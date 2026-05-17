@@ -1,0 +1,414 @@
+.pageContainer {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #7ad9ff 0%, #a0f6cf 100%);
+    padding: 24px;
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    color: #1e293b;
+}
+
+.pageWrapper {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+/* Header Styles */
+.header {
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    padding: 14px 28px;
+    border-radius: 18px;
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    width: 100%;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.headerControls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: auto;
+    justify-content: flex-end;
+}
+
+.difficultyTabs {
+    display: flex;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+}
+
+.difficultyTab {
+    padding: 8px 16px;
+    border-radius: 14px;
+    border: none;
+    background: transparent;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: capitalize;
+    transition: all 0.25s ease;
+}
+
+.difficultyTabActive {
+    background: #10b981;
+    color: white;
+    box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.3);
+}
+
+.resetButton {
+    min-width: 88px;
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.autoSubmitToggle {
+    min-height: 44px;
+    padding: 0 12px 0 16px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.autoSubmitToggle span {
+    min-width: 34px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #475569;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.autoSubmitToggleActive {
+    border-color: #86efac;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.autoSubmitToggleActive span {
+    background: #22c55e;
+    color: #ffffff;
+}
+
+.backButton {
+    color: #10b981;
+    text-decoration: none;
+    font-size: 24px;
+    font-weight: 900;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ecfdf5;
+    border-radius: 16px;
+    transition: all 0.2s ease;
+}
+
+.title {
+    font-size: 22px;
+    color: #0f172a;
+    font-weight: 950;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+
+/* Grid Layout */
+.mainGrid {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(520px, 4.3fr) minmax(220px, 0.8fr);
+    gap: 20px;
+    align-items: start;
+}
+
+/* Sidebar Panels */
+.panel {
+    background: white;
+    padding: 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.02);
+}
+
+.progressPanel {
+    padding: 14px 28px;
+}
+
+.panelTitle {
+    margin: 0 0 16px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+/* Main Card */
+.questionCard {
+    background: white;
+    padding: 34px 40px 36px;
+    border-radius: 32px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.questionBody {
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+.questionFocus {
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 22px;
+}
+
+.submitRow {
+    border-top: 1px solid #e8eef6;
+    padding-top: 26px;
+    margin-top: auto;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.accentBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
+}
+
+/* Adaptive Level Indicator */
+.levelBadge {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.levelLabel {
+    font-weight: 900;
+    color: #1e293b;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.progressBar {
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 10px;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Submit Button (Tactile) */
+.submitButton {
+    min-width: 204px;
+    padding: 16px 36px;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-weight: 900;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.submitButton:disabled {
+    background: #eef4fb;
+    color: #8aa0bb;
+    cursor: not-allowed;
+    box-shadow: inset 0 0 0 1px #dde8f4;
+}
+
+.submitButton:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 24px -6px rgba(59, 130, 246, 0.5);
+}
+
+/* Feedback Area */
+.feedbackContainer {
+    margin-top: 40px;
+    padding: 32px;
+    border-radius: 32px;
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feedbackSuccess {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+}
+
+.feedbackError {
+    background: #fff7ed;
+    border: 2px solid #f97316;
+}
+
+.correctPraiseCard {
+    width: min(360px, 100%);
+    margin: 12px auto;
+    padding: 28px 24px;
+    border-radius: 26px;
+    background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+    border: 1px solid #bbf7d0;
+    box-shadow: 0 22px 46px rgba(22, 163, 74, 0.14);
+    text-align: center;
+    animation: praisePop 420ms cubic-bezier(0.18, 0.9, 0.2, 1);
+}
+
+.correctPraiseBadge {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 12px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #22c55e;
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 950;
+    box-shadow: 0 14px 26px rgba(34, 197, 94, 0.26);
+}
+
+.correctPraiseCard h2 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 28px;
+    line-height: 1.1;
+    font-weight: 950;
+}
+
+.correctPraiseCard p {
+    margin: 0;
+    color: #15803d;
+    font-size: 14px;
+    line-height: 1.45;
+    font-weight: 800;
+}
+
+.questionSlideIn {
+    animation: slideQuestionIn 480ms cubic-bezier(0.18, 0.9, 0.2, 1);
+}
+
+/* Dark History Panel */
+.darkPanel {
+    background: #0f172a;
+    padding: 24px;
+    border-radius: 32px;
+    color: white;
+    box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.4);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes praisePop {
+    from { opacity: 0; transform: translateY(12px) scale(0.94); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideQuestionIn {
+    from { opacity: 0; transform: translateX(42px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 1024px) {
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+    
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .headerControls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .pageContainer {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 760px) {
+    .questionCard {
+        padding: 28px 22px;
+        border-radius: 24px;
+    }
+
+    .questionFocus {
+        min-height: 140px;
+        justify-content: flex-start;
+    }
+
+    .difficultyTabs {
+        overflow-x: auto;
+        max-width: calc(100vw - 150px);
+    }
+}

@@ -1,0 +1,302 @@
+import Image from 'next/image';
+import Link from 'next/link';
+
+const TOPICS = [
+  {
+    id: 'addition',
+    title: 'Addition',
+    color: '#ff951f',
+    subject: 'math',
+    topic: 'addition',
+    includes: ['Add with cubes up to 10', 'Addition sentences - which model matches?', 'Word problem sentences', 'Vertical addition 10-99'],
+    groups: [
+      {
+        title: 'First-grade skills',
+        skills: [
+          ['A.1', 'Addition facts up to 9', 'addition-g1-a1-horizontal-to-9'],
+          ['C.1', 'Add with cubes up to 10', 'addition-g1-c1-visual-counting-to-10'],
+          ['C.2', 'Copy cubes into boxes', 'addition-g1-copy-cubes-to-boxes'],
+          ['E.3', 'Addition sentences up to 10: which model matches?', 'addition-g1-e3-model-match-to-10'],
+          ['V.7', 'Addition sentences up to 5: what does the model show?', 'addition-g1-v7-picture-sentence-to-5'],
+          ['Q.5', 'Model and write addition sentences for word problems', 'addition-g1-q5-word-sentence-to-10'],
+          ['Q.13', 'Sort addition facts - sums up to 20', 'addition-g1-q13-sort-facts-sums-to-20'],
+          ['Q.14', 'Make a number using addition - sums up to 20', 'addition-g1-q14-make-number-sums-to-20'],
+          ['R.1', 'Addition word problems with models - sums up to 20', 'addition-g1-r1-word-problems-models-to-20'],
+        ],
+      },
+      {
+        title: 'Second-grade skills',
+        skills: [
+          ['B.1', 'Vertical addition 10-99', 'addition-g2-b1-vertical-10-99'],
+          ['B.2', 'Vertical addition 10-99 with regrouping', 'addition-g2-b2-vertical-10-99-regrouping'],
+          ['G.3', 'Add three numbers: make 10', 'addition-g2-g3-three-addends-make-10'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'time',
+    title: 'Time',
+    color: '#2fbfd0',
+    subject: 'math',
+    topic: 'time',
+    includes: ['Days of the week', 'Seasons', 'Read clocks and write times', 'Elapsed time', 'Time patterns'],
+    groups: [
+      {
+        title: 'Calendar skills',
+        skills: [
+          ['T.1', 'Days of the week', 'v1_days_of_week'],
+          ['T.2', 'Order days of the week', 'order_days'],
+          ['T.3', 'Seasons of the year', 'v2_seasons'],
+          ['T.4', 'Read a calendar', 'v3_calendar'],
+          ['T.5', 'Months of the year', 'v4_months'],
+          ['T.6', 'Days in each month', 'm5_days_in_month'],
+        ],
+      },
+      {
+        title: 'Clock skills',
+        skills: [
+          ['C.1', 'A.M. or P.M.', 'v5_am_pm'],
+          ['C.2', 'Match analogue clocks and times', 'match_analog_clock_words'],
+          ['C.3', 'Match digital clocks and times', 'match_digital_clock'],
+          ['C.4', 'Read clocks and write times', 'o3_read_clock'],
+          ['C.5', 'Elapsed time', 'o5_elapsed_time'],
+          ['C.6', 'Time patterns', 'o7_time_patterns'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'fractions',
+    title: 'Fractions',
+    color: '#7a56d6',
+    subject: 'math',
+    topic: 'fractions',
+    includes: ['Identify fractions from shapes', 'Equal parts', 'Fraction of a set', 'Mixed numbers from models'],
+    groups: [
+      {
+        title: 'Visual model skills',
+        skills: [
+          ['F.1', 'Identify fractions from shapes', 'visual_models_identify'],
+          ['F.2', 'Equal parts', 'visual_models_equal_parts'],
+          ['F.3', 'Fraction of a set', 'visual_models_fraction_of_set'],
+          ['F.4', 'Mixed numbers from models', 'visual_models_mixed_numbers'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'place-values',
+    title: 'Place Values',
+    color: '#4db46b',
+    subject: 'math',
+    topic: 'place-values',
+    includes: ['Tens and ones blocks', 'Place value names', 'Expanded form', 'Word form', 'Place-value tables'],
+    groups: [
+      {
+        title: 'First-grade skills',
+        skills: [
+          ['PV.1', 'Identify numbers from tens and ones blocks', 'pv-g1-blocks-units'],
+          ['PV.2', 'Name the place value of a digit', 'pv-g1-place-name'],
+          ['PV.3', 'Which model shows the number?', 'pv-g1-match-blocks-to-number'],
+        ],
+      },
+      {
+        title: 'Second-grade skills',
+        skills: [
+          ['PV.4', 'Identify hundreds, tens, and ones blocks', 'pv-g2-blocks-hundreds'],
+          ['PV.5', 'Write numbers in expanded form', 'pv-g2-expanded-form'],
+          ['PV.6', 'Break down numbers in a table', 'pv-g2-breakdown-table'],
+        ],
+      },
+      {
+        title: 'Third-grade skills',
+        skills: [
+          ['PV.7', 'Identify thousands blocks', 'pv-g3-blocks-thousands'],
+          ['PV.8', 'Write word form as a number', 'pv-g3-word-to-number'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'social-gk',
+    title: 'General Knowledge',
+    color: '#3f8bd6',
+    subject: 'social',
+    topic: 'gk',
+    includes: ['Identify famous persons', 'Personality trivia', 'Political vs sports sorting', 'True or false'],
+    groups: [
+      {
+        title: 'People skills',
+        skills: [
+          ['GK.1', 'Identify famous persons', 'gk_identify_person_v1'],
+          ['GK.2', 'Identify from images', 'gk_identify_image_v1'],
+          ['GK.3', 'Political vs sports sorting', 'gk_sort_people_v1'],
+        ],
+      },
+      {
+        title: 'Reasoning skills',
+        skills: [
+          ['GK.4', 'Personality trivia', 'gk_trivia_v1'],
+          ['GK.5', 'Fill in the blanks', 'gk_fill_blanks_v1'],
+          ['GK.6', 'True or false', 'gk_true_false_v1'],
+          ['GK.7', 'Spot the truth', 'gk_misconception_v1'],
+          ['GK.8', 'Inference questions', 'gk_inference_v1'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'testing',
+    title: 'Testing Tools',
+    color: '#d64d3d',
+    subject: 'math',
+    topic: 'testing',
+    includes: ['Interactive protractor', 'Copy drag/drop', 'Categorization', 'Number line', 'Clock pattern'],
+    groups: [
+      {
+        title: 'Interactive parts',
+        skills: [
+          ['TEST.1', 'Interactive protractor', 'testing-protractor'],
+          ['TEST.2', 'Copy drag/drop', 'testing-copy-drag-drop'],
+          ['TEST.3', 'Categorization', 'testing-categorization'],
+        ],
+      },
+      {
+        title: 'Visual parts',
+        skills: [
+          ['TEST.4', 'Number line', 'testing-number-line'],
+          ['TEST.5', 'Base-ten blocks', 'testing-base-ten-blocks'],
+          ['TEST.6', 'Clock', 'testing-clock'],
+          ['TEST.7', 'Missing time pattern', 'testing-clock-pattern'],
+          ['TEST.8', 'Fraction model', 'testing-fraction-model'],
+          ['TEST.9', 'Mixed text/SVG/blank', 'testing-mixed-parts'],
+        ],
+      },
+    ],
+  },
+];
+
+function countSkills(topic) {
+  return topic.groups.reduce((total, group) => total + group.skills.length, 0);
+}
+
+function practiceHref(topic, skill) {
+  return `/practice?subject=${topic.subject}&topic=${topic.topic}&skill=${skill}`;
+}
+
+function HomeHero() {
+  return (
+    <section className="home-hero" aria-label="WEXLS learning hero">
+      <div className="home-hero-frame">
+        <Image
+          className="home-hero-image home-hero-image-desktop"
+          src="/images/heroc.png"
+          alt="Students practicing interactive math and reasoning skills"
+          width={1774}
+          height={887}
+          priority
+        />
+        <Image
+          className="home-hero-image home-hero-image-mobile"
+          src="/images/heromobile.png"
+          alt="Students practicing interactive math and reasoning skills"
+          width={941}
+          height={1672}
+          priority
+        />
+      </div>
+    </section>
+  );
+}
+
+function TopicCatalog() {
+  return (
+    <main className="topic-catalog-page">
+      <HomeHero />
+      <section className="topic-catalog-hero">
+        <p>WEXLS Practice</p>
+        <h1>Choose a topic</h1>
+      </section>
+      <section className="topic-card-list" aria-label="Practice topics">
+        {TOPICS.map((topic) => (
+          <article className="topic-row-card" key={topic.id} style={{ '--topic-color': topic.color }}>
+            <div className="topic-color-bar" />
+            <div className="topic-row-copy">
+              <h2>{topic.title}</h2>
+              <p>
+                <span>Includes:</span>{' '}
+                {topic.includes.map((item, index) => (
+                  <span key={item}>
+                    {index > 0 ? <b aria-hidden="true"> | </b> : null}
+                    {item}
+                  </span>
+                ))}
+              </p>
+            </div>
+            <Link className="topic-row-button" href={`/?topic=${topic.id}`} style={{ background: topic.color }}>
+              See all {countSkills(topic)} skills ›
+            </Link>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
+
+function TopicSkillsPage({ selectedTopic }) {
+  const selected = TOPICS.find((topic) => topic.id === selectedTopic) || TOPICS[0];
+
+  return (
+    <main className="topic-detail-page">
+      <aside className="topic-side-nav" aria-label="Topic navigation">
+        {TOPICS.map((topic) => (
+          <Link
+            key={topic.id}
+            href={`/?topic=${topic.id}`}
+            className={`topic-side-link ${topic.id === selected.id ? 'active' : ''}`}
+            style={{ '--topic-color': topic.color }}
+          >
+            <span />
+            {topic.title}
+          </Link>
+        ))}
+      </aside>
+
+      <section className="topic-skill-content" style={{ '--topic-color': selected.color }}>
+        <Link className="back-to-topics" href="/">‹ All topics</Link>
+        <h1>{selected.title}</h1>
+        <p className="topic-skill-intro">
+          Here is a list of skills for {selected.title.toLowerCase()}. Skills are organized by level, and each link opens in the shared adaptive practice shell.
+        </p>
+        <div className="skill-columns">
+          {selected.groups.map((group) => (
+            <section key={group.title} className="skill-column">
+              <h2>{group.title}</h2>
+              <ol>
+                {group.skills.map(([code, name, skill]) => (
+                  <li key={skill}>
+                    <span>{code}</span>
+                    <Link href={practiceHref(selected, skill)}>{name}</Link>
+                    <small aria-hidden="true"> ✎ ⊙</small>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default async function HomePage({ searchParams }) {
+  const params = await searchParams;
+  const selectedTopic = params?.topic;
+
+  if (selectedTopic) {
+    return <TopicSkillsPage selectedTopic={selectedTopic} />;
+  }
+
+  return <TopicCatalog />;
+}

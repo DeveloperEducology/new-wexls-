@@ -1,0 +1,29 @@
+export const grade2PlaceValueSkills = [
+  {
+    id: 'pv-g2-blocks-hundreds',
+    code: 'PV.3',
+    grade: 2,
+    topic: 'place-values',
+    title: 'Identify numbers from hundreds, tens, and ones blocks',
+    templateId: 'place-values.blocks.hundreds',
+    config: { forcedTask: 'identify_from_blocks_3d', difficulty: 'medium' },
+  },
+  {
+    id: 'pv-g2-expanded-form',
+    code: 'PV.4',
+    grade: 2,
+    topic: 'place-values',
+    title: 'Write numbers in expanded form',
+    templateId: 'place-values.expanded-form',
+    config: { forcedTask: 'expanded_form', difficulty: 'medium' },
+  },
+  {
+    id: 'pv-g2-breakdown-table',
+    code: 'PV.5',
+    grade: 2,
+    topic: 'place-values',
+    title: 'Break down a number in a place-value table',
+    templateId: 'place-values.breakdown-table',
+    config: { forcedTask: 'breakdown_table', difficulty: 'medium' },
+  },
+];

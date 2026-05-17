@@ -1,0 +1,2235 @@
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+.container {
+    width: 100%;
+    max-width: 100%;
+}
+
+.questionCard {
+    position: relative;
+    background: transparent;
+    padding: 0;
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 768px) {
+    .questionCard {
+        padding: 1rem;
+        padding-top: 2.75rem;
+        /* Space for toggle */
+    }
+}
+
+@media (max-width: 480px) {
+    .questionCard {
+        padding: 0.5rem;
+        padding-top: 2.5rem;
+        /* Space for toggle */
+    }
+}
+
+.questionContent {
+    width: 100%;
+    margin-bottom: 2rem;
+    font-size: 1.05rem;
+    line-height: 2.2;
+    color: var(--text-primary);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;  /* Pro sentence flow */
+    text-align: left;
+    padding-left: 0;
+}
+
+@media (max-width: 600px) {
+    .questionContent {
+        margin-bottom: 1rem;
+        line-height: 1.8;
+    }
+}
+
+.questionTextRow {
+    width: 100%;
+    margin-bottom: 1.25rem;
+}
+
+.templateContainer {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.keypadToggle {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+    .keypadToggle {
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .keypadToggle {
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+}
+
+.keypadToggle:hover {
+    background: #f8fafc;
+    color: #3b82f6;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.keypadToggle:active {
+    transform: translateY(0);
+}
+
+.questionText {
+    display: block;
+    font-size: clamp(0.98rem, 1.5vw, 1.3rem);
+    line-height: 1.35;
+    font-weight: 700;
+    color: #1f2937;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.partWrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    white-space: normal;
+}
+
+.inlinePart {
+    width: auto;
+    justify-content: flex-start;
+}
+
+.verticalPart {
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.pairedRow {
+    width: fit-content;
+    max-width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.2rem;
+    margin: 0.1rem 0 0.2rem;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.pairedColumn {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.pairedRow .verticalPart,
+.pairedRow .inlinePart {
+    width: auto;
+}
+
+.pairedRow .textWithSpeaker {
+    gap: 0.45rem;
+}
+
+.text {
+    display: inline;
+}
+
+.text h1, .text h2, .text h3 {
+    display: block;
+    width: 100%;
+    margin: 1.2rem 0 0.6rem;
+    color: #1e293b;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.text h1 { font-size: 1.6rem; }
+.text h2 { font-size: 1.4rem; }
+.text h3 { font-size: 1.25rem; }
+
+.textWithSpeaker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.mathLatex {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: #111827;
+    font-weight: 600;
+}
+
+.fraction {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 0.2rem;
+    min-width: 1.5rem;
+}
+
+.fractionNumerator, .fractionDenominator {
+    padding: 0 0.1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 1.4rem;
+}
+
+.fractionText {
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.fractionBar {
+    width: 100%;
+    height: 2px;
+    background-color: #111827;
+    margin: 0.1rem 0;
+    border-radius: 1px;
+}
+
+.mathLatex :global(.katex .mord),
+.mathLatex :global(.katex .mbin),
+.mathLatex :global(.katex .mrel) {
+    margin-right: 0.14em;
+}
+
+.mathLatexWrap {
+    width: 100%;
+}
+
+.mathLatexInteractive {
+    position: relative;
+    display: inline-block;
+}
+
+.mathLatexInteractive :global([data-blank-id]) {
+    color: transparent;
+}
+
+.mathLatexDisplay {
+    width: 100%;
+}
+
+.mathLatexInputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+}
+
+.latexInlineInput {
+    position: absolute;
+    transform: translate(0, 0);
+    margin: 0;
+    padding: 0;
+    z-index: 2;
+    border: 1.5px solid #c084fc;
+    border-radius: 2px;
+    background: #fff;
+    color: #111827;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    box-shadow: none;
+}
+
+.latexInlineInput:focus {
+    border-color: #7c3aed;
+    box-shadow: none;
+}
+
+.inlineSpeaker {
+    width: 24px;
+    height: 24px;
+}
+
+.imageContainer {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    vertical-align: middle;
+    margin: 0 0.25rem;
+}
+
+.boxDisplay {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0.4rem 0 0.6rem;
+}
+
+.boxDisplayItem {
+    width: 52px;
+    height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e293b;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    outline: none;
+}
+
+.boxMethodWrap {
+    width: 100%;
+    margin: 0.4rem 0 0.9rem;
+}
+
+.boxMethodBoard {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    border: 2px solid #111827;
+    padding: 1rem 1rem 0.9rem;
+    background: #fff;
+}
+
+.boxMethodTopLabel {
+    margin-left: 4.6rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 0.01em;
+}
+
+.boxMethodBody {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.boxMethodLeftLabel {
+    width: 3.6rem;
+    padding-top: 2.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.boxMethodGridArea {
+    padding-top: 0.2rem;
+}
+
+.boxMethodGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 90px);
+    grid-template-rows: repeat(2, 60px);
+    border: 2px solid #111827;
+}
+
+.boxMethodCell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #111827;
+    border-bottom: 1px solid #111827;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.boxMethodCell:nth-child(2n) {
+    border-right: none;
+}
+
+.boxMethodCell:nth-last-child(-n + 2) {
+    border-bottom: none;
+}
+
+.boxMethodSums {
+    min-width: 124px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding-top: 0.25rem;
+}
+
+.boxMethodRowInput {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.boxMethodField {
+    position: relative;
+    width: 154px;
+    height: 46px;
+    border: 2px solid #cbd5e1;
+    border-radius: 0;
+    background: #fff;
+    overflow: hidden;
+}
+
+.boxMethodFieldActive {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+
+.boxMethodFieldThree {
+    width: 102px;
+}
+
+.boxMethodFieldOffset {
+    margin-left: 4px;
+}
+
+.boxMethodGuides {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    pointer-events: none;
+}
+
+.boxMethodFieldFour .boxMethodGuides {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.boxMethodFieldThree .boxMethodGuides {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.boxMethodGuide {
+    border-right: 1px dashed #cbd5e1;
+}
+
+.boxMethodFieldActive .boxMethodGuide {
+    border-right-color: #60a5fa;
+}
+
+.boxMethodGuide:last-child {
+    border-right: none;
+}
+
+.boxMethodFieldInput {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: #111827;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0 12px;
+    outline: none;
+    z-index: 2;
+}
+
+.boxMethodFieldInput::placeholder {
+    color: transparent;
+}
+
+.boxMethodComma {
+    position: absolute;
+    left: 34px;
+    top: 50%;
+    transform: translateY(-46%);
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #111827;
+    z-index: 1;
+}
+
+.boxMethodCursor {
+    position: absolute;
+    left: 50px;
+    top: 50%;
+    transform: translateY(-54%);
+    font-size: 1.55rem;
+    color: #111827;
+    z-index: 1;
+}
+
+.boxMethodPlusRow {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.boxMethodPlus {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1;
+}
+
+.boxMethodDivider {
+    width: 100%;
+    border-top: 2px solid #111827;
+    margin: 0.1rem 0 0.05rem;
+}
+
+@media (max-width: 768px) {
+    .boxMethodBoard {
+        width: 100%;
+        max-width: 100%;
+        padding: 0.85rem;
+    }
+
+    .boxMethodBody {
+        flex-wrap: wrap;
+        gap: 0.85rem;
+    }
+
+    .boxMethodTopLabel {
+        margin-left: 3.5rem;
+        font-size: 0.95rem;
+    }
+
+    .boxMethodLeftLabel {
+        width: 2.8rem;
+        padding-top: 1.75rem;
+        gap: 1.7rem;
+        font-size: 0.9rem;
+    }
+
+    .boxMethodGrid {
+        grid-template-columns: repeat(2, 74px);
+        grid-template-rows: repeat(2, 52px);
+    }
+
+    .boxMethodCell {
+        font-size: 1rem;
+    }
+
+    .boxMethodField {
+        width: 138px;
+        height: 42px;
+    }
+
+    .boxMethodFieldThree {
+        width: 94px;
+    }
+}
+
+.boxDisplayItem:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+}
+
+.svgContainer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0.35rem 0;
+}
+
+.svgContainer svg {
+    width: 100%;
+    height: auto;
+    max-width: min(100%, 600px);
+}
+
+.image {
+    border-radius: 4px;
+}
+
+.sequence {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    vertical-align: middle;
+}
+
+.sequenceItem {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sequenceComma {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #475569;
+    margin-left: -0.1rem;
+    margin-right: 0.35rem;
+    /* display: inline-block; */
+}
+
+.inputWithOverlay {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.inputShapeOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.input {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-size: 1.35rem;
+    font-weight: 800;
+    text-align: center;
+    border: 2.5px solid #f1f5f9;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #1e293b;
+    caret-color: #3b82f6;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    max-width: 100%;
+    line-height: normal;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+    /* box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 6px -1px rgba(0, 0, 0, 0.1); */
+    /* transform: translateY(-1px); */
+}
+
+.input:disabled {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.inputCorrect {
+    border-color: #22c55e !important;
+    background-color: #f0fdf4 !important;
+    color: #15803d !important;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15) !important;
+}
+
+.inputIncorrect {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+    color: #991b1b !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1) !important;
+}
+
+.inlineBlankWrap {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    vertical-align: middle;
+    margin: 0 0.15rem;
+}
+
+.inlineBlankWrap .input {
+    width: 65px !important;
+    height: 32px !important;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    font-size: 1.4rem;
+    border: 2px solid #94a3b8;
+}
+
+.inputSmall {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 1.2rem;
+    border-radius: 6px;
+    border-width: 1.5px;
+}
+
+.inputMedium {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 1.4rem;
+}
+
+.inputLarge {
+    width: 72px !important;
+    height: 72px !important;
+    font-size: 1.6rem;
+}
+
+.mathLatexInteractive {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 2px;
+}
+
+.arithmeticLayout {
+    font-family: "Baloo 2", "Nunito", cursive, sans-serif;
+    --ar-cell-size: 82px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0.25rem auto 0.75rem;
+    color: #111827;
+}
+
+.arTextRow {
+    line-height: 1.1;
+}
+
+.arLabelRow {
+    display: flex;
+    justify-content: end;
+    align-items: end;
+    gap: 1.2rem;
+    min-height: 52px;
+    margin-bottom: 0.15rem;
+    padding-right: 0.1rem;
+}
+
+.arLabelWord {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    font-family: "Nunito", "Baloo 2", "Segoe UI", sans-serif;
+}
+
+.arHeaderRow {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 1), var(--ar-cell-size));
+    justify-content: end;
+    align-items: center;
+    margin-bottom: 0px;
+    width: fit-content;
+    margin-left: auto;
+}
+
+.arHeaderCell {
+    width: var(--ar-cell-size);
+    min-height: 28px;
+    padding: 0 0.15rem 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 900;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.arCarryRow {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 1), var(--ar-cell-size));
+    justify-content: end;
+    align-items: center;
+    margin-bottom: 2px;
+    width: fit-content;
+    margin-left: auto;
+}
+
+.arCarryCell {
+    width: var(--ar-cell-size);
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arCarryInput {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #576b8a;
+    border-radius: 50%;
+    background: transparent;
+    color: #111827;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.arCarryInput:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.arCarryInputActive {
+    border-color: #3b82f6;
+}
+
+.arCarryInput:not(:placeholder-shown) {
+    border-color: #475569;
+}
+
+.arGridRow {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 1), var(--ar-cell-size));
+    justify-content: end;
+    align-items: center;
+    width: fit-content;
+    margin-left: auto;
+}
+
+.arGridCell {
+    width: var(--ar-cell-size);
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.18rem;
+    font-weight: 900;
+    line-height: 1;
+    font-family: inherit;
+}
+
+.arGridCellHighlighted {
+    color: #3b82f6;
+    font-weight: 900;
+}
+
+.arAnswerJoinedGroup {
+    border: 3px solid #8b5cf6;
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+    background: #fff;
+    display: flex;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.arAnswerJoinedGroup .arCellInput {
+    border: none !important;
+    border-right: 2px solid #8b5cf6 !important;
+    border-radius: 0 !important;
+    width: var(--ar-cell-size);
+    height: 58px;
+    font-size: 1.85rem;
+    font-weight: 800;
+    background: transparent;
+    text-align: center;
+}
+
+.arAnswerJoinedGroup .arCellInput:last-child {
+    border-right: none !important;
+}
+
+.arAnswerJoinedGroup .arCellInputActive {
+    background: #f5f3ff;
+    box-shadow: inset 0 0 10px rgba(139, 92, 246, 0.1);
+}
+
+.arAnswerSimpleGroup {
+    display: flex;
+    grid-column: 1 / -1;
+}
+
+.arDivider {
+    border-top: 5px solid #111827;
+    border-radius: 4px;
+    margin: 0.1rem 0 0.5rem;
+    width: 100%;
+}
+
+.arAnswerRow {
+    line-height: 1;
+}
+
+.arPrefixCell {
+    color: #1f2f46;
+}
+
+.arFixedCell {
+    color: #111827;
+}
+
+.arCellInput {
+    width: 58px;
+    height: 58px;
+    border: 3px solid #1f2937;
+    border-radius: 8px;
+    background: #fff;
+    color: #111827;
+    font-size: 2rem;
+    font-weight: 900;
+    text-align: center;
+    box-sizing: border-box;
+    transition: all 0.1s ease;
+}
+
+.arCellInputActive {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.14);
+    background: #fff;
+}
+
+.arCellInput:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: none;
+}
+
+.verticalAdditionReplica {
+    --ar-cell-size: 46px;
+    margin: 0.15rem auto 0;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+}
+
+.verticalAdditionReplica .arGridRow {
+    grid-template-columns: repeat(var(--cols, 1), var(--ar-cell-size));
+}
+
+.verticalAdditionReplica .arGridCell {
+    width: var(--ar-cell-size);
+    height: 38px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 2rem;
+    font-weight: 400;
+    color: #000;
+    line-height: 1;
+}
+
+.verticalAdditionReplica .arDivider {
+    border-top: 2px solid #000;
+    border-radius: 0;
+    margin: 0.1rem 0 0.5rem;
+}
+
+.verticalAdditionReplica .arAnswerRow {
+    margin-top: 0;
+}
+
+.verticalAdditionReplica .arAnswerJoinedGroup {
+    border: 2px solid #0098ff;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    height: 50px;
+    background: #fff;
+}
+
+.verticalAdditionReplica .arAnswerJoinedGroup .arGridCell {
+    height: 50px;
+}
+
+.verticalAdditionReplica .arAnswerJoinedGroup .arCellInput {
+    width: var(--ar-cell-size);
+    height: 50px;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #fff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 2rem;
+    font-weight: 400;
+    caret-color: #000;
+    box-shadow: none !important;
+}
+
+.verticalAdditionReplica .arAnswerJoinedGroup .arGridCell:not(:last-child) .arCellInput {
+    border-right: 2px dashed #0098ff !important;
+}
+
+.verticalAdditionReplica .arAnswerJoinedGroup .arCellInput:focus,
+.verticalAdditionReplica .arAnswerJoinedGroup .arCellInputActive {
+    outline: none;
+    background: #fff;
+    box-shadow: none !important;
+}
+
+.arDigitPad {
+    margin-top: 0.8rem;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.arPadBtn {
+    border: 1px solid #b9d8ef;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2f46;
+    font-size: 0.95rem;
+    font-weight: 700;
+    height: 34px;
+    cursor: pointer;
+}
+
+.arPadBtn:hover {
+    border-color: #7fbce4;
+    background: #f5fbff;
+}
+
+:global(.pictureEq) {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+
+:global(.pictureTerm) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+:global(.pictureBox) {
+    min-width: 80px;
+    min-height: 80px;
+    padding: 0.75rem 1rem;
+    border: 2.5px solid #d1d5db;
+    border-radius: 12px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+
+:global(.pictureBox span) {
+    font-size: 2.2rem;
+    line-height: 1;
+}
+
+:global(.pictureImage) {
+    width: auto;
+    height: 48px;
+    object-fit: contain;
+}
+
+:global(.pictureLabel) {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+}
+
+/* --- Notebook Subtraction Styles --- */
+/* --- Premium STATED OF THE ART Notebook Subtraction Styles --- */
+:global(.notebookPaper) {
+    background: #fffdf5;
+    background-image: linear-gradient(#f1f5f9 1.1px, transparent 1.1px), 
+                      linear-gradient(90deg, #f1f5f9 1.1px, transparent 1.1px);
+    background-size: 25px 25px;
+    padding: 3rem;
+    border-radius: 4px;
+    box-shadow: 
+        1px 1px 1px rgba(0,0,0,0.05),
+        2px 2px 2px rgba(0,0,0,0.05),
+        4px 4px 4px rgba(0,0,0,0.05),
+        8px 8px 8px rgba(0,0,0,0.05),
+        16px 16px 16px rgba(0,0,0,0.05);
+    border-left: 24px solid #94a3b8;
+    max-width: 440px;
+    margin: 2.5rem auto;
+    font-family: 'Patrick Hand', 'Chalkboard SE', cursive;
+    position: relative;
+    transform: rotate(-0.5deg);
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+:global(.notebookPaper::before) {
+    content: "";
+    position: absolute;
+    top: 5%;
+    left: -18px;
+    height: 90%;
+    width: 12px;
+    background: repeating-linear-gradient(
+        #64748b,
+        #64748b 15px,
+        #475569 15px,
+        #475569 18px
+    );
+    border-radius: 10px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+:global(.notebookTable) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 3rem;
+    color: #334155;
+    letter-spacing: 0.25rem;
+}
+
+:global(.nbCarryRow td) {
+    font-size: 1.2rem;
+    color: #f43f5e;
+    padding-bottom: 0px;
+    height: 1.6rem;
+    vertical-align: bottom;
+    text-align: center;
+    font-weight: 700;
+    line-height: 1;
+}
+
+
+:global(.nbMainRow td) {
+    text-align: center;
+    position: relative;
+    padding: 0.15rem 0.3rem;
+}
+
+:global(.nbStrike) {
+    position: relative;
+    display: inline-block;
+}
+
+:global(.nbStrike::after) {
+    content: "";
+    position: absolute;
+    left: -10%;
+    top: 50%;
+    width: 120%;
+    height: 4px;
+    background: rgba(244, 63, 94, 0.6);
+    transform: rotate(-15deg);
+    border-radius: 100%;
+    pointer-events: none;
+}
+
+:global(.nbOperator) {
+    width: 65px;
+    text-align: left;
+    padding-right: 1.5rem;
+    opacity: 0.6;
+    font-weight: 300;
+}
+
+:global(.nbResultRow) {
+    border-top: 4px solid #475569;
+}
+
+:global(.nbResultRow td) {
+    padding-top: 0.8rem;
+    text-align: center;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+:global(.nbDigitInput) {
+    width: 38px !important;
+    height: 48px !important;
+    font-size: 2.4rem !important;
+    text-align: center !important;
+    padding: 0 !important;
+    border: 2px solid #cbd5e1 !important;
+    background: rgba(255,255,255,0.8) !important;
+    border-radius: 4px !important;
+    font-family: 'Patrick Hand', cursive !important;
+    color: #0f172a !important;
+}
+
+
+
+
+.gridArithmeticWrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0.2rem 0;
+}
+
+@media (max-width: 768px) {
+    .gridArithmeticWrap {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+.gridArithmetic {
+    display: grid;
+    width: max-content;
+    margin: 0 auto;
+    border: none;
+    background: transparent;
+}
+
+.gridCell {
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+.gridBackground {
+    border: 1px solid #d1d5db;
+    background: #f8fafc;
+}
+
+.gridInputHost {
+    background: #fff;
+    border: 2px solid #7c3aed;
+}
+
+.gridFixedText {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+}
+
+.gridCellInput {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    padding: 0;
+}
+
+.gridCellInput:focus {
+    outline: 2px solid #7c3aed;
+    outline-offset: -2px;
+    background: #fff;
+}
+
+.butterflyWrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.butterflyStage {
+    width: min(100%, var(--bf-width));
+}
+
+.butterflyCanvas {
+    position: relative;
+    width: var(--bf-width);
+    height: var(--bf-height);
+    transform: scale(var(--bf-scale, 1));
+    transform-origin: top center;
+    margin: 0 auto;
+}
+
+.butterflySvg {
+    width: 100%;
+    height: 100%;
+}
+
+.bfNumber {
+    font-size: 50px;
+    font-weight: 700;
+    fill: #111827;
+    font-family: "Nunito", "Baloo 2", "Segoe UI", sans-serif;
+}
+
+.bfOperator {
+    font-size: 50px;
+    font-weight: 700;
+    fill: #1f2937;
+    font-family: "Nunito", "Baloo 2", "Segoe UI", sans-serif;
+}
+
+.bfResultColumn {
+    position: absolute;
+    left: 80%;
+    top: 36%;
+    width: 12%;
+    height: 30%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bfResultBar {
+    width: 100%;
+    height: 3px;
+    background: #1e3a8a;
+}
+
+.bfInput {
+    position: absolute;
+    border: 2px solid #3b82f6;
+    border-radius: 3px;
+    background: #fff;
+    color: #111827;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 0;
+}
+
+.bfInput:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.16);
+}
+
+.submitButton {
+    width: min(220px, 100%);
+    background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+    color: white;
+    border: none;
+    padding: 0.62rem 1rem;
+    border-radius: var(--border-radius-lg);
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: var(--transition-base);
+    margin-left: 0.5rem;
+    display: inline-block;
+}
+
+.submitButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+
+.arithmeticLayout {
+    --ar-cell-size: 36px;
+}
+
+.arGridCell {
+    width: var(--ar-cell-size);
+    height: 64px;
+    font-size: 2.5rem;
+}
+
+.arLabelRow {
+    min-height: 44px;
+    gap: 0.9rem;
+}
+
+.arLabelWord {
+    font-size: 1.6rem;
+}
+
+.inputLarge {
+    min-width: 180px;
+    height: 48px;
+    font-size: 1.25rem;
+}
+
+.select {
+    padding: 0 1rem;
+    height: 40px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    color: #1e293b;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+    margin: 0 0.5rem;
+    vertical-align: middle;
+}
+
+.select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.select:disabled {
+    cursor: not-allowed;
+    background-color: #f8fafc;
+}
+
+.arDigitPad {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.arPadBtn {
+    height: 32px;
+    font-size: 0.9rem;
+}
+
+.bfInput {
+    font-size: 1rem;
+}
+
+.pictureEq {
+    grid-template-columns: auto;
+    justify-items: center;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.pictureTerm {
+    min-width: 0;
+}
+
+.pictureEmoji {
+    font-size: 1.65rem;
+    min-height: 34px;
+}
+
+.pictureOp {
+    font-size: 1.7rem;
+}
+
+.pictureBox {
+    width: 78px;
+    height: 40px;
+    font-size: 1.15rem;
+}
+
+.pictureFooter {
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.pairedRow {
+    display: flex;
+    align-items: center;
+    gap: 0.05rem;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0.05rem 0;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+}
+
+.pairedRow .verticalPart,
+.pairedRow .inlinePart {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.smartTableOuter {
+    width: 100%;
+    padding: 0.2rem 0.5rem;
+    display: flex;
+    justify-content: left;
+}
+
+@media (max-width: 768px) {
+    .smartTableOuter {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+.smartTableContainer {
+    width: 100%;
+    max-width: 100%;
+    /* border: 1px solid #e5e7eb; */
+    /* border-radius: 12px; */
+    overflow: hidden;
+    background: white;
+    /* box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); */
+}
+
+.smartTableTitle {
+    padding: 1rem 1.25rem;
+    background: #ffffff;
+    border-bottom: 1px solid #f3f4f6;
+    font-weight: 700;
+    color: #111827;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.smartTableScroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    text-align: center;
+}
+
+.smartTable {
+    border-collapse: collapse;
+    width: auto;
+    max-width: none;
+    /* Allow it to be wider than container for scrolling */
+    min-width: auto;
+    display: inline-table;
+    margin: 0 auto;
+}
+
+.smartTableHeaderCell {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.smartTableCell {
+    padding: 0.95rem 1rem;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #111827;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.smartTableNarrowCell {
+    padding-left: 0.15rem !important;
+    padding-right: 0.15rem !important;
+    width: 1px;
+    white-space: nowrap;
+}
+
+.smartTableLabelCell {
+    text-align: left;
+    font-weight: 700;
+    color: #4b5563;
+    font-size: 1.1rem;
+    background: #f9fafb;
+    border-right: 1px solid #f3f4f6;
+    padding-left: 1.15rem;
+}
+
+.smartTableRowTotal .smartTableCell {
+    background: #f8fafc;
+    color: #1d4ed8;
+    font-weight: 800;
+    border-top: 2px solid #e2e8f0;
+}
+
+.smartTableFooter {
+    padding: 0.75rem 1.25rem;
+    background: #ffffff;
+    border-top: 1px solid #f3f4f6;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.exportButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.exportButton:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    color: #111827;
+    transform: translateY(-1px);
+}
+
+.smartTableInput {
+    width: 72px;
+    height: 42px;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    background: #fff;
+    color: #111827;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+    /* box-sizing: border-box; */
+    /* padding: 0 0.5rem; */
+    display: block;
+    margin: 0 auto;
+}
+
+.smartTableInput:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.smartTableRowCarry .smartTableCell {
+    padding-bottom: 0.25rem;
+    border-bottom: none;
+}
+
+.smartTableCarryInput {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #576b8a;
+    border-radius: 50%;
+    background: transparent;
+    color: #111827;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.smartTableCarryInput:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+
+
+.virtualKeypad {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 70%;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f1f5f9;
+    border-radius: 12px;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+}
+
+.keypadButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.keypadButtonWide {
+    width: auto;
+    min-width: 48px;
+    padding: 0 1rem;
+}
+
+.keypadSvgWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.keypadSvgWrap svg {
+    width: 100%;
+    height: 100%;
+}
+
+.keypadButton:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.keypadButton:active {
+    background: #e2e8f0;
+    transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+    .questionCard {
+        padding: 0.75rem;
+        padding-top: 2.5rem;
+    }
+
+    .questionContent {
+        margin-bottom: 1rem;
+        line-height: 1.3;
+        font-size: 0.85rem;
+        gap: 0.25rem;
+    }
+
+    .questionTextRow {
+        margin-bottom: 0.4rem;
+    }
+
+    .questionText {
+        font-size: 0.9rem;
+        line-height: 1.25;
+        white-space: normal;
+    }
+
+    .input {
+        font-size: 0.75rem;
+        padding: 0.15rem 0.3rem;
+        min-height: 28px;
+        min-width: 28px;
+    }
+
+    .submitButton {
+        margin-top: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .smartTableOuter {
+        padding: 0.4rem 0.1rem;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .smartTableContainer {
+        width: auto !important;
+        max-width: 100%;
+        margin: 0.2rem auto;
+        border-radius: 6px;
+    }
+
+    .smartTableScroll {
+        width: auto !important;
+        display: flex;
+        justify-content: center;
+    }
+
+    .smartTable {
+        width: auto !important;
+        table-layout: auto !important;
+    }
+
+    .smartTableHeaderCell {
+        padding: 0.15rem 0px !important;
+        font-size: 0.6rem !important;
+    }
+
+    .smartTableCell {
+        padding: 0.15rem 0px !important;
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+    }
+
+    .smartTableLabelCell {
+        padding-left: 0.4rem !important;
+        font-size: 0.8rem !important;
+    }
+
+    .smartTableInput {
+        width: 54px !important;
+        min-width: 34px !important;
+        height: 42px !important;
+        font-size: 1.0rem !important;
+        font-weight: 700 !important;
+        border-radius: 4px !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+    }
+
+    .smartTableCarryInput {
+        width: 20px !important;
+        height: 20px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .keypadButton {
+        width: 36px;
+        height: 36px;
+        font-size: 0.95rem;
+    }
+
+    .virtualKeypad {
+        gap: 5px;
+        padding: 0.4rem;
+        margin-top: 0.75rem;
+        width: calc(100% + 1rem);
+        margin-left: -0.5rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+}
+
+@media (max-width: 400px) {
+    .questionCard {
+        padding: 0.5rem;
+        padding-top: 2.25rem;
+    }
+
+    .questionText {
+        font-size: 0.85rem;
+    }
+
+    .smartTableHeaderCell {
+        padding: 0.1rem 0px !important;
+        font-size: 0.6rem !important;
+    }
+
+    .smartTableCell {
+        padding: 0.1rem 0px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .smartTableInput {
+        width: 50px !important;
+        min-width: 30px !important;
+        height: 38px !important;
+        font-size: 1.0rem !important;
+        font-weight: 700 !important;
+        padding: 0 !important;
+    }
+
+    .keypadButton {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+
+    .virtualKeypad {
+        gap: 4px;
+        padding: 0.35rem;
+    }
+}
+
+/* Vertical Multiplication Interactive Layout */
+.vertMultContainer {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    min-width: 100px;
+}
+
+.vertMultRow {
+    display: flex;
+    justify-content: flex-end;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.vertMultSpacingNormal {
+    letter-spacing: 0.4em;
+}
+
+.vertMultMiddleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border-bottom: 3px solid #0f172a;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.vertMultOperator {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-right: 1.25rem;
+}
+
+.vertMultInputGroup {
+    display: flex;
+    align-items: center;
+}
+
+.vertMultInput {
+    width: 44px;
+    height: 52px;
+    border: 2px solid #3b82f6;
+    border-right-style: dashed;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    transition: all 0.2s;
+}
+
+.vertMultInput:last-child {
+    border-right-style: solid;
+}
+
+.vertMultInput:focus {
+    outline: none;
+    background: #eff6ff;
+    border-color: #2563eb;
+}
+
+@media (max-width: 768px) {
+    .vertMultRow { font-size: 1.5rem; }
+    .vertMultOperator { font-size: 1.35rem; }
+    .vertMultInput { width: 34px; height: 42px; font-size: 1.4rem; }
+}
+
+.markdownTableWrap {
+    width: 100%;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.markdownTableWrap table {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.smartTable {
+    border-collapse: collapse;
+    width: auto;
+    max-width: none;
+    display: inline-table;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.smartTableHeaderCell {
+    padding: 0.5rem 0.2rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4b5563;
+    text-transform: uppercase;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.smartTableCell {
+    padding: 0.6rem 0.2rem;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.3s ease;
+}
+
+.smartTableCellHighlighted {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 2px solid #3b82f6 !important;
+    border-radius: 4px;
+}
+
+.smartTableRightAlign {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.smartTablePrefixWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.smartTablePrefix {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.smartTableCell :global(.input) {
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+}
+
+.smallBox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: #f8fafc;
+    color: #1e293b;
+    margin: 0 4px;
+    vertical-align: middle;
+}
+
+.inlineBlankWrap {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    vertical-align: middle;
+    margin: 0 0.05rem;
+}
+
+.selectableSentence {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 1.5rem 0;
+    padding: 1.25rem;
+    background: #f8fafc;
+    border: 2.5px solid #e2e8f0;
+    border-radius: 14px;
+}
+
+.token {
+    padding: 0.45rem 1rem;
+    background: white;
+    border: 2.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.token:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.15);
+}
+
+.tokenSelected {
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px);
+}
+
+.tokenCorrect {
+    border-color: #10b981 !important;
+    background: #10b981 !important;
+    color: white !important;
+}
+
+.tokenIncorrect {
+    border-color: #ef4444 !important;
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+.tokenDisabled {
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.9;
+}
+
+
+/* Arithmetic Work Layout */
+:global(.arithmeticWork) {
+    background: transparent;
+    padding: 2rem 1rem;
+    position: relative;
+    margin: 1rem 0;
+}
+
+.inlineImageWrapper {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0.5rem;
+}
+
+.inlineImage {
+    max-width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+:global(.arithmeticWork) {
+    /* Fully justify left */
+    max-width: fit-content;
+    font-family: 'Patrick Hand', cursive;
+    overflow: visible;
+}
+
+:global(.arithmeticWork .smartTable) {
+    border-collapse: separate;
+    border-spacing: 0.8rem 0.2rem;
+    margin: 0;
+    border: none !important;
+}
+
+:global(.arithmeticWork .smartTableCell) {
+    font-size: 2.4rem;
+    color: #1a202c;
+    padding: 0.2rem;
+    text-align: center;
+    position: relative;
+    width: 3.6rem; /* Fixed width for perfect alignment */
+    height: 3.6rem;
+    line-height: 1;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Operator Column (Minus sign) should be narrower */
+:global(.arithmeticWork .smartTableCell:first-child) {
+    width: 2rem;
+    min-width: 2rem;
+    color: #4a5568;
+}
+
+/* Carry Row Styling */
+:global(.arithmeticWork tr:nth-child(1) .smartTableCell) {
+    font-size: 1.4rem;
+    color: #1a202c; /* Carry is dark in image */
+    font-weight: 800;
+    padding-bottom: 0.4rem;
+    vertical-align: bottom;
+}
+
+/* Blue Box for Struck Digits */
+:global(.arithmeticWork .smartTableCellHighlighted) {
+    background-color: #eff6ff !important; /* Light blue */
+    border: 2px solid #3b82f6 !important; /* Blue border */
+    border-radius: 4px;
+}
+
+/* Strike-through effect */
+:global(.arithmeticWork .smartTableCellHighlighted)::after {
+    content: '';
+    position: absolute;
+    top: 45%;
+    left: 15%;
+    width: 70%;
+    height: 3px;
+    background: #ef4444; /* Bright red strike */
+    transform: rotate(-35deg);
+    border-radius: 4px;
+    z-index: 5;
+}
+
+/* Result Line */
+:global(.arithmeticWork tr:nth-child(3)) {
+    border-bottom: 3px solid #1a202c !important;
+}
+
+:global(.arithmeticWork .smartTableInput) {
+    width: 3.2rem !important;
+    height: 3.2rem !important;
+    border: 2px solid #3b82f6 !important;
+    background: #fff !important;
+    font-size: 2.2rem !important;
+    text-align: center;
+    border-radius: 8px;
+    margin: 0 auto; /* Center in cell */
+    display: block;
+    font-family: 'Patrick Hand', cursive !important;
+}
+
+/* Result Line */
+:global(.arithmeticWork tr:nth-child(3)) {
+    border-bottom: 2px solid #333;
+}
+
+
+
+.inputInstantHint {
+    border-color: #3b82f6 !important;
+    background-color: #eff6ff !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.inputOneDigit {
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    text-align: center !important;
+    font-size: 1.25rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
