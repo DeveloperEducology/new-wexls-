@@ -180,11 +180,7 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     items: Array.isArray(question.items) ? question.items : undefined,
     poolPosition: question.poolPosition,
     answer,
-    correctAnswerIndex: Number.isFinite(Number(question.correctAnswerIndex))
-      ? Number(question.correctAnswerIndex)
-      : Number.isFinite(Number(question.correct_answer_index))
-        ? Number(question.correct_answer_index)
-      : null,
+    correctAnswerIndex: normalizeIndex(question.correctAnswerIndex) ?? normalizeIndex(question.correct_answer_index),
     solution: normalizeSolution(question.solution || question.explanation),
     metadata: {
       ...(question.metadata || {}),
@@ -217,6 +213,12 @@ function normalizeSolution(solution) {
   return solution;
 }
 
+function normalizeIndex(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : null;
+}
+
 function parseAnswer(value) {
   if (value == null) return null;
   if (typeof value !== 'string') return value;
@@ -242,9 +244,7 @@ function normalizeFractionsQuestion(question, { skill, seed }) {
     parts: Array.isArray(question.parts) ? question.parts : [],
     options: Array.isArray(question.options) ? question.options : [],
     answer,
-    correctAnswerIndex: Number.isFinite(Number(question.correctAnswerIndex))
-      ? Number(question.correctAnswerIndex)
-      : null,
+    correctAnswerIndex: normalizeIndex(question.correctAnswerIndex),
     solution: normalizeSolution(question.solution || question.explanation),
     metadata: {
       ...(question.metadata || {}),
@@ -283,9 +283,7 @@ function normalizeTimeQuestion(question, { skill, seed }) {
     parts: normalizedParts,
     options: Array.isArray(question.options) ? question.options : [],
     answer,
-    correctAnswerIndex: Number.isFinite(Number(question.correctAnswerIndex))
-      ? Number(question.correctAnswerIndex)
-      : null,
+    correctAnswerIndex: normalizeIndex(question.correctAnswerIndex),
     solution,
     metadata,
   };

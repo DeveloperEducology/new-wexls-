@@ -466,7 +466,16 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
                   disabled={isAnswered}
                   onChange={(event) => {
                     const nextValue = event.target.value.replace(/\D/g, '').slice(-1);
-                    onAnswer(writeAnswer(userAnswer, cell.id, nextValue));
+                    const nextAnswer = writeAnswer(userAnswer, cell.id, nextValue);
+                    const nextJoined = (answerRow?.cells || [])
+                      .map((answerCell) => readAnswer(nextAnswer, answerCell.id))
+                      .join('');
+
+                    onAnswer(
+                      isVerticalAdditionReplica
+                        ? { ...nextAnswer, _joined: nextJoined }
+                        : nextAnswer
+                    );
 
                     const nextIndex = isVerticalAdditionReplica ? cellIndex - 1 : cellIndex + 1;
                     if (nextValue && nextIndex >= 0 && nextIndex < (answerRow?.cells || []).length) {

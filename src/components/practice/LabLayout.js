@@ -137,7 +137,7 @@ export default function LabLayout({
                                         {!isAnswered && question?.showSubmitButton !== false && (
                                             <div className={styles.submitRow}>
                                                 <button 
-                                                    onClick={handleSubmit}
+                                                    onClick={() => handleSubmit()}
                                                     disabled={userAnswer === null}
                                                     className={styles.submitButton}
                                                 >
