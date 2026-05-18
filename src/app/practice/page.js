@@ -18,11 +18,17 @@ const ADDITION_TOPIC_OPTIONS = [
   { group: 'Grade 1', label: 'V.7 What does the model show?', value: 'addition-g1-v7-picture-sentence-to-5' },
   { group: 'Grade 1', label: 'Q.5 Word problem sentence', value: 'addition-g1-q5-word-sentence-to-10' },
   { group: 'Grade 1', label: 'Q.13 Sort addition facts - sums to 20', value: 'addition-g1-q13-sort-facts-sums-to-20' },
+  { group: 'Grade 1', label: 'Q.13b Sort facts HTML v2', value: 'addition-g1-q13b-sort-values-html-sums-to-20' },
   { group: 'Grade 1', label: 'Q.14 Make a number - sums to 20', value: 'addition-g1-q14-make-number-sums-to-20' },
   { group: 'Grade 1', label: 'R.1 Word problems with models - sums to 20', value: 'addition-g1-r1-word-problems-models-to-20' },
   { group: 'Grade 2', label: 'B.1 Vertical 10-99', value: 'addition-g2-b1-vertical-10-99' },
   { group: 'Grade 2', label: 'B.2 Vertical 10-99 regrouping', value: 'addition-g2-b2-vertical-10-99-regrouping' },
   { group: 'Grade 2', label: 'G.3 Add three numbers: make 10', value: 'addition-g2-g3-three-addends-make-10' },
+  { group: 'Grade 2', label: 'G.4 Doubles and doubles-plus-one facts', value: 'addition-g2-g4-doubles-plus-one' },
+];
+
+const SUBTRACTION_TOPIC_OPTIONS = [
+  { group: 'Grade 1', label: 'C.1 Subtract with cubes up to 10', value: 'subtraction-g1-c1-remove-cubes-to-10' },
 ];
 
 const TIME_OPTIONS = [
@@ -81,6 +87,7 @@ const TESTING_OPTIONS = [
   { group: 'Visual Parts', label: 'Missing time pattern', value: 'testing-clock-pattern' },
   { group: 'Visual Parts', label: 'Fraction model', value: 'testing-fraction-model' },
   { group: 'Composition', label: 'Mixed text/SVG/blank', value: 'testing-mixed-parts' },
+  { group: 'Composition', label: 'Inputs + options', value: 'testing-doubles-plus-one-mixed' },
 ];
 
 const SOURCE_CONFIGS = {
@@ -96,6 +103,20 @@ const SOURCE_CONFIGS = {
     tips: [
       { label: 'Generator boundary', text: 'Engines create question JSON only.' },
       { label: 'Reusable skills', text: 'Grade skills pass config into shared template families.' },
+    ],
+  },
+  subtraction: {
+    label: 'Subtraction Practice',
+    api: '/api/practice',
+    badge: 'TOPIC',
+    description: 'Topic-wise Subtraction engines, templates, and grade micro-skills.',
+    defaultLogicType: 'subtraction-g1-c1-remove-cubes-to-10',
+    subject: 'math',
+    topic: 'subtraction',
+    options: SUBTRACTION_TOPIC_OPTIONS,
+    tips: [
+      { label: 'Inverse model', text: 'Subtraction reuses the shared tool pattern, but students remove cubes from a row.' },
+      { label: 'Generator boundary', text: 'Subtraction engines create question JSON only.' },
     ],
   },
   time: {
@@ -185,6 +206,7 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'math' && topic === 'fractions') return 'fractions';
   if (subject === 'math' && topic === 'place-values') return 'place-values';
   if (subject === 'math' && topic === 'addition') return 'addition-topic';
+  if (subject === 'math' && topic === 'subtraction') return 'subtraction';
   if (subject === 'math' && topic === 'testing') return 'testing';
   if (subject === 'social' && topic === 'gk') return 'social-gk';
   return fallback;

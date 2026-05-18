@@ -14,6 +14,16 @@ function writeAnswer(userAnswer, blankId, value) {
   return { ...current, [blankId]: value };
 }
 
+function responsivePx(value, minPx, fallbackMaxPx) {
+  const rawValue = value ?? fallbackMaxPx;
+  const numeric = typeof rawValue === 'number'
+    ? rawValue
+    : Number(String(rawValue).trim().replace('px', ''));
+
+  if (!Number.isFinite(numeric)) return rawValue;
+  return `clamp(${minPx}px, ${Math.max(minPx, numeric * 0.16)}vw, ${numeric}px)`;
+}
+
 function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
   const pieces = String(text || '').split(/(\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
 
@@ -36,13 +46,13 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
             onChange={(event) => onAnswer(writeAnswer(userAnswer, blankId, event.target.value))}
             inputMode="numeric"
             style={{
-              width: 92,
-              height: 48,
-              margin: '0 8px',
+              width: 'clamp(64px, 19vw, 92px)',
+              height: 'clamp(38px, 11vw, 48px)',
+              margin: '0 clamp(4px, 1.6vw, 8px)',
               border: '2px solid #93c5fd',
               borderRadius: 12,
               textAlign: 'center',
-              fontSize: 24,
+              fontSize: 'clamp(18px, 5.5vw, 24px)',
               fontWeight: 900,
               color: '#0f172a',
               background: isAnswered ? '#f8fafc' : '#ffffff',
@@ -117,12 +127,12 @@ function InputPart({ id = 'ans', userAnswer, onAnswer, isAnswered, style }) {
       disabled={isAnswered}
       onChange={(event) => onAnswer(writeAnswer(userAnswer, id, event.target.value))}
       style={{
-        width: 132,
-        height: 50,
+        width: 'clamp(76px, 28vw, 132px)',
+        height: 'clamp(40px, 11vw, 50px)',
         border: '2px solid #93c5fd',
         borderRadius: 12,
         textAlign: 'center',
-        fontSize: 22,
+        fontSize: 'clamp(18px, 5vw, 22px)',
         fontWeight: 900,
         color: '#0f172a',
         background: isAnswered ? '#f8fafc' : '#ffffff',
@@ -137,7 +147,7 @@ function ArithmeticLayout({ layout, userAnswer, onAnswer, isAnswered }) {
   const answerRow = layout?.rows?.find((row) => row.kind === 'answer');
 
   return (
-    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 42, fontWeight: 800, color: '#0f172a' }}>
+    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(30px, 9vw, 42px)', fontWeight: 800, color: '#0f172a' }}>
       {(layout?.rows || []).map((row, rowIndex) => {
         if (row.kind === 'divider') {
           return <div key={rowIndex} style={{ width: '100%', height: 3, background: '#0f172a', borderRadius: 999 }} />;
@@ -230,7 +240,7 @@ function renderPart(part, props, index, context = {}) {
     <div
       key={index}
       style={{
-        fontSize: part.style?.fontSize || 28,
+        fontSize: responsivePx(part.style?.fontSize, 20, 28),
         fontWeight: part.style?.fontWeight || 800,
         color: part.style?.color || '#0f172a',
         lineHeight: 1.45,

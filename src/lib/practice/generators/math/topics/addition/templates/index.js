@@ -34,6 +34,16 @@ export const additionTemplates = {
       regrouping: false
     }
   },
+  'addition.numbers.doublesPlusOne': {
+    id: 'addition.numbers.doublesPlusOne',
+    topic: 'addition',
+    engine: 'doublesPlusOne',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      targetRange: [2, 20],
+      addendCount: 3
+    }
+  },
   'addition.visual.counting': {
     id: 'addition.visual.counting',
     topic: 'addition',
@@ -86,6 +96,17 @@ export const additionTemplates = {
     defaultConfig: {
       range: [1, 20],
       sums: [14, 15, 16]
+    }
+  },
+  'addition.sort.valuesTo20Html': {
+    id: 'addition.sort.valuesTo20Html',
+    topic: 'addition',
+    engine: 'sortFacts',
+    questionType: 'categorization',
+    defaultConfig: {
+      range: [1, 20],
+      sums: [14, 15, 16],
+      renderer: 'html'
     }
   },
   'addition.makeNumber.to20': {

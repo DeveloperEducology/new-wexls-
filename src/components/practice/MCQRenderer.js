@@ -35,6 +35,16 @@ function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
 }
 
+function responsivePx(value, minPx, fallbackMaxPx) {
+  const rawValue = value ?? fallbackMaxPx;
+  const numeric = typeof rawValue === 'number'
+    ? rawValue
+    : Number(String(rawValue).trim().replace('px', ''));
+
+  if (!Number.isFinite(numeric)) return rawValue;
+  return `clamp(${minPx}px, ${Math.max(minPx, numeric * 0.16)}vw, ${numeric}px)`;
+}
+
 function InlineMarkdown({ text }) {
   return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
     const match = piece.match(/^\*\*([^*]+)\*\*$/);
@@ -217,7 +227,7 @@ export default function MCQRenderer({
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 22 }}>
       {question.questionText ? (
-        <h2 style={{ margin: 0, color: '#0f172a', fontSize: 28, lineHeight: 1.25, fontWeight: 900 }}>
+        <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(22px, 5.6vw, 28px)', lineHeight: 1.25, fontWeight: 900 }}>
           <InlineMarkdown text={question.questionText} />
         </h2>
       ) : null}
@@ -312,12 +322,12 @@ export default function MCQRenderer({
                 </div>
               ) : null}
               {!isSvgOption && !isImageOption ? (
-                <div style={{ fontSize: optionLayout.fontSize, fontWeight: optionLayout.mode === 'pictureSentence' ? 500 : 850, lineHeight: 1.35 }}>
+                <div style={{ fontSize: responsivePx(optionLayout.fontSize, 14, optionLayout.fontSize), fontWeight: optionLayout.mode === 'pictureSentence' ? 500 : 850, lineHeight: 1.35 }}>
                   <InlineMarkdown text={getOptionLabel(option, index)} />
                 </div>
               ) : null}
               {isImageOption && getOptionLabel(option, index) ? (
-                <div style={{ fontSize: 14, fontWeight: 850, lineHeight: 1.25, color: '#334155' }}>
+                <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 850, lineHeight: 1.25, color: '#334155' }}>
                   <InlineMarkdown text={getOptionLabel(option, index)} />
                 </div>
               ) : null}

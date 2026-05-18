@@ -44,4 +44,9 @@ export const testingGenerator = {
     description: 'Tests text, row, SVG, and blank rendering from parts.',
     difficulty: 'easy',
   },
+  'testing-doubles-plus-one-mixed': {
+    title: 'Part Tool: Inputs + Options',
+    description: 'Tests blanks and selectable options inside one fill blank question.',
+    difficulty: 'easy',
+  },
 };

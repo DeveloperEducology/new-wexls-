@@ -14,6 +14,7 @@ const RENDERERS = {
   gridArithmetic: FillInTheBlankRenderer,
   vertical_arithmetic: FillInTheBlankRenderer,
   categorization: CategorizationRenderer,
+  categorizationv2: CategorizationRenderer,
   categorySort: CategorizationRenderer,
 };
 

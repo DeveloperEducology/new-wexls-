@@ -4,6 +4,10 @@ import {
   generateAdditionTopicQuestion,
 } from '../../../lib/practice/generators/math/topics/addition';
 import {
+  createSubtractionTopicTemplate,
+  generateSubtractionTopicQuestion,
+} from '../../../lib/practice/generators/math/topics/subtraction';
+import {
   getTimeTemplateConfig,
 } from '../../../lib/practice/generators/math/topics/time';
 import { timeGenerator } from '../../../lib/practice/generators/math/topics/time/registry.js';
@@ -36,7 +40,7 @@ export async function GET(request) {
   const skill = resolveSkill(searchParams);
   const seed = searchParams.get('seed') || Date.now().toString();
 
-  const isMathTopic = subject === 'math' && ['addition', 'time', 'fractions', 'place-values', 'testing'].includes(topic);
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'time', 'fractions', 'place-values', 'testing'].includes(topic);
   const isSocialTopic = subject === 'social' && topic === 'gk';
 
   if (!isMathTopic && !isSocialTopic) {
@@ -130,6 +134,23 @@ export async function GET(request) {
         question,
         seed,
         template: getPlaceValueTemplateConfig(question.metadata?.task || skill),
+      });
+    }
+
+    if (topic === 'subtraction') {
+      const question = generateSubtractionTopicQuestion(config);
+      const template = createSubtractionTopicTemplate(skill);
+
+      return NextResponse.json({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: skill,
+          template,
+          resolved: question.resolvedConfig,
+          config,
+        },
       });
     }
 

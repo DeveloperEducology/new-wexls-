@@ -182,6 +182,79 @@ function buildMixedPartsQuestion(skill) {
   };
 }
 
+function buildDoublesPlusOneMixedQuestion(skill) {
+  const target = 7;
+  const half = Math.floor(target / 2);
+  const parity = target % 2 === 0 ? 'even' : 'odd';
+
+  return {
+    id: `testing-${skill}`,
+    type: 'fillInTheBlank',
+    questionText: `Complete the doubles-plus-one fact for ${target}.`,
+    parts: [
+      {
+        type: 'text',
+        content: `Complete the doubles-plus-one fact for ${target}.`,
+        isVertical: true,
+        style: {
+          textAlign: 'left',
+          fontSize: 28,
+          fontWeight: 400,
+          color: '#000000',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+        },
+      },
+      {
+        type: 'text',
+        content: `${target} = [[left]] + [[right]] + 1`,
+        isVertical: true,
+        style: {
+          textAlign: 'left',
+          fontSize: 26,
+          fontWeight: 400,
+          color: '#000000',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          marginLeft: 44,
+        },
+      },
+      {
+        type: 'text',
+        content: `Is ${target} even or odd?`,
+        isVertical: true,
+        style: {
+          textAlign: 'left',
+          fontSize: 28,
+          fontWeight: 400,
+          color: '#000000',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+        },
+      },
+      {
+        type: 'option_select',
+        id: 'parity',
+        options: [
+          { label: 'even', value: 'even' },
+          { label: 'odd', value: 'odd' },
+        ],
+        isVertical: true,
+        style: {
+          marginLeft: 44,
+        },
+      },
+    ],
+    answer: { left: String(half), right: String(half), parity },
+    correctAnswerText: JSON.stringify({ left: String(half), right: String(half), parity }),
+    solution: {
+      sections: [
+        { type: 'text', content: 'An even number can be split into two equal groups.' },
+        { type: 'text', content: 'An odd number cannot be split into two equal groups. There is always one left over.' },
+        { type: 'text', content: `${target} has two equal groups of ${half} with 1 left over.` },
+        { type: 'text', content: `So, ${target} = ${half} + ${half} + 1, and ${target} is ${parity}.` },
+      ],
+    },
+  };
+}
+
 function buildNumberLineQuestion(skill) {
   return {
     id: `testing-${skill}`,
@@ -336,6 +409,7 @@ const BUILDERS = {
   'testing-clock-pattern': buildClockPatternQuestion,
   'testing-fraction-model': buildFractionModelQuestion,
   'testing-mixed-parts': buildMixedPartsQuestion,
+  'testing-doubles-plus-one-mixed': buildDoublesPlusOneMixedQuestion,
 };
 
 export function generateTestingQuestion(config = {}) {

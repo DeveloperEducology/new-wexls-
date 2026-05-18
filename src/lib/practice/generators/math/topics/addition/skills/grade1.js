@@ -83,6 +83,19 @@ export const grade1AdditionSkills = [
     }
   },
   {
+    id: 'addition-g1-q13b-sort-values-html-sums-to-20',
+    code: 'Q.13b',
+    grade: 1,
+    topic: 'addition',
+    title: 'Sort addition facts - HTML drag and drop',
+    templateId: 'addition.sort.valuesTo20Html',
+    config: {
+      range: [1, 20],
+      sums: [14, 15, 16],
+      renderer: 'html'
+    }
+  },
+  {
     id: 'addition-g1-q14-make-number-sums-to-20',
     code: 'Q.14',
     grade: 1,

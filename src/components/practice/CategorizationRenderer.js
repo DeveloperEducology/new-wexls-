@@ -76,22 +76,48 @@ function SpeakerIcon({ x = 0, y = 0, scale = 1 }) {
   );
 }
 
-function HtmlCategorizationFallback({ categories, items, isCopiable = false, userAnswer, onAnswer, isAnswered }) {
+function HtmlCategorizationFallback({
+  categories,
+  items,
+  isCopiable = false,
+  isRemoval = false,
+  isV2 = false,
+  userAnswer,
+  onAnswer,
+  isAnswered,
+}) {
   const [zones, setZones] = useState({});
   const [copyZones, setCopyZones] = useState({});
+  const [removedZones, setRemovedZones] = useState({});
   const [activeDropZone, setActiveDropZone] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [dragState, setDragState] = useState(null);
+  const [selectedItemId, setSelectedItemId] = useState(null);
   const dragMetaRef = useRef(null);
 
   const cardWidth = 174;
   const cardHeight = 148;
+  const textCardMinWidth = 96;
+  const textCardMaxWidth = 154;
+  const textCardHeight = 54;
+  const getTextCardWidth = (item) => {
+    const contentLength = String(item.content || '').replace(/\s+/g, '').length;
+    return Math.max(textCardMinWidth, Math.min(textCardMaxWidth, contentLength * 15 + 34));
+  };
+  const itemCardWidth = (item) => (isV2 && !item.imageUrl ? getTextCardWidth(item) : cardWidth);
+  const itemCardHeight = (item) => (isV2 && !item.imageUrl ? textCardHeight : cardHeight);
+  const gridCardWidth = isV2 && items.every((item) => !item.imageUrl)
+    ? Math.max(...items.map(getTextCardWidth), textCardMinWidth)
+    : cardWidth;
+  const gridCardHeight = isV2 && items.every((item) => !item.imageUrl) ? textCardHeight : cardHeight;
   useEffect(() => {
     setZones({});
     setCopyZones({});
+    setRemovedZones({});
     setActiveDropZone(null);
     setDraggingId(null);
     setDragState(null);
+    setSelectedItemId(null);
   }, [items]);
 
   useEffect(() => () => {
@@ -113,6 +139,7 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
     } else {
       onAnswer?.(null);
     }
+    setSelectedItemId(null);
   };
 
   const unsortedItems = items.filter((item) => !zones[item.id]);
@@ -128,6 +155,42 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
 
   const commitCopyAnswer = (nextCopyZones) => {
     onAnswer?.(isCopyAnswerComplete(nextCopyZones) ? buildCopyAnswer(nextCopyZones) : null);
+  };
+
+  const buildRemovalAnswer = (nextRemovedZones) => Object.fromEntries(
+    categories.map((category) => {
+      const prefilledCount = Number(category.prefilledCount || 0);
+      const removedCount = (nextRemovedZones[category.id] || []).length;
+      return [category.id, prefilledCount - removedCount];
+    })
+  );
+
+  const isRemovalAnswerComplete = (nextRemovedZones) => categories.every((category) => (
+    (nextRemovedZones[category.id] || []).length === Number(category.removeCount || 0)
+  ));
+
+  const commitRemovalAnswer = (nextRemovedZones) => {
+    onAnswer?.(isRemovalAnswerComplete(nextRemovedZones) ? buildRemovalAnswer(nextRemovedZones) : null);
+  };
+
+  const toggleRemovedCube = (categoryId, cubeIndex) => {
+    if (isAnswered) return;
+    const category = categories.find((candidate) => candidate.id === categoryId);
+    const removeCount = Number(category?.removeCount || 0);
+    const currentRemoved = removedZones[categoryId] || [];
+    const isRemoved = currentRemoved.includes(cubeIndex);
+    const nextRemoved = isRemoved
+      ? currentRemoved.filter((index) => index !== cubeIndex)
+      : currentRemoved.length < removeCount
+        ? [...currentRemoved, cubeIndex]
+        : currentRemoved;
+
+    const next = {
+      ...removedZones,
+      [categoryId]: nextRemoved,
+    };
+    setRemovedZones(next);
+    commitRemovalAnswer(next);
   };
 
   const getCopySourceElement = (itemId) => (
@@ -217,16 +280,27 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
   );
 
   const findPointerDropZone = (clientX, clientY) => {
+    const magnetPadding = isV2 ? 46 : 0;
     const categoryElement = Array.from(document.querySelectorAll('[data-category-zone-id]')).find((element) => {
       const rect = element.getBoundingClientRect();
-      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+      return (
+        clientX >= rect.left - magnetPadding
+        && clientX <= rect.right + magnetPadding
+        && clientY >= rect.top - magnetPadding
+        && clientY <= rect.bottom + magnetPadding
+      );
     });
     if (categoryElement?.dataset.categoryZoneId) return categoryElement.dataset.categoryZoneId;
 
     const sourceTray = document.querySelector('[data-source-tray="true"]');
     if (sourceTray) {
       const rect = sourceTray.getBoundingClientRect();
-      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+      if (
+        clientX >= rect.left - magnetPadding
+        && clientX <= rect.right + magnetPadding
+        && clientY >= rect.top - magnetPadding
+        && clientY <= rect.bottom + magnetPadding
+      ) {
         return 'pool';
       }
     }
@@ -295,13 +369,15 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
   };
 
   const beginPointerDrag = (item, event) => {
-    if (isAnswered || isCopiable) return;
+    if (isAnswered || isCopiable || isRemoval) return;
     if (event.button !== undefined && event.button !== 0) return;
 
     const element = event.currentTarget;
     const rect = element.getBoundingClientRect();
-    const pointerOffsetX = event.clientX - rect.left;
-    const pointerOffsetY = event.clientY - rect.top;
+    const pointerOffsetX = isV2 ? rect.width / 2 : event.clientX - rect.left;
+    const pointerOffsetY = isV2 ? rect.height / 2 : event.clientY - rect.top;
+    const initialX = event.clientX - pointerOffsetX;
+    const initialY = event.clientY - pointerOffsetY;
 
     event.preventDefault();
     element.setPointerCapture?.(event.pointerId);
@@ -313,18 +389,22 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
       pointerId: event.pointerId,
       pointerOffsetX,
       pointerOffsetY,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      moved: false,
       width: rect.width,
       height: rect.height,
-      lastX: rect.left,
-      lastY: rect.top,
+      lastX: initialX,
+      lastY: initialY,
     };
 
     setDraggingId(item.id);
+    setSelectedItemId(null);
     setActiveDropZone(null);
     setDragState({
       item,
-      x: rect.left,
-      y: rect.top,
+      x: initialX,
+      y: initialY,
       width: rect.width,
       height: rect.height,
     });
@@ -340,6 +420,9 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
       if (!meta) return;
       const nextX = event.clientX - meta.pointerOffsetX;
       const nextY = event.clientY - meta.pointerOffsetY;
+      if (Math.abs(event.clientX - meta.startClientX) > 5 || Math.abs(event.clientY - meta.startClientY) > 5) {
+        meta.moved = true;
+      }
       meta.lastX = nextX;
       meta.lastY = nextY;
 
@@ -354,6 +437,18 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
 
     const handlePointerUp = (event) => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      const meta = dragMetaRef.current;
+      if (isV2 && meta && !meta.moved) {
+        setSelectedItemId((current) => (current === meta.itemId ? null : meta.itemId));
+        dragMetaRef.current = null;
+        setDraggingId(null);
+        setDragState(null);
+        setActiveDropZone(null);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        return;
+      }
+
       const zone = findPointerDropZone(event.clientX, event.clientY);
       if (zone) {
         commitPointerDrop(zone);
@@ -387,6 +482,7 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
     flushSync(() => {
       placeItem(itemId, categoryId);
       setDraggingId(null);
+      setSelectedItemId(null);
     });
 
     if (!firstRect) return;
@@ -400,13 +496,13 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
       const dy = firstRect.top - lastRect.top;
 
       movedCard.style.transition = 'none';
-      movedCard.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`;
+      movedCard.style.transform = `translate(${dx}px, ${dy}px)`;
       movedCard.style.zIndex = '2';
       movedCard.getBoundingClientRect();
 
       window.requestAnimationFrame(() => {
         movedCard.style.transition = 'transform 560ms cubic-bezier(0.18, 0.9, 0.2, 1), box-shadow 560ms ease, opacity 160ms ease';
-        movedCard.style.transform = 'translate(0, 0) scale(1)';
+        movedCard.style.transform = 'translate(0, 0)';
         movedCard.style.boxShadow = '0 18px 34px rgba(15, 23, 42, 0.14)';
 
         window.setTimeout(() => {
@@ -618,34 +714,127 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
     </div>
   );
 
+  const renderRemovalMode = () => (
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      {categories.map((category) => {
+        const prefilledCount = Number(category.prefilledCount || 0);
+        const removeCount = Number(category.removeCount || 0);
+        const removed = removedZones[category.id] || [];
+        const remaining = prefilledCount - removed.length;
+        const sourceItem = items[0] || { visual: 'cube', color: category.prefillColor, stroke: category.prefillStroke };
+
+        return (
+          <div
+            key={category.id}
+            style={{
+              padding: 18,
+              border: '2px solid #dbeafe',
+              borderRadius: 16,
+              background: '#ffffff',
+              boxShadow: '0 8px 22px rgba(15, 23, 42, 0.05)',
+            }}
+          >
+            <div style={{ marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
+              {category.label}
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              {Array.from({ length: prefilledCount }).map((_, index) => {
+                const removedCube = removed.includes(index);
+                return (
+                  <button
+                    key={`remove-cube-${index}`}
+                    type="button"
+                    disabled={isAnswered}
+                    onClick={() => toggleRemovedCube(category.id, index)}
+                    style={{
+                      width: 76,
+                      height: 76,
+                      border: `2px solid ${removedCube ? '#fb7185' : '#5cc4ed'}`,
+                      borderRadius: 12,
+                      background: removedCube ? '#fff1f2' : '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: isAnswered ? 'default' : 'pointer',
+                      opacity: removedCube ? 0.38 : 1,
+                      transform: removedCube ? 'scale(0.88)' : 'scale(1)',
+                      position: 'relative',
+                      transition: 'opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease',
+                    }}
+                    aria-pressed={removedCube}
+                  >
+                    {renderCopyVisual(sourceItem, 64, { color: category.prefillColor, stroke: category.prefillStroke })}
+                    {removedCube ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute',
+                          inset: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#e11d48',
+                          fontSize: 46,
+                          fontWeight: 950,
+                          lineHeight: 1,
+                        }}
+                      >
+                        ×
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 14, color: '#64748b', fontSize: 13, fontWeight: 900 }}>
+              Removed {removed.length}/{removeCount}. {remaining} left.
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const renderCard = (item, origin = 'pool', options = {}) => {
     const isDragging = draggingId === item.id && !options.isDragLayer;
+    const isSelected = selectedItemId === item.id;
     const showCompactImage = Boolean(item.imageUrl);
+    const mediaCard = Boolean(item.imageUrl);
+    const effectiveWidth = options.width || itemCardWidth(item);
+    const effectiveHeight = options.height || itemCardHeight(item);
 
     return (
     <div
       key={item.id}
       data-card-id={item.id}
       onPointerDown={(event) => beginPointerDrag(item, event)}
+      onClick={(event) => {
+        if (isV2) event.stopPropagation();
+      }}
       onDoubleClick={() => origin !== 'pool' && !isAnswered && placeItem(item.id, null)}
       title={origin === 'pool' ? 'Drag into a group' : 'Drag to another group or back to the pool'}
       style={{
-        width: options.width || '100%',
-        maxWidth: options.maxWidth || cardWidth,
-        minWidth: options.minWidth || 142,
-        height: cardHeight,
-        border: '2px solid #5cc4ed',
+        width: effectiveWidth,
+        maxWidth: options.maxWidth || effectiveWidth,
+        minWidth: options.minWidth || effectiveWidth,
+        height: effectiveHeight,
+        border: `2px solid ${isSelected ? '#2563eb' : '#5cc4ed'}`,
         borderRadius: 9,
         background: '#ffffff',
-        boxShadow: options.isDragLayer ? '0 24px 48px rgba(15, 23, 42, 0.22)' : '0 10px 22px rgba(15, 23, 42, 0.08)',
+        boxShadow: options.isDragLayer
+          ? '0 24px 48px rgba(15, 23, 42, 0.22)'
+          : isSelected
+            ? '0 18px 34px rgba(37, 99, 235, 0.16)'
+            : '0 10px 22px rgba(15, 23, 42, 0.08)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        flexDirection: 'column',
+        justifySelf: 'center',
+        flexDirection: mediaCard ? 'column' : 'row',
         overflow: 'hidden',
         cursor: isAnswered ? 'default' : 'grab',
         opacity: isDragging ? 0 : 1,
-        transform: options.isDragLayer ? 'scale(1.035)' : 'scale(1)',
+        transform: 'scale(1)',
         viewTransitionName: `sort-card-${item.id}`,
         touchAction: 'none',
         userSelect: 'none',
@@ -697,7 +886,7 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
           </span>
         </>
       ) : (
-        <span style={{ padding: 12, textAlign: 'center', fontSize: 22, lineHeight: 1.1, fontWeight: 900, color: '#0f172a' }}>{item.content}</span>
+        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1, fontWeight: 900, color: '#0f172a' }}>{item.content}</span>
       )}
     </div>
   );
@@ -707,8 +896,8 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
     <div
       key={key}
       style={{
-        width: cardWidth,
-        height: cardHeight,
+        width: gridCardWidth,
+        height: gridCardHeight,
         border: '2px dashed #dbeafe',
         borderRadius: 8,
         background: '#f8fafc',
@@ -727,18 +916,24 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {isCopiable ? renderCopyMode() : (
+      {isRemoval ? renderRemovalMode() : isCopiable ? renderCopyMode() : (
       <>
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(categories.length, 1)}, minmax(260px, 1fr))`, gap: 16 }}>
         {categories.map((category) => {
           const placedItems = items.filter((item) => zones[item.id] === category.id);
           const rows = Math.max(1, Math.ceil(placedItems.length / 2));
-          const minHeight = 108 + rows * (cardHeight + 12) + (activeDropZone === category.id ? 18 : 0);
+          const minHeight = 108 + rows * (gridCardHeight + 12);
 
           return (
           <div
             key={category.id}
             data-zone-id={category.id}
+            data-category-zone-id={category.id}
+            onClick={() => {
+              if (isV2 && selectedItemId && !isAnswered) {
+                placeItemWithRealCardAnimation(selectedItemId, category.id);
+              }
+            }}
             onDragEnter={() => setActiveDropZone(category.id)}
             onDragOver={(event) => {
               event.preventDefault();
@@ -751,14 +946,15 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
             style={{
               minHeight,
               padding: 16,
-              border: `2px solid ${activeDropZone === category.id ? '#2563eb' : '#5cc4ed'}`,
+              border: `2px solid ${activeDropZone === category.id || (isV2 && selectedItemId) ? '#2563eb' : '#5cc4ed'}`,
               borderRadius: 10,
-              background: activeDropZone === category.id ? '#f8fbff' : '#ffffff',
-              boxShadow: activeDropZone === category.id ? '0 16px 34px rgba(37, 99, 235, 0.14)' : 'none',
+              background: '#ffffff',
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
-              transition: 'min-height 220ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 180ms ease, box-shadow 180ms ease, background 180ms ease',
+              transform: 'scale(1)',
+              transition: 'min-height 220ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 120ms ease',
             }}
           >
             <div style={{ borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18 }}>
@@ -768,11 +964,11 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
               data-zone-grid
               style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidth}px, ${cardWidth}px))`,
+                gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardWidth}px, ${gridCardWidth}px))`,
                 gap: 12,
                 alignContent: 'start',
                 justifyContent: 'center',
-                minHeight: cardHeight,
+                minHeight: gridCardHeight,
                 transition: 'all 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
               }}
             >
@@ -785,7 +981,13 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
 
       <div
         data-zone-id="pool"
+        data-source-tray="true"
         data-zone-grid
+        onClick={() => {
+          if (isV2 && selectedItemId && zones[selectedItemId] && !isAnswered) {
+            placeItemWithRealCardAnimation(selectedItemId, null);
+          }
+        }}
         onDragEnter={() => setActiveDropZone('pool')}
         onDragOver={(event) => {
           event.preventDefault();
@@ -799,13 +1001,13 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
           padding: 14,
           border: `2px dashed ${activeDropZone === 'pool' ? '#2563eb' : '#dbeafe'}`,
           borderRadius: 12,
-          background: activeDropZone === 'pool' ? '#eff6ff' : '#f8fafc',
+          background: '#f8fafc',
           display: 'grid',
-          gridTemplateColumns: `repeat(auto-fit, minmax(${cardWidth}px, ${cardWidth}px))`,
+          gridTemplateColumns: `repeat(auto-fit, minmax(${gridCardWidth}px, ${gridCardWidth}px))`,
           gap: 12,
           justifyContent: 'center',
-          minHeight: cardHeight + 32,
-          transition: 'background 160ms ease, border-color 160ms ease',
+          minHeight: gridCardHeight + 32,
+          transition: 'border-color 120ms ease',
         }}
       >
         {unsortedItems.map((item) => renderCard(item, 'pool'))}
@@ -818,6 +1020,27 @@ function HtmlCategorizationFallback({ categories, items, isCopiable = false, use
         <p style={{ margin: 0, textAlign: 'center', color: '#475569', fontSize: 13, fontWeight: 800 }}>
           All items sorted. Verify your answer.
         </p>
+      ) : null}
+      {dragState ? (
+        <div
+          style={{
+            position: 'fixed',
+            left: dragState.x,
+            top: dragState.y,
+            width: dragState.width,
+            height: dragState.height,
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}
+        >
+          {renderCard(dragState.item, 'drag', {
+            isDragLayer: true,
+            width: dragState.width,
+            maxWidth: dragState.width,
+            minWidth: dragState.width,
+            height: dragState.height,
+          })}
+        </div>
       ) : null}
       </>
       )}
@@ -881,6 +1104,7 @@ export default function CategorizationRenderer({
 }) {
   const categories = question.categories || question.parts?.find((part) => part.type === 'categorization')?.categories || [];
   const items = question.items || question.parts?.find((part) => part.type === 'categorization')?.items || [];
+  const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 860, scale: 1 });
 
@@ -1181,11 +1405,13 @@ export default function CategorizationRenderer({
           </div>
         ) : null}
 
-        {question.isCopiable ? (
+        {question.isCopiable || question.isRemoval || useHtmlRenderer ? (
           <HtmlCategorizationFallback
             categories={categories}
             items={items}
             isCopiable={Boolean(question.isCopiable)}
+            isRemoval={Boolean(question.isRemoval)}
+            isV2={useHtmlRenderer}
             userAnswer={userAnswer}
             onAnswer={onAnswer}
             isAnswered={isAnswered}

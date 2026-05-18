@@ -8,7 +8,7 @@ const TOPICS = [
     color: '#ff951f',
     subject: 'math',
     topic: 'addition',
-    includes: ['Add with cubes up to 10', 'Addition sentences - which model matches?', 'Word problem sentences', 'Vertical addition 10-99'],
+    includes: ['Add with cubes up to 10', 'Doubles and doubles-plus-one facts', 'Word problem sentences', 'Vertical addition 10-99'],
     groups: [
       {
         title: 'First-grade skills',
@@ -20,6 +20,7 @@ const TOPICS = [
           ['V.7', 'Addition sentences up to 5: what does the model show?', 'addition-g1-v7-picture-sentence-to-5'],
           ['Q.5', 'Model and write addition sentences for word problems', 'addition-g1-q5-word-sentence-to-10'],
           ['Q.13', 'Sort addition facts - sums up to 20', 'addition-g1-q13-sort-facts-sums-to-20'],
+          ['Q.13b', 'Sort addition facts - HTML drag/drop', 'addition-g1-q13b-sort-values-html-sums-to-20'],
           ['Q.14', 'Make a number using addition - sums up to 20', 'addition-g1-q14-make-number-sums-to-20'],
           ['R.1', 'Addition word problems with models - sums up to 20', 'addition-g1-r1-word-problems-models-to-20'],
         ],
@@ -30,6 +31,23 @@ const TOPICS = [
           ['B.1', 'Vertical addition 10-99', 'addition-g2-b1-vertical-10-99'],
           ['B.2', 'Vertical addition 10-99 with regrouping', 'addition-g2-b2-vertical-10-99-regrouping'],
           ['G.3', 'Add three numbers: make 10', 'addition-g2-g3-three-addends-make-10'],
+          ['G.4', 'Complete doubles and doubles-plus-one facts', 'addition-g2-g4-doubles-plus-one'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'subtraction',
+    title: 'Subtraction',
+    color: '#ef6c35',
+    subject: 'math',
+    topic: 'subtraction',
+    includes: ['Remove cubes from a row', 'Subtraction facts up to 10', 'Model subtraction sentences'],
+    groups: [
+      {
+        title: 'First-grade skills',
+        skills: [
+          ['C.1', 'Subtract with cubes up to 10', 'subtraction-g1-c1-remove-cubes-to-10'],
         ],
       },
     ],
@@ -152,7 +170,7 @@ const TOPICS = [
     color: '#d64d3d',
     subject: 'math',
     topic: 'testing',
-    includes: ['Interactive protractor', 'Copy drag/drop', 'Categorization', 'Number line', 'Clock pattern'],
+    includes: ['Interactive protractor', 'Copy drag/drop', 'Categorization', 'Number line', 'Inputs plus options'],
     groups: [
       {
         title: 'Interactive parts',
@@ -171,6 +189,12 @@ const TOPICS = [
           ['TEST.7', 'Missing time pattern', 'testing-clock-pattern'],
           ['TEST.8', 'Fraction model', 'testing-fraction-model'],
           ['TEST.9', 'Mixed text/SVG/blank', 'testing-mixed-parts'],
+        ],
+      },
+      {
+        title: 'Composition',
+        skills: [
+          ['TEST.10', 'Inputs + options', 'testing-doubles-plus-one-mixed'],
         ],
       },
     ],

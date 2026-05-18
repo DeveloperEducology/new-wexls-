@@ -33,6 +33,7 @@ export function generateSortFactsQuestion(template = {}, variables = {}) {
   return {
     id: uid(),
     type: 'categorization',
+    renderer: template.config?.renderer || undefined,
     questionText: 'Sort.',
     parts: [],
     options: [],

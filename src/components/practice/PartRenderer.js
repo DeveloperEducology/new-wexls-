@@ -15,6 +15,16 @@ function writeAnswer(userAnswer, blankId, value) {
   return { ...current, [blankId]: value };
 }
 
+function responsivePx(value, minPx, fallbackMaxPx) {
+  const rawValue = value ?? fallbackMaxPx;
+  const numeric = typeof rawValue === 'number'
+    ? rawValue
+    : Number(String(rawValue).trim().replace('px', ''));
+
+  if (!Number.isFinite(numeric)) return rawValue;
+  return `clamp(${minPx}px, ${Math.max(minPx, numeric * 0.16)}vw, ${numeric}px)`;
+}
+
 function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
 }
@@ -51,13 +61,13 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
             onChange={(event) => onAnswer(writeAnswer(userAnswer, blankId, event.target.value))}
             inputMode="numeric"
             style={{
-              width: 92,
-              height: 48,
-              margin: '0 8px',
+              width: 'clamp(64px, 19vw, 92px)',
+              height: 'clamp(38px, 11vw, 48px)',
+              margin: '0 clamp(4px, 1.6vw, 8px)',
               border: '2px solid #93c5fd',
               borderRadius: 12,
               textAlign: 'center',
-              fontSize: 24,
+              fontSize: 'clamp(18px, 5.5vw, 24px)',
               fontWeight: 900,
               color: '#0f172a',
               background: isAnswered ? '#f8fafc' : '#ffffff',
@@ -114,7 +124,7 @@ function TextPart({ part, userAnswer, onAnswer, isAnswered }) {
   return (
     <div
       style={{
-        fontSize: part.style?.fontSize || 28,
+        fontSize: responsivePx(part.style?.fontSize, 20, 28),
         fontWeight: part.style?.fontWeight || 800,
         color: part.style?.color || '#0f172a',
         lineHeight: 1.45,
@@ -183,12 +193,12 @@ function InputPart({ part, userAnswer, onAnswer, isAnswered }) {
       disabled={isAnswered}
       onChange={(event) => onAnswer(writeAnswer(userAnswer, id, event.target.value))}
       style={{
-        width: 132,
-        height: 50,
+        width: 'clamp(76px, 28vw, 132px)',
+        height: 'clamp(40px, 11vw, 50px)',
         border: '2px solid #93c5fd',
         borderRadius: 12,
         textAlign: 'center',
-        fontSize: 22,
+        fontSize: 'clamp(18px, 5vw, 22px)',
         fontWeight: 900,
         color: '#0f172a',
         background: isAnswered ? '#f8fafc' : '#ffffff',
@@ -196,6 +206,62 @@ function InputPart({ part, userAnswer, onAnswer, isAnswered }) {
         ...part.style,
       }}
     />
+  );
+}
+
+function OptionSelectPart({ part, userAnswer, onAnswer, isAnswered }) {
+  const id = part.id || part.answerId || 'selected';
+  const selectedValue = readAnswer(userAnswer, id);
+  const options = Array.isArray(part.options) ? part.options : [];
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 'clamp(12px, 3vw, 22px)',
+        alignItems: 'center',
+        justifyContent: part.align || 'flex-start',
+        width: '100%',
+        ...(part.style || {}),
+      }}
+    >
+      {options.map((option, index) => {
+        const value = typeof option === 'object'
+          ? option.value ?? option.id ?? option.label ?? option.text
+          : option;
+        const label = typeof option === 'object'
+          ? option.label ?? option.text ?? option.value ?? option.id
+          : option;
+        const selected = String(selectedValue) === String(value);
+
+        return (
+          <button
+            key={`${value}-${index}`}
+            type="button"
+            disabled={isAnswered}
+            onClick={() => onAnswer(writeAnswer(userAnswer, id, value))}
+            style={{
+              minWidth: 'clamp(112px, 26vw, 150px)',
+              minHeight: 'clamp(58px, 12vw, 76px)',
+              padding: '12px 24px',
+              border: `2px solid ${selected ? '#38a5e8' : '#a7e3fb'}`,
+              borderRadius: 8,
+              background: selected ? '#eef6ff' : '#ffffff',
+              color: '#000000',
+              fontSize: 'clamp(20px, 5vw, 28px)',
+              fontWeight: 400,
+              fontFamily: 'Arial, Helvetica, sans-serif',
+              cursor: isAnswered ? 'default' : 'pointer',
+              boxShadow: selected ? '0 3px 0 rgba(56, 165, 232, 0.16)' : 'none',
+              transition: 'border-color 140ms ease, background 140ms ease, box-shadow 140ms ease',
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -423,7 +489,7 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
         alignItems: 'flex-end',
         gap: isVerticalAdditionReplica ? 3 : 6,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fontSize: isVerticalAdditionReplica ? 30 : 42,
+          fontSize: isVerticalAdditionReplica ? 'clamp(24px, 7vw, 30px)' : 'clamp(30px, 9vw, 42px)',
         lineHeight: 1.05,
         fontWeight: isVerticalAdditionReplica ? 500 : 800,
         color: '#0f172a',
@@ -724,6 +790,8 @@ function ToolCategorizationPart({ part, userAnswer, onAnswer, isAnswered }) {
     categories: part.categories || part.dropZones || part.dropGroups || [],
     items: part.items || part.sourceItems || part.dragItems || [],
     isCopiable: Boolean(part.isCopiable),
+    isRemoval: Boolean(part.isRemoval),
+    renderer: part.renderer,
     poolPosition: part.poolPosition,
     answer: answerKey,
   };
@@ -995,6 +1063,9 @@ const PART_RENDERERS = {
   svg: SvgPart,
   image: ImagePart,
   input: InputPart,
+  option_select: OptionSelectPart,
+  choice: OptionSelectPart,
+  choices: OptionSelectPart,
   latex: ({ part }) => (
     <div style={{ fontFamily: 'ui-serif, Georgia, serif', fontSize: 26, fontWeight: 850, color: '#0f172a', textAlign: 'center', ...(part.style || {}) }}>
       {cleanText(part.content || '')}
@@ -1004,6 +1075,7 @@ const PART_RENDERERS = {
   row: GroupPart,
   group: GroupPart,
   categorization: ToolCategorizationPart,
+  categorizationv2: ToolCategorizationPart,
   copy_drag_drop: ToolCategorizationPart,
   drag_drop: ToolCategorizationPart,
   interactive_protractor: InteractiveProtractorPart,

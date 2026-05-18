@@ -40,8 +40,20 @@ export const grade2AdditionSkills = [
     }
   },
   {
+    id: 'addition-g2-g4-doubles-plus-one',
+    code: 'G.4',
+    grade: 2,
+    topic: 'addition',
+    title: 'Complete doubles and doubles-plus-one facts',
+    templateId: 'addition.numbers.doublesPlusOne',
+    config: {
+      targetRange: [2, 20],
+      addendCount: 3
+    }
+  },
+  {
     id: 'addition-g2-g4-three-addends-vertical',
-    code: 'G.3',
+    code: 'G.5',
     grade: 2,
     topic: 'addition',
     title: 'Add three numbers: make 10 vertical',
