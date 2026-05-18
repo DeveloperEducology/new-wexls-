@@ -25,6 +25,13 @@ import {
 } from '../../../lib/practice/generators/math/topics/testing/index.js';
 import { generateSmartGKQuestion } from '../../../lib/practice/generators/social/topics/gk/index.js';
 import { gkGenerators } from '../../../lib/practice/generators/social/topics/gk/registry.js';
+import { resolveCompetency } from '../../../lib/competency/index.js';
+import {
+  createMultiplicationTemplate,
+  generateMultiplicationQuestion,
+} from '../../../lib/practice/generators/math/topics/multiplication';
+import { resolveUnitsMeasurementGenerator } from '../../../lib/practice/generators/science/topics/units-measurement/index.js';
+
 
 function resolveSkill(searchParams) {
   return searchParams.get('skill')
@@ -40,10 +47,11 @@ export async function GET(request) {
   const skill = resolveSkill(searchParams);
   const seed = searchParams.get('seed') || Date.now().toString();
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'time', 'fractions', 'place-values', 'testing'].includes(topic);
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing'].includes(topic);
   const isSocialTopic = subject === 'social' && topic === 'gk';
+  const isScienceTopic = subject === 'science' && topic === 'units-measurement';
 
-  if (!isMathTopic && !isSocialTopic) {
+  if (!isMathTopic && !isSocialTopic && !isScienceTopic) {
     return NextResponse.json(
       { success: false, error: `Unsupported practice route: ${subject}/${topic}` },
       { status: 404 },
@@ -59,6 +67,8 @@ export async function GET(request) {
       practiceLevel: Number(searchParams.get('practiceLevel') || 1),
       levelStreak: Number(searchParams.get('levelStreak') || 0),
       lastResult: searchParams.get('lastResult') || 'none',
+      remediationActive: searchParams.get('remediationActive') === 'true',
+      remediationStep: Number(searchParams.get('remediationStep') || 0),
     },
     variables: { seed },
   };
@@ -70,7 +80,7 @@ export async function GET(request) {
         { topic, skill, seed, engine: 'gk', subject: 'social' },
       );
 
-      return NextResponse.json({
+      return NextResponse.json(withCompetency({
         success: true,
         question,
         seed,
@@ -78,7 +88,7 @@ export async function GET(request) {
           logic_type: skill,
           ...(gkGenerators[skill] || {}),
         },
-      });
+      }, { subject, topic, skill }));
     }
 
     if (topic === 'time') {
@@ -87,12 +97,12 @@ export async function GET(request) {
         { skill, seed },
       );
 
-      return NextResponse.json({
+      return NextResponse.json(withCompetency({
         success: true,
         question,
         seed,
         template: getTimeTemplateConfig(skill, question),
-      });
+      }, { subject, topic, skill }));
     }
 
     if (topic === 'testing') {
@@ -101,12 +111,12 @@ export async function GET(request) {
         { topic, skill, seed, engine: 'testing' },
       );
 
-      return NextResponse.json({
+      return NextResponse.json(withCompetency({
         success: true,
         question,
         seed,
         template: getTestingTemplateConfig(skill),
-      });
+      }, { subject, topic, skill }));
     }
 
     if (topic === 'fractions') {
@@ -115,12 +125,12 @@ export async function GET(request) {
         { skill, seed },
       );
 
-      return NextResponse.json({
+      return NextResponse.json(withCompetency({
         success: true,
         question,
         seed,
         template: getFractionsV2TemplateConfig(skill),
-      });
+      }, { subject, topic, skill }));
     }
 
     if (topic === 'place-values') {
@@ -129,19 +139,19 @@ export async function GET(request) {
         { topic, skill, seed, engine: 'place-values' },
       );
 
-      return NextResponse.json({
+      return NextResponse.json(withCompetency({
         success: true,
         question,
         seed,
         template: getPlaceValueTemplateConfig(question.metadata?.task || skill),
-      });
+      }, { subject, topic, skill }));
     }
 
     if (topic === 'subtraction') {
       const question = generateSubtractionTopicQuestion(config);
       const template = createSubtractionTopicTemplate(skill);
 
-      return NextResponse.json({
+      return NextResponse.json(withCompetency({
         success: true,
         question,
         seed,
@@ -151,13 +161,50 @@ export async function GET(request) {
           resolved: question.resolvedConfig,
           config,
         },
-      });
+      }, { subject, topic, skill }));
+    }
+
+    if (subject === 'science' && topic === 'units-measurement') {
+      const generator = resolveUnitsMeasurementGenerator(skill, config);
+      if (!generator) {
+        throw new Error(`Could not resolve generator for ${skill}`);
+      }
+      
+      const questionData = generator.generate({ ...config.variables, difficulty: config.difficulty });
+      const question = normalizeGenericTopicQuestion(
+        questionData,
+        { topic, skill, seed, engine: generator.template.engine, subject }
+      );
+      
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: generator.template,
+      }, { subject, topic, skill }));
+    }
+
+    if (topic === 'multiplication') {
+      const question = generateMultiplicationQuestion(config);
+      const template = createMultiplicationTemplate(skill);
+
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: skill,
+          template,
+          resolved: question.resolvedConfig,
+          config,
+        },
+      }, { subject, topic, skill }));
     }
 
     const question = generateAdditionTopicQuestion(config);
     const template = createAdditionTopicTemplate(skill);
 
-    return NextResponse.json({
+    return NextResponse.json(withCompetency({
       success: true,
       question,
       seed,
@@ -167,11 +214,41 @@ export async function GET(request) {
         resolved: question.resolvedConfig,
         config,
       },
-    });
+    }, { subject, topic, skill }));
   } catch (error) {
     console.error('Practice API Error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
+}
+
+function withCompetency(payload, { subject, topic, skill }) {
+  const competency = resolveCompetency({
+    subject,
+    topic,
+    skillId: skill,
+    templateId: payload.question?.metadata?.templateId,
+  });
+
+  if (!competency || !payload.question) return payload;
+
+  return {
+    ...payload,
+    competency,
+    question: {
+      ...payload.question,
+      metadata: {
+        ...(payload.question.metadata || {}),
+        competencyId: competency.id,
+        competency,
+      },
+    },
+    template: payload.template
+      ? {
+          ...payload.template,
+          competency,
+        }
+      : payload.template,
+  };
 }
 
 function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, subject = 'math' }) {

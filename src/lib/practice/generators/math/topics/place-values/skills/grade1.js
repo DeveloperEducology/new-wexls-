@@ -4,6 +4,7 @@ export const grade1PlaceValueSkills = [
     code: 'PV.1',
     grade: 1,
     topic: 'place-values',
+    competencyId: 'place_value_tens_ones',
     title: 'Identify numbers from tens and ones blocks',
     templateId: 'place-values.blocks.units',
     config: { forcedTask: 'identify_from_blocks', difficulty: 'easy' },
@@ -13,6 +14,7 @@ export const grade1PlaceValueSkills = [
     code: 'PV.2',
     grade: 1,
     topic: 'place-values',
+    competencyId: 'place_value_tens_ones',
     title: 'Name the place value of a digit',
     templateId: 'place-values.place-name',
     config: { forcedTask: 'place_name', difficulty: 'easy' },
@@ -22,6 +24,7 @@ export const grade1PlaceValueSkills = [
     code: 'PV.3',
     grade: 1,
     topic: 'place-values',
+    competencyId: 'place_value_tens_ones',
     title: 'Which base-ten model shows the number?',
     templateId: 'place-values.blocks.match-number',
     config: {

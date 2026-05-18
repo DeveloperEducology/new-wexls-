@@ -1,5 +1,25 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { additionSkillsByGrade } from '../lib/practice/generators/math/topics/addition/skills/index.js';
+import { multiplicationSkillsByGrade } from '../lib/practice/generators/math/topics/multiplication/skills/index.js';
+import { unitsMeasurementSkillsByGrade } from '../lib/practice/generators/science/topics/units-measurement/skills/index.js';
+
+const additionHomeGroups = Object.entries(additionSkillsByGrade).map(([grade, skills]) => ({
+  title: grade === 'remediation' ? 'Remediation skills' : `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`,
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
+
+const gradeOrdinal = (grade) => `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`;
+
+const multiplicationHomeGroups = Object.entries(multiplicationSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
+
+const unitsMeasurementHomeGroups = Object.entries(unitsMeasurementSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
 
 const TOPICS = [
   {
@@ -8,33 +28,8 @@ const TOPICS = [
     color: '#ff951f',
     subject: 'math',
     topic: 'addition',
-    includes: ['Add with cubes up to 10', 'Doubles and doubles-plus-one facts', 'Word problem sentences', 'Vertical addition 10-99'],
-    groups: [
-      {
-        title: 'First-grade skills',
-        skills: [
-          ['A.1', 'Addition facts up to 9', 'addition-g1-a1-horizontal-to-9'],
-          ['C.1', 'Add with cubes up to 10', 'addition-g1-c1-visual-counting-to-10'],
-          ['C.2', 'Copy cubes into boxes', 'addition-g1-copy-cubes-to-boxes'],
-          ['E.3', 'Addition sentences up to 10: which model matches?', 'addition-g1-e3-model-match-to-10'],
-          ['V.7', 'Addition sentences up to 5: what does the model show?', 'addition-g1-v7-picture-sentence-to-5'],
-          ['Q.5', 'Model and write addition sentences for word problems', 'addition-g1-q5-word-sentence-to-10'],
-          ['Q.13', 'Sort addition facts - sums up to 20', 'addition-g1-q13-sort-facts-sums-to-20'],
-          ['Q.13b', 'Sort addition facts - HTML drag/drop', 'addition-g1-q13b-sort-values-html-sums-to-20'],
-          ['Q.14', 'Make a number using addition - sums up to 20', 'addition-g1-q14-make-number-sums-to-20'],
-          ['R.1', 'Addition word problems with models - sums up to 20', 'addition-g1-r1-word-problems-models-to-20'],
-        ],
-      },
-      {
-        title: 'Second-grade skills',
-        skills: [
-          ['B.1', 'Vertical addition 10-99', 'addition-g2-b1-vertical-10-99'],
-          ['B.2', 'Vertical addition 10-99 with regrouping', 'addition-g2-b2-vertical-10-99-regrouping'],
-          ['G.3', 'Add three numbers: make 10', 'addition-g2-g3-three-addends-make-10'],
-          ['G.4', 'Complete doubles and doubles-plus-one facts', 'addition-g2-g4-doubles-plus-one'],
-        ],
-      },
-    ],
+    includes: ['Counting on', 'Make ten', 'Doubles and near doubles', 'Word problem translation', 'Regrouping'],
+    groups: additionHomeGroups,
   },
   {
     id: 'subtraction',
@@ -52,6 +47,17 @@ const TOPICS = [
       },
     ],
   },
+
+  {
+    id: 'multiplication',
+    title: 'Multiplication',
+    color: '#ff951f',
+    subject: 'math',
+    topic: 'multiplication',
+    includes: ['Facts to 10', 'Vertical multiplication', 'Regrouping', 'Indian number system'],
+    groups: multiplicationHomeGroups,
+  },
+
   {
     id: 'time',
     title: 'Time',
@@ -90,7 +96,7 @@ const TOPICS = [
     color: '#7a56d6',
     subject: 'math',
     topic: 'fractions',
-    includes: ['Identify fractions from shapes', 'Equal parts', 'Fraction of a set', 'Mixed numbers from models'],
+    includes: ['Identify fractions from shapes', 'Equal parts', 'Fraction of a set', 'Remove parts from models'],
     groups: [
       {
         title: 'Visual model skills',
@@ -99,6 +105,13 @@ const TOPICS = [
           ['F.2', 'Equal parts', 'visual_models_equal_parts'],
           ['F.3', 'Fraction of a set', 'visual_models_fraction_of_set'],
           ['F.4', 'Mixed numbers from models', 'visual_models_mixed_numbers'],
+          ['F.5', 'Remove parts from a circle', 'visual_models_remove_fraction_pie'],
+          ['F.6', 'Remove parts from a square', 'visual_models_remove_fraction_square'],
+          ['F.7', 'Remove parts from a rectangle', 'visual_models_remove_fraction_rectangle'],
+          ['F.8', 'Remove parts from a fraction bar', 'visual_models_remove_fraction_bar'],
+          ['F.9', 'Fill parts of a circle', 'visual_models_fill_fraction_pie'],
+          ['F.10', 'Fill parts of a square', 'visual_models_fill_fraction_square'],
+          ['F.11', 'Fill parts of a rectangle', 'visual_models_fill_fraction_rectangle'],
         ],
       },
     ],
@@ -198,6 +211,15 @@ const TOPICS = [
         ],
       },
     ],
+  },
+  {
+    id: 'units-measurement',
+    title: 'Units and measurement',
+    color: '#0ea5e9',
+    subject: 'science',
+    topic: 'units-measurement',
+    includes: ['Units', 'temperature', 'measuring tools', 'metric/customary units', 'conversions'],
+    groups: unitsMeasurementHomeGroups,
   },
 ];
 

@@ -6,6 +6,7 @@ import { wordProblemsEngine } from './engines/wordProblems.js';
 import { operationsEngine } from './engines/operations.js';
 import { comparisonEngine } from './engines/comparison.js';
 import { rationalNumbersEngine } from './engines/rationalNumbers.js';
+import { interactiveFractionModelEngine } from './engines/interactiveFractionModel.js';
 
 /**
  * Registry mapping DB logic_types (or template_ids) to specific engines
@@ -40,6 +41,65 @@ export const fractionsV2Registry = {
     params: {
       subType: 'mixed_numbers',
       shapeTypes: ['circle', 'rectangle', 'pentagon', 'kite']
+    }
+  },
+  'visual_models_remove_fraction_pie': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'remove_fraction',
+      model: 'pie',
+      denominatorPool: [3, 4, 5, 6, 8],
+    }
+  },
+  'visual_models_remove_fraction_square': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'remove_fraction',
+      model: 'square',
+      denominatorPool: [4, 6, 8, 9],
+    }
+  },
+  'visual_models_remove_fraction_rectangle': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'remove_fraction',
+      model: 'rectangle',
+      denominatorPool: [2, 3, 4, 5, 6, 8],
+    }
+  },
+  'visual_models_remove_fraction_bar': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'remove_fraction',
+      model: 'bar',
+      denominatorPool: [3, 4, 5, 6, 8, 10],
+    }
+  },
+  'visual_models_fill_fraction_pie': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'fill_fraction',
+      interaction: 'fill',
+      model: 'pie',
+      denominatorPool: [3, 4, 5, 6, 8],
+    }
+  },
+  'visual_models_fill_fraction_square': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'fill_fraction',
+      interaction: 'fill',
+      model: 'square',
+      denominatorPool: [4, 6, 8, 9],
+    }
+  },
+  'visual_models_fill_fraction_rectangle': {
+    engine: interactiveFractionModelEngine,
+    params: {
+      subType: 'fill_fraction',
+      interaction: 'fill',
+      model: 'rectangle',
+      denominatorPool: [2, 3, 4, 5, 6, 8],
     }
   },
 

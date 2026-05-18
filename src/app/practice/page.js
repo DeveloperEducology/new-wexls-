@@ -9,27 +9,58 @@ import LabLayout from '../../components/practice/LabLayout';
 import PracticeFeedback from '../../components/practice/PracticeFeedback';
 import styles from '../../components/practice/FactoryLayout.module.css';
 import { isAnswerCorrect } from '../../lib/practice/answerValidation';
+import { resolveCompetency } from '../../lib/competency';
+import {
+  appendAttempt,
+  calculateSmartScore,
+  createAttempt,
+  loadMasteryState,
+  saveMasteryState,
+  updateMasteryState,
+} from '../../lib/mastery';
+import { additionSkillsByGrade } from '../../lib/practice/generators/math/topics/addition/skills/index.js';
+import { multiplicationSkillsByGrade } from '../../lib/practice/generators/math/topics/multiplication/skills/index.js';
 
-const ADDITION_TOPIC_OPTIONS = [
-  { group: 'Grade 1', label: 'A.1 Addition facts up to 9', value: 'addition-g1-a1-horizontal-to-9' },
-  { group: 'Grade 1', label: 'C.1 Add with cubes up to 10', value: 'addition-g1-c1-visual-counting-to-10' },
-  { group: 'Grade 1', label: 'C.2 Copy cubes into boxes', value: 'addition-g1-copy-cubes-to-boxes' },
-  { group: 'Grade 1', label: 'E.3 Which model matches?', value: 'addition-g1-e3-model-match-to-10' },
-  { group: 'Grade 1', label: 'V.7 What does the model show?', value: 'addition-g1-v7-picture-sentence-to-5' },
-  { group: 'Grade 1', label: 'Q.5 Word problem sentence', value: 'addition-g1-q5-word-sentence-to-10' },
-  { group: 'Grade 1', label: 'Q.13 Sort addition facts - sums to 20', value: 'addition-g1-q13-sort-facts-sums-to-20' },
-  { group: 'Grade 1', label: 'Q.13b Sort facts HTML v2', value: 'addition-g1-q13b-sort-values-html-sums-to-20' },
-  { group: 'Grade 1', label: 'Q.14 Make a number - sums to 20', value: 'addition-g1-q14-make-number-sums-to-20' },
-  { group: 'Grade 1', label: 'R.1 Word problems with models - sums to 20', value: 'addition-g1-r1-word-problems-models-to-20' },
-  { group: 'Grade 2', label: 'B.1 Vertical 10-99', value: 'addition-g2-b1-vertical-10-99' },
-  { group: 'Grade 2', label: 'B.2 Vertical 10-99 regrouping', value: 'addition-g2-b2-vertical-10-99-regrouping' },
-  { group: 'Grade 2', label: 'G.3 Add three numbers: make 10', value: 'addition-g2-g3-three-addends-make-10' },
-  { group: 'Grade 2', label: 'G.4 Doubles and doubles-plus-one facts', value: 'addition-g2-g4-doubles-plus-one' },
-];
+import { subtractionSkillsByGrade } from '../../lib/practice/generators/math/topics/subtraction/skills/index.js';
+import { unitsMeasurementSkillsByGrade } from '../../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 
-const SUBTRACTION_TOPIC_OPTIONS = [
-  { group: 'Grade 1', label: 'C.1 Subtract with cubes up to 10', value: 'subtraction-g1-c1-remove-cubes-to-10' },
-];
+const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).flatMap(([grade, skills]) =>
+  skills.map((skill) => ({
+    group: `Grade ${grade}`,
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+);
+
+const MULTIPLICATION_OPTIONS = Object.entries(multiplicationSkillsByGrade).flatMap(([grade, skills]) =>
+  skills.map((skill) => ({
+    group: `Grade ${grade}`,
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+);
+
+const gradeLabel = (grade) => {
+  if (grade === 'remediation') return 'Remediation';
+  if (grade === 'prek') return 'Pre-K';
+  return `Grade ${grade}`;
+};
+
+const ADDITION_TOPIC_OPTIONS = Object.entries(additionSkillsByGrade).flatMap(([grade, skills]) => (
+  skills.map((skill) => ({
+    group: gradeLabel(grade),
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+));
+
+const SUBTRACTION_TOPIC_OPTIONS = Object.entries(subtractionSkillsByGrade).flatMap(([grade, skills]) => (
+  skills.map((skill) => ({
+    group: gradeLabel(grade),
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+));
 
 const TIME_OPTIONS = [
   { group: 'Calendar', label: 'Days of the week', value: 'v1_days_of_week' },
@@ -53,6 +84,13 @@ const FRACTIONS_OPTIONS = [
   { group: 'Visual Models', label: 'Equal parts', value: 'visual_models_equal_parts' },
   { group: 'Visual Models', label: 'Fraction of a set', value: 'visual_models_fraction_of_set' },
   { group: 'Visual Models', label: 'Mixed numbers from models', value: 'visual_models_mixed_numbers' },
+  { group: 'Interactive Models', label: 'Remove parts from a circle', value: 'visual_models_remove_fraction_pie' },
+  { group: 'Interactive Models', label: 'Remove parts from a square', value: 'visual_models_remove_fraction_square' },
+  { group: 'Interactive Models', label: 'Remove parts from a rectangle', value: 'visual_models_remove_fraction_rectangle' },
+  { group: 'Interactive Models', label: 'Remove parts from a fraction bar', value: 'visual_models_remove_fraction_bar' },
+  { group: 'Interactive Models', label: 'Fill parts of a circle', value: 'visual_models_fill_fraction_pie' },
+  { group: 'Interactive Models', label: 'Fill parts of a square', value: 'visual_models_fill_fraction_square' },
+  { group: 'Interactive Models', label: 'Fill parts of a rectangle', value: 'visual_models_fill_fraction_rectangle' },
 ];
 
 const PLACE_VALUE_OPTIONS = [
@@ -119,6 +157,20 @@ const SOURCE_CONFIGS = {
       { label: 'Generator boundary', text: 'Subtraction engines create question JSON only.' },
     ],
   },
+  multiplication: {
+  label: 'Multiplication Practice',
+  api: '/api/practice',
+  badge: 'TOPIC',
+  description: 'Multiplication engines, templates, and grade micro-skills.',
+  defaultLogicType: 'multiplication-g2-a1-facts-to-5',
+  subject: 'math',
+  topic: 'multiplication',
+  options: MULTIPLICATION_OPTIONS,
+  tips: [
+    { label: 'Template families', text: 'Skills reuse multiplication templates.' },
+    { label: 'Generator boundary', text: 'Engines create question JSON only.' },
+  ],
+},
   time: {
     label: 'Time Practice',
     api: '/api/practice',
@@ -176,6 +228,20 @@ const SOURCE_CONFIGS = {
       { label: 'Content governance', text: 'GK facts should stay versioned with source, locale, and review metadata.' },
     ],
   },
+  'units-measurement': {
+    label: 'Units & Measurement Practice',
+    api: '/api/practice',
+    badge: 'SCI',
+    description: 'Units, temperature, measuring tools, metric/customary units, and conversions.',
+    defaultLogicType: 'science-g2-p6-read-thermometer-celsius',
+    subject: 'science',
+    topic: 'units-measurement',
+    options: UNITS_MEASUREMENT_OPTIONS,
+    tips: [
+      { label: 'IXL Quality', text: 'SVG thermometers scale responsively across all screens.' },
+      { label: 'Interactive MCQ', text: 'Compare temperatures using multiple SVGs side by side.' },
+    ],
+  },
   testing: {
     label: 'Testing Practice',
     api: '/api/practice',
@@ -209,26 +275,8 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'math' && topic === 'subtraction') return 'subtraction';
   if (subject === 'math' && topic === 'testing') return 'testing';
   if (subject === 'social' && topic === 'gk') return 'social-gk';
+  if (subject === 'science' && topic === 'units-measurement') return 'units-measurement';
   return fallback;
-}
-
-function calculateSmartScore(currentScore, correct) {
-  const score = Number(currentScore || 0);
-
-  if (correct) {
-    if (score < 40) return Math.min(score + 15, 40);
-    if (score < 70) return Math.min(score + 10, 70);
-    if (score < 80) return Math.min(score + 6, 80);
-    if (score < 90) return Math.min(score + 4, 90);
-    if (score < 99) return Math.min(score + 2, 99);
-    return 100;
-  }
-
-  if (score < 40) return Math.max(score - 4, 0);
-  if (score < 70) return Math.max(score - 8, 30);
-  if (score < 80) return Math.max(score - 12, 45);
-  if (score < 90) return Math.max(score - 16, 60);
-  return Math.max(score - 22, 70);
 }
 
 function CorrectPraiseCard({ praiseMessage }) {
@@ -273,11 +321,41 @@ function PracticePageContent() {
   const [transitionState, setTransitionState] = useState('idle');
   const [praiseMessage, setPraiseMessage] = useState(null);
   const [autoSubmit, setAutoSubmit] = useState(false);
+  const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
 
   const sourceConfig = useMemo(() => getSourceConfig(sourceKey), [sourceKey]);
   const questionJson = useMemo(() => (
     JSON.stringify({ question, template: templateJson }, null, 2)
   ), [question, templateJson]);
+  const currentCompetency = useMemo(() => (
+    resolveCompetency({
+      subject: urlSubject || sourceConfig.subject,
+      topic: urlTopic || sourceConfig.topic,
+      skillId: logicType,
+      templateId: question?.metadata?.templateId,
+    })
+  ), [logicType, question?.metadata?.templateId, sourceConfig.subject, sourceConfig.topic, urlSubject, urlTopic]);
+  const prerequisiteLinks = useMemo(() => {
+    const prerequisites = currentCompetency?.prerequisites || [];
+    if (!prerequisites.length) return [];
+
+    return prerequisites.map((competencyId) => {
+      const matchingOption = sourceConfig.options.find((option) => {
+        const optionCompetency = resolveCompetency({
+          subject: urlSubject || sourceConfig.subject,
+          topic: urlTopic || sourceConfig.topic,
+          skillId: option.value,
+        });
+        return optionCompetency?.id === competencyId;
+      });
+
+      return {
+        competencyId,
+        label: matchingOption?.label || competencyId.replaceAll('_', ' '),
+        skillId: matchingOption?.value || null,
+      };
+    });
+  }, [currentCompetency?.prerequisites, sourceConfig.options, sourceConfig.subject, sourceConfig.topic, urlSubject, urlTopic]);
 
   const syncRoute = useCallback((nextSource, nextLogicType) => {
     const params = new URLSearchParams();
@@ -326,6 +404,20 @@ function PracticePageContent() {
       url.searchParams.set('practiceLevel', String(sessionOverride.practiceLevel ?? practiceLevel));
       url.searchParams.set('levelStreak', String(sessionOverride.levelStreak ?? levelStreak));
       url.searchParams.set('lastResult', sessionOverride.lastResult ?? lastResult);
+      const competency = resolveCompetency({
+        subject: urlSubject || sourceConfig.subject,
+        topic: urlTopic || sourceConfig.topic,
+        skillId: logicType,
+      });
+      const storedMastery = loadMasteryState({
+        subject: urlSubject || sourceConfig.subject,
+        topic: urlTopic || sourceConfig.topic,
+        skillId: logicType,
+        competencyId: competency?.id,
+      });
+      const remediationNeeded = sessionOverride.remediationNeeded ?? storedMastery?.remediationNeeded ?? false;
+      url.searchParams.set('remediationActive', remediationNeeded ? 'true' : 'false');
+      url.searchParams.set('remediationStep', remediationNeeded ? '1' : '0');
       url.searchParams.set('seed', String(Date.now()));
 
       const res = await fetch(url.toString());
@@ -334,6 +426,7 @@ function PracticePageContent() {
       if (data?.success && data?.question) {
         setQuestion(data.question);
         setTemplateJson(data.template || null);
+        setQuestionStartedAt(Date.now());
         if (sessionOverride.slideIn) {
           setTransitionState('slideIn');
           window.setTimeout(() => setTransitionState('idle'), 520);
@@ -352,7 +445,54 @@ function PracticePageContent() {
   }, [correctStreak, difficulty, lastResult, levelStreak, logicType, practiceLevel, sourceConfig, urlSubject, urlTopic]);
 
   useEffect(() => {
-    fetchQuestion();
+    const nextSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
+    const nextLogicType = urlSkill
+      || resolveSearchValue(searchParams, 'forcedTask')
+      || resolveSearchValue(searchParams, 'logic_type')
+      || getSourceConfig(nextSource).defaultLogicType;
+    setSourceKey(nextSource);
+    setLogicType(nextLogicType);
+  }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource]);
+
+  useEffect(() => {
+    const competency = resolveCompetency({
+      subject: urlSubject || sourceConfig.subject,
+      topic: urlTopic || sourceConfig.topic,
+      skillId: logicType,
+    });
+    const storedMastery = loadMasteryState({
+      subject: urlSubject || sourceConfig.subject,
+      topic: urlTopic || sourceConfig.topic,
+      skillId: logicType,
+      competencyId: competency?.id,
+    });
+
+    if (storedMastery) {
+      setSmartScore(Number(storedMastery.smartScore || 0));
+      setCorrectStreak(Number(storedMastery.correctStreak || 0));
+      setPracticeLevel(Number(storedMastery.practiceLevel || 1));
+      setLevelStreak(Number(storedMastery.levelStreak || 0));
+      setLastResult(storedMastery.lastResult || 'none');
+      fetchQuestion(false, {
+        correctStreak: Number(storedMastery.correctStreak || 0),
+        practiceLevel: Number(storedMastery.practiceLevel || 1),
+        levelStreak: Number(storedMastery.levelStreak || 0),
+        lastResult: storedMastery.lastResult || 'none',
+      });
+      return;
+    }
+
+    setSmartScore(0);
+    setCorrectStreak(0);
+    setPracticeLevel(1);
+    setLevelStreak(0);
+    setLastResult('none');
+    fetchQuestion(false, {
+      correctStreak: 0,
+      practiceLevel: 1,
+      levelStreak: 0,
+      lastResult: 'none',
+    });
   }, [sourceKey, logicType, difficulty, urlSubject, urlTopic]);
 
   const handleSubmit = (answerOverride = undefined) => {
@@ -361,24 +501,47 @@ function PracticePageContent() {
 
     const correct = isAnswerCorrect(question, answerToCheck);
     const newSmartScore = calculateSmartScore(smartScore, correct);
-    const nextCorrectStreak = correct ? correctStreak + 1 : 0;
-    const nextLevelStreak = correct ? levelStreak + 1 : 0;
-    let nextPracticeLevel = practiceLevel;
-    let finalLevelStreak = nextLevelStreak;
+    const competency = question.metadata?.competency || currentCompetency;
+    const attempt = createAttempt({
+      question: {
+        ...question,
+        metadata: {
+          ...(question.metadata || {}),
+          competencyId: competency?.id || question.metadata?.competencyId || null,
+          competency: competency || question.metadata?.competency || null,
+        },
+      },
+      userAnswer: answerToCheck,
+      isCorrect: correct,
+      difficulty,
+      practiceLevel,
+      smartScoreBefore: smartScore,
+      smartScoreAfter: newSmartScore,
+      startedAt: questionStartedAt,
+    });
+    const previousMastery = loadMasteryState(attempt);
+    const nextMastery = updateMasteryState(previousMastery, attempt);
+    saveMasteryState(attempt, nextMastery);
+    appendAttempt(attempt);
 
-    setSmartScore(newSmartScore);
+    const nextCorrectStreak = nextMastery.correctStreak;
+    const nextLevelStreak = correct ? levelStreak + 1 : 0;
+    const nextPracticeLevel = nextMastery.practiceLevel;
+    const finalLevelStreak = nextMastery.levelStreak;
+    const didLevelUp = correct && nextLevelStreak >= 5;
+
+    setSmartScore(nextMastery.smartScore);
     setCorrectStreak(nextCorrectStreak);
-    if (correct && nextLevelStreak >= 5) {
-      nextPracticeLevel = Math.min(practiceLevel + 1, 5);
-      finalLevelStreak = 0;
+    if (didLevelUp) {
       setPracticeLevel(nextPracticeLevel);
-      setLevelStreak(0);
+      setLevelStreak(finalLevelStreak);
       setLevelModal({
         level: nextPracticeLevel,
         isMaxLevel: nextPracticeLevel === 5,
       });
     } else {
-      setLevelStreak(nextLevelStreak);
+      setPracticeLevel(nextPracticeLevel);
+      setLevelStreak(finalLevelStreak);
     }
     setLastResult(correct ? 'correct' : 'incorrect');
     setIsCorrect(correct);
@@ -386,12 +549,12 @@ function PracticePageContent() {
     setHistory((prev) => [{
       type: question.metadata?.skillId || logicType,
       isCorrect: correct,
-      scoreChange: newSmartScore - smartScore,
+      scoreChange: nextMastery.smartScore - smartScore,
       timestamp: new Date().toLocaleTimeString(),
     }, ...prev].slice(0, 5));
 
     if (correct) {
-      const praisePool = nextLevelStreak >= 5
+      const praisePool = didLevelUp
         ? ['Level up!', 'Brilliant streak!', 'You are moving up!']
         : nextCorrectStreak >= 4
           ? ['Fantastic!', 'Sharp work!', 'Great streak!']
@@ -399,7 +562,7 @@ function PracticePageContent() {
 
       setPraiseMessage({
         title: praisePool[nextCorrectStreak % praisePool.length],
-        subtitle: nextLevelStreak >= 5
+        subtitle: didLevelUp
           ? `Five in a row. Now Level ${nextPracticeLevel}.`
           : `${finalLevelStreak}/5 correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
       });
@@ -411,6 +574,7 @@ function PracticePageContent() {
           practiceLevel: nextPracticeLevel,
           levelStreak: finalLevelStreak,
           lastResult: 'correct',
+          remediationNeeded: false,
           keepTransition: true,
           slideIn: true,
         });
@@ -556,6 +720,60 @@ function PracticePageContent() {
           />
         </div>
       </div>
+
+      {prerequisiteLinks.length ? (
+        <div style={{ background: '#f8fafc', padding: 18, borderRadius: 20, border: '1px solid #dbeafe', marginBottom: 20 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Prerequisites
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {prerequisiteLinks.map((item) => (
+              item.skillId ? (
+                <button
+                  key={item.competencyId}
+                  type="button"
+                  onClick={() => {
+                    setLogicType(item.skillId);
+                    syncRoute(sourceKey, item.skillId);
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    border: '1px solid #dbeafe',
+                    background: '#ffffff',
+                    color: '#2563eb',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                    fontSize: 12,
+                    fontWeight: 850,
+                    lineHeight: 1.25,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <div
+                  key={item.competencyId}
+                  style={{
+                    border: '1px dashed #cbd5e1',
+                    background: '#ffffff',
+                    color: '#64748b',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    lineHeight: 1.25,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {item.label}
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div style={{ background: '#ecfeff', padding: 20, borderRadius: 20, border: '1px solid #cffafe', marginBottom: 20 }}>
         <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#155e75', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

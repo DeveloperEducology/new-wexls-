@@ -4,7 +4,18 @@ function sum(numbers) {
   return numbers.reduce((total, number) => total + number, 0);
 }
 
-function buildAddends({ range, addendCount, targetSum, random }) {
+function buildAddends({ range, addendCount, targetSum, fixedAddend, sameAddends, random }) {
+  if (addendCount === 2 && sameAddends) {
+    const addend = randInt(range.min, range.max, random);
+    return [addend, addend];
+  }
+
+  if (addendCount === 2 && Number.isFinite(Number(fixedAddend))) {
+    const fixed = Number(fixedAddend);
+    const variable = randInt(range.min, range.max, random);
+    return random() < 0.5 ? [fixed, variable] : [variable, fixed];
+  }
+
   if (addendCount === 3 && targetSum) {
     const pairMin = Math.max(range.min, targetSum - range.max);
     const pairMax = Math.min(range.max, targetSum - range.min);
@@ -42,17 +53,17 @@ function hasRegrouping(addends) {
   return false;
 }
 
-function buildVerticalAddends({ range, addendCount, regrouping, targetSum, random }) {
-  if (addendCount !== 2 || typeof regrouping !== 'boolean' || targetSum) {
-    return buildAddends({ range, addendCount, targetSum, random });
+function buildVerticalAddends({ range, addendCount, regrouping, targetSum, fixedAddend, sameAddends, random }) {
+  if (addendCount !== 2 || typeof regrouping !== 'boolean' || targetSum || fixedAddend || sameAddends) {
+    return buildAddends({ range, addendCount, targetSum, fixedAddend, sameAddends, random });
   }
 
   for (let attempt = 0; attempt < 240; attempt += 1) {
-    const addends = buildAddends({ range, addendCount, targetSum, random });
+    const addends = buildAddends({ range, addendCount, targetSum, fixedAddend, sameAddends, random });
     if (hasRegrouping(addends) === regrouping) return addends;
   }
 
-  return buildAddends({ range, addendCount, targetSum, random });
+  return buildAddends({ range, addendCount, targetSum, fixedAddend, sameAddends, random });
 }
 
 function verticalRangeForDifficulty(baseRange, difficulty, history = {}) {
@@ -140,15 +151,19 @@ export function generateNumbersQuestion(template = {}, variables = {}) {
     : baseRange;
   const addendCount = Number(template.config?.addendCount || 2);
   const targetSum = template.config?.targetSum ? Number(template.config.targetSum) : null;
+  const fixedAddend = template.config?.fixedAddend ?? null;
+  const sameAddends = Boolean(template.config?.sameAddends);
   const addends = layout === 'vertical'
     ? buildVerticalAddends({
       range,
       addendCount,
       targetSum,
+      fixedAddend,
+      sameAddends,
       regrouping: effectiveRegrouping,
       random
     })
-    : buildAddends({ range, addendCount, targetSum, random });
+    : buildAddends({ range, addendCount, targetSum, fixedAddend, sameAddends, random });
   const total = sum(addends);
   const [a, b] = addends;
   const shouldShowStrategy = addendCount === 3 && Boolean(findTargetPair(addends, targetSum));

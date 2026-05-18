@@ -10,6 +10,25 @@ export const subtractionTemplates = {
       model: 'cubes',
     },
   },
+  'subtraction.mcq.modelMatch': {
+    id: 'subtraction.mcq.modelMatch',
+    topic: 'subtraction',
+    engine: 'pictureSentence',
+    questionType: 'mcq',
+    defaultConfig: {
+      range: [2, 10],
+      mode: 'findModel'
+    }
+  },
+  'subtraction.mcq.pictureSentence': {
+    id: 'subtraction.mcq.pictureSentence',
+    topic: 'subtraction',
+    engine: 'pictureSentence',
+    questionType: 'mcq',
+    defaultConfig: {
+      range: [2, 10]
+    }
+  }
 };
 
 export function getSubtractionTemplate(templateId) {

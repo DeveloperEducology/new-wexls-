@@ -4,6 +4,7 @@ export const grade1SubtractionSkills = [
     code: 'C.1',
     grade: 1,
     topic: 'subtraction',
+    competencyId: 'subtraction_models_to_10',
     title: 'Subtract with cubes up to 10',
     templateId: 'subtraction.visual.removeCubes',
     config: {

@@ -1,6 +1,6 @@
-import { createSeededRandom, cubeWord, randInt, uid } from './shared.js';
+import { createSeededRandom, randInt, uid } from './shared.js';
 
-const CUBE_PALETTES = [
+const PALETTES = [
   { fill: '#5cc4c0', stroke: '#269b98' },
   { fill: '#60a5fa', stroke: '#2563eb' },
   { fill: '#34d399', stroke: '#059669' },
@@ -8,6 +8,16 @@ const CUBE_PALETTES = [
   { fill: '#fb7185', stroke: '#e11d48' },
   { fill: '#c45add', stroke: '#a83ac4' },
 ];
+
+const OBJECTS = [
+  { imageUrl: 'https://cdn-icons-png.flaticon.com/512/6363/6363577.png', singular: 'toy', plural: 'toys' },
+  { imageUrl: 'https://cdn-icons-png.flaticon.com/512/5120/5120828.png', singular: 'item', plural: 'items' },
+  { imageUrl: 'https://cdn-icons-png.flaticon.com/512/4191/4191509.png', singular: 'object', plural: 'objects' },
+];
+
+function objectWord(count, obj) {
+  return count === 1 ? obj.singular : obj.plural;
+}
 
 export function generateRemoveCubesQuestion(template = {}, variables = {}) {
   const random = createSeededRandom(variables.seed || template.seed || Date.now());
@@ -18,16 +28,29 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
   const minRemove = Math.min(maxRemove, Number(removeRange[0] ?? 1));
   const removeCount = randInt(minRemove, maxRemove, random);
   const remainingCount = startCount - removeCount;
-  const palette = CUBE_PALETTES[randInt(0, CUBE_PALETTES.length - 1, random)];
+  
+  const palette = PALETTES[randInt(0, PALETTES.length - 1, random)];
+  const obj = OBJECTS[randInt(0, OBJECTS.length - 1, random)];
+  
+  const startWord = objectWord(startCount, obj);
+  const removeWord = objectWord(removeCount, obj);
+  
+  const isWordProblem = template.config?.isWordProblem;
+  let questionText;
+  if (isWordProblem) {
+    questionText = `Nina has ${startCount} ${startWord}. She gives away ${removeCount} ${removeWord}. How many ${objectWord(remainingCount, obj)} does she have left?`;
+  } else {
+    questionText = `Start with ${startCount} ${startWord}. Remove ${removeCount} ${removeWord}.`;
+  }
 
   return {
     id: uid(),
     type: 'fillInTheBlank',
-    questionText: `Start with ${startCount} ${cubeWord(startCount)}. Remove ${removeCount} ${cubeWord(removeCount)}.`,
+    questionText,
     parts: [
       {
         type: 'text',
-        content: `Start with ${startCount} ${cubeWord(startCount)}. Remove ${removeCount} ${cubeWord(removeCount)}.`,
+        content: questionText,
         isVertical: true,
       },
       {
@@ -37,7 +60,7 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
         categories: [
           {
             id: 'cube_train',
-            label: `Remove ${removeCount} ${cubeWord(removeCount)} from the row`,
+            label: `Remove ${removeCount} ${removeWord}`,
             prefilledCount: startCount,
             removeCount,
             remainingCount,
@@ -48,8 +71,9 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
         items: [
           {
             id: 'cube',
-            content: 'Cube',
-            visual: 'cube',
+            content: obj.singular,
+            visual: 'image',
+            imageUrl: obj.imageUrl,
             color: palette.fill,
             stroke: palette.stroke,
           },
@@ -67,8 +91,8 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
     correctAnswerText: JSON.stringify({ cube_train: remainingCount, ans: String(remainingCount) }),
     solution: {
       sections: [
-        { type: 'text', content: `Start with ${startCount} ${cubeWord(startCount)}.` },
-        { type: 'text', content: `Remove ${removeCount} ${cubeWord(removeCount)}.` },
+        { type: 'text', content: `Start with ${startCount} ${startWord}.` },
+        { type: 'text', content: `Remove ${removeCount} ${removeWord}.` },
         { type: 'text', content: `${startCount} - ${removeCount} = ${remainingCount}.` },
       ],
     },

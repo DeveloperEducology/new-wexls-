@@ -466,18 +466,182 @@ function FractionModelPart({ part }) {
   );
 }
 
+function getFractionGrid(totalParts, requestedRows, requestedColumns) {
+  if (requestedRows && requestedColumns) {
+    return { rows: Number(requestedRows), columns: Number(requestedColumns) };
+  }
+
+  if (totalParts === 4) return { rows: 2, columns: 2 };
+  if (totalParts === 6) return { rows: 2, columns: 3 };
+  if (totalParts === 8) return { rows: 2, columns: 4 };
+  if (totalParts === 9) return { rows: 3, columns: 3 };
+  return { rows: 1, columns: totalParts };
+}
+
+function polarPoint(cx, cy, radius, degrees) {
+  const radians = (degrees * Math.PI) / 180;
+  return {
+    x: cx + Math.cos(radians) * radius,
+    y: cy + Math.sin(radians) * radius,
+  };
+}
+
+function InteractiveFractionModelPart({ part, userAnswer, onAnswer, isAnswered }) {
+  const totalParts = Math.max(2, Number(part.totalParts ?? part.denominator ?? 4));
+  const targetCount = Math.max(1, Math.min(totalParts, Number(part.removeCount ?? part.fillCount ?? part.numerator ?? 1)));
+  const model = part.model || part.shape || 'pie';
+  const interaction = part.interaction || 'remove';
+  const answerKey = part.answerKey || (interaction === 'fill' ? 'filledCount' : 'removedCount');
+  const selectionKey = interaction === 'fill' ? 'filledParts' : 'removedParts';
+  const currentAnswer = typeof userAnswer === 'object' && userAnswer !== null ? userAnswer : {};
+  const selectedParts = Array.isArray(currentAnswer[selectionKey]) ? currentAnswer[selectionKey] : [];
+  const selectedSet = new Set(selectedParts);
+  const size = Number(part.size ?? 280);
+
+  const updateSelection = (pieceId) => {
+    if (isAnswered) return;
+
+    let next = selectedParts.includes(pieceId)
+      ? selectedParts.filter((id) => id !== pieceId)
+      : [...selectedParts, pieceId];
+
+    if (next.length > targetCount) {
+      next = next.slice(next.length - targetCount);
+    }
+
+    onAnswer({
+      ...currentAnswer,
+      [selectionKey]: next,
+      [answerKey]: String(next.length),
+      totalParts: String(totalParts),
+      fraction: `${next.length}/${totalParts}`,
+    });
+  };
+
+  const pieceStyle = (pieceId) => {
+    const selected = selectedSet.has(pieceId);
+    const isRemove = interaction === 'remove';
+    return {
+      fill: isRemove
+        ? (selected ? '#ffffff' : (part.fillColor || '#bbf7d0'))
+        : (selected ? (part.fillColor || '#bbf7d0') : '#ffffff'),
+      stroke: isRemove && selected ? '#94a3b8' : (part.strokeColor || '#16a34a'),
+      strokeWidth: isRemove && selected ? 2 : 3,
+      strokeDasharray: isRemove && selected ? '8 6' : 'none',
+      opacity: isRemove && selected ? 0.75 : 1,
+      cursor: isAnswered ? 'default' : 'pointer',
+      transition: 'opacity 160ms ease',
+    };
+  };
+
+  const renderPie = () => (
+    <svg width={size} height={size} viewBox="0 0 240 240" role="img" aria-label={`${interaction === 'fill' ? 'Fill' : 'Remove'} ${targetCount} out of ${totalParts} parts`}>
+      {Array.from({ length: totalParts }).map((_, index) => {
+        const id = `piece_${index}`;
+        const start = -90 + (index * 360) / totalParts;
+        const end = -90 + ((index + 1) * 360) / totalParts;
+        const p1 = polarPoint(120, 120, 92, start);
+        const p2 = polarPoint(120, 120, 92, end);
+        const largeArc = end - start > 180 ? 1 : 0;
+        return (
+          <path
+            key={id}
+            d={`M120 120 L${p1.x} ${p1.y} A92 92 0 ${largeArc} 1 ${p2.x} ${p2.y} Z`}
+            {...pieceStyle(id)}
+            onClick={() => updateSelection(id)}
+          />
+        );
+      })}
+      <circle cx="120" cy="120" r="92" fill="none" stroke={part.strokeColor || '#16a34a'} strokeWidth="4" pointerEvents="none" />
+    </svg>
+  );
+
+  const renderGridShape = () => {
+    const { rows, columns } = getFractionGrid(totalParts, part.rows, part.columns);
+    const isRectangle = model === 'rectangle';
+    const shapeWidth = isRectangle ? 190 : 180;
+    const shapeHeight = isRectangle ? 130 : 180;
+    const xOffset = (240 - shapeWidth) / 2;
+    const yOffset = (240 - shapeHeight) / 2;
+    const cellWidth = shapeWidth / columns;
+    const cellHeight = shapeHeight / rows;
+    return (
+      <svg width={size} height={size} viewBox="0 0 240 240" role="img" aria-label={`${interaction === 'fill' ? 'Fill' : 'Remove'} ${targetCount} out of ${totalParts} parts`}>
+        {Array.from({ length: totalParts }).map((_, index) => {
+          const id = `piece_${index}`;
+          const row = Math.floor(index / columns);
+          const column = index % columns;
+          return (
+            <rect
+              key={id}
+              x={xOffset + column * cellWidth}
+              y={yOffset + row * cellHeight}
+              width={cellWidth}
+              height={cellHeight}
+              {...pieceStyle(id)}
+              onClick={() => updateSelection(id)}
+            />
+          );
+        })}
+        <rect x={xOffset} y={yOffset} width={shapeWidth} height={shapeHeight} fill="none" stroke={part.strokeColor || '#16a34a'} strokeWidth="4" pointerEvents="none" />
+      </svg>
+    );
+  };
+
+  const renderBar = () => (
+    <svg width="100%" height="150" viewBox="0 0 560 150" style={{ maxWidth: 620 }} role="img" aria-label={`${interaction === 'fill' ? 'Fill' : 'Remove'} ${targetCount} out of ${totalParts} parts`}>
+      {Array.from({ length: totalParts }).map((_, index) => {
+        const id = `piece_${index}`;
+        const width = 480 / totalParts;
+        return (
+          <rect
+            key={id}
+            x={40 + index * width}
+            y="48"
+            width={width}
+            height="58"
+            {...pieceStyle(id)}
+            onClick={() => updateSelection(id)}
+          />
+        );
+      })}
+      <rect x="40" y="48" width="480" height="58" fill="none" stroke={part.strokeColor || '#16a34a'} strokeWidth="4" pointerEvents="none" />
+    </svg>
+  );
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 10,
+        margin: '18px 0',
+        ...(part.style || {}),
+      }}
+    >
+      {model === 'square' || model === 'rectangle' ? renderGridShape() : model === 'bar' ? renderBar() : renderPie()}
+      <div style={{ fontSize: 15, fontWeight: 900, color: '#475569' }}>
+        {interaction === 'fill' ? 'Filled' : 'Removed'} {selectedParts.length} of {totalParts} parts
+      </div>
+    </div>
+  );
+}
+
 function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
   const layout = part.layout;
   const answerRow = layout?.rows?.find((row) => row.kind === 'answer');
   const inputRefs = useRef([]);
   const isVerticalAdditionReplica = layout?.variant === 'verticalAdditionReplica';
+  const isVerticalArithmeticReplica = isVerticalAdditionReplica || layout?.variant === 'verticalMultiplicationReplica';
   const digitCount = Math.max(
     2,
     answerRow?.cells?.length || 0,
-    ...(layout?.rows || []).map((row) => String(row.text || '').replace('+', '').trim().length)
+    ...(layout?.rows || []).map((row) => String(row.text || '').replace(/[+×x]/gi, '').trim().length)
   );
-  const cellSize = isVerticalAdditionReplica ? 32 : 44;
-  const operatorWidth = isVerticalAdditionReplica ? 28 : 0;
+  const cellSize = isVerticalArithmeticReplica ? 32 : 44;
+  const operatorWidth = isVerticalArithmeticReplica ? 28 : 0;
   const digitGridWidth = digitCount * cellSize;
   const fullGridWidth = operatorWidth + digitGridWidth;
 
@@ -487,11 +651,11 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
         display: 'inline-flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
-        gap: isVerticalAdditionReplica ? 3 : 6,
+        gap: isVerticalArithmeticReplica ? 3 : 6,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-          fontSize: isVerticalAdditionReplica ? 'clamp(24px, 7vw, 30px)' : 'clamp(30px, 9vw, 42px)',
+          fontSize: isVerticalArithmeticReplica ? 'clamp(24px, 7vw, 30px)' : 'clamp(30px, 9vw, 42px)',
         lineHeight: 1.05,
-        fontWeight: isVerticalAdditionReplica ? 500 : 800,
+        fontWeight: isVerticalArithmeticReplica ? 500 : 800,
         color: '#0f172a',
       }}
     >
@@ -501,11 +665,11 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
             <div
               key={rowIndex}
               style={{
-                width: isVerticalAdditionReplica ? fullGridWidth : '100%',
-                height: isVerticalAdditionReplica ? 2 : 3,
+                width: isVerticalArithmeticReplica ? fullGridWidth : '100%',
+                height: isVerticalArithmeticReplica ? 2 : 3,
                 background: '#0f172a',
-                borderRadius: isVerticalAdditionReplica ? 0 : 999,
-                marginTop: isVerticalAdditionReplica ? 1 : 0,
+                borderRadius: isVerticalArithmeticReplica ? 0 : 999,
+                marginTop: isVerticalArithmeticReplica ? 1 : 0,
               }}
             />
           );
@@ -517,9 +681,9 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
               key={rowIndex}
               style={{
                 display: 'flex',
-                gap: isVerticalAdditionReplica ? 0 : 6,
-                width: isVerticalAdditionReplica ? digitGridWidth : 'auto',
-                marginLeft: isVerticalAdditionReplica ? operatorWidth : 0,
+                gap: isVerticalArithmeticReplica ? 0 : 6,
+                width: isVerticalArithmeticReplica ? digitGridWidth : 'auto',
+                marginLeft: isVerticalArithmeticReplica ? operatorWidth : 0,
               }}
             >
               {(answerRow?.cells || []).map((cell, cellIndex) => (
@@ -538,12 +702,12 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
                       .join('');
 
                     onAnswer(
-                      isVerticalAdditionReplica
+                      isVerticalArithmeticReplica
                         ? { ...nextAnswer, _joined: nextJoined }
                         : nextAnswer
                     );
 
-                    const nextIndex = isVerticalAdditionReplica ? cellIndex - 1 : cellIndex + 1;
+                    const nextIndex = isVerticalArithmeticReplica ? cellIndex - 1 : cellIndex + 1;
                     if (nextValue && nextIndex >= 0 && nextIndex < (answerRow?.cells || []).length) {
                       window.requestAnimationFrame(() => {
                         inputRefs.current[nextIndex]?.focus();
@@ -552,7 +716,7 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
                     }
                   }}
                   onKeyDown={(event) => {
-                    const backspaceIndex = isVerticalAdditionReplica ? cellIndex + 1 : cellIndex - 1;
+                    const backspaceIndex = isVerticalArithmeticReplica ? cellIndex + 1 : cellIndex - 1;
                     if (
                       event.key === 'Backspace'
                       && !readAnswer(userAnswer, cell.id)
@@ -569,15 +733,15 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
                   maxLength={1}
                   style={{
                     width: cellSize,
-                    height: isVerticalAdditionReplica ? 30 : 54,
+                    height: isVerticalArithmeticReplica ? 30 : 54,
                     border: '2px solid #38a8ff',
-                    borderLeftStyle: isVerticalAdditionReplica && cell.id !== answerRow.cells[0]?.id ? 'dashed' : 'solid',
-                    borderLeftWidth: isVerticalAdditionReplica && cell.id !== answerRow.cells[0]?.id ? 1 : 2,
-                    borderRadius: isVerticalAdditionReplica ? 0 : 10,
-                    marginLeft: isVerticalAdditionReplica && cell.id !== answerRow.cells[0]?.id ? -1 : 0,
+                    borderLeftStyle: isVerticalArithmeticReplica && cell.id !== answerRow.cells[0]?.id ? 'dashed' : 'solid',
+                    borderLeftWidth: isVerticalArithmeticReplica && cell.id !== answerRow.cells[0]?.id ? 1 : 2,
+                    borderRadius: isVerticalArithmeticReplica ? 0 : 10,
+                    marginLeft: isVerticalArithmeticReplica && cell.id !== answerRow.cells[0]?.id ? -1 : 0,
                     textAlign: 'center',
                     font: 'inherit',
-                    fontSize: isVerticalAdditionReplica ? 24 : 'inherit',
+                    fontSize: isVerticalArithmeticReplica ? 24 : 'inherit',
                     lineHeight: 1,
                     padding: 0,
                     background: isAnswered ? '#f8fafc' : '#ffffff',
@@ -589,10 +753,10 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
             </div>
           );
         }
-        if (isVerticalAdditionReplica) {
+        if (isVerticalArithmeticReplica) {
           const rawText = String(row.text || '');
-          const hasOperator = rawText.trimStart().startsWith('+');
-          const digits = rawText.replace('+', '').trim().padStart(digitCount, ' ').split('');
+          const operator = rawText.trimStart().match(/^[+×x]/i)?.[0] || '';
+          const digits = rawText.replace(/^[\s+×x]+/i, '').trim().padStart(digitCount, ' ').split('');
 
           return (
             <div
@@ -605,7 +769,7 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
                 whiteSpace: 'pre',
               }}
             >
-              <span style={{ textAlign: 'center' }}>{hasOperator ? '+' : ''}</span>
+              <span style={{ textAlign: 'center' }}>{operator.toLowerCase() === 'x' ? '×' : operator}</span>
               {digits.map((digit, digitIndex) => (
                 <span key={`${rowIndex}-${digitIndex}`} style={{ textAlign: 'center' }}>
                   {digit === ' ' ? '\u00A0' : digit}
@@ -618,10 +782,10 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
           <div
             key={rowIndex}
             style={{
-              minWidth: isVerticalAdditionReplica ? digitCount * cellSize : 'auto',
+              minWidth: isVerticalArithmeticReplica ? digitCount * cellSize : 'auto',
               textAlign: 'right',
               whiteSpace: 'pre',
-              letterSpacing: isVerticalAdditionReplica ? '0.08em' : 0,
+              letterSpacing: isVerticalArithmeticReplica ? '0.08em' : 0,
             }}
           >
             {row.text}
@@ -1083,6 +1247,7 @@ const PART_RENDERERS = {
   base_ten_blocks: BaseTenBlocksPart,
   clock: ClockPart,
   fraction_model: FractionModelPart,
+  interactive_fraction_model: InteractiveFractionModelPart,
 };
 
 export default function PartRenderer({

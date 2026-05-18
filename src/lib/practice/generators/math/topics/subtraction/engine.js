@@ -1,9 +1,11 @@
 import { generateRemoveCubesQuestion } from './engines/removeCubes.engine.js';
+import { generatePictureSentenceQuestion } from './engines/pictureSentence.engine.js';
 import { getSubtractionSkill } from './skills/index.js';
 import { getSubtractionTemplate } from './templates/index.js';
 
 const ENGINE_GENERATORS = {
   removeCubes: generateRemoveCubesQuestion,
+  pictureSentence: generatePictureSentenceQuestion,
 };
 
 export function createSubtractionTopicTemplate(skillOrTemplateId, overrides = {}) {

@@ -539,6 +539,28 @@ function HtmlCategorizationFallback({
   const renderCopyVisual = (item, size = 64, overrides = {}) => {
     const fill = overrides.color || item.color;
     const stroke = overrides.stroke || item.stroke;
+
+    if (item.visual === 'emoji' || overrides.visual === 'emoji') {
+      return (
+        <div style={{ fontSize: size * 0.65, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+          {overrides.emoji || item.emoji || '🍎'}
+        </div>
+      );
+    }
+
+    if (item.visual === 'image' || overrides.visual === 'image') {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+          <img 
+            src={overrides.imageUrl || item.imageUrl} 
+            alt={item.content || ''}
+            style={{ width: size * 0.8, height: size * 0.8, objectFit: 'contain' }}
+            draggable="false"
+          />
+        </div>
+      );
+    }
+
     if (item.visual === 'die' || item.visual === 'dice') {
       const dots = {
         1: [[50, 50]],

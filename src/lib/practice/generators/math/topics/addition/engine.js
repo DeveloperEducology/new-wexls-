@@ -35,6 +35,7 @@ export function createAdditionTopicTemplate(skillOrTemplateId, overrides = {}) {
     microSkillId: skill?.id || null,
     code: skill?.code || null,
     grade: skill?.grade || null,
+    competencyId: skill?.competencyId || null,
     title: skill?.title || template.id,
     topic: 'addition',
     templateId: template.id,
@@ -100,6 +101,7 @@ export function generateAdditionTopicQuestion(config = {}, overrideVariables = n
       microSkillId: template.microSkillId,
       code: template.code,
       grade: template.grade,
+      competencyId: template.competencyId,
       topic: 'addition',
       templateId: template.templateId,
       engine: template.engine
