@@ -126,6 +126,18 @@ const TOPICS = [
           ['F.12', 'Equivalent fractions on number lines', 'equivalence_number_line'],
         ],
       },
+      {
+        title: 'Decomposing & Unit Fractions',
+        skills: [
+          ['F.19', 'Decompose fractions into unit fractions', 'fractions_decompose_into_unit_fractions'],
+          ['F.20', 'Decompose fractions: missing unit fraction', 'fractions_decompose_missing_unit_fraction'],
+          ['F.21', 'Decompose fractions: select all sums', 'fractions_decompose_select_all_sums'],
+          ['F.22', 'Build fractions from unit fraction words', 'fractions_build_from_words'],
+          ['F.23', 'Decompose fractions: error analysis', 'fractions_decompose_error_analysis'],
+          ['F.24', 'Count the unit fraction pieces', 'fractions_count_unit_fraction_pieces'],
+          ['F.25', 'Decompose fractions: puzzle style', 'fractions_decompose_puzzle_style'],
+        ],
+      },
     ],
   },
   {

@@ -365,6 +365,12 @@ export const competencyGraphs = {
           title: 'Equivalent fractions on number lines',
           prerequisites: ['fraction_visual_models'],
           remediation: ['fraction_visual_models'],
+        },
+        {
+          id: 'fraction_decompositions',
+          title: 'Decompose fractions into sums of unit fractions',
+          prerequisites: ['fraction_visual_models'],
+          remediation: ['fraction_visual_models'],
         }
       ],
       skillMap: {
@@ -386,6 +392,13 @@ export const competencyGraphs = {
         visual_models_cut_circle_thirds: 'fraction_visual_models',
         visual_models_cut_circle_sixths: 'fraction_visual_models',
         equivalence_number_line: 'fraction_equivalence',
+        fractions_decompose_into_unit_fractions: 'fraction_decompositions',
+        fractions_decompose_missing_unit_fraction: 'fraction_decompositions',
+        fractions_decompose_select_all_sums: 'fraction_decompositions',
+        fractions_build_from_words: 'fraction_decompositions',
+        fractions_decompose_error_analysis: 'fraction_decompositions',
+        fractions_count_unit_fraction_pieces: 'fraction_decompositions',
+        fractions_decompose_puzzle_style: 'fraction_decompositions',
       },
     },
     time: {

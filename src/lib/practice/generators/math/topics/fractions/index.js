@@ -7,7 +7,7 @@ export function getFractionsV2TemplateConfig(logicType) {
   
   return {
     logic_type: logicType,
-    type: (logicType.includes('identify') || logicType.includes('visual_compare') || logicType.includes('properties') || logicType.includes('equivalence_number_line')) ? 'mcq' : 
+    type: (logicType.includes('identify') || logicType.includes('visual_compare') || logicType.includes('properties') || logicType.includes('equivalence_number_line') || logicType.includes('decompose') || logicType.includes('build_from_words') || logicType.includes('count_unit_fraction')) ? 'mcq' : 
           logicType.includes('sorting') ? 'sorting' : 'fillInTheBlank', // Default mapping
     engineParams: engineConfig.params,
     adaptiveConfig: {
@@ -61,6 +61,13 @@ export const fractionsV2Generators = {
   'visual_models_cut_rectangle_thirds': generateFractionsV2Question,
   'visual_models_cut_circle_thirds': generateFractionsV2Question,
   'visual_models_cut_circle_sixths': generateFractionsV2Question,
+  'fractions_decompose_into_unit_fractions': generateFractionsV2Question,
+  'fractions_decompose_missing_unit_fraction': generateFractionsV2Question,
+  'fractions_decompose_select_all_sums': generateFractionsV2Question,
+  'fractions_build_from_words': generateFractionsV2Question,
+  'fractions_decompose_error_analysis': generateFractionsV2Question,
+  'fractions_count_unit_fraction_pieces': generateFractionsV2Question,
+  'fractions_decompose_puzzle_style': generateFractionsV2Question,
   'number_lines_identify': generateFractionsV2Question,
   'number_lines_graph': generateFractionsV2Question,
   'equivalence_number_line': generateFractionsV2Question,

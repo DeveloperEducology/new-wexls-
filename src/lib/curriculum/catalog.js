@@ -69,6 +69,19 @@ export const curriculumCatalog = {
               skills: [
                 'equivalence_number_line',
               ],
+            },
+            {
+              id: 'decomposing-fractions',
+              title: 'Decomposing & Unit Fractions',
+              skills: [
+                'fractions_decompose_into_unit_fractions',
+                'fractions_decompose_missing_unit_fraction',
+                'fractions_decompose_select_all_sums',
+                'fractions_build_from_words',
+                'fractions_decompose_error_analysis',
+                'fractions_count_unit_fraction_pieces',
+                'fractions_decompose_puzzle_style',
+              ],
             }
           ],
         },

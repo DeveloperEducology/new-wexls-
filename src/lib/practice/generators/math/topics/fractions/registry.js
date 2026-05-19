@@ -7,6 +7,7 @@ import { operationsEngine } from './engines/operations.js';
 import { comparisonEngine } from './engines/comparison.js';
 import { rationalNumbersEngine } from './engines/rationalNumbers.js';
 import { interactiveFractionModelEngine } from './engines/interactiveFractionModel.js';
+import { unitFractionsEngine } from './engines/unitFractions.js';
 
 /**
  * Registry mapping DB logic_types (or template_ids) to specific engines
@@ -136,6 +137,48 @@ export const fractionsV2Registry = {
     engine: visualModelsEngine,
     params: {
       subType: 'visual_models_cut_circle_sixths'
+    }
+  },
+  'fractions_decompose_into_unit_fractions': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'standard_mcq'
+    }
+  },
+  'fractions_decompose_missing_unit_fraction': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'missing_unit_fraction'
+    }
+  },
+  'fractions_decompose_select_all_sums': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'select_all'
+    }
+  },
+  'fractions_build_from_words': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'build_from_words'
+    }
+  },
+  'fractions_decompose_error_analysis': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'error_analysis'
+    }
+  },
+  'fractions_count_unit_fraction_pieces': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'count_unit_fractions'
+    }
+  },
+  'fractions_decompose_puzzle_style': {
+    engine: unitFractionsEngine,
+    params: {
+      subType: 'puzzle_style'
     }
   },
 
