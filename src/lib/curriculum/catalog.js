@@ -46,16 +46,28 @@ export const curriculumCatalog = {
         {
           id: 'fractions',
           title: 'Fractions',
-          grades: [{
-            id: 'visual-models',
-            title: 'Visual Models',
-            skills: [
-              'visual_models_identify',
-              'visual_models_equal_parts',
-              'visual_models_fraction_of_set',
-              'visual_models_mixed_numbers',
-            ],
-          }],
+          grades: [
+            {
+              id: 'visual-models',
+              title: 'Visual Models',
+              skills: [
+                'visual_models_identify',
+                'visual_models_equal_parts',
+                'visual_models_fraction_of_set',
+                'visual_models_mixed_numbers',
+                'visual_models_cut_rectangle_fourths',
+                'visual_models_cut_circle_fourths',
+                'visual_models_cut_rectangle_halves_different',
+              ],
+            },
+            {
+              id: 'equivalence',
+              title: 'Equivalence',
+              skills: [
+                'equivalence_number_line',
+              ],
+            }
+          ],
         },
         {
           id: 'time',

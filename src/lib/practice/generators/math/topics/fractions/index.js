@@ -7,7 +7,7 @@ export function getFractionsV2TemplateConfig(logicType) {
   
   return {
     logic_type: logicType,
-    type: (logicType.includes('identify') || logicType.includes('visual_compare') || logicType.includes('properties')) ? 'mcq' : 
+    type: (logicType.includes('identify') || logicType.includes('visual_compare') || logicType.includes('properties') || logicType.includes('equivalence_number_line')) ? 'mcq' : 
           logicType.includes('sorting') ? 'sorting' : 'fillInTheBlank', // Default mapping
     engineParams: engineConfig.params,
     adaptiveConfig: {
@@ -55,8 +55,12 @@ export const fractionsV2Generators = {
   'visual_models_fill_fraction_pie': generateFractionsV2Question,
   'visual_models_fill_fraction_square': generateFractionsV2Question,
   'visual_models_fill_fraction_rectangle': generateFractionsV2Question,
+  'visual_models_cut_rectangle_fourths': generateFractionsV2Question,
+  'visual_models_cut_circle_fourths': generateFractionsV2Question,
+  'visual_models_cut_rectangle_halves_different': generateFractionsV2Question,
   'number_lines_identify': generateFractionsV2Question,
   'number_lines_graph': generateFractionsV2Question,
+  'equivalence_number_line': generateFractionsV2Question,
   'equivalence_simplify': generateFractionsV2Question,
   'equivalence_identify_equivalent': generateFractionsV2Question,
   'equivalence_missing_value': generateFractionsV2Question,

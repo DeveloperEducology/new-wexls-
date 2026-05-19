@@ -5,7 +5,7 @@
  */
 
 import { createSeededRandom, getRandomInt } from '../shared/mathCore.js';
-import { buildNumberLineSvg } from '../shared/svgLibrary/numberLines.js';
+import { buildNumberLineSvg, buildEquivalentNumberLinesSvg } from '../shared/svgLibrary/numberLines.js';
 
 let _uid = 0;
 const uid = () => `${Date.now()}_${++_uid}`;
@@ -33,6 +33,8 @@ export const numberLinesEngine = (config) => {
     return generateIdentifyPoint(params, random);
   } else if (subType === 'graph_fraction_mcq') {
     return generateGraphFractionMCQ(params, random);
+  } else if (subType === 'equivalence_number_line') {
+    return generateEquivalenceNumberLine(params, random);
   } else {
     throw new Error(`[NumberLinesEngine] Unsupported subType: ${subType}`);
   }
@@ -193,3 +195,121 @@ function generateGraphFractionMCQ(params, random) {
       }
     };
 }
+
+function generateEquivalenceNumberLine(params, random) {
+  const baseFractions = [
+    { num: 1, den: 2 },
+    { num: 1, den: 3 },
+    { num: 2, den: 3 },
+    { num: 1, den: 4 },
+    { num: 3, den: 4 },
+    { num: 1, den: 5 },
+    { num: 2, den: 5 },
+    { num: 3, den: 5 },
+    { num: 4, den: 5 }
+  ];
+  
+  const base = baseFractions[Math.floor(random() * baseFractions.length)];
+  const num1 = base.num;
+  const denom1 = base.den;
+  
+  const isEquivalent = random() > 0.5;
+  
+  let num2, denom2;
+  
+  if (isEquivalent) {
+    const k = random() > 0.5 ? 2 : 3;
+    num2 = num1 * k;
+    denom2 = denom1 * k;
+  } else {
+    const k = random() > 0.5 ? 2 : 3;
+    denom2 = denom1 * k;
+    
+    const target = num1 * k;
+    const offset = random() > 0.5 ? 1 : -1;
+    num2 = target + offset;
+    
+    if (num2 <= 0) num2 = target + 1;
+    if (num2 >= denom2) num2 = target - 1;
+    
+    if (Math.abs((num1 / denom1) - (num2 / denom2)) < 0.001) {
+      num2 = (num1 * k) + 1;
+    }
+  }
+
+  const cleanQuestionText = `Is ${num1}/${denom1} equivalent to ${num2}/${denom2}?`;
+
+  const questionSvg = buildEquivalentNumberLinesSvg({
+    min: 0,
+    max: 1,
+    denom1,
+    num1,
+    denom2,
+    num2,
+    highlight: false
+  });
+
+  const solutionSvg = buildEquivalentNumberLinesSvg({
+    min: 0,
+    max: 1,
+    denom1,
+    num1,
+    denom2,
+    num2,
+    highlight: true
+  });
+
+  const options = [
+    { id: 'opt_yes', content: 'yes', isCorrect: isEquivalent, type: 'text' },
+    { id: 'opt_no', content: 'no', isCorrect: !isEquivalent, type: 'text' }
+  ];
+
+  const answer = isEquivalent ? 'opt_yes' : 'opt_no';
+  const correctAnswerIndex = isEquivalent ? 0 : 1;
+
+  const fraction1Str = `${num1}/${denom1}`;
+  const fraction2Str = `${num2}/${denom2}`;
+
+  const solutionText = isEquivalent 
+    ? `Both number lines show numbers between 0 and 1. **${fraction1Str}** and **${fraction2Str}** are at the same place between 0 and 1 on the number line.`
+    : `Both number lines show numbers between 0 and 1. **${fraction1Str}** and **${fraction2Str}** are at different places between 0 and 1 on the number line.`;
+
+  const concludingText = isEquivalent
+    ? `**${fraction1Str}** and **${fraction2Str}** are equivalent fractions.`
+    : `**${fraction1Str}** and **${fraction2Str}** are **not** equivalent fractions.`;
+
+  return {
+    id: `q_frac_eq_nl_${uid()}`,
+    type: 'mcq',
+    questionText: cleanQuestionText,
+    parts: [
+      { type: 'text', content: cleanQuestionText, isVertical: true, style: { fontSize: '24px', fontWeight: 600, marginBottom: '1rem' } },
+      { type: 'svg', content: questionSvg, isVertical: true, style: { maxWidth: '700px', margin: '0 auto 1.5rem' } }
+    ],
+    options,
+    correctAnswerId: answer,
+    correctAnswerIndex,
+    isGrid: true,
+    layoutConfig: { columns: 2, gap: '1rem' },
+    solution: {
+      sections: [
+        { type: 'text', content: 'Equivalent fractions are at the same place on a number line.' },
+        { type: 'text', content: solutionText },
+        { type: 'svg', content: solutionSvg },
+        { type: 'text', content: concludingText }
+      ]
+    },
+    adaptiveConfig: {
+      logic_type: params.logic_type || 'equivalence_number_line',
+      variables: {
+        num1,
+        denom1,
+        num2,
+        denom2,
+        isEquivalent,
+        seed: params.seed
+      }
+    }
+  };
+}
+

@@ -360,6 +360,12 @@ export const competencyGraphs = {
           prerequisites: ['equal_parts'],
           remediation: ['equal_parts'],
         },
+        {
+          id: 'fraction_equivalence',
+          title: 'Equivalent fractions on number lines',
+          prerequisites: ['fraction_visual_models'],
+          remediation: ['fraction_visual_models'],
+        }
       ],
       skillMap: {
         visual_models_identify: 'fraction_visual_models',
@@ -373,6 +379,10 @@ export const competencyGraphs = {
         visual_models_fill_fraction_pie: 'fraction_visual_models',
         visual_models_fill_fraction_square: 'fraction_visual_models',
         visual_models_fill_fraction_rectangle: 'fraction_visual_models',
+        visual_models_cut_rectangle_fourths: 'fraction_visual_models',
+        visual_models_cut_circle_fourths: 'fraction_visual_models',
+        visual_models_cut_rectangle_halves_different: 'fraction_visual_models',
+        equivalence_number_line: 'fraction_equivalence',
       },
     },
     time: {

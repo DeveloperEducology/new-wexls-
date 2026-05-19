@@ -39,6 +39,12 @@ export const visualModelsEngine = (config) => {
     return generateFractionOfSet(params, random);
   } else if (subType === 'mixed_numbers') {
     return generateMixedNumbers(params, random);
+  } else if (subType === 'visual_models_cut_rectangle_fourths') {
+    return generateCutRectangleFourths(params, random);
+  } else if (subType === 'visual_models_cut_circle_fourths') {
+    return generateCutCircleFourths(params, random);
+  } else if (subType === 'visual_models_cut_rectangle_halves_different') {
+    return generateCutRectangleHalvesDifferent(params, random);
   } else {
       throw new Error(`[VisualModelsEngine] Unsupported subType: ${subType}`);
   }
@@ -434,6 +440,178 @@ function generateFractionOfSet(params, random) {
         denom: denominator,
         seed: params.seed
       }
+    }
+  };
+}
+
+function generateCutRectangleFourths(params, random) {
+  const questionText = "Cut the rectangle into fourths. Connect two dots to make a cut.";
+  
+  const solutionSvg = `<svg viewBox="0 0 300 300" width="220" height="220"><rect x="50" y="50" width="200" height="200" rx="12" fill="#6ee7b7" stroke="#059669" stroke-width="4" /><line x1="150" y1="50" x2="150" y2="250" stroke="#ffffff" stroke-width="4" /><line x1="50" y1="150" x2="250" y2="150" stroke="#ffffff" stroke-width="4" /><text x="100" y="110" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">1</text><text x="200" y="110" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">2</text><text x="100" y="210" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">3</text><text x="200" y="210" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">4</text></svg>`;
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: "Fourths means 4 equal parts." },
+        { type: 'text', content: "This rectangle has 4 equal parts." },
+        {
+          type: 'group',
+          direction: 'row',
+          style: { justifyContent: 'center', margin: '14px 0' },
+          parts: [{ type: 'svg', content: solutionSvg }]
+        },
+        { type: 'text', content: "It is cut into fourths." }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_cut_rect_4_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: "Cut the rectangle into fourths.", style: { fontWeight: 900 } },
+      { type: 'text', content: "Connect two dots to make a cut.", style: { color: '#475569', fontSize: 15 } },
+      {
+        type: 'interactive_fraction_cutter',
+        shape: 'rectangle',
+        dots: [
+          { id: 'top', x: 150, y: 50 },
+          { id: 'bottom', x: 150, y: 250 },
+          { id: 'left', x: 50, y: 150 },
+          { id: 'right', x: 250, y: 150 }
+        ],
+        requiredCuts: [
+          ['top', 'bottom'],
+          ['left', 'right']
+        ],
+        size: 280
+      }
+    ],
+    correctAnswerText: JSON.stringify({ isCorrect: 'true' }),
+    validation: { type: 'exact', answer: { isCorrect: 'true' } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_cut_rectangle_fourths',
+      variables: { seed: params.seed }
+    }
+  };
+}
+
+function generateCutCircleFourths(params, random) {
+  const questionText = "Cut the circle into fourths. Connect two dots to make a cut.";
+
+  const solutionSvg = `<svg viewBox="0 0 300 300" width="220" height="220"><circle cx="150" cy="150" r="100" fill="#c084fc" stroke="#7c3aed" stroke-width="4" /><line x1="150" y1="50" x2="150" y2="250" stroke="#ffffff" stroke-width="4" /><line x1="50" y1="150" x2="250" y2="150" stroke="#ffffff" stroke-width="4" /><text x="105" y="115" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">1</text><text x="195" y="115" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">2</text><text x="105" y="205" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">3</text><text x="195" y="205" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">4</text></svg>`;
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: "Fourths means 4 equal parts." },
+        { type: 'text', content: "This circle has 4 equal parts." },
+        {
+          type: 'group',
+          direction: 'row',
+          style: { justifyContent: 'center', margin: '14px 0' },
+          parts: [{ type: 'svg', content: solutionSvg }]
+        },
+        { type: 'text', content: "It is cut into fourths." }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_cut_circ_4_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: "Cut the circle into fourths.", style: { fontWeight: 900 } },
+      { type: 'text', content: "Connect two dots to make a cut.", style: { color: '#475569', fontSize: 15 } },
+      {
+        type: 'interactive_fraction_cutter',
+        shape: 'circle',
+        dots: [
+          { id: 'top', x: 150, y: 50 },
+          { id: 'bottom', x: 150, y: 250 },
+          { id: 'left', x: 50, y: 150 },
+          { id: 'right', x: 250, y: 150 }
+        ],
+        preexistingCuts: [
+          ['top', 'bottom']
+        ],
+        requiredCuts: [
+          ['left', 'right']
+        ],
+        size: 280
+      }
+    ],
+    correctAnswerText: JSON.stringify({ isCorrect: 'true' }),
+    validation: { type: 'exact', answer: { isCorrect: 'true' } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_cut_circle_fourths',
+      variables: { seed: params.seed }
+    }
+  };
+}
+
+function generateCutRectangleHalvesDifferent(params, random) {
+  const questionText = "Cut the rectangle into halves a different way.";
+
+  const preexistingSvg = `<svg viewBox="0 0 300 300" width="180" height="180" style="margin: 10px 0;"><rect x="50" y="50" width="200" height="200" rx="12" fill="#c084fc" stroke="#7c3aed" stroke-width="4" /><line x1="50" y1="250" x2="250" y2="50" stroke="#ffffff" stroke-width="4" /></svg>`;
+
+  const solutionSvg = `<svg viewBox="0 0 300 300" width="220" height="220"><rect x="50" y="50" width="200" height="200" rx="12" fill="#c084fc" stroke="#7c3aed" stroke-width="4" /><line x1="50" y1="50" x2="250" y2="250" stroke="#ffffff" stroke-width="4" /><text x="100" y="180" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">1</text><text x="200" y="130" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">2</text></svg>`;
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: "Halves means 2 equal parts." },
+        { type: 'text', content: "This rectangle is cut into 2 equal parts." },
+        {
+          type: 'group',
+          direction: 'row',
+          style: { justifyContent: 'center', margin: '14px 0' },
+          parts: [{ type: 'svg', content: solutionSvg }]
+        },
+        { type: 'text', content: "It is cut into halves a different way." }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_cut_rect_half_diff_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: "This rectangle is cut into halves.", style: { fontWeight: 600 } },
+      { type: 'svg', content: preexistingSvg },
+      { type: 'text', content: "Cut the rectangle into halves a different way.", style: { fontWeight: 900, marginTop: 14 } },
+      {
+        type: 'interactive_fraction_cutter',
+        shape: 'rectangle',
+        dots: [
+          { id: 'top-left', x: 50, y: 50 },
+          { id: 'top-right', x: 250, y: 50 },
+          { id: 'bottom-left', x: 50, y: 250 },
+          { id: 'bottom-right', x: 250, y: 250 }
+        ],
+        requiredCuts: [
+          ['top-left', 'bottom-right']
+        ],
+        size: 280
+      }
+    ],
+    correctAnswerText: JSON.stringify({ isCorrect: 'true' }),
+    validation: { type: 'exact', answer: { isCorrect: 'true' } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_cut_rectangle_halves_different',
+      variables: { seed: params.seed }
     }
   };
 }

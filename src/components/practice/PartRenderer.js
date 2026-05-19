@@ -486,6 +486,212 @@ function polarPoint(cx, cy, radius, degrees) {
   };
 }
 
+function InteractiveFractionCutterPart({ part, userAnswer, onAnswer, isAnswered }) {
+  const size = Number(part.size ?? 280);
+  const shape = part.shape || 'rectangle'; 
+  const dots = Array.isArray(part.dots) ? part.dots : [];
+  const preexistingCuts = Array.isArray(part.preexistingCuts) ? part.preexistingCuts : [];
+  const requiredCuts = Array.isArray(part.requiredCuts) ? part.requiredCuts : [];
+  const sizeSVG = 300;
+
+  const currentAnswer = typeof userAnswer === 'object' && userAnswer !== null ? userAnswer : {};
+  const userCuts = Array.isArray(currentAnswer.cuts) ? currentAnswer.cuts : [];
+  
+  const [activeDotId, setActiveDotId] = useState(null);
+  const [pointerPos, setPointerPos] = useState(null);
+  const svgRef = useRef(null);
+
+  const activeDot = dots.find((d) => d.id === activeDotId);
+
+  const handleDotClick = (dotId, event) => {
+    if (isAnswered) return;
+    event.stopPropagation();
+
+    if (activeDotId === null) {
+      setActiveDotId(dotId);
+    } else if (activeDotId === dotId) {
+      setActiveDotId(null);
+      setPointerPos(null);
+    } else {
+      const exists = userCuts.some(
+        ([a, b]) => (a === activeDotId && b === dotId) || (a === dotId && b === activeDotId)
+      ) || preexistingCuts.some(
+        ([a, b]) => (a === activeDotId && b === dotId) || (a === dotId && b === activeDotId)
+      );
+
+      if (!exists) {
+        const nextCuts = [...userCuts, [activeDotId, dotId]];
+        
+        const checkCutsMatch = (u, r) => {
+          if (u.length !== r.length) return false;
+          const normU = u.map(([a, b]) => [a, b].sort().join('-')).sort();
+          const normR = r.map(([a, b]) => [a, b].sort().join('-')).sort();
+          return normU.every((c, i) => c === normR[i]);
+        };
+
+        const isCorrect = checkCutsMatch(nextCuts, requiredCuts);
+
+        onAnswer({
+          cuts: nextCuts,
+          isCorrect: isCorrect ? 'true' : 'false'
+        });
+      }
+      setActiveDotId(null);
+      setPointerPos(null);
+    }
+  };
+
+  const handleSvgMouseMove = (event) => {
+    if (isAnswered || activeDotId === null || !svgRef.current) return;
+    
+    const rect = svgRef.current.getBoundingClientRect();
+    const pointerX = event.touches?.[0]?.clientX ?? event.clientX;
+    const pointerY = event.touches?.[0]?.clientY ?? event.clientY;
+    
+    const x = ((pointerX - rect.left) / rect.width) * sizeSVG;
+    const y = ((pointerY - rect.top) / rect.height) * sizeSVG;
+    
+    setPointerPos({ x, y });
+  };
+
+  const handleClear = () => {
+    if (isAnswered) return;
+    onAnswer(null);
+    setActiveDotId(null);
+    setPointerPos(null);
+  };
+
+  const allCuts = [...preexistingCuts, ...userCuts];
+
+  const getDotCoords = (dotId) => {
+    const dot = dots.find((d) => d.id === dotId);
+    return dot ? { x: dot.x, y: dot.y } : { x: 150, y: 150 };
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+        margin: '18px 0',
+        width: '100%',
+        ...(part.style || {}),
+      }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: size,
+          height: size,
+          userSelect: 'none',
+          touchAction: 'none'
+        }}
+      >
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${sizeSVG} ${sizeSVG}`}
+          width="100%"
+          height="100%"
+          onMouseMove={handleSvgMouseMove}
+          onTouchMove={handleSvgMouseMove}
+          onMouseLeave={() => setPointerPos(null)}
+          style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            border: '2px solid #e2e8f0',
+            boxShadow: '0 8px 24px rgba(148, 163, 184, 0.08)',
+            cursor: isAnswered ? 'default' : 'crosshair'
+          }}
+        >
+          {shape === 'circle' ? (
+            <circle cx="150" cy="150" r="100" fill="#c084fc" stroke="#7c3aed" strokeWidth="4" />
+          ) : (
+            <rect x="50" y="50" width="200" height="200" rx="12" fill="#6ee7b7" stroke="#059669" strokeWidth="4" />
+          )}
+
+          {allCuts.map(([idA, idB], index) => {
+            const ptA = getDotCoords(idA);
+            const ptB = getDotCoords(idB);
+            const isPreexisting = preexistingCuts.some(
+              ([a, b]) => (a === idA && b === idB) || (a === idB && b === idA)
+            );
+            return (
+              <line
+                key={index}
+                x1={ptA.x}
+                y1={ptA.y}
+                x2={ptB.x}
+                y2={ptB.y}
+                stroke="#ffffff"
+                strokeWidth="4"
+                strokeDasharray={isPreexisting ? "none" : "8 6"}
+                strokeLinecap="round"
+              />
+            );
+          })}
+
+          {activeDot && pointerPos && (
+            <line
+              x1={activeDot.x}
+              y1={activeDot.y}
+              x2={pointerPos.x}
+              y2={pointerPos.y}
+              stroke="#ffffff"
+              strokeWidth="3.5"
+              strokeDasharray="6 4"
+              strokeLinecap="round"
+              pointerEvents="none"
+            />
+          )}
+
+          {dots.map((dot) => {
+            const isActive = activeDotId === dot.id;
+            return (
+              <circle
+                key={dot.id}
+                cx={dot.x}
+                cy={dot.y}
+                r={isActive ? "10" : "8"}
+                fill={isActive ? "#f97316" : "#64748b"}
+                stroke="#ffffff"
+                strokeWidth="2.5"
+                style={{
+                  cursor: isAnswered ? 'default' : 'pointer',
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.16))',
+                  transition: 'r 150ms ease, fill 150ms ease'
+                }}
+                onClick={(e) => handleDotClick(dot.id, e)}
+              />
+            );
+          })}
+        </svg>
+      </div>
+
+      {!isAnswered && (
+        <button
+          type="button"
+          onClick={handleClear}
+          style={{
+            padding: '6px 14px',
+            border: '2px solid #cbd5e1',
+            borderRadius: '12px',
+            background: '#ffffff',
+            color: '#475569',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'background 180ms ease, border-color 180ms ease'
+          }}
+        >
+          Reset cuts
+        </button>
+      )}
+    </div>
+  );
+}
+
 function InteractiveFractionModelPart({ part, userAnswer, onAnswer, isAnswered }) {
   const totalParts = Math.max(2, Number(part.totalParts ?? part.denominator ?? 4));
   const targetCount = Math.max(1, Math.min(totalParts, Number(part.removeCount ?? part.fillCount ?? part.numerator ?? 1)));
@@ -1248,6 +1454,7 @@ const PART_RENDERERS = {
   clock: ClockPart,
   fraction_model: FractionModelPart,
   interactive_fraction_model: InteractiveFractionModelPart,
+  interactive_fraction_cutter: InteractiveFractionCutterPart,
 };
 
 export default function PartRenderer({

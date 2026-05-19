@@ -90,7 +90,7 @@ export const fractionsV2Registry = {
       subType: 'fill_fraction',
       interaction: 'fill',
       model: 'square',
-      denominatorPool: [4, 6, 8, 9],
+      denominatorPool: [4, 6, 8, 9,10,12],
     }
   },
   'visual_models_fill_fraction_rectangle': {
@@ -99,7 +99,25 @@ export const fractionsV2Registry = {
       subType: 'fill_fraction',
       interaction: 'fill',
       model: 'rectangle',
-      denominatorPool: [2, 3, 4, 5, 6, 8],
+      denominatorPool: [2, 3, 4, 5, 6, 8,10],
+    }
+  },
+  'visual_models_cut_rectangle_fourths': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'visual_models_cut_rectangle_fourths'
+    }
+  },
+  'visual_models_cut_circle_fourths': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'visual_models_cut_circle_fourths'
+    }
+  },
+  'visual_models_cut_rectangle_halves_different': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'visual_models_cut_rectangle_halves_different'
     }
   },
 
@@ -109,7 +127,7 @@ export const fractionsV2Registry = {
     params: {
       subType: 'identify_fraction',
       // We can override defaults for specific UUIDs
-      shapeTypes: ['circle', 'rectangle'] 
+      shapeTypes: ['circle', 'rectangle', 'square', 'pentagon', 'kite'] 
     }
   },
 
@@ -128,6 +146,14 @@ export const fractionsV2Registry = {
     params: {
       subType: 'graph_fraction_mcq',
       denominatorPool: [2, 3, 4, 5, 6, 8],
+      min: 0,
+      max: 1
+    }
+  },
+  'equivalence_number_line': {
+    engine: numberLinesEngine,
+    params: {
+      subType: 'equivalence_number_line',
       min: 0,
       max: 1
     }

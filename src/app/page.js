@@ -112,6 +112,15 @@ const TOPICS = [
           ['F.9', 'Fill parts of a circle', 'visual_models_fill_fraction_pie'],
           ['F.10', 'Fill parts of a square', 'visual_models_fill_fraction_square'],
           ['F.11', 'Fill parts of a rectangle', 'visual_models_fill_fraction_rectangle'],
+          ['F.13', 'Cut rectangle into fourths', 'visual_models_cut_rectangle_fourths'],
+          ['F.14', 'Cut circle into fourths', 'visual_models_cut_circle_fourths'],
+          ['F.15', 'Cut rectangle into halves in different ways', 'visual_models_cut_rectangle_halves_different'],
+        ],
+      },
+      {
+        title: 'Equivalence skills',
+        skills: [
+          ['F.12', 'Equivalent fractions on number lines', 'equivalence_number_line'],
         ],
       },
     ],
