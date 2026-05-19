@@ -34,7 +34,19 @@ function InlineMarkdown({ text }) {
   return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
     const match = piece.match(/^\*\*([^*]+)\*\*$/);
     if (match) return <strong key={index}>{match[1]}</strong>;
-    return <span key={index}>{piece.replace(/^#{1,4}\s*/, '')}</span>;
+    
+    const subSegments = piece.split(/(\$[^\$]+\$)/g);
+    return (
+      <span key={index}>
+        {subSegments.map((subPiece, subIndex) => {
+          const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+          if (mathMatch) {
+            return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
+          }
+          return <span key={subIndex}>{subPiece.replace(/^#{1,4}\s*/, '')}</span>;
+        })}
+      </span>
+    );
   });
 }
 

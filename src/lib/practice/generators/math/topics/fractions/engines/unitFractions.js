@@ -493,22 +493,148 @@ function generateTrueOrFalse(numerator, denominator, params, random) {
 }
 
 function generateErrorAnalysis(numerator, denominator, params, random) {
-  const questionText = `Identify the student's mistake.`;
-  const fractionStr = fractionLatex(numerator, denominator);
-
-  const errorType = random() > 0.5 ? 'denom' : 'num';
-  let equationStr = '';
-  let correctExplanation = '';
-  let correctLabel = '';
+  const errorTypes = [
+    'denominator_confusion',
+    'numerator_confusion',
+    'too_few_parts',
+    'too_many_parts',
+    'mixed_denominators'
+  ];
   
-  if (errorType === 'denom') {
-    equationStr = `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, numerator)).join(' + ')}`;
-    correctExplanation = `The student used the numerator ${numerator} as the denominator of the unit fractions. The denominator should remain ${denominator}.`;
-    correctLabel = 'Wrong denominator';
-  } else {
-    equationStr = `${fractionStr} = ${Array(denominator).fill(fractionLatex(1, numerator)).join(' + ')}`;
-    correctExplanation = `The student confused the numerator and denominator and wrote too many unit fractions.`;
-    correctLabel = 'Wrong count of fractions';
+  // Choose one misconception based on seed
+  const selectedError = errorTypes[Math.floor(random() * errorTypes.length)];
+  
+  let equationLatex = '';
+  let correctLabel = '';
+  let correctExplanation = '';
+  let solutionSteps = [];
+  let distractors = [];
+  let misconceptionCode = '';
+
+  // Ensure numerator/denominator are safe for specific subtypes
+  let num = numerator;
+  let den = denominator;
+  if (selectedError === 'too_few_parts' && num < 3) {
+    num = 4; // make sure we have enough room to have too few
+  }
+  if (selectedError === 'denominator_confusion') {
+    // make sure den and num are distinct
+    if (num === den) num = den - 1;
+  }
+
+  const fractionStr = fractionLatex(num, den);
+
+  if (selectedError === 'denominator_confusion') {
+    misconceptionCode = 'unit_fraction_denominator_confusion';
+    equationLatex = `${fractionStr} = \\underbrace{${Array(num).fill(fractionLatex(1, num)).join(' + ')}}_{${num} \\text{ pieces of size } 1/${num}}`;
+    
+    correctLabel = `Used the wrong denominator in the unit fractions (used ${num}ths instead of ${den}ths)`;
+    correctExplanation = `The student used the numerator (${num}) as the denominator of the unit fractions. The denominator should remain unchanged as ${den}.`;
+    
+    solutionSteps = [
+      { type: 'text', content: `**Expected Decomposition:**`, style: { fontWeight: 800 } },
+      { type: 'latex', content: `${fractionStr} = \\underbrace{${Array(num).fill(fractionLatex(1, den)).join(' + ')}}_{\\text{Denominator stays } ${den}}` },
+      { type: 'text', content: `**Student's Incorrect Equation:**`, style: { fontWeight: 800, marginTop: 12 } },
+      { type: 'latex', content: `${fractionStr} = \\underbrace{${Array(num).fill(fractionLatex(1, `\\color{#ef4444}{${num}}`)).join(' + ')}}_{\\text{Student used wrong denominator } \\color{#ef4444}{${num}}}` },
+      { type: 'text', content: `Notice that the denominator must show how many equal parts the whole is divided into ($${den}$), not the number of shaded parts ($${num}$).` }
+    ];
+
+    distractors = [
+      { id: 'opt_dist_1', type: 'text', content: `Added the wrong number of unit fraction pieces`, isCorrect: false },
+      { id: 'opt_dist_2', type: 'text', content: `Used the original numerator (${num}) inside the unit fractions`, isCorrect: false },
+      { id: 'opt_dist_3', type: 'text', content: `Multiplied the unit fractions instead of adding them`, isCorrect: false }
+    ];
+
+  } else if (selectedError === 'numerator_confusion') {
+    misconceptionCode = 'unit_fraction_numerator_confusion';
+    equationLatex = `${fractionStr} = ${Array(num).fill(fractionLatex(num, den)).join(' + ')}`;
+    
+    correctLabel = `Used the original numerator (${num}) instead of 1 inside the unit fractions`;
+    correctExplanation = `A unit fraction always represents exactly 1 part of the whole. Therefore, the numerator of each unit fraction must be 1, not ${num}.`;
+
+    solutionSteps = [
+      { type: 'text', content: `**Expected Decomposition:**`, style: { fontWeight: 800 } },
+      { type: 'latex', content: `${fractionStr} = ${Array(num).fill(fractionLatex(`\\color{#22c55e}{1}`, den)).join(' + ')}` },
+      { type: 'text', content: `**Student's Incorrect Equation:**`, style: { fontWeight: 800, marginTop: 12 } },
+      { type: 'latex', content: `${fractionStr} = ${Array(num).fill(fractionLatex(`\\color{#ef4444}{${num}}`, den)).join(' + ')}` },
+      { type: 'text', content: `Each piece is a single unit of size $${fractionLatex(1, den)}$, so the top number of each piece must be $1$.` }
+    ];
+
+    distractors = [
+      { id: 'opt_dist_1', type: 'text', content: `Used the wrong denominator in the unit fractions`, isCorrect: false },
+      { id: 'opt_dist_2', type: 'text', content: `Did not add enough unit fraction pieces`, isCorrect: false },
+      { id: 'opt_dist_3', type: 'text', content: `Used a mixed combination of denominators`, isCorrect: false }
+    ];
+
+  } else if (selectedError === 'too_few_parts') {
+    misconceptionCode = 'unit_fraction_too_few_parts';
+    const fewCount = num - 1;
+    equationLatex = `${fractionStr} = \\underbrace{${Array(fewCount).fill(fractionLatex(1, den)).join(' + ')}}_{${fewCount} \\text{ pieces instead of } ${num}}`;
+    
+    correctLabel = `Did not add enough unit fraction pieces (used ${fewCount} pieces instead of ${num})`;
+    correctExplanation = `The numerator is ${num}, which means we need exactly ${num} unit fractions. The student only wrote ${fewCount} unit fractions.`;
+
+    solutionSteps = [
+      { type: 'text', content: `**Expected Decomposition:**`, style: { fontWeight: 800 } },
+      { type: 'latex', content: `${fractionStr} = \\underbrace{${Array(num).fill(fractionLatex(1, den)).join(' + ')}}_{\\text{Requires exactly } ${num} \\text{ pieces}}` },
+      { type: 'text', content: `**Student's Incorrect Equation:**`, style: { fontWeight: 800, marginTop: 12 } },
+      { type: 'latex', content: `${fractionStr} = \\underbrace{${Array(fewCount).fill(fractionLatex(1, den)).join(' + ')}}_{\\text{Student only wrote } \\color{#ef4444}{${fewCount}} \\text{ pieces}}` },
+      { type: 'text', content: `Adding $${fewCount}$ copies of $${fractionLatex(1, den)}$ only equals $${fractionLatex(fewCount, den)}$, not $${fractionStr}$.` }
+    ];
+
+    distractors = [
+      { id: 'opt_dist_1', type: 'text', content: `Used the wrong denominator in the unit fractions`, isCorrect: false },
+      { id: 'opt_dist_2', type: 'text', content: `Added too many unit fraction pieces`, isCorrect: false },
+      { id: 'opt_dist_3', type: 'text', content: `Used the original numerator (${num}) inside the unit fractions`, isCorrect: false }
+    ];
+
+  } else if (selectedError === 'too_many_parts') {
+    misconceptionCode = 'unit_fraction_too_many_parts';
+    const manyCount = num + 1;
+    equationLatex = `${fractionStr} = \\underbrace{${Array(manyCount).fill(fractionLatex(1, den)).join(' + ')}}_{${manyCount} \\text{ pieces instead of } ${num}}`;
+
+    correctLabel = `Added too many unit fraction pieces (used ${manyCount} pieces instead of ${num})`;
+    correctExplanation = `The numerator is ${num}, which means we need exactly ${num} unit fractions. The student wrote ${manyCount} unit fractions, which equals ${manyCount}/${den}.`;
+
+    solutionSteps = [
+      { type: 'text', content: `**Expected Decomposition:**`, style: { fontWeight: 800 } },
+      { type: 'latex', content: `${fractionStr} = \\underbrace{${Array(num).fill(fractionLatex(1, den)).join(' + ')}}_{\\text{Requires exactly } ${num} \\text{ pieces}}` },
+      { type: 'text', content: `**Student's Incorrect Equation:**`, style: { fontWeight: 800, marginTop: 12 } },
+      { type: 'latex', content: `${fractionStr} = \\underbrace{${Array(manyCount).fill(fractionLatex(1, den)).join(' + ')}}_{\\text{Student wrote } \\color{#ef4444}{${manyCount}} \\text{ pieces}}` },
+      { type: 'text', content: `Adding $${manyCount}$ copies of $${fractionLatex(1, den)}$ equals $${fractionLatex(manyCount, den)}$, which is larger than $${fractionStr}$.` }
+    ];
+
+    distractors = [
+      { id: 'opt_dist_1', type: 'text', content: `Used the wrong denominator in the unit fractions`, isCorrect: false },
+      { id: 'opt_dist_2', type: 'text', content: `Did not add enough unit fraction pieces`, isCorrect: false },
+      { id: 'opt_dist_3', type: 'text', content: `Used the original numerator (${num}) inside the unit fractions`, isCorrect: false }
+    ];
+
+  } else if (selectedError === 'mixed_denominators') {
+    misconceptionCode = 'unit_fraction_mixed_denominators';
+    const terms = Array(num).fill(fractionLatex(1, den));
+    terms[Math.floor(random() * num)] = fractionLatex(1, 2);
+    equationLatex = `${fractionStr} = ${terms.join(' + ')}`;
+
+    correctLabel = `Used mixed denominators instead of keeping all unit fractions equal`;
+    correctExplanation = `All unit fractions must have the exact same denominator (${den}) as the target fraction, because the whole is divided into equal parts.`;
+
+    const expectedTermsStr = Array(num).fill(fractionLatex(1, den)).join(' + ');
+    const incorrectTermsStr = terms.map(t => t.includes('{2}') ? `\\color{#ef4444}{\\frac{1}{2}}` : t).join(' + ');
+
+    solutionSteps = [
+      { type: 'text', content: `**Expected Decomposition:**`, style: { fontWeight: 800 } },
+      { type: 'latex', content: `${fractionStr} = ${expectedTermsStr}` },
+      { type: 'text', content: `**Student's Incorrect Equation:**`, style: { fontWeight: 800, marginTop: 12 } },
+      { type: 'latex', content: `${fractionStr} = ${incorrectTermsStr}` },
+      { type: 'text', content: `The student incorrectly introduced $\\color{#ef4444}{\\frac{1}{2}}$ into the sum. All parts must remain size $${fractionLatex(1, den)}$.` }
+    ];
+
+    distractors = [
+      { id: 'opt_dist_1', type: 'text', content: `Used the numerator as the denominator`, isCorrect: false },
+      { id: 'opt_dist_2', type: 'text', content: `Added the wrong number of unit fraction pieces`, isCorrect: false },
+      { id: 'opt_dist_3', type: 'text', content: `Used the original numerator (${num}) inside the unit fractions`, isCorrect: false }
+    ];
   }
 
   const correctOption = {
@@ -517,27 +643,6 @@ function generateErrorAnalysis(numerator, denominator, params, random) {
     content: correctLabel,
     isCorrect: true
   };
-
-  const distractors = [
-    {
-      id: 'opt_dist_1',
-      type: 'text',
-      content: errorType === 'denom' ? 'Wrong count of fractions' : 'Wrong denominator',
-      isCorrect: false
-    },
-    {
-      id: 'opt_dist_2',
-      type: 'text',
-      content: 'Fractions should multiply',
-      isCorrect: false
-    },
-    {
-      id: 'opt_dist_3',
-      type: 'text',
-      content: 'Too many parts shaded',
-      isCorrect: false
-    }
-  ];
 
   const options = [correctOption, ...distractors];
   for (let i = options.length - 1; i > 0; i--) {
@@ -550,23 +655,29 @@ function generateErrorAnalysis(numerator, denominator, params, random) {
   const solution = [
     {
       type: 'section',
-      label: 'solve',
+      label: 'remember',
       parts: [
-        { type: 'text', content: `The correct decomposition is:` },
-        { type: 'latex', content: `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')}` },
-        { type: 'text', content: correctExplanation, style: { marginTop: 10 } }
+        { type: 'text', content: `When decomposing a fraction like $${fractionStr}$ into unit fractions:`, style: { fontWeight: 800 } },
+        { type: 'text', content: `1. The denominator (${den}) must stay the same for all parts.` },
+        { type: 'text', content: `2. Each unit fraction must have a numerator of exactly 1.` },
+        { type: 'text', content: `3. You must add exactly ${num} pieces together.` }
       ]
+    },
+    {
+      type: 'section',
+      label: 'solve',
+      parts: solutionSteps
     }
   ];
 
   return {
     id: `q_unit_frac_err_${uid()}`,
     type: 'mcq',
-    questionText,
+    questionText: `Which mistake did the student make when decomposing the fraction?`,
     parts: [
-      { type: 'text', content: "A student writes this equation:", style: { color: '#475569' } },
-      { type: 'latex', content: equationStr, style: { fontSize: 24, margin: '10px 0' } },
-      { type: 'text', content: "What is the mistake?", style: { fontWeight: 900, marginTop: 12 } }
+      { type: 'text', content: "A student writes this equation:", style: { color: '#475569', fontSize: 16 } },
+      { type: 'latex', content: equationLatex, style: { fontSize: 24, margin: '14px 0' } },
+      { type: 'text', content: "Which mistake did the student make when decomposing the fraction?", style: { fontWeight: 900, marginTop: 12 } }
     ],
     options,
     correctAnswerId: 'opt_correct',
@@ -575,8 +686,9 @@ function generateErrorAnalysis(numerator, denominator, params, random) {
     solution,
     adaptiveConfig: {
       logic_type: 'fractions_decompose_error_analysis',
-      variables: { subType: 'error_analysis', numerator, denominator, seed: params.seed }
-    }
+      variables: { subType: 'error_analysis', numerator: num, denominator: den, seed: params.seed }
+    },
+    misconceptionCode
   };
 }
 
