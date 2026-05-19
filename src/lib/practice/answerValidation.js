@@ -128,5 +128,24 @@ export function isAnswerCorrect(question, userAnswer) {
     return JSON.stringify(answerArray.map(normalizeText)) === JSON.stringify(expected.map(normalizeText));
   }
 
-  return normalizeText(userAnswer) === normalizeText(expected);
+  if (normalizeText(userAnswer) === normalizeText(expected)) {
+    return true;
+  }
+
+  // Check alternative answers if present
+  const altAnswers = question.altAnswers ?? question.validation?.altAnswers;
+  if (Array.isArray(altAnswers)) {
+    for (const alt of altAnswers) {
+      if (alt && typeof alt === 'object') {
+        const altKeys = Object.keys(alt);
+        const answerObject = typeof userAnswer === 'object' && userAnswer !== null ? userAnswer : { ans: String(userAnswer) };
+        const altMatch = altKeys.every((key) => normalizeText(answerObject[key]) === normalizeText(alt[key]));
+        if (altMatch) return true;
+      } else if (normalizeText(userAnswer) === normalizeText(alt)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }

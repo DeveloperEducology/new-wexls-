@@ -44,7 +44,10 @@ export function generateFractionsV2Question(templateConfig) {
 
 // Export the generators object for the main math registry
 export const fractionsV2Generators = {
+  'fractions-g5-add-subtract-unlike-denominators': generateFractionsV2Question,
+  'fractions.unlikeDenominators.addSubtract': generateFractionsV2Question,
   'visual_models_identify': generateFractionsV2Question,
+  'visual_models_write_fraction': generateFractionsV2Question,
   'visual_models_equal_parts': generateFractionsV2Question,
   'visual_models_fraction_of_set': generateFractionsV2Question,
   'visual_models_mixed_numbers': generateFractionsV2Question,

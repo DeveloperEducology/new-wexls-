@@ -1124,7 +1124,13 @@ export default function CategorizationRenderer({
   onAnswer,
   isAnswered,
 }) {
-  const categories = question.categories || question.parts?.find((part) => part.type === 'categorization')?.categories || [];
+  const rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization')?.categories || [];
+  const categories = rawCategories.map((cat) => {
+    if (typeof cat === 'string') {
+      return { id: cat, label: cat };
+    }
+    return cat;
+  });
   const items = question.items || question.parts?.find((part) => part.type === 'categorization')?.items || [];
   const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
   const containerRef = useRef(null);

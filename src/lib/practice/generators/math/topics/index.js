@@ -33,3 +33,13 @@ export {
   getTestingTemplateConfig,
   testingGenerator,
 } from './testing/index.js';
+
+export {
+  generateRatioQuestion,
+  generateRatioQuestionSet,
+  generateRatioRemediation,
+  validateRatioAnswer,
+  ratioTemplateRegistry,
+  ratioTheory
+} from './ratio/index.js';
+

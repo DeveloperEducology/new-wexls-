@@ -150,6 +150,47 @@
     margin-top: 2px;
 }
 
+.mobileStatusBar {
+    display: none;
+}
+
+.mobileStatusItem {
+    min-width: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 8px 10px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.mobileStatusLabel {
+    display: block;
+    color: #64748b;
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.mobileStatusValue {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 21px;
+    line-height: 1;
+    font-weight: 900;
+}
+
+.mobileStatusSubvalue {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.1;
+    font-weight: 800;
+}
+
 /* Grid Layout */
 .mainGrid {
     display: grid;
@@ -184,26 +225,28 @@
 /* Main Card */
 .questionCard {
     background: white;
-    padding: 34px 40px 36px;
-    border-radius: 32px;
+    padding: 24px 28px 26px;
+    border-radius: 20px;
     border: 1px solid rgba(226, 232, 240, 0.8);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.03);
     position: relative;
     overflow: hidden;
 }
 
 .questionBody {
-    min-height: 250px;
+    min-height: 200px;
     display: flex;
     flex-direction: column;
 }
 
 .questionFocus {
-    min-height: 160px;
+    min-height: auto;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 22px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    margin-bottom: 16px;
+    width: 100%;
 }
 
 .submitRow {
@@ -397,19 +440,68 @@
 }
 
 @media (max-width: 760px) {
+    .pageContainer {
+        padding: 10px;
+    }
+
+    .header {
+        margin-bottom: 14px;
+        padding: 12px;
+        border-radius: 16px;
+        gap: 12px;
+    }
+
+    .headerLeft {
+        gap: 12px;
+    }
+
+    .backButton {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        font-size: 22px;
+        flex: 0 0 auto;
+    }
+
+    .title {
+        font-size: 18px;
+        line-height: 1.1;
+    }
+
+    .subtitle {
+        font-size: 9px;
+    }
+
+    .headerControls,
+    .desktopOnlyPanel,
+    .mobileHiddenPanel {
+        display: none !important;
+    }
+
+    .mobileStatusBar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    .mainGrid {
+        gap: 12px;
+    }
+
     .questionCard {
-        padding: 24px 18px;
-        border-radius: 24px;
+        padding: 16px 14px 18px;
+        border-radius: 12px;
     }
 
     .questionBody {
-        min-height: 220px;
+        min-height: 180px;
     }
 
     .questionFocus {
-        min-height: 120px;
+        min-height: auto;
         justify-content: flex-start;
-        margin-bottom: 18px;
+        margin-bottom: 12px;
         overflow-wrap: anywhere;
     }
 
@@ -424,4 +516,81 @@
         font-size: 15px;
         border-radius: 14px;
     }
+
+    .optionsGrid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .optionButton {
+        padding: 10px 14px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+}
+
+.responsiveSvg :global(svg),
+.optionMedia :global(svg) {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Options Grid Layout System */
+.optionsGrid {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    margin-top: 14px;
+}
+
+.optionsGridCompact {
+    grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+}
+
+.optionsGridText {
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+
+.optionsGridVisual {
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 16px;
+}
+
+.optionsGridSingleColumn {
+    grid-template-columns: 1fr;
+}
+
+/* Option Buttons styling (IXL-style premium visual cards) */
+.optionButton {
+    min-height: 52px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 1.5px solid #dbeafe;
+    background: #ffffff;
+    color: #1e293b;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    font-weight: 500;
+}
+
+.optionButton:hover:not(:disabled) {
+    border-color: #93c5fd;
+    background: #f8fafc;
+}
+
+.optionButtonActive {
+    border-color: #0ea5e9 !important;
+    background: #f0f9ff !important;
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.1) !important;
+    font-weight: 600 !important;
+}
+
+.optionButton:disabled {
+    cursor: default;
 }

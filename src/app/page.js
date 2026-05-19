@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { additionSkillsByGrade } from '../lib/practice/generators/math/topics/addition/skills/index.js';
 import { multiplicationSkillsByGrade } from '../lib/practice/generators/math/topics/multiplication/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../lib/practice/generators/science/topics/units-measurement/skills/index.js';
+import { grammarSkillsByGrade } from '../lib/practice/generators/english/topics/grammar/skills/index.js';
 
 const additionHomeGroups = Object.entries(additionSkillsByGrade).map(([grade, skills]) => ({
   title: grade === 'remediation' ? 'Remediation skills' : `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`,
@@ -17,6 +18,11 @@ const multiplicationHomeGroups = Object.entries(multiplicationSkillsByGrade).map
 }));
 
 const unitsMeasurementHomeGroups = Object.entries(unitsMeasurementSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
+
+const grammarHomeGroups = Object.entries(grammarSkillsByGrade).map(([grade, skills]) => ({
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
@@ -102,6 +108,7 @@ const TOPICS = [
         title: 'Visual model skills',
         skills: [
           ['F.1', 'Identify fractions from shapes', 'visual_models_identify'],
+          ['F.1b', 'Write fractions from shapes', 'visual_models_write_fraction'],
           ['F.2', 'Equal parts', 'visual_models_equal_parts'],
           ['F.3', 'Fraction of a set', 'visual_models_fraction_of_set'],
           ['F.4', 'Mixed numbers from models', 'visual_models_mixed_numbers'],
@@ -136,6 +143,12 @@ const TOPICS = [
           ['F.23', 'Decompose fractions: error analysis', 'fractions_decompose_error_analysis'],
           ['F.24', 'Count the unit fraction pieces', 'fractions_count_unit_fraction_pieces'],
           ['F.25', 'Decompose fractions: puzzle style', 'fractions_decompose_puzzle_style'],
+        ],
+      },
+      {
+        title: 'Operations skills',
+        skills: [
+          ['F.26', 'Add and subtract fractions with unlike denominators', 'fractions-g5-add-subtract-unlike-denominators'],
         ],
       },
     ],
@@ -237,6 +250,15 @@ const TOPICS = [
     ],
   },
   {
+    id: 'english-grammar',
+    title: 'English Grammar',
+    color: '#a855f7',
+    subject: 'english',
+    topic: 'grammar',
+    includes: ['Identify nouns', 'Pronouns & replacements', 'Action verbs & tenses', 'Articles a vs an', 'Capitalization & punctuation'],
+    groups: grammarHomeGroups,
+  },
+  {
     id: 'units-measurement',
     title: 'Units and measurement',
     color: '#0ea5e9',
@@ -244,6 +266,60 @@ const TOPICS = [
     topic: 'units-measurement',
     includes: ['Units', 'temperature', 'measuring tools', 'metric/customary units', 'conversions'],
     groups: unitsMeasurementHomeGroups,
+  },
+  {
+    id: 'ratio',
+    title: 'Ratios',
+    color: '#ea580c',
+    subject: 'math',
+    topic: 'ratio',
+    includes: ['Simplifying ratios', 'Same-kind check', 'Antecedent & consequent', 'Ratio tables', 'Equivalent ratios', 'Word problems'],
+    groups: [
+      {
+        title: 'Ratio concepts',
+        skills: [
+          ['R.1', 'Compare quantities of same kind', 'ratio_identify_from_words'],
+          ['R.2', 'Compare quantities by subtraction vs division', 'ratio_subtraction_vs_division'],
+          ['R.3', 'Check if comparison is same kind', 'ratio_same_kind_check'],
+          ['R.4', 'Understand antecedent and consequent', 'ratio_terms_antecedent_consequent'],
+          ['R.5', 'Ratio has no units', 'ratio_units_concept'],
+        ],
+      },
+      {
+        title: 'Equivalence & simplification',
+        skills: [
+          ['R.6', 'Simplify ratios using HCF (two terms)', 'ratio_simplify_two_terms'],
+          ['R.7', 'Simplify ratios using HCF (three terms)', 'ratio_simplify_three_terms'],
+          ['R.8', 'Check equivalent ratios', 'ratio_equivalent_check'],
+          ['R.9', 'Find equivalent ratios', 'ratio_equivalent_find'],
+          ['R.10', 'Equivalent ratios with fractions', 'ratio_fraction_to_whole'],
+        ],
+      },
+      {
+        title: 'Missing values & tables',
+        skills: [
+          ['R.11', 'Solve missing values in ratios', 'ratio_missing_value'],
+          ['R.12', 'Complete ratio tables', 'ratio_table_completion'],
+          ['R.13', 'Pattern completion in ratios', 'ratio_pattern_completion'],
+          ['R.14', 'Greater ratio comparison', 'ratio_greater_comparison'],
+        ],
+      },
+      {
+        title: 'Visuals & applications',
+        skills: [
+          ['R.15', 'Identify ratios from visual count', 'ratio_visual_count'],
+          ['R.16', 'Word problems on ratios', 'ratio_word_problem_basic'],
+          ['R.17', 'Error analysis of ratio mistakes', 'ratio_error_analysis'],
+          ['R.18', 'Match ratios to descriptions', 'ratio_matching'],
+          ['R.19', 'Sort ratios into categories', 'ratio_sorting'],
+          ['R.20', 'Misconception remediation', 'ratio_remediation'],
+          ['S.1', 'Write a part-to-part ratio', 'ratio_write_part_to_part_mcq'],
+          ['S.2', 'Write a ratio using a colon', 'ratio_write_colon_single_blank'],
+          ['S.3', 'Write a ratio using a fraction', 'ratio_write_fraction_single_blank'],
+          ['S.6', 'Which model represents the ratio?', 'ratio_which_model_represents_mcq'],
+        ],
+      },
+    ],
   },
 ];
 

@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import CategorizationRenderer from './CategorizationRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
+import styles from './FactoryLayout.module.css';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -74,14 +75,14 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
             onChange={(event) => onAnswer(writeAnswer(userAnswer, blankId, event.target.value))}
             inputMode="numeric"
             style={{
-              width: 'clamp(64px, 19vw, 92px)',
-              height: 'clamp(38px, 11vw, 48px)',
-              margin: '0 clamp(4px, 1.6vw, 8px)',
-              border: '2px solid #93c5fd',
-              borderRadius: 12,
+              width: 'clamp(54px, 14vw, 76px)',
+              height: 'clamp(32px, 8vw, 40px)',
+              margin: '0 clamp(2px, 1vw, 6px)',
+              border: '1.5px solid #94a3b8',
+              borderRadius: 4,
               textAlign: 'center',
-              fontSize: 'clamp(18px, 5.5vw, 24px)',
-              fontWeight: 900,
+              fontSize: 'clamp(16px, 4vw, 20px)',
+              fontWeight: 600,
               color: '#0f172a',
               background: isAnswered ? '#f8fafc' : '#ffffff',
               outline: 'none',
@@ -137,11 +138,12 @@ function TextPart({ part, userAnswer, onAnswer, isAnswered }) {
   return (
     <div
       style={{
-        fontSize: responsivePx(part.style?.fontSize, 20, 28),
-        fontWeight: part.style?.fontWeight || 800,
-        color: part.style?.color || '#0f172a',
-        lineHeight: 1.45,
-        textAlign: 'center',
+        fontSize: responsivePx(part.style?.fontSize, 16, 22),
+        fontWeight: part.style?.fontWeight || 400,
+        color: part.style?.color || '#334155',
+        lineHeight: 1.4,
+        textAlign: 'left',
+        width: '100%',
         ...part.style,
       }}
     >
@@ -157,12 +159,13 @@ function TextPart({ part, userAnswer, onAnswer, isAnswered }) {
 function SvgPart({ part, inGroup = false }) {
   return (
     <div
+      className={styles.responsiveSvg}
       style={{
         width: inGroup ? 'auto' : '100%',
-        maxWidth: inGroup ? 180 : 680,
+        maxWidth: '100%',
         flex: inGroup ? '0 0 auto' : 'initial',
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         ...(part.style || {}),
       }}
       dangerouslySetInnerHTML={{ __html: part.content }}
@@ -178,7 +181,7 @@ function ImagePart({ part, inGroup = false }) {
         maxWidth: inGroup ? 220 : 460,
         flex: inGroup ? '0 0 auto' : 'initial',
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         ...(part.style || {}),
       }}
     >
@@ -206,16 +209,17 @@ function InputPart({ part, userAnswer, onAnswer, isAnswered }) {
       disabled={isAnswered}
       onChange={(event) => onAnswer(writeAnswer(userAnswer, id, event.target.value))}
       style={{
-        width: 'clamp(76px, 28vw, 132px)',
-        height: 'clamp(40px, 11vw, 50px)',
-        border: '2px solid #93c5fd',
-        borderRadius: 12,
+        width: 'clamp(60px, 15vw, 84px)',
+        height: 'clamp(34px, 9vw, 42px)',
+        border: '1.5px solid #94a3b8',
+        borderRadius: 4,
         textAlign: 'center',
-        fontSize: 'clamp(18px, 5vw, 22px)',
-        fontWeight: 900,
+        fontSize: 'clamp(16px, 4vw, 20px)',
+        fontWeight: 600,
         color: '#0f172a',
         background: isAnswered ? '#f8fafc' : '#ffffff',
         outline: 'none',
+        transition: 'border-color 0.15s ease',
         ...part.style,
       }}
     />
@@ -274,6 +278,145 @@ function OptionSelectPart({ part, userAnswer, onAnswer, isAnswered }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function normalizeSentenceTokens(part) {
+  if (Array.isArray(part.tokens) && part.tokens.length) {
+    return part.tokens.map((token, index) => {
+      if (typeof token === 'string') {
+        return {
+          id: `token_${index}`,
+          text: token,
+          selectable: true,
+        };
+      }
+
+      return {
+        id: token.id || `token_${index}`,
+        text: token.text ?? token.content ?? '',
+        display: token.display ?? token.text ?? token.content ?? '',
+        trailing: token.trailing ?? '',
+        leading: token.leading ?? '',
+        selectable: token.selectable !== false,
+      };
+    });
+  }
+
+  return String(part.sentence || part.content || '')
+    .split(/(\s+)/)
+    .filter((piece) => piece.length)
+    .map((piece, index) => ({
+      id: `token_${index}`,
+      text: piece,
+      display: piece,
+      selectable: !/^\s+$/.test(piece),
+      isSpace: /^\s+$/.test(piece),
+    }));
+}
+
+function PickFromSentencePart({ part, userAnswer, onAnswer, isAnswered }) {
+  const [hoveredToken, setHoveredToken] = useState(null);
+  const answerKey = part.answerKey || part.id || 'selectedTokens';
+  const multiSelect = Boolean(part.multiSelect);
+  const tokens = normalizeSentenceTokens(part);
+  const tokenOrder = new Map(tokens.map((token, index) => [token.id, index]));
+  const selectedValue = readAnswer(userAnswer, answerKey);
+  const selectedIds = String(selectedValue || '')
+    .split('|')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  function serializeSelected(ids) {
+    return [...new Set(ids)]
+      .sort((a, b) => (tokenOrder.get(a) ?? 0) - (tokenOrder.get(b) ?? 0))
+      .join('|');
+  }
+
+  function handleSelect(token) {
+    if (isAnswered || !token.selectable) return;
+
+    const nextIds = multiSelect
+      ? selectedIds.includes(token.id)
+        ? selectedIds.filter((id) => id !== token.id)
+        : [...selectedIds, token.id]
+      : [token.id];
+
+    onAnswer(writeAnswer(userAnswer, answerKey, serializeSelected(nextIds)));
+  }
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: part.align === 'center' ? 'center' : 'flex-start',
+        ...(part.wrapperStyle || {}),
+      }}
+    >
+      <div
+        role="group"
+        aria-label={part.ariaLabel || part.prompt || 'Select words in the sentence'}
+        style={{
+          maxWidth: part.maxWidth || 940,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'baseline',
+          columnGap: 'clamp(7px, 1.4vw, 13px)',
+          rowGap: 'clamp(8px, 1.8vw, 14px)',
+          color: '#0f172a',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: responsivePx(part.fontSize || part.style?.fontSize, 27, 42),
+          fontWeight: part.fontWeight || 400,
+          lineHeight: 1.55,
+          textAlign: 'left',
+          ...(part.style || {}),
+        }}
+      >
+        {tokens.map((token) => {
+          if (token.isSpace) {
+            return <span key={token.id} style={{ width: 2 }} />;
+          }
+
+          const selected = selectedIds.includes(token.id);
+          const hovered = hoveredToken === token.id;
+          const canPick = token.selectable && !isAnswered;
+
+          return (
+            <button
+              key={token.id}
+              type="button"
+              disabled={!token.selectable || isAnswered}
+              onClick={() => handleSelect(token)}
+              onMouseEnter={() => setHoveredToken(token.id)}
+              onMouseLeave={() => setHoveredToken(null)}
+              style={{
+                appearance: 'none',
+                border: 'none',
+                borderBottom: selected
+                  ? '4px solid #38a5e8'
+                  : hovered && token.selectable
+                    ? '3px dotted #38a5e8'
+                    : '3px solid transparent',
+                borderRadius: 0,
+                background: 'transparent',
+                padding: '0 2px 5px',
+                margin: 0,
+                color: selected ? '#0f172a' : 'inherit',
+                font: 'inherit',
+                fontWeight: selected ? 700 : 'inherit',
+                cursor: canPick ? 'pointer' : 'default',
+                transition: 'border-color 120ms ease, border-style 120ms ease, color 120ms ease',
+              }}
+            >
+              {token.leading || ''}
+              {token.display ?? token.text}
+              {token.trailing || ''}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1017,6 +1160,9 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
 
 function GroupPart({ part, question, userAnswer, onAnswer, isAnswered }) {
   const direction = part.direction === 'row' || part.type === 'row' ? 'row' : 'column';
+  const defaultJustifyContent = direction === 'row' ? 'flex-start' : 'stretch';
+  const defaultAlignItems = direction === 'row' ? 'center' : 'stretch';
+  
   return (
     <div
       style={{
@@ -1024,8 +1170,8 @@ function GroupPart({ part, question, userAnswer, onAnswer, isAnswered }) {
         flexDirection: direction,
         gap: direction === 'row' ? 14 : 10,
         flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: defaultJustifyContent,
+        alignItems: defaultAlignItems,
         width: '100%',
         ...(part.style || {}),
       }}
@@ -1449,11 +1595,26 @@ const PART_RENDERERS = {
   option_select: OptionSelectPart,
   choice: OptionSelectPart,
   choices: OptionSelectPart,
-  latex: ({ part }) => (
-    <div style={{ fontSize: 26, color: '#0f172a', textAlign: 'center', display: 'flex', justifyContent: 'center', width: '100%', ...(part.style || {}) }}>
-      <KaTeXRenderer math={part.content} displayMode={true} />
-    </div>
-  ),
+  pick_from_sentence: PickFromSentencePart,
+  select_from_sentence: PickFromSentencePart,
+  token_select: PickFromSentencePart,
+  latex: ({ part }) => {
+    const isInline = part.style?.display === 'inline-block' || part.style?.display === 'inline';
+    return (
+      <div style={{
+        fontSize: 'clamp(20px, 5vw, 26px)',
+        color: '#0f172a',
+        textAlign: 'left',
+        display: isInline ? 'inline-block' : 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        width: isInline ? 'auto' : '100%',
+        ...(part.style || {})
+      }}>
+        <KaTeXRenderer math={part.content} displayMode={!isInline} />
+      </div>
+    );
+  },
   arithmeticLayout: ArithmeticLayoutPart,
   row: GroupPart,
   group: GroupPart,

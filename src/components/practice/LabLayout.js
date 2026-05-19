@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import styles from './FactoryLayout.module.css';
 
 export default function LabLayout({
@@ -21,7 +20,9 @@ export default function LabLayout({
     handleSubmit,
     userAnswer,
     autoSubmit = false,
-    setAutoSubmit
+    setAutoSubmit,
+    practiceLevel = 1,
+    levelStreak = 0
 }) {
     const [isMobile, setIsMobile] = useState(false);
 
@@ -52,7 +53,6 @@ export default function LabLayout({
                 {/* Premium Header */}
                 <header className={styles.header}>
                     <div className={styles.headerLeft}>
-                        <Link href="/" className={styles.backButton}>←</Link>
                         <div>
                             <h1 className={styles.title}>{title}</h1>
                             <p className={styles.subtitle}>{grade}</p>
@@ -86,12 +86,24 @@ export default function LabLayout({
                             Reset
                         </button>
                     </div>
+
+                    <div className={styles.mobileStatusBar} aria-label="Practice progress">
+                        <div className={styles.mobileStatusItem}>
+                            <span className={styles.mobileStatusLabel}>SmartScore</span>
+                            <strong className={styles.mobileStatusValue}>{smartScore}</strong>
+                        </div>
+                        <div className={styles.mobileStatusItem}>
+                            <span className={styles.mobileStatusLabel}>Streak</span>
+                            <strong className={styles.mobileStatusValue}>{levelStreak}/5</strong>
+                            <span className={styles.mobileStatusSubvalue}>Level {practiceLevel}</span>
+                        </div>
+                    </div>
                 </header>
 
                 <main className={styles.mainGrid}>
                     
                     {/* Left Sidebar */}
-                    <aside style={{ display: 'flex', flexDirection: 'column', gap: '24px', order: isMobile ? 2 : 1 }}>
+                    <aside className={styles.mobileHiddenPanel} style={{ display: 'flex', flexDirection: 'column', gap: '24px', order: isMobile ? 2 : 1 }}>
                         {leftPanel}
                     </aside>
 
@@ -99,7 +111,7 @@ export default function LabLayout({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', order: isMobile ? 1 : 2 }}>
                         
                         {/* Phase & Progress Card */}
-                        <div className={`${styles.panel} ${styles.progressPanel}`}>
+                        <div className={`${styles.panel} ${styles.progressPanel} ${styles.desktopOnlyPanel}`}>
                             <div className={styles.levelBadge}>
                                 <span className={styles.levelLabel}>{getPhaseText(smartScore)}</span>
                                 <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '16px' }}>{smartScore} / 100</span>
@@ -152,7 +164,7 @@ export default function LabLayout({
                     </div>
 
                     {/* Right Sidebar */}
-                    <aside style={{ display: 'flex', flexDirection: 'column', gap: '24px', order: 3 }}>
+                    <aside className={styles.mobileHiddenPanel} style={{ display: 'flex', flexDirection: 'column', gap: '24px', order: 3 }}>
                         
                         {/* SmartScore Dashboard */}
                         <div className={styles.panel} style={{ position: 'relative', overflow: 'hidden' }}>

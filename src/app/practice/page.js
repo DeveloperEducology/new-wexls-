@@ -23,8 +23,17 @@ import { multiplicationSkillsByGrade } from '../../lib/practice/generators/math/
 
 import { subtractionSkillsByGrade } from '../../lib/practice/generators/math/topics/subtraction/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../../lib/practice/generators/science/topics/units-measurement/skills/index.js';
+import { grammarSkillsByGrade } from '../../lib/practice/generators/english/topics/grammar/skills/index.js';
 
 const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).flatMap(([grade, skills]) =>
+  skills.map((skill) => ({
+    group: `Grade ${grade}`,
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+);
+
+const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
     group: `Grade ${grade}`,
     label: `${skill.code} ${skill.title}`,
@@ -81,6 +90,7 @@ const TIME_OPTIONS = [
 
 const FRACTIONS_OPTIONS = [
   { group: 'Visual Models', label: 'Identify fractions from shapes', value: 'visual_models_identify' },
+  { group: 'Visual Models', label: 'Write fractions from shapes', value: 'visual_models_write_fraction' },
   { group: 'Visual Models', label: 'Equal parts', value: 'visual_models_equal_parts' },
   { group: 'Visual Models', label: 'Fraction of a set', value: 'visual_models_fraction_of_set' },
   { group: 'Visual Models', label: 'Mixed numbers from models', value: 'visual_models_mixed_numbers' },
@@ -91,6 +101,7 @@ const FRACTIONS_OPTIONS = [
   { group: 'Interactive Models', label: 'Fill parts of a circle', value: 'visual_models_fill_fraction_pie' },
   { group: 'Interactive Models', label: 'Fill parts of a square', value: 'visual_models_fill_fraction_square' },
   { group: 'Interactive Models', label: 'Fill parts of a rectangle', value: 'visual_models_fill_fraction_rectangle' },
+  { group: 'Operations', label: 'Add and subtract fractions with unlike denominators', value: 'fractions-g5-add-subtract-unlike-denominators' },
 ];
 
 const PLACE_VALUE_OPTIONS = [
@@ -242,6 +253,20 @@ const SOURCE_CONFIGS = {
       { label: 'Interactive MCQ', text: 'Compare temperatures using multiple SVGs side by side.' },
     ],
   },
+  'english-grammar': {
+    label: 'Grammar Practice',
+    api: '/api/practice',
+    badge: 'ENG',
+    description: 'Topic-wise Grammar engines, templates, and grade micro-skills.',
+    defaultLogicType: 'english-g1-n1-identify-nouns',
+    subject: 'english',
+    topic: 'grammar',
+    options: ENGLISH_GRAMMAR_OPTIONS,
+    tips: [
+      { label: 'Clean Generator', text: 'Engines create clean question JSON.' },
+      { label: 'Responsive Layouts', text: 'Sentence, pronoun, and noun options adapt.' },
+    ],
+  },
   testing: {
     label: 'Testing Practice',
     api: '/api/practice',
@@ -276,6 +301,7 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'math' && topic === 'testing') return 'testing';
   if (subject === 'social' && topic === 'gk') return 'social-gk';
   if (subject === 'science' && topic === 'units-measurement') return 'units-measurement';
+  if (subject === 'english' && topic === 'grammar') return 'english-grammar';
   return fallback;
 }
 
@@ -861,6 +887,8 @@ function PracticePageContent() {
         userAnswer={userAnswer}
         autoSubmit={autoSubmit}
         setAutoSubmit={setAutoSubmit}
+        practiceLevel={practiceLevel}
+        levelStreak={levelStreak}
       >
         {question ? (
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>

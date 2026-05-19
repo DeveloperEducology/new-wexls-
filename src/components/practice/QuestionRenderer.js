@@ -16,6 +16,9 @@ const RENDERERS = {
   categorization: CategorizationRenderer,
   categorizationv2: CategorizationRenderer,
   categorySort: CategorizationRenderer,
+  sorting: CategorizationRenderer,
+  sort: CategorizationRenderer,
+  matching: CategorizationRenderer,
 };
 
 export default function QuestionRenderer({

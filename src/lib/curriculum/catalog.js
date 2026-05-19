@@ -52,6 +52,7 @@ export const curriculumCatalog = {
               title: 'Visual Models',
               skills: [
                 'visual_models_identify',
+                'visual_models_write_fraction',
                 'visual_models_equal_parts',
                 'visual_models_fraction_of_set',
                 'visual_models_mixed_numbers',
@@ -81,6 +82,13 @@ export const curriculumCatalog = {
                 'fractions_decompose_error_analysis',
                 'fractions_count_unit_fraction_pieces',
                 'fractions_decompose_puzzle_style',
+              ],
+            },
+            {
+              id: 'operations',
+              title: 'Fraction Operations',
+              skills: [
+                'fractions-g5-add-subtract-unlike-denominators',
               ],
             }
           ],

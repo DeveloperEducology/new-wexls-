@@ -39,6 +39,8 @@ export const visualModelsEngine = (config) => {
     return generateFractionOfSet(params, random);
   } else if (subType === 'mixed_numbers') {
     return generateMixedNumbers(params, random);
+  } else if (subType === 'write_fraction_from_model') {
+    return generateWriteFractionFromModel(params, random);
   } else if (subType === 'visual_models_cut_rectangle_fourths') {
     return generateCutRectangleFourths(params, random);
   } else if (subType === 'visual_models_cut_circle_fourths') {
@@ -794,6 +796,92 @@ function generateCutCircleSixths(params, random) {
     adaptiveConfig: {
       logic_type: 'visual_models_cut_circle_sixths',
       variables: { seed: params.seed }
+    }
+  };
+}
+
+function buildFractionBarSvg(numerator, denominator) {
+  const w = 440 / denominator;
+  const cells = Array.from({ length: denominator }).map((_, index) => {
+    const fill = index < numerator ? '#bbf7d0' : '#ffffff';
+    return `<rect x="${40 + index * w}" y="42" width="${w}" height="54" fill="${fill}" stroke="#16a34a" stroke-width="3" />`;
+  }).join('\n');
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 138" width="100%" style="max-width: 320px; display: block; margin: 8px auto;">
+      ${cells}
+    </svg>
+  `;
+}
+
+function buildFractionCircleSvg(numerator, denominator, size = 180) {
+  const cells = Array.from({ length: denominator }).map((_, index) => {
+    const start = (index / denominator) * Math.PI * 2 - Math.PI / 2;
+    const end = ((index + 1) / denominator) * Math.PI * 2 - Math.PI / 2;
+    const x1 = 120 + Math.cos(start) * 92;
+    const y1 = 120 + Math.sin(start) * 92;
+    const x2 = 120 + Math.cos(end) * 92;
+    const y2 = 120 + Math.sin(end) * 92;
+    const largeArc = end - start > Math.PI ? 1 : 0;
+    const fill = index < numerator ? '#bbf7d0' : '#ffffff';
+    return `<path d="M120 120 L${x1.toFixed(2)} ${y1.toFixed(2)} A92 92 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z" fill="${fill}" stroke="#16a34a" stroke-width="3" />`;
+  }).join('\n');
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 240 240" style="display: block; margin: 8px auto;">
+      ${cells}
+      <circle cx="120" cy="120" r="92" fill="none" stroke="#16a34a" stroke-width="4" />
+    </svg>
+  `;
+}
+
+function generateWriteFractionFromModel(params, random) {
+  const denominatorPool = params.denominatorPool || [2, 3, 4, 5, 6, 8, 10];
+  const denominator = params.denom || params.denominator || denominatorPool[Math.floor(random() * denominatorPool.length)];
+  const numerator = params.num || params.numerator || getRandomInt(1, denominator - 1, random);
+  const shape = params.shape || (random() > 0.5 ? 'bar' : 'circle');
+
+  const questionText = 'Write the fraction of the shape that is shaded.';
+
+  const solutionSvg = shape === 'bar' 
+    ? buildFractionBarSvg(numerator, denominator) 
+    : buildFractionCircleSvg(numerator, denominator);
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: 'Count the shaded parts and the total parts to write the fraction.' },
+        { type: 'svg', content: solutionSvg },
+        { type: 'text', content: `First, count the number of shaded parts: **${numerator}** ${numerator === 1 ? 'part is' : 'parts are'} shaded. This is the **numerator** (top number).` },
+        { type: 'text', content: `Next, count the total number of equal parts: there are **${denominator}** equal parts in total. This is the **denominator** (bottom number).` },
+        { type: 'text', content: 'Write the fraction as numerator over denominator:', style: { marginTop: 12 } },
+        { type: 'latex', content: `\\frac{${numerator}}{${denominator}}` }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_write_model_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: questionText, style: { fontWeight: 900 } },
+      {
+        type: 'fraction_model',
+        numerator,
+        denominator,
+        shape,
+        isVertical: true
+      },
+      { type: 'text', content: 'Fraction: [[ans]]', style: { fontSize: 20, fontWeight: 'bold', marginTop: 14 } }
+    ],
+    correctAnswerText: JSON.stringify({ ans: `${numerator}/${denominator}` }),
+    validation: { type: 'exact', answer: { ans: `${numerator}/${denominator}` } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_write_fraction',
+      variables: { numerator, denominator, shape, seed: params.seed }
     }
   };
 }

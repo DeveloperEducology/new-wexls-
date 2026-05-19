@@ -2,6 +2,7 @@
 
 import PartRenderer from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
+import styles from './FactoryLayout.module.css';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -47,14 +48,14 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
             onChange={(event) => onAnswer(writeAnswer(userAnswer, blankId, event.target.value))}
             inputMode="numeric"
             style={{
-              width: 'clamp(64px, 19vw, 92px)',
-              height: 'clamp(38px, 11vw, 48px)',
-              margin: '0 clamp(4px, 1.6vw, 8px)',
-              border: '2px solid #93c5fd',
-              borderRadius: 12,
+              width: 'clamp(54px, 14vw, 76px)',
+              height: 'clamp(32px, 8vw, 40px)',
+              margin: '0 clamp(2px, 1vw, 6px)',
+              border: '1.5px solid #94a3b8',
+              borderRadius: 4,
               textAlign: 'center',
-              fontSize: 'clamp(18px, 5.5vw, 24px)',
-              fontWeight: 900,
+              fontSize: 'clamp(16px, 4vw, 20px)',
+              fontWeight: 600,
               color: '#0f172a',
               background: isAnswered ? '#f8fafc' : '#ffffff',
               outline: 'none',
@@ -108,12 +109,13 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
 function SvgPart({ content, style, inGroup = false }) {
   return (
     <div
+      className={styles.responsiveSvg}
       style={{
         width: inGroup ? 'auto' : '100%',
-        maxWidth: inGroup ? 170 : 680,
+        maxWidth: '100%',
         flex: inGroup ? '0 0 auto' : 'initial',
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         ...style,
       }}
       dangerouslySetInnerHTML={{ __html: content }}
@@ -128,16 +130,17 @@ function InputPart({ id = 'ans', userAnswer, onAnswer, isAnswered, style }) {
       disabled={isAnswered}
       onChange={(event) => onAnswer(writeAnswer(userAnswer, id, event.target.value))}
       style={{
-        width: 'clamp(76px, 28vw, 132px)',
-        height: 'clamp(40px, 11vw, 50px)',
-        border: '2px solid #93c5fd',
-        borderRadius: 12,
+        width: 'clamp(60px, 15vw, 84px)',
+        height: 'clamp(34px, 9vw, 42px)',
+        border: '1.5px solid #94a3b8',
+        borderRadius: 4,
         textAlign: 'center',
-        fontSize: 'clamp(18px, 5vw, 22px)',
-        fontWeight: 900,
+        fontSize: 'clamp(16px, 4vw, 20px)',
+        fontWeight: 600,
         color: '#0f172a',
         background: isAnswered ? '#f8fafc' : '#ffffff',
         outline: 'none',
+        transition: 'border-color 0.15s ease',
         ...style,
       }}
     />
@@ -191,7 +194,7 @@ function renderPart(part, props, index, context = {}) {
   if (part.type === 'svg') return <SvgPart key={index} content={part.content} style={part.style} inGroup={context.inGroup} />;
   if (part.type === 'image') {
     return (
-      <div key={index} style={{ width: '100%', display: 'flex', justifyContent: 'center', ...(part.style || {}) }}>
+      <div key={index} style={{ width: '100%', display: 'flex', justifyContent: 'flex-start', ...(part.style || {}) }}>
         <img
           src={part.imageUrl || part.src || part.content}
           alt={part.alt || ''}
@@ -207,17 +210,31 @@ function renderPart(part, props, index, context = {}) {
       </div>
     );
   }
-  if (part.type === 'input') return <InputPart key={index} id={part.id} {...props} style={part.style} />;
+  if (part.type === 'input') return <InputPart key={index} id={part.id || part.name} {...props} style={part.style} />;
+
   if (part.type === 'latex') {
+    const isInline = part.style?.display === 'inline-block' || part.style?.display === 'inline';
     return (
-      <div key={index} style={{ fontSize: 26, color: '#0f172a', textAlign: 'center', display: 'flex', justifyContent: 'center', width: '100%', ...(part.style || {}) }}>
-        <KaTeXRenderer math={part.content} displayMode={true} />
+      <div key={index} style={{
+        fontSize: 'clamp(20px, 5vw, 26px)',
+        color: '#0f172a',
+        textAlign: 'left',
+        display: isInline ? 'inline-block' : 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        width: isInline ? 'auto' : '100%',
+        ...(part.style || {})
+      }}>
+        <KaTeXRenderer math={part.content} displayMode={!isInline} />
       </div>
     );
   }
   if (part.type === 'arithmeticLayout') return <ArithmeticLayout key={index} layout={part.layout} {...props} />;
   if (part.type === 'row' || part.type === 'group') {
     const direction = part.direction === 'row' ? 'row' : 'column';
+    const defaultJustifyContent = direction === 'row' ? 'flex-start' : 'stretch';
+    const defaultAlignItems = direction === 'row' ? 'center' : 'stretch';
+
     return (
       <div
         key={index}
@@ -226,8 +243,8 @@ function renderPart(part, props, index, context = {}) {
           flexDirection: direction,
           gap: direction === 'row' ? 14 : 10,
           flexWrap: 'wrap',
-          justifyContent: 'center',
-          alignItems: 'center',
+          justifyContent: defaultJustifyContent,
+          alignItems: defaultAlignItems,
           width: '100%',
           ...(part.style || {}),
         }}
@@ -241,11 +258,12 @@ function renderPart(part, props, index, context = {}) {
     <div
       key={index}
       style={{
-        fontSize: responsivePx(part.style?.fontSize, 20, 28),
-        fontWeight: part.style?.fontWeight || 800,
-        color: part.style?.color || '#0f172a',
-        lineHeight: 1.45,
-        textAlign: 'center',
+        fontSize: responsivePx(part.style?.fontSize, 16, 22),
+        fontWeight: part.style?.fontWeight || 400,
+        color: part.style?.color || '#334155',
+        lineHeight: 1.4,
+        textAlign: 'left',
+        width: '100%',
         ...part.style,
       }}
     >
@@ -269,7 +287,7 @@ export default function FillInTheBlankRenderer({
     : [{ type: 'text', content: question.questionText }];
 
   return (
-    <section style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+    <section style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
       {parts.map((part, index) => (
         <PartRenderer
           key={index}

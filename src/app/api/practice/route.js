@@ -31,6 +31,10 @@ import {
   generateMultiplicationQuestion,
 } from '../../../lib/practice/generators/math/topics/multiplication';
 import { resolveUnitsMeasurementGenerator } from '../../../lib/practice/generators/science/topics/units-measurement/index.js';
+import {
+  generateRatioQuestion,
+} from '../../../lib/practice/generators/math/topics/ratio/index.js';
+
 
 
 function resolveSkill(searchParams) {
@@ -47,11 +51,13 @@ export async function GET(request) {
   const skill = resolveSkill(searchParams);
   const seed = searchParams.get('seed') || Date.now().toString();
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing'].includes(topic);
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios'].includes(topic);
   const isSocialTopic = subject === 'social' && topic === 'gk';
-  const isScienceTopic = subject === 'science' && topic === 'units-measurement';
 
-  if (!isMathTopic && !isSocialTopic && !isScienceTopic) {
+  const isScienceTopic = subject === 'science' && topic === 'units-measurement';
+  const isEnglishTopic = subject === 'english' && topic === 'grammar';
+
+  if (!isMathTopic && !isSocialTopic && !isScienceTopic && !isEnglishTopic) {
     return NextResponse.json(
       { success: false, error: `Unsupported practice route: ${subject}/${topic}` },
       { status: 404 },
@@ -184,8 +190,53 @@ export async function GET(request) {
       }, { subject, topic, skill }));
     }
 
+    if (subject === 'english' && topic === 'grammar') {
+      const { resolveGrammarGenerator } = await import('../../../lib/practice/generators/english/topics/grammar/engine.js');
+      const generator = resolveGrammarGenerator(skill, config);
+      if (!generator) {
+        throw new Error(`Could not resolve generator for ${skill}`);
+      }
+      
+      const questionData = generator.generate({ ...config.variables, difficulty: config.difficulty });
+      const question = normalizeGenericTopicQuestion(
+        questionData,
+        { topic, skill, seed, engine: generator.template.engine, subject }
+      );
+      
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: generator.template,
+      }, { subject, topic, skill }));
+    }
+
+    if (topic === 'ratio' || topic === 'ratios') {
+      const question = normalizeGenericTopicQuestion(
+        generateRatioQuestion(config),
+        { topic, skill, seed, engine: 'ratio' },
+      );
+
+
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: question.metadata?.templateId || skill,
+          title: question.metadata?.templateId || skill,
+          description: "Ratio topic template practice",
+          competency: {
+            id: "ratio_competency",
+            title: "Ratio comparison and calculations"
+          }
+        },
+      }, { subject, topic, skill }));
+    }
+
     if (topic === 'multiplication') {
       const question = generateMultiplicationQuestion(config);
+
       const template = createMultiplicationTemplate(skill);
 
       return NextResponse.json(withCompetency({
@@ -268,14 +319,34 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     ?? question.correct_answer_index
     ?? null;
 
+  const rawCategories = Array.isArray(question.categories) ? question.categories : undefined;
+  const rawItems = Array.isArray(question.items) ? question.items : undefined;
+
+  let categories = rawCategories;
+  let items = rawItems;
+
+  if (question.type === 'matching' && Array.isArray(question.pairs)) {
+    const uniqueRights = Array.from(new Set(question.pairs.map(p => p.right?.content || p.right?.label || p.right)));
+    categories = uniqueRights.map(val => ({ id: val, label: val }));
+    items = question.pairs.map(p => {
+      const id = p.left?.content || p.left?.id || p.id || String(Math.random());
+      return {
+        id: id,
+        content: p.left?.content || p.left?.label || p.left || '',
+        imageUrl: p.left?.imageUrl || undefined
+      };
+    });
+  }
+
   return {
     id: question.id || `${topic}-${skill}-${seed}`,
     type: question.type,
     questionText: question.questionText || question.text || '',
     parts: normalizedParts,
     options: Array.isArray(question.options) ? question.options : [],
-    categories: Array.isArray(question.categories) ? question.categories : undefined,
-    items: Array.isArray(question.items) ? question.items : undefined,
+    categories,
+    items,
+    pairs: Array.isArray(question.pairs) ? question.pairs : undefined,
     poolPosition: question.poolPosition,
     answer,
     correctAnswerIndex: normalizeIndex(question.correctAnswerIndex) ?? normalizeIndex(question.correct_answer_index),

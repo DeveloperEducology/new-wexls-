@@ -8,6 +8,7 @@ import { comparisonEngine } from './engines/comparison.js';
 import { rationalNumbersEngine } from './engines/rationalNumbers.js';
 import { interactiveFractionModelEngine } from './engines/interactiveFractionModel.js';
 import { unitFractionsEngine } from './engines/unitFractions.js';
+import { unlikeDenominatorsEngine } from './engines/unlikeDenominators.engine.js';
 
 /**
  * Registry mapping DB logic_types (or template_ids) to specific engines
@@ -21,6 +22,13 @@ export const fractionsV2Registry = {
       subType: 'identify_fraction',
       shapeTypes: ['circle', 'rectangle', 'pentagon', 'kite'],
       denominatorPool: [2, 3, 4, 5, 6, 8]
+    }
+  },
+  'visual_models_write_fraction': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'write_fraction_from_model',
+      denominatorPool: [2, 3, 4, 5, 6, 8, 10]
     }
   },
   'visual_models_equal_parts': {
@@ -367,6 +375,14 @@ export const fractionsV2Registry = {
     params: {
       subType: 'fraction_of_number'
     }
+  },
+  'fractions-g5-add-subtract-unlike-denominators': {
+    engine: unlikeDenominatorsEngine,
+    params: {}
+  },
+  'fractions.unlikeDenominators.addSubtract': {
+    engine: unlikeDenominatorsEngine,
+    params: {}
   },
 
   // Rational Numbers (Class 8 / Pre-Algebra)

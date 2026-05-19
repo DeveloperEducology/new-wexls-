@@ -371,10 +371,17 @@ export const competencyGraphs = {
           title: 'Decompose fractions into sums of unit fractions',
           prerequisites: ['fraction_visual_models'],
           remediation: ['fraction_visual_models'],
+        },
+        {
+          id: 'fraction_unlike_denominators',
+          title: 'Add and subtract fractions with unlike denominators',
+          prerequisites: ['fraction_visual_models'],
+          remediation: ['fraction_visual_models'],
         }
       ],
       skillMap: {
         visual_models_identify: 'fraction_visual_models',
+        visual_models_write_fraction: 'fraction_visual_models',
         visual_models_equal_parts: 'fraction_visual_models',
         visual_models_fraction_of_set: 'fraction_visual_models',
         visual_models_mixed_numbers: 'fraction_visual_models',
@@ -399,6 +406,8 @@ export const competencyGraphs = {
         fractions_decompose_error_analysis: 'fraction_decompositions',
         fractions_count_unit_fraction_pieces: 'fraction_decompositions',
         fractions_decompose_puzzle_style: 'fraction_decompositions',
+        'fractions-g5-add-subtract-unlike-denominators': 'fraction_unlike_denominators',
+        'fractions.unlikeDenominators.addSubtract': 'fraction_unlike_denominators',
       },
     },
     time: {
@@ -696,6 +705,63 @@ export const competencyGraphs = {
 
   }
 },
+  english: {
+    grammar: {
+      competencies: [
+        {
+          id: 'grammar_nouns',
+          title: 'Understand nouns: identification and classification',
+          prerequisites: [],
+          remediation: [],
+        },
+        {
+          id: 'grammar_pronouns',
+          title: 'Understand pronouns: personal pronouns and noun replacement',
+          prerequisites: ['grammar_nouns'],
+          remediation: ['grammar_nouns'],
+        },
+        {
+          id: 'grammar_verbs',
+          title: 'Understand action verbs and past/present tenses',
+          prerequisites: [],
+          remediation: [],
+        },
+        {
+          id: 'grammar_adjectives',
+          title: 'Understand describing words (adjectives)',
+          prerequisites: ['grammar_nouns'],
+          remediation: ['grammar_nouns'],
+        },
+        {
+          id: 'grammar_articles',
+          title: 'Use articles correctly: "a" and "an"',
+          prerequisites: [],
+          remediation: [],
+        },
+        {
+          id: 'grammar_sentences',
+          title: 'Sentence construction: types, punctuation, and capitalization',
+          prerequisites: ['grammar_nouns', 'grammar_verbs'],
+          remediation: ['grammar_verbs'],
+        }
+      ],
+      skillMap: {
+        'english-g1-n1-identify-nouns': 'grammar_nouns',
+        'english-g1-n2-classify-nouns': 'grammar_nouns',
+        'english-g1-n3-sort-nouns': 'grammar_nouns',
+        'english-g1-p1-choose-pronoun': 'grammar_pronouns',
+        'english-g1-p2-replace-pronoun': 'grammar_pronouns',
+        'english-g1-a1-choose-article': 'grammar_articles',
+        'english-g2-v1-identify-verbs': 'grammar_verbs',
+        'english-g2-v2-tense-verbs': 'grammar_verbs',
+        'english-g2-adj1-identify-adjectives': 'grammar_adjectives',
+        'english-g2-a2-sentence-article': 'grammar_articles',
+        'english-g3-s1-sentence-type': 'grammar_sentences',
+        'english-g3-s2-sentence-punctuation': 'grammar_sentences',
+        'english-g3-s3-sentence-capitalization': 'grammar_sentences'
+      }
+    }
+  }
 };
 
 function normalizeId(value) {
