@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import CategorizationRenderer from './CategorizationRenderer';
+import KaTeXRenderer from './KaTeXRenderer';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -1437,8 +1438,8 @@ const PART_RENDERERS = {
   choice: OptionSelectPart,
   choices: OptionSelectPart,
   latex: ({ part }) => (
-    <div style={{ fontFamily: 'ui-serif, Georgia, serif', fontSize: 26, fontWeight: 850, color: '#0f172a', textAlign: 'center', ...(part.style || {}) }}>
-      {cleanText(part.content || '')}
+    <div style={{ fontSize: 26, color: '#0f172a', textAlign: 'center', display: 'flex', justifyContent: 'center', width: '100%', ...(part.style || {}) }}>
+      <KaTeXRenderer math={part.content} displayMode={true} />
     </div>
   ),
   arithmeticLayout: ArithmeticLayoutPart,

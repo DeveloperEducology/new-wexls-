@@ -1,13 +1,15 @@
 /**
- * Unit Fractions Decompositions Engine
+ * Unit Fractions Decompositions Engine (LaTeX/KaTeX Only)
  * Generates highly adaptive visual and numeric decompositions of fractions
- * into unit fractions (e.g. 3/5 = 1/5 + 1/5 + 1/5) across multiple cognitive styles.
+ * into unit fractions using only standard LaTeX/KaTeX math representations.
  */
 
 import { createSeededRandom, getRandomInt } from '../shared/mathCore.js';
 
 let _uid = 0;
 const uid = () => `${Date.now()}_${++_uid}`;
+
+const fractionLatex = (num, den) => `\\frac{${num}}{${den}}`;
 
 export const unitFractionsEngine = (config) => {
   const { engineParams = {}, adaptiveConfig = {}, variables = {} } = config || {};
@@ -103,10 +105,10 @@ function buildFractionStripSvg(numerator, denominator, size = 300) {
 // ============================================================================
 
 function generateStandardMcq(numerator, denominator, params, random) {
-  const fractionStr = `${numerator}/${denominator}`;
+  const fractionStr = fractionLatex(numerator, denominator);
   const questionText = `How do you write ${numerator}/${denominator} as a sum of unit fractions?`;
 
-  const unitSum = Array(numerator).fill(`1/${denominator}`).join(' + ');
+  const unitSum = Array(numerator).fill(fractionLatex(1, denominator)).join(' + ');
 
   const correctOption = {
     id: 'opt_correct',
@@ -120,21 +122,21 @@ function generateStandardMcq(numerator, denominator, params, random) {
     {
       id: 'opt_dist_denom',
       type: 'latex',
-      content: Array(numerator).fill(`1/${numerator}`).join(' + '),
+      content: Array(numerator).fill(fractionLatex(1, numerator)).join(' + '),
       isCorrect: false
     },
     // 2. Numerator copied (numerator/denominator + 1/denominator)
     {
       id: 'opt_dist_num_copy',
       type: 'latex',
-      content: `${numerator}/${denominator} + 1/${denominator}`,
+      content: `${fractionLatex(numerator, denominator)} + ${fractionLatex(1, denominator)}`,
       isCorrect: false
     },
     // 3. Whole misunderstanding (1/2 + 1/2 + ...)
     {
       id: 'opt_dist_whole',
       type: 'latex',
-      content: Array(numerator).fill(`1/2`).join(' + '),
+      content: Array(numerator).fill(fractionLatex(1, 2)).join(' + '),
       isCorrect: false
     }
   ];
@@ -159,8 +161,8 @@ function generateStandardMcq(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `To write ${numerator}/${denominator} as a sum of unit fractions, we add the unit fraction 1/${denominator} a total of ${numerator} times.` },
-        { type: 'latex', content: `${numerator}/${denominator} = ${unitSum}` }
+        { type: 'text', content: `To write $${fractionStr}$ as a sum of unit fractions, we add the unit fraction $${fractionLatex(1, denominator)}$ a total of ${numerator} times.` },
+        { type: 'latex', content: `${fractionStr} = ${unitSum}` }
       ]
     }
   ];
@@ -186,10 +188,11 @@ function generateStandardMcq(numerator, denominator, params, random) {
 }
 
 function generateVisualStripMcq(numerator, denominator, params, random) {
+  const fractionStr = fractionLatex(numerator, denominator);
   const questionText = `How do you write ${numerator}/${denominator} as a sum of unit fractions? Use the fraction strips to help.`;
   const stripSvg = buildFractionStripSvg(numerator, denominator, 280);
 
-  const unitSum = Array(numerator).fill(`1/${denominator}`).join(' + ');
+  const unitSum = Array(numerator).fill(fractionLatex(1, denominator)).join(' + ');
 
   const correctOption = {
     id: 'opt_correct',
@@ -202,19 +205,19 @@ function generateVisualStripMcq(numerator, denominator, params, random) {
     {
       id: 'opt_dist_denom',
       type: 'latex',
-      content: Array(numerator).fill(`1/${numerator}`).join(' + '),
+      content: Array(numerator).fill(fractionLatex(1, numerator)).join(' + '),
       isCorrect: false
     },
     {
       id: 'opt_dist_whole',
       type: 'latex',
-      content: Array(numerator).fill(`1/2`).join(' + '),
+      content: Array(numerator).fill(fractionLatex(1, 2)).join(' + '),
       isCorrect: false
     },
     {
       id: 'opt_dist_off_one',
       type: 'latex',
-      content: Array(Math.max(1, numerator - 1)).fill(`1/${denominator}`).join(' + '),
+      content: Array(Math.max(1, numerator - 1)).fill(fractionLatex(1, denominator)).join(' + '),
       isCorrect: false
     }
   ];
@@ -239,14 +242,14 @@ function generateVisualStripMcq(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `This model shows 1 whole divided into ${denominator} equal parts. Each equal part shows the unit fraction 1/${denominator}.` },
+        { type: 'text', content: `This model shows 1 whole divided into ${denominator} equal parts. Each equal part shows the unit fraction $${fractionLatex(1, denominator)}$.` },
         {
           type: 'group',
           direction: 'row',
           style: { justifyContent: 'center', margin: '10px 0' },
           parts: [{ type: 'svg', content: stripSvg }]
         },
-        { type: 'text', content: `Together, ${numerator} of the 1/${denominator} parts make ${numerator}/${denominator}.` },
+        { type: 'text', content: `Together, ${numerator} of the $${fractionLatex(1, denominator)}$ parts make $${fractionStr}$.` },
         { type: 'text', content: "So, this is how you write the fraction as a sum of unit fractions:", style: { marginTop: 10 } },
         { type: 'latex', content: `${unitSum}` }
       ]
@@ -258,7 +261,7 @@ function generateVisualStripMcq(numerator, denominator, params, random) {
     type: 'mcq',
     questionText,
     parts: [
-      { type: 'text', content: `How do you write ${numerator}/${denominator} as a sum of unit fractions? Use the fraction strips to help.`, style: { fontWeight: 900 } },
+      { type: 'text', content: `How do you write $${fractionStr}$ as a sum of unit fractions? Use the fraction strips to help.`, style: { fontWeight: 900 } },
       { type: 'svg', content: stripSvg }
     ],
     options,
@@ -274,7 +277,8 @@ function generateVisualStripMcq(numerator, denominator, params, random) {
 }
 
 function generateCountUnitFractions(numerator, denominator, params, random) {
-  const questionText = `How many 1/${denominator} pieces make ${numerator}/${denominator}?`;
+  const fractionStr = fractionLatex(numerator, denominator);
+  const questionText = `How many ${fractionLatex(1, denominator)} pieces make ${fractionStr}?`;
 
   const correctOption = {
     id: 'opt_correct',
@@ -317,10 +321,10 @@ function generateCountUnitFractions(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `The numerator of ${numerator}/${denominator} is ${numerator}, which tells us the number of parts.` },
-        { type: 'text', content: `The denominator is ${denominator}, which tells us each piece is 1/${denominator}.` },
-        { type: 'latex', content: `${numerator}/${denominator} = ${numerator} × 1/${denominator}` },
-        { type: 'text', content: `So, there are exactly ${numerator} pieces of size 1/${denominator}.` }
+        { type: 'text', content: `The numerator of $${fractionStr}$ is ${numerator}, which tells us the number of parts.` },
+        { type: 'text', content: `The denominator is ${denominator}, which tells us each piece is $${fractionLatex(1, denominator)}$.` },
+        { type: 'latex', content: `${fractionStr} = ${numerator} \\times ${fractionLatex(1, denominator)}` },
+        { type: 'text', content: `So, there are exactly ${numerator} pieces of size $${fractionLatex(1, denominator)}$.` }
       ]
     }
   ];
@@ -330,7 +334,13 @@ function generateCountUnitFractions(numerator, denominator, params, random) {
     type: 'mcq',
     questionText,
     parts: [
-      { type: 'text', content: `How many 1/${denominator} pieces make ${numerator}/${denominator}?`, style: { fontWeight: 900, fontSize: 18 } }
+      { type: 'row', parts: [
+        { type: 'text', content: "How many ", style: { fontWeight: 900, fontSize: 18 } },
+        { type: 'latex', content: fractionLatex(1, denominator) },
+        { type: 'text', content: " pieces make ", style: { fontWeight: 900, fontSize: 18 } },
+        { type: 'latex', content: fractionStr },
+        { type: 'text', content: "?", style: { fontWeight: 900, fontSize: 18 } }
+      ]}
     ],
     options,
     correctAnswerId: 'opt_correct',
@@ -345,19 +355,20 @@ function generateCountUnitFractions(numerator, denominator, params, random) {
 }
 
 function generateMissingUnitFraction(numerator, denominator, params, random) {
+  const fractionStr = fractionLatex(numerator, denominator);
   const questionText = `Find the missing fraction to complete the sum.`;
 
-  // Draw equation like: 4/7 = 1/7 + 1/7 + ? + 1/7
-  const sumTerms = Array(numerator).fill(`1/${denominator}`);
+  // Draw equation like: 4/7 = 1/7 + 1/7 + ▢ + 1/7
+  const sumTerms = Array(numerator).fill(fractionLatex(1, denominator));
   const missingIdx = Math.floor(random() * numerator);
-  sumTerms[missingIdx] = '▢';
+  sumTerms[missingIdx] = '\\square';
 
-  const equationStr = `${numerator}/${denominator} = ${sumTerms.join(' + ')}`;
+  const equationStr = `${fractionStr} = ${sumTerms.join(' + ')}`;
 
   const correctOption = {
     id: 'opt_correct',
     type: 'latex',
-    content: `1/${denominator}`,
+    content: fractionLatex(1, denominator),
     isCorrect: true
   };
 
@@ -365,19 +376,19 @@ function generateMissingUnitFraction(numerator, denominator, params, random) {
     {
       id: 'opt_dist_whole',
       type: 'latex',
-      content: `1/${numerator}`,
+      content: fractionLatex(1, numerator),
       isCorrect: false
     },
     {
       id: 'opt_dist_half',
       type: 'latex',
-      content: `1/2`,
+      content: fractionLatex(1, 2),
       isCorrect: false
     },
     {
       id: 'opt_dist_num',
       type: 'latex',
-      content: `${numerator}/${denominator}`,
+      content: fractionStr,
       isCorrect: false
     }
   ];
@@ -395,9 +406,9 @@ function generateMissingUnitFraction(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `To make the fraction ${numerator}/${denominator}, we decompose it into exactly ${numerator} equal unit fractions of size 1/${denominator}.` },
-        { type: 'latex', content: `${numerator}/${denominator} = ${Array(numerator).fill(`1/${denominator}`).join(' + ')}` },
-        { type: 'text', content: `The missing term in the box is 1/${denominator}.` }
+        { type: 'text', content: `To make the fraction $${fractionStr}$, we decompose it into exactly ${numerator} equal unit fractions of size $${fractionLatex(1, denominator)}$.` },
+        { type: 'latex', content: `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')}` },
+        { type: 'text', content: `The missing term in the box is $${fractionLatex(1, denominator)}$.` }
       ]
     }
   ];
@@ -425,17 +436,18 @@ function generateMissingUnitFraction(numerator, denominator, params, random) {
 function generateTrueOrFalse(numerator, denominator, params, random) {
   const isCorrectTrue = random() > 0.5;
   let equationStr = '';
+  const fractionStr = fractionLatex(numerator, denominator);
   
   if (isCorrectTrue) {
-    equationStr = `${numerator}/${denominator} = ${Array(numerator).fill(`1/${denominator}`).join(' + ')}`;
+    equationStr = `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')}`;
   } else {
     // Generate a wrong sum (e.g. off by one count, or wrong denominator)
     const wrongType = random() > 0.5 ? 'count' : 'denom';
     if (wrongType === 'count') {
       const wrongCount = random() > 0.5 ? numerator + 1 : Math.max(1, numerator - 1);
-      equationStr = `${numerator}/${denominator} = ${Array(wrongCount).fill(`1/${denominator}`).join(' + ')}`;
+      equationStr = `${fractionStr} = ${Array(wrongCount).fill(fractionLatex(1, denominator)).join(' + ')}`;
     } else {
-      equationStr = `${numerator}/${denominator} = ${Array(numerator).fill(`1/${numerator}`).join(' + ')}`;
+      equationStr = `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, numerator)).join(' + ')}`;
     }
   }
 
@@ -453,8 +465,8 @@ function generateTrueOrFalse(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `Let's write ${numerator}/${denominator} as a sum of unit fractions:` },
-        { type: 'latex', content: `${numerator}/${denominator} = ${Array(numerator).fill(`1/${denominator}`).join(' + ')}` },
+        { type: 'text', content: `Let's write $${fractionStr}$ as a sum of unit fractions:` },
+        { type: 'latex', content: `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')}` },
         { type: 'text', content: `Looking at the equation shown, the statement is ${isCorrectTrue ? 'True' : 'False'}.` }
       ]
     }
@@ -482,6 +494,7 @@ function generateTrueOrFalse(numerator, denominator, params, random) {
 
 function generateErrorAnalysis(numerator, denominator, params, random) {
   const questionText = `Identify the student's mistake.`;
+  const fractionStr = fractionLatex(numerator, denominator);
 
   const errorType = random() > 0.5 ? 'denom' : 'num';
   let equationStr = '';
@@ -489,11 +502,11 @@ function generateErrorAnalysis(numerator, denominator, params, random) {
   let correctLabel = '';
   
   if (errorType === 'denom') {
-    equationStr = `${numerator}/${denominator} = ${Array(numerator).fill(`1/${numerator}`).join(' + ')}`;
+    equationStr = `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, numerator)).join(' + ')}`;
     correctExplanation = `The student used the numerator ${numerator} as the denominator of the unit fractions. The denominator should remain ${denominator}.`;
     correctLabel = 'Wrong denominator';
   } else {
-    equationStr = `${numerator}/${denominator} = ${Array(denominator).fill(`1/${numerator}`).join(' + ')}`;
+    equationStr = `${fractionStr} = ${Array(denominator).fill(fractionLatex(1, numerator)).join(' + ')}`;
     correctExplanation = `The student confused the numerator and denominator and wrote too many unit fractions.`;
     correctLabel = 'Wrong count of fractions';
   }
@@ -540,7 +553,7 @@ function generateErrorAnalysis(numerator, denominator, params, random) {
       label: 'solve',
       parts: [
         { type: 'text', content: `The correct decomposition is:` },
-        { type: 'latex', content: `${numerator}/${denominator} = ${Array(numerator).fill(`1/${denominator}`).join(' + ')}` },
+        { type: 'latex', content: `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')}` },
         { type: 'text', content: correctExplanation, style: { marginTop: 10 } }
       ]
     }
@@ -568,18 +581,18 @@ function generateErrorAnalysis(numerator, denominator, params, random) {
 }
 
 function generateSelectAll(numerator, denominator, params, random) {
-  const questionText = `Which expressions equal ${numerator}/${denominator}? Select all that apply.`;
+  const questionText = `Which expressions equal ${fractionLatex(numerator, denominator)}? Select all that apply.`;
+  const fractionStr = fractionLatex(numerator, denominator);
 
-  const unitSum = Array(numerator).fill(`1/${denominator}`).join(' + ');
+  const unitSum = Array(numerator).fill(fractionLatex(1, denominator)).join(' + ');
 
   const rawOptions = [
     { id: 'opt_correct_1', content: unitSum, isCorrect: true, type: 'latex' },
-    { id: 'opt_correct_2', content: `${numerator}/${denominator}`, isCorrect: true, type: 'latex' },
-    { id: 'opt_dist_1', content: Array(numerator).fill(`1/${numerator}`).join(' + '), isCorrect: false, type: 'latex' },
-    { id: 'opt_dist_2', content: Array(denominator).fill(`1/${denominator}`).join(' + '), isCorrect: false, type: 'latex' }
+    { id: 'opt_correct_2', content: fractionStr, isCorrect: true, type: 'latex' },
+    { id: 'opt_dist_1', content: Array(numerator).fill(fractionLatex(1, numerator)).join(' + '), isCorrect: false, type: 'latex' },
+    { id: 'opt_dist_2', content: Array(denominator).fill(fractionLatex(1, denominator)).join(' + '), isCorrect: false, type: 'latex' }
   ];
 
-  // For compatibility with the single MCQ framework, we will ask which expression is EQUAL, but provide select all style options
   for (let i = rawOptions.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [rawOptions[i], rawOptions[j]] = [rawOptions[j], rawOptions[i]];
@@ -593,8 +606,8 @@ function generateSelectAll(numerator, denominator, params, random) {
       label: 'solve',
       parts: [
         { type: 'text', content: `Let's find the values of each option:` },
-        { type: 'text', content: `Decomposing ${numerator}/${denominator} gives:` },
-        { type: 'latex', content: `${unitSum} = ${numerator}/${denominator}` }
+        { type: 'text', content: `Decomposing $${fractionStr}$ gives:` },
+        { type: 'latex', content: `${unitSum} = ${fractionStr}` }
       ]
     }
   ];
@@ -604,7 +617,11 @@ function generateSelectAll(numerator, denominator, params, random) {
     type: 'mcq',
     questionText,
     parts: [
-      { type: 'text', content: `Which expression equals ${numerator}/${denominator}?`, style: { fontWeight: 900 } }
+      { type: 'row', parts: [
+        { type: 'text', content: "Which expression equals ", style: { fontWeight: 900 } },
+        { type: 'latex', content: fractionStr },
+        { type: 'text', content: "?", style: { fontWeight: 900 } }
+      ]}
     ],
     options: rawOptions.map(opt => ({ ...opt, label: opt.content })),
     correctAnswerId: rawOptions[correctIdx].id,
@@ -628,11 +645,12 @@ function generateBuildFromWords(numerator, denominator, params, random) {
   const wordDenom = ordinalWords[denominator] + (numerator > 1 ? 's' : '');
 
   const questionText = `Write ${wordNum} ${wordDenom} as a fraction.`;
+  const fractionStr = fractionLatex(numerator, denominator);
 
   const correctOption = {
     id: 'opt_correct',
     type: 'latex',
-    content: `${numerator}/${denominator}`,
+    content: fractionStr,
     isCorrect: true
   };
 
@@ -640,19 +658,19 @@ function generateBuildFromWords(numerator, denominator, params, random) {
     {
       id: 'opt_dist_rev',
       type: 'latex',
-      content: `${denominator}/${numerator}`,
+      content: fractionLatex(denominator, numerator),
       isCorrect: false
     },
     {
       id: 'opt_dist_unit',
       type: 'latex',
-      content: `1/${denominator}`,
+      content: fractionLatex(1, denominator),
       isCorrect: false
     },
     {
       id: 'opt_dist_num',
       type: 'latex',
-      content: `1/${numerator}`,
+      content: fractionLatex(1, numerator),
       isCorrect: false
     }
   ];
@@ -670,8 +688,8 @@ function generateBuildFromWords(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `"${wordNum} ${wordDenom}" means we have exactly ${numerator} pieces of size 1/${denominator}.` },
-        { type: 'latex', content: `${numerator} × 1/${denominator} = ${numerator}/${denominator}` }
+        { type: 'text', content: `"${wordNum} ${wordDenom}" means we have exactly ${numerator} pieces of size $${fractionLatex(1, denominator)}$.` },
+        { type: 'latex', content: `${numerator} \\times ${fractionLatex(1, denominator)} = ${fractionStr}` }
       ]
     }
   ];
@@ -701,12 +719,13 @@ function generatePuzzleStyle(numerator, denominator, params, random) {
   };
 
   const pieceName = ordinalSingular[denominator];
+  const fractionStr = fractionLatex(numerator, denominator);
   const questionText = `I used ${numerator} equal unit fractions. Each one is a ${pieceName}. What fraction did I make?`;
 
   const correctOption = {
     id: 'opt_correct',
     type: 'latex',
-    content: `${numerator}/${denominator}`,
+    content: fractionStr,
     isCorrect: true
   };
 
@@ -714,19 +733,19 @@ function generatePuzzleStyle(numerator, denominator, params, random) {
     {
       id: 'opt_dist_rev',
       type: 'latex',
-      content: `${denominator}/${numerator}`,
+      content: fractionLatex(denominator, numerator),
       isCorrect: false
     },
     {
       id: 'opt_dist_unit',
       type: 'latex',
-      content: `1/${denominator}`,
+      content: fractionLatex(1, denominator),
       isCorrect: false
     },
     {
       id: 'opt_dist_add',
       type: 'latex',
-      content: `${numerator - 1}/${denominator}`,
+      content: fractionLatex(numerator - 1, denominator),
       isCorrect: false
     }
   ];
@@ -744,8 +763,8 @@ function generatePuzzleStyle(numerator, denominator, params, random) {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `We are adding ${numerator} unit fractions of size 1/${denominator}:` },
-        { type: 'latex', content: `${Array(numerator).fill(`1/${denominator}`).join(' + ')} = ${numerator}/${denominator}` }
+        { type: 'text', content: `We are adding ${numerator} unit fractions of size $${fractionLatex(1, denominator)}$:` },
+        { type: 'latex', content: `${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')} = ${fractionStr}` }
       ]
     }
   ];
@@ -755,7 +774,11 @@ function generatePuzzleStyle(numerator, denominator, params, random) {
     type: 'mcq',
     questionText,
     parts: [
-      { type: 'text', content: `I used ${numerator} equal unit fractions. Each one is 1/${denominator}.`, style: { color: '#475569' } },
+      { type: 'row', parts: [
+        { type: 'text', content: `I used ${numerator} equal unit fractions. Each one is `, style: { color: '#475569' } },
+        { type: 'latex', content: fractionLatex(1, denominator) },
+        { type: 'text', content: ".", style: { color: '#475569' } }
+      ]},
       { type: 'text', content: "What fraction did I make?", style: { fontWeight: 900, marginTop: 8 } }
     ],
     options,
@@ -772,20 +795,21 @@ function generatePuzzleStyle(numerator, denominator, params, random) {
 
 function generateFillInTheBlank(numerator, denominator, params, random) {
   const questionText = `Find the missing fraction to make the equation true.`;
+  const fractionStr = fractionLatex(numerator, denominator);
 
   // 4/6 = 1/6 + 1/6 + 1/6 + ?
-  const sumTerms = Array(numerator - 1).fill(`1/${denominator}`);
+  const sumTerms = Array(numerator - 1).fill(fractionLatex(1, denominator));
   
-  const equationStr = `${numerator}/${denominator} = ${sumTerms.join(' + ')} + ▢`;
+  const equationStr = `${fractionStr} = ${sumTerms.join(' + ')} + \\square`;
 
   const solution = [
     {
       type: 'section',
       label: 'solve',
       parts: [
-        { type: 'text', content: `To write ${numerator}/${denominator} as a sum of unit fractions, we add the unit fraction 1/${denominator} exactly ${numerator} times.` },
-        { type: 'latex', content: `${numerator}/${denominator} = ${Array(numerator).fill(`1/${denominator}`).join(' + ')}` },
-        { type: 'text', content: `Comparing both sides, the missing unit fraction in the box is 1/${denominator}.` }
+        { type: 'text', content: `To write $${fractionStr}$ as a sum of unit fractions, we add the unit fraction $${fractionLatex(1, denominator)}$ exactly ${numerator} times.` },
+        { type: 'latex', content: `${fractionStr} = ${Array(numerator).fill(fractionLatex(1, denominator)).join(' + ')}` },
+        { type: 'text', content: `Comparing both sides, the missing unit fraction in the box is $${fractionLatex(1, denominator)}$.` }
       ]
     }
   ];

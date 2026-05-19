@@ -1,6 +1,7 @@
 'use client';
 
 import PartRenderer from './PartRenderer';
+import KaTeXRenderer from './KaTeXRenderer';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -209,8 +210,8 @@ function renderPart(part, props, index, context = {}) {
   if (part.type === 'input') return <InputPart key={index} id={part.id} {...props} style={part.style} />;
   if (part.type === 'latex') {
     return (
-      <div key={index} style={{ fontFamily: 'ui-serif, Georgia, serif', fontSize: 26, fontWeight: 850, color: '#0f172a', textAlign: 'center', ...(part.style || {}) }}>
-        {String(part.content || '').replace(/\*\*/g, '')}
+      <div key={index} style={{ fontSize: 26, color: '#0f172a', textAlign: 'center', display: 'flex', justifyContent: 'center', width: '100%', ...(part.style || {}) }}>
+        <KaTeXRenderer math={part.content} displayMode={true} />
       </div>
     );
   }

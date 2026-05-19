@@ -1,5 +1,7 @@
 'use client';
 
+import KaTeXRenderer from './KaTeXRenderer';
+
 function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
 }
@@ -81,15 +83,16 @@ function renderSolutionPart(part, index, context = {}) {
       <div
         key={index}
         style={{
-          fontFamily: 'ui-serif, Georgia, serif',
           fontSize: context.inGroup ? 18 : 20,
-          fontWeight: 800,
           color: '#0f172a',
           textAlign: 'center',
+          display: 'flex',
+          justifyContent: 'center',
+          width: '100%',
           ...(part.style || {}),
         }}
       >
-        {cleanText(part.content)}
+        <KaTeXRenderer math={part.content} displayMode={true} />
       </div>
     );
   }

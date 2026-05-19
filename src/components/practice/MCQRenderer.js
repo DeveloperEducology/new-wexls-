@@ -1,6 +1,7 @@
 'use client';
 
 import PartRenderer from './PartRenderer';
+import KaTeXRenderer from './KaTeXRenderer';
 
 function getOptionLabel(option, index) {
   if (typeof option === 'string' || typeof option === 'number') return String(option);
@@ -187,8 +188,8 @@ function Part({ part, inGroup = false }) {
 
   if (part?.type === 'latex') {
     return (
-      <div style={{ fontFamily: 'ui-serif, Georgia, serif', fontSize: 24, fontWeight: 800, color: '#0f172a', ...(part.style || {}) }}>
-        {cleanText(part.content || '')}
+      <div style={{ fontSize: 24, color: '#0f172a', display: 'flex', justifyContent: 'center', width: '100%', ...(part.style || {}) }}>
+        <KaTeXRenderer math={part.content} displayMode={true} />
       </div>
     );
   }
@@ -323,7 +324,11 @@ export default function MCQRenderer({
               ) : null}
               {!isSvgOption && !isImageOption ? (
                 <div style={{ fontSize: responsivePx(optionLayout.fontSize, 14, optionLayout.fontSize), fontWeight: optionLayout.mode === 'pictureSentence' ? 500 : 850, lineHeight: 1.35 }}>
-                  <InlineMarkdown text={getOptionLabel(option, index)} />
+                  {option?.type === 'latex' ? (
+                    <KaTeXRenderer math={getOptionLabel(option, index)} />
+                  ) : (
+                    <InlineMarkdown text={getOptionLabel(option, index)} />
+                  )}
                 </div>
               ) : null}
               {isImageOption && getOptionLabel(option, index) ? (
