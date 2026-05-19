@@ -120,6 +120,24 @@ export const fractionsV2Registry = {
       subType: 'visual_models_cut_rectangle_halves_different'
     }
   },
+  'visual_models_cut_rectangle_thirds': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'visual_models_cut_rectangle_thirds'
+    }
+  },
+  'visual_models_cut_circle_thirds': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'visual_models_cut_circle_thirds'
+    }
+  },
+  'visual_models_cut_circle_sixths': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'visual_models_cut_circle_sixths'
+    }
+  },
 
   // UUIDs can also be mapped directly to an engine + config
   '15c4dd64-7433-4af1-97ce-bd3880a847d0': {

@@ -58,6 +58,9 @@ export const curriculumCatalog = {
                 'visual_models_cut_rectangle_fourths',
                 'visual_models_cut_circle_fourths',
                 'visual_models_cut_rectangle_halves_different',
+                'visual_models_cut_rectangle_thirds',
+                'visual_models_cut_circle_thirds',
+                'visual_models_cut_circle_sixths',
               ],
             },
             {

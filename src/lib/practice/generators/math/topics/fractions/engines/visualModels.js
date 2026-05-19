@@ -45,6 +45,12 @@ export const visualModelsEngine = (config) => {
     return generateCutCircleFourths(params, random);
   } else if (subType === 'visual_models_cut_rectangle_halves_different') {
     return generateCutRectangleHalvesDifferent(params, random);
+  } else if (subType === 'visual_models_cut_rectangle_thirds') {
+    return generateCutRectangleThirds(params, random);
+  } else if (subType === 'visual_models_cut_circle_thirds') {
+    return generateCutCircleThirds(params, random);
+  } else if (subType === 'visual_models_cut_circle_sixths') {
+    return generateCutCircleSixths(params, random);
   } else {
       throw new Error(`[VisualModelsEngine] Unsupported subType: ${subType}`);
   }
@@ -611,6 +617,182 @@ function generateCutRectangleHalvesDifferent(params, random) {
     solution,
     adaptiveConfig: {
       logic_type: 'visual_models_cut_rectangle_halves_different',
+      variables: { seed: params.seed }
+    }
+  };
+}
+
+function generateCutRectangleThirds(params, random) {
+  const questionText = "Cut the rectangle into thirds. Connect two dots to make a cut.";
+
+  const solutionSvg = `<svg viewBox="0 0 300 300" width="220" height="220"><rect x="50" y="50" width="200" height="200" rx="12" fill="#6ee7b7" stroke="#059669" stroke-width="4" /><line x1="117" y1="50" x2="117" y2="250" stroke="#ffffff" stroke-width="4" /><line x1="183" y1="50" x2="183" y2="250" stroke="#ffffff" stroke-width="4" /><text x="83" y="155" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">1</text><text x="150" y="155" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">2</text><text x="217" y="155" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">3</text></svg>`;
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: "Thirds means 3 equal parts." },
+        { type: 'text', content: "This rectangle has 3 equal parts." },
+        {
+          type: 'group',
+          direction: 'row',
+          style: { justifyContent: 'center', margin: '14px 0' },
+          parts: [{ type: 'svg', content: solutionSvg }]
+        },
+        { type: 'text', content: "It is cut into thirds." }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_cut_rect_3_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: "Cut the rectangle into thirds.", style: { fontWeight: 900 } },
+      { type: 'text', content: "Connect two dots to make a cut.", style: { color: '#475569', fontSize: 15 } },
+      {
+        type: 'interactive_fraction_cutter',
+        shape: 'rectangle',
+        dots: [
+          { id: 'top-1', x: 117, y: 50 },
+          { id: 'bottom-1', x: 117, y: 250 },
+          { id: 'top-2', x: 183, y: 50 },
+          { id: 'bottom-2', x: 183, y: 250 }
+        ],
+        requiredCuts: [
+          ['top-1', 'bottom-1'],
+          ['top-2', 'bottom-2']
+        ],
+        size: 280
+      }
+    ],
+    correctAnswerText: JSON.stringify({ isCorrect: 'true' }),
+    validation: { type: 'exact', answer: { isCorrect: 'true' } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_cut_rectangle_thirds',
+      variables: { seed: params.seed }
+    }
+  };
+}
+
+function generateCutCircleThirds(params, random) {
+  const questionText = "Cut the circle into thirds. Connect two dots to make a cut.";
+
+  const solutionSvg = `<svg viewBox="0 0 300 300" width="220" height="220"><circle cx="150" cy="150" r="100" fill="#c084fc" stroke="#7c3aed" stroke-width="4" /><line x1="150" y1="150" x2="150" y2="50" stroke="#ffffff" stroke-width="4" /><line x1="150" y1="150" x2="63" y2="200" stroke="#ffffff" stroke-width="4" /><line x1="150" y1="150" x2="237" y2="200" stroke="#ffffff" stroke-width="4" /><text x="105" y="125" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">1</text><text x="195" y="125" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">2</text><text x="150" y="220" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">3</text></svg>`;
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: "Thirds means 3 equal parts." },
+        { type: 'text', content: "This circle has 3 equal parts." },
+        {
+          type: 'group',
+          direction: 'row',
+          style: { justifyContent: 'center', margin: '14px 0' },
+          parts: [{ type: 'svg', content: solutionSvg }]
+        },
+        { type: 'text', content: "It is cut into thirds." }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_cut_circ_3_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: "Cut the circle into thirds.", style: { fontWeight: 900 } },
+      { type: 'text', content: "Connect two dots to make a cut.", style: { color: '#475569', fontSize: 15 } },
+      {
+        type: 'interactive_fraction_cutter',
+        shape: 'circle',
+        dots: [
+          { id: 'center', x: 150, y: 150 },
+          { id: 'top', x: 150, y: 50 },
+          { id: 'bottom-left', x: 63, y: 200 },
+          { id: 'bottom-right', x: 237, y: 200 }
+        ],
+        preexistingCuts: [
+          ['center', 'top'],
+          ['center', 'bottom-left']
+        ],
+        requiredCuts: [
+          ['center', 'bottom-right']
+        ],
+        size: 280
+      }
+    ],
+    correctAnswerText: JSON.stringify({ isCorrect: 'true' }),
+    validation: { type: 'exact', answer: { isCorrect: 'true' } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_cut_circle_thirds',
+      variables: { seed: params.seed }
+    }
+  };
+}
+
+function generateCutCircleSixths(params, random) {
+  const questionText = "Cut the circle into sixths. Connect two dots to make a cut.";
+
+  const solutionSvg = `<svg viewBox="0 0 300 300" width="220" height="220"><circle cx="150" cy="150" r="100" fill="#c084fc" stroke="#7c3aed" stroke-width="4" /><line x1="150" y1="50" x2="150" y2="250" stroke="#ffffff" stroke-width="4" /><line x1="237" y1="100" x2="63" y2="200" stroke="#ffffff" stroke-width="4" /><line x1="63" y1="100" x2="237" y2="200" stroke="#ffffff" stroke-width="4" /><text x="150" y="100" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle">1</text><text x="200" y="125" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle">2</text><text x="200" y="195" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle">3</text><text x="150" y="220" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle">4</text><text x="100" y="195" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle">5</text><text x="100" y="125" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle">6</text></svg>`;
+
+  const solution = [
+    {
+      type: 'section',
+      label: 'solve',
+      parts: [
+        { type: 'text', content: "Sixths means 6 equal parts." },
+        { type: 'text', content: "This circle has 6 equal parts." },
+        {
+          type: 'group',
+          direction: 'row',
+          style: { justifyContent: 'center', margin: '14px 0' },
+          parts: [{ type: 'svg', content: solutionSvg }]
+        },
+        { type: 'text', content: "It is cut into sixths." }
+      ]
+    }
+  ];
+
+  return {
+    id: `q_frac_cut_circ_6_${uid()}`,
+    type: 'fillInTheBlank',
+    questionText,
+    parts: [
+      { type: 'text', content: "Cut the circle into sixths.", style: { fontWeight: 900 } },
+      { type: 'text', content: "Connect two dots to make a cut.", style: { color: '#475569', fontSize: 15 } },
+      {
+        type: 'interactive_fraction_cutter',
+        shape: 'circle',
+        dots: [
+          { id: 'top', x: 150, y: 50 },
+          { id: 'bottom', x: 150, y: 250 },
+          { id: 'top-right', x: 237, y: 100 },
+          { id: 'bottom-left', x: 63, y: 200 },
+          { id: 'top-left', x: 63, y: 100 },
+          { id: 'bottom-right', x: 237, y: 200 }
+        ],
+        preexistingCuts: [
+          ['top', 'bottom'],
+          ['top-right', 'bottom-left']
+        ],
+        requiredCuts: [
+          ['top-left', 'bottom-right']
+        ],
+        size: 280
+      }
+    ],
+    correctAnswerText: JSON.stringify({ isCorrect: 'true' }),
+    validation: { type: 'exact', answer: { isCorrect: 'true' } },
+    solution,
+    adaptiveConfig: {
+      logic_type: 'visual_models_cut_circle_sixths',
       variables: { seed: params.seed }
     }
   };

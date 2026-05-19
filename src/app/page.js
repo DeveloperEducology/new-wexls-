@@ -115,6 +115,9 @@ const TOPICS = [
           ['F.13', 'Cut rectangle into fourths', 'visual_models_cut_rectangle_fourths'],
           ['F.14', 'Cut circle into fourths', 'visual_models_cut_circle_fourths'],
           ['F.15', 'Cut rectangle into halves in different ways', 'visual_models_cut_rectangle_halves_different'],
+          ['F.16', 'Cut rectangle into thirds', 'visual_models_cut_rectangle_thirds'],
+          ['F.17', 'Cut circle into thirds', 'visual_models_cut_circle_thirds'],
+          ['F.18', 'Cut circle into sixths', 'visual_models_cut_circle_sixths'],
         ],
       },
       {
