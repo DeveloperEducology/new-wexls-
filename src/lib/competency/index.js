@@ -380,6 +380,9 @@ export const competencyGraphs = {
         }
       ],
       skillMap: {
+        'fractions-g2-identify-visual': 'fraction_visual_models',
+        'fractions-g3-types': 'fraction_visual_models',
+        'fractions-g3-like-unlike': 'fraction_equivalence',
         visual_models_identify: 'fraction_visual_models',
         visual_models_write_fraction: 'fraction_visual_models',
         visual_models_equal_parts: 'fraction_visual_models',
@@ -408,6 +411,17 @@ export const competencyGraphs = {
         fractions_decompose_puzzle_style: 'fraction_decompositions',
         'fractions-g5-add-subtract-unlike-denominators': 'fraction_unlike_denominators',
         'fractions.unlikeDenominators.addSubtract': 'fraction_unlike_denominators',
+        'fractions-g5-convert-improper-to-mixed': 'fraction_visual_models',
+        'fractions-g5-convert-mixed-to-improper': 'fraction_visual_models',
+        'fractions-g5-compare-like-fractions': 'fraction_equivalence',
+        'fractions-g5-compare-unlike-fractions': 'fraction_equivalence',
+        'fractions-g5-compare-proper-fractions': 'fraction_equivalence',
+        'fractions-g5-add-like-fractions': 'fraction_visual_models',
+        'fractions-g5-add-improper-fractions': 'fraction_visual_models',
+        'fractions-g5-add-fraction-and-integer': 'fraction_visual_models',
+        'fractions-g5-missing-fraction-addend': 'fraction_visual_models',
+        'fractions-g5-missing-integer-addend': 'fraction_visual_models',
+        'fractions-g5-add-multiple-fractions': 'fraction_visual_models',
       },
     },
     time: {

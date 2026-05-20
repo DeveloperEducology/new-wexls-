@@ -51,6 +51,8 @@ export const curriculumCatalog = {
               id: 'visual-models',
               title: 'Visual Models',
               skills: [
+                'fractions-g2-identify-visual',
+                'fractions-g3-types',
                 'visual_models_identify',
                 'visual_models_write_fraction',
                 'visual_models_equal_parts',
@@ -68,7 +70,13 @@ export const curriculumCatalog = {
               id: 'equivalence',
               title: 'Equivalence',
               skills: [
+                'fractions-g3-like-unlike',
                 'equivalence_number_line',
+                'fractions-g5-convert-improper-to-mixed',
+                'fractions-g5-convert-mixed-to-improper',
+                'fractions-g5-compare-like-fractions',
+                'fractions-g5-compare-unlike-fractions',
+                'fractions-g5-compare-proper-fractions',
               ],
             },
             {
@@ -88,6 +96,12 @@ export const curriculumCatalog = {
               id: 'operations',
               title: 'Fraction Operations',
               skills: [
+                'fractions-g5-add-like-fractions',
+                'fractions-g5-add-improper-fractions',
+                'fractions-g5-add-fraction-and-integer',
+                'fractions-g5-missing-fraction-addend',
+                'fractions-g5-missing-integer-addend',
+                'fractions-g5-add-multiple-fractions',
                 'fractions-g5-add-subtract-unlike-denominators',
               ],
             }

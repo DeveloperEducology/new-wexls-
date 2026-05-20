@@ -62,9 +62,7 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
         const blankId = legacyMatch?.[1] || bracketMatch?.[1] || (legacyMatch ? 'blank' : null);
 
         if (!blankId) {
-          const boldMatch = piece.match(/^\*\*([^*]+)\*\*$/);
-          if (boldMatch) return <strong key={index}>{boldMatch[1]}</strong>;
-          return <span key={index}>{piece.replace(/^#{1,4}\s*/, '')}</span>;
+          return <InlineMarkdown key={index} text={piece} />;
         }
 
         return (
@@ -226,7 +224,7 @@ function InputPart({ part, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
-function OptionSelectPart({ part, userAnswer, onAnswer, isAnswered }) {
+function OptionSelectPart({ part, userAnswer, onAnswer, isAnswered, inGroup = false }) {
   const id = part.id || part.answerId || 'selected';
   const selectedValue = readAnswer(userAnswer, id);
   const options = Array.isArray(part.options) ? part.options : [];
@@ -239,7 +237,8 @@ function OptionSelectPart({ part, userAnswer, onAnswer, isAnswered }) {
         gap: 'clamp(12px, 3vw, 22px)',
         alignItems: 'center',
         justifyContent: part.align || 'flex-start',
-        width: '100%',
+        width: inGroup ? 'auto' : '100%',
+        flex: inGroup ? '0 0 auto' : 'initial',
         ...(part.style || {}),
       }}
     >
@@ -272,6 +271,7 @@ function OptionSelectPart({ part, userAnswer, onAnswer, isAnswered }) {
               cursor: isAnswered ? 'default' : 'pointer',
               boxShadow: selected ? '0 3px 0 rgba(56, 165, 232, 0.16)' : 'none',
               transition: 'border-color 140ms ease, background 140ms ease, box-shadow 140ms ease',
+              ...(part.buttonStyle || {}),
             }}
           >
             {label}
@@ -561,6 +561,77 @@ function ClockPart({ part, inGroup = false }) {
       {part.label ? (
         <div style={{ fontSize: 15, fontWeight: 900, color: '#334155', textAlign: 'center' }}>{part.label}</div>
       ) : null}
+    </div>
+  );
+}
+
+function FractionPart({ part, userAnswer, onAnswer, isAnswered }) {
+  const renderItem = (item) => {
+    if (typeof item === 'object' && item !== null) {
+      if (item.type === 'input') {
+        const id = item.id || 'ans';
+        return (
+          <input
+            value={readAnswer(userAnswer, id)}
+            disabled={isAnswered}
+            onChange={(event) => onAnswer(writeAnswer(userAnswer, id, event.target.value))}
+            style={{
+              width: 'clamp(54px, 14vw, 76px)',
+              height: 'clamp(32px, 8vw, 40px)',
+              margin: '0 clamp(2px, 1vw, 6px)',
+              border: '1.5px solid #94a3b8',
+              borderRadius: 4,
+              textAlign: 'center',
+              fontSize: 'clamp(16px, 4vw, 20px)',
+              fontWeight: 600,
+              color: '#0f172a',
+              background: isAnswered ? '#f8fafc' : '#ffffff',
+              outline: 'none',
+              ...(item.style || {}),
+            }}
+          />
+        );
+      }
+    }
+    return (
+      <span
+        style={{
+          fontSize: 'clamp(20px, 5vw, 28px)',
+          fontWeight: 700,
+          ...(typeof item === 'object' && item !== null ? item.style || {} : {}),
+        }}
+      >
+        {String(item ?? '')}
+      </span>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        verticalAlign: 'middle',
+        margin: '0 8px',
+        ...(part.style || {}),
+      }}
+    >
+      <div style={{ padding: '2px 4px', textAlign: 'center' }}>
+        {renderItem(part.numerator)}
+      </div>
+      <div
+        style={{
+          width: '100%',
+          height: 2,
+          background: '#0f172a',
+          margin: '2px 0',
+        }}
+      />
+      <div style={{ padding: '2px 4px', textAlign: 'center' }}>
+        {renderItem(part.denominator)}
+      </div>
     </div>
   );
 }
@@ -1629,6 +1700,7 @@ const PART_RENDERERS = {
   fraction_model: FractionModelPart,
   interactive_fraction_model: InteractiveFractionModelPart,
   interactive_fraction_cutter: InteractiveFractionCutterPart,
+  fraction: FractionPart,
 };
 
 export default function PartRenderer({

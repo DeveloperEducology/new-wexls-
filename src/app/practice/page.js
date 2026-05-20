@@ -89,6 +89,9 @@ const TIME_OPTIONS = [
 ];
 
 const FRACTIONS_OPTIONS = [
+  { group: 'Visual Models', label: 'Identify fractions from models', value: 'fractions-g2-identify-visual' },
+  { group: 'Visual Models', label: 'Identify like and unlike fractions', value: 'fractions-g3-like-unlike' },
+  { group: 'Visual Models', label: 'Identify proper, improper, and mixed fractions', value: 'fractions-g3-types' },
   { group: 'Visual Models', label: 'Identify fractions from shapes', value: 'visual_models_identify' },
   { group: 'Visual Models', label: 'Write fractions from shapes', value: 'visual_models_write_fraction' },
   { group: 'Visual Models', label: 'Equal parts', value: 'visual_models_equal_parts' },
@@ -101,6 +104,17 @@ const FRACTIONS_OPTIONS = [
   { group: 'Interactive Models', label: 'Fill parts of a circle', value: 'visual_models_fill_fraction_pie' },
   { group: 'Interactive Models', label: 'Fill parts of a square', value: 'visual_models_fill_fraction_square' },
   { group: 'Interactive Models', label: 'Fill parts of a rectangle', value: 'visual_models_fill_fraction_rectangle' },
+  { group: 'Conversions', label: 'Convert improper fractions to mixed numbers', value: 'fractions-g5-convert-improper-to-mixed' },
+  { group: 'Conversions', label: 'Convert mixed numbers to improper fractions', value: 'fractions-g5-convert-mixed-to-improper' },
+  { group: 'Comparisons', label: 'Compare like fractions', value: 'fractions-g5-compare-like-fractions' },
+  { group: 'Comparisons', label: 'Compare unlike fractions', value: 'fractions-g5-compare-unlike-fractions' },
+  { group: 'Comparisons', label: 'Compare proper fractions', value: 'fractions-g5-compare-proper-fractions' },
+  { group: 'Operations', label: 'Add like fractions', value: 'fractions-g5-add-like-fractions' },
+  { group: 'Operations', label: 'Add improper fractions', value: 'fractions-g5-add-improper-fractions' },
+  { group: 'Operations', label: 'Add a fraction and an integer', value: 'fractions-g5-add-fraction-and-integer' },
+  { group: 'Operations', label: 'Find the missing fraction addend', value: 'fractions-g5-missing-fraction-addend' },
+  { group: 'Operations', label: 'Find the missing integer addend', value: 'fractions-g5-missing-integer-addend' },
+  { group: 'Operations', label: 'Add three or more fractions', value: 'fractions-g5-add-multiple-fractions' },
   { group: 'Operations', label: 'Add and subtract fractions with unlike denominators', value: 'fractions-g5-add-subtract-unlike-denominators' },
 ];
 

@@ -9,6 +9,12 @@ import { rationalNumbersEngine } from './engines/rationalNumbers.js';
 import { interactiveFractionModelEngine } from './engines/interactiveFractionModel.js';
 import { unitFractionsEngine } from './engines/unitFractions.js';
 import { unlikeDenominatorsEngine } from './engines/unlikeDenominators.engine.js';
+import { identifyFractionEngine } from './engines/identifyFraction.engine.js';
+import { likeUnlikeEngine } from './engines/likeUnlike.engine.js';
+import { typesEngine } from './engines/types.engine.js';
+import { conversionsG5Engine } from './engines/conversionsG5.engine.js';
+import { comparisonG5Engine } from './engines/comparisonG5.engine.js';
+import { operationsG5Engine } from './engines/operationsG5.engine.js';
 
 /**
  * Registry mapping DB logic_types (or template_ids) to specific engines
@@ -433,5 +439,171 @@ export const fractionsV2Registry = {
   'rational_numbers_round': {
     engine: rationalNumbersEngine,
     params: { subType: 'round-decimals-and-mixed-numbers' }
+  },
+
+  // Identify Fraction
+  'fractions.identify.visual': {
+    engine: identifyFractionEngine,
+    params: {
+      subType: 'identify_visual'
+    }
+  },
+  'fractions-g2-identify-visual': {
+    engine: identifyFractionEngine,
+    params: {
+      subType: 'identify_visual'
+    }
+  },
+
+  // Like & Unlike
+  'fractions.compare.likeUnlike': {
+    engine: likeUnlikeEngine,
+    params: {
+      subType: 'fractions.compare.likeUnlike'
+    }
+  },
+  'fractions.identify.likeFractions': {
+    engine: likeUnlikeEngine,
+    params: {
+      subType: 'fractions.identify.likeFractions'
+    }
+  },
+  'fractions.identify.unlikeFractions': {
+    engine: likeUnlikeEngine,
+    params: {
+      subType: 'fractions.identify.unlikeFractions'
+    }
+  },
+  'fractions-g3-like-unlike': {
+    engine: likeUnlikeEngine,
+    params: {
+      subType: 'fractions.compare.likeUnlike'
+    }
+  },
+
+  // Types of Fractions
+  'fractions.types.proper': {
+    engine: typesEngine,
+    params: {
+      subType: 'fractions.types.proper'
+    }
+  },
+  'fractions.types.improper': {
+    engine: typesEngine,
+    params: {
+      subType: 'fractions.types.improper'
+    }
+  },
+  'fractions.types.mixed': {
+    engine: typesEngine,
+    params: {
+      subType: 'fractions.types.mixed'
+    }
+  },
+  'fractions.types.identify': {
+    engine: typesEngine,
+    params: {
+      subType: 'fractions.types.identify'
+    }
+  },
+  'fractions-g3-types': {
+    engine: typesEngine,
+    params: {
+      subType: 'fractions.types.identify'
+    }
+  },
+
+  // Grade 5 Conversions
+  'fractions.conversion.improperToMixed': {
+    engine: conversionsG5Engine,
+    params: { subType: 'improperToMixed' }
+  },
+  'fractions-g5-convert-improper-to-mixed': {
+    engine: conversionsG5Engine,
+    params: { subType: 'improperToMixed' }
+  },
+  'fractions.conversion.mixedToImproper': {
+    engine: conversionsG5Engine,
+    params: { subType: 'mixedToImproper' }
+  },
+  'fractions-g5-convert-mixed-to-improper': {
+    engine: conversionsG5Engine,
+    params: { subType: 'mixedToImproper' }
+  },
+
+  // Grade 5 Comparison
+  'fractions.compare.likeFractions': {
+    engine: comparisonG5Engine,
+    params: { subType: 'likeFractions' }
+  },
+  'fractions-g5-compare-like-fractions': {
+    engine: comparisonG5Engine,
+    params: { subType: 'likeFractions' }
+  },
+  'fractions.compare.unlikeFractions': {
+    engine: comparisonG5Engine,
+    params: { subType: 'unlikeFractions' }
+  },
+  'fractions-g5-compare-unlike-fractions': {
+    engine: comparisonG5Engine,
+    params: { subType: 'unlikeFractions' }
+  },
+  'fractions.compare.properFractions': {
+    engine: comparisonG5Engine,
+    params: { subType: 'properFractions' }
+  },
+  'fractions-g5-compare-proper-fractions': {
+    engine: comparisonG5Engine,
+    params: { subType: 'properFractions' }
+  },
+
+  // Grade 5 Addition / Operations
+  'fractions.addition.likeFractions': {
+    engine: operationsG5Engine,
+    params: { subType: 'likeFractions' }
+  },
+  'fractions-g5-add-like-fractions': {
+    engine: operationsG5Engine,
+    params: { subType: 'likeFractions' }
+  },
+  'fractions.addition.improperFractions': {
+    engine: operationsG5Engine,
+    params: { subType: 'improperFractions' }
+  },
+  'fractions-g5-add-improper-fractions': {
+    engine: operationsG5Engine,
+    params: { subType: 'improperFractions' }
+  },
+  'fractions.addition.fractionAndInteger': {
+    engine: operationsG5Engine,
+    params: { subType: 'fractionAndInteger' }
+  },
+  'fractions-g5-add-fraction-and-integer': {
+    engine: operationsG5Engine,
+    params: { subType: 'fractionAndInteger' }
+  },
+  'fractions.addition.missingFractionAddend': {
+    engine: operationsG5Engine,
+    params: { subType: 'missingFractionAddend' }
+  },
+  'fractions-g5-missing-fraction-addend': {
+    engine: operationsG5Engine,
+    params: { subType: 'missingFractionAddend' }
+  },
+  'fractions.addition.missingIntegerAddend': {
+    engine: operationsG5Engine,
+    params: { subType: 'missingIntegerAddend' }
+  },
+  'fractions-g5-missing-integer-addend': {
+    engine: operationsG5Engine,
+    params: { subType: 'missingIntegerAddend' }
+  },
+  'fractions.addition.multipleFractions': {
+    engine: operationsG5Engine,
+    params: { subType: 'multipleFractions' }
+  },
+  'fractions-g5-add-multiple-fractions': {
+    engine: operationsG5Engine,
+    params: { subType: 'multipleFractions' }
   }
 };

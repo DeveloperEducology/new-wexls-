@@ -940,7 +940,7 @@ function HtmlCategorizationFallback({
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {isRemoval ? renderRemovalMode() : isCopiable ? renderCopyMode() : (
       <>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(categories.length, 1)}, minmax(260px, 1fr))`, gap: 16 }}>
+      <div className="categories-grid-container" style={{ gap: 16 }}>
         {categories.map((category) => {
           const placedItems = items.filter((item) => zones[item.id] === category.id);
           const rows = Math.max(1, Math.ceil(placedItems.length / 2));
@@ -977,6 +977,8 @@ function HtmlCategorizationFallback({
               gap: 12,
               transform: 'scale(1)',
               transition: 'min-height 220ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 120ms ease',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             <div style={{ borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18 }}>
@@ -992,6 +994,7 @@ function HtmlCategorizationFallback({
                 justifyContent: 'center',
                 minHeight: gridCardHeight,
                 transition: 'all 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                width: '100%',
               }}
             >
               {placedItems.map((item) => renderCard(item, category.id))}
@@ -1030,6 +1033,8 @@ function HtmlCategorizationFallback({
           justifyContent: 'center',
           minHeight: gridCardHeight + 32,
           transition: 'border-color 120ms ease',
+          width: '100%',
+          boxSizing: 'border-box',
         }}
       >
         {unsortedItems.map((item) => renderCard(item, 'pool'))}
@@ -1064,6 +1069,19 @@ function HtmlCategorizationFallback({
           })}
         </div>
       ) : null}
+      <style jsx>{`
+        .categories-grid-container {
+          display: grid;
+          width: 100%;
+          max-width: 100%;
+          grid-template-columns: repeat(${Math.max(categories.length, 1)}, minmax(260px, 1fr));
+        }
+        @media (max-width: 768px) {
+          .categories-grid-container {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
       </>
       )}
     </div>
@@ -1135,6 +1153,7 @@ export default function CategorizationRenderer({
   const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 860, scale: 1 });
+  const [isMobile, setIsMobile] = useState(false);
 
   const [pool, setPool] = useState(() => buildKonvaPool(items, categories));
   const [activeZone, setActiveZone] = useState(null);
@@ -1152,6 +1171,7 @@ export default function CategorizationRenderer({
     const updateSize = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.offsetWidth;
+      setIsMobile(containerWidth < 768);
       const layout = getKonvaLayout(items, categories);
       const scale = Math.min(1, (containerWidth - 20) / layout.designWidth);
       setDimensions({ width: containerWidth, scale });
@@ -1425,7 +1445,7 @@ export default function CategorizationRenderer({
   };
 
   return (
-    <section className={styles.container}>
+    <section className={styles.container} ref={containerRef}>
       <div className={styles.questionCard}>
         {question.questionText ? (
           <div className={styles.questionTextRow}>
@@ -1433,19 +1453,19 @@ export default function CategorizationRenderer({
           </div>
         ) : null}
 
-        {question.isCopiable || question.isRemoval || useHtmlRenderer ? (
+        {question.isCopiable || question.isRemoval || useHtmlRenderer || isMobile ? (
           <HtmlCategorizationFallback
             categories={categories}
             items={items}
             isCopiable={Boolean(question.isCopiable)}
             isRemoval={Boolean(question.isRemoval)}
-            isV2={useHtmlRenderer}
+            isV2={useHtmlRenderer || isMobile}
             userAnswer={userAnswer}
             onAnswer={onAnswer}
             isAnswered={isAnswered}
           />
         ) : (
-        <div ref={containerRef} style={{ margin: '8px auto 0', width: '100%', maxWidth: 900, overflow: 'hidden' }}>
+        <div style={{ margin: '8px auto 0', width: '100%', maxWidth: 900, overflow: 'hidden' }}>
           <Stage
             width={Math.max(320, dimensions.width - 20)}
             height={layout.stageHeight * dimensions.scale}

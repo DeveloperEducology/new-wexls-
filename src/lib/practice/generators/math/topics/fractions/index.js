@@ -107,7 +107,50 @@ export const fractionsV2Generators = {
   'rational_numbers_reciprocals': generateFractionsV2Question,
   'rational_numbers_round': generateFractionsV2Question,
 
-  // Geometry
+  // Fractions Identify Visual
+  'fractions.identify.visual': generateFractionsV2Question,
+  'fractions-g2-identify-visual': generateFractionsV2Question,
+
+  // Like & Unlike
+  'fractions.compare.likeUnlike': generateFractionsV2Question,
+  'fractions.identify.likeFractions': generateFractionsV2Question,
+  'fractions.identify.unlikeFractions': generateFractionsV2Question,
+  'fractions-g3-like-unlike': generateFractionsV2Question,
+
+  // Types of Fractions
+  'fractions.types.proper': generateFractionsV2Question,
+  'fractions.types.improper': generateFractionsV2Question,
+  'fractions.types.mixed': generateFractionsV2Question,
+  'fractions.types.identify': generateFractionsV2Question,
+  'fractions-g3-types': generateFractionsV2Question,
+
+  // Grade 5 Conversions
+  'fractions.conversion.improperToMixed': generateFractionsV2Question,
+  'fractions-g5-convert-improper-to-mixed': generateFractionsV2Question,
+  'fractions.conversion.mixedToImproper': generateFractionsV2Question,
+  'fractions-g5-convert-mixed-to-improper': generateFractionsV2Question,
+
+  // Grade 5 Comparison
+  'fractions.compare.likeFractions': generateFractionsV2Question,
+  'fractions-g5-compare-like-fractions': generateFractionsV2Question,
+  'fractions.compare.unlikeFractions': generateFractionsV2Question,
+  'fractions-g5-compare-unlike-fractions': generateFractionsV2Question,
+  'fractions.compare.properFractions': generateFractionsV2Question,
+  'fractions-g5-compare-proper-fractions': generateFractionsV2Question,
+
+  // Grade 5 Operations / Addition
+  'fractions.addition.likeFractions': generateFractionsV2Question,
+  'fractions-g5-add-like-fractions': generateFractionsV2Question,
+  'fractions.addition.improperFractions': generateFractionsV2Question,
+  'fractions-g5-add-improper-fractions': generateFractionsV2Question,
+  'fractions.addition.fractionAndInteger': generateFractionsV2Question,
+  'fractions-g5-add-fraction-and-integer': generateFractionsV2Question,
+  'fractions.addition.missingFractionAddend': generateFractionsV2Question,
+  'fractions-g5-missing-fraction-addend': generateFractionsV2Question,
+  'fractions.addition.missingIntegerAddend': generateFractionsV2Question,
+  'fractions-g5-missing-integer-addend': generateFractionsV2Question,
+  'fractions.addition.multipleFractions': generateFractionsV2Question,
+  'fractions-g5-add-multiple-fractions': generateFractionsV2Question
 };
 
 // We will also export specific template IDs here as we build them

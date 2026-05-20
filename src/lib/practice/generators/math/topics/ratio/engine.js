@@ -1494,10 +1494,12 @@ export function generateRatioQuestion(config = {}) {
       if (diffStr === "easy") profileKey = "easy_numeric";
       else if (diffStr === "medium") profileKey = "medium_simplify";
       else if (diffStr === "hard") profileKey = "hard_word_problem";
+      else if (diffStr === "adaptive") profileKey = "easy_numeric";
     } else {
       profileKey = "easy_numeric";
     }
   }
+  if (!profileKey) profileKey = "easy_numeric";
   const profile = RATIO_DIFFICULTY_PROFILES[profileKey] || RATIO_DIFFICULTY_PROFILES.easy_numeric;
 
   // Map to core generator difficulty string for backward compatibility
