@@ -54,7 +54,7 @@ export default function DiagramLabelingLayout({
   return (
     <div style={layoutStyle}>
       {/* Diagram Canvas */}
-      <div style={canvasWrapperStyle}>
+      <div data-diagram-canvas="true" style={canvasWrapperStyle}>
         {bgImage && (
           <img 
             src={bgImage} 

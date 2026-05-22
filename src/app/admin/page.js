@@ -385,6 +385,10 @@ export default function AdminConsolePage() {
   const [cardStyle, setCardStyle] = useState('');
   const [hideItemLabels, setHideItemLabels] = useState(false);
 
+  // New Diagram Labeling states
+  const [selectedTargetId, setSelectedTargetId] = useState(null);
+  const [dragging, setDragging] = useState(null);
+
 
   // Preview Answer checking state
   const [previewAnswer, setPreviewAnswer] = useState(null);
@@ -429,6 +433,7 @@ export default function AdminConsolePage() {
   // Track changes (Dirty state)
   const [isDirty, setIsDirty] = useState(false);
   const ignoreDirtyChange = useRef(false);
+  const canvasRef = useRef(null);
 
   // Curriculum Builder State (prefixed with curr to avoid collisions)
   const [currTree, setCurrTree] = useState([]);
@@ -1205,6 +1210,27 @@ export default function AdminConsolePage() {
       setCorrectAnswer(updated[idx].label);
     }
   };
+  const syncTargetsToCategoriesAndItems = (newTargets) => {
+    setTargets(newTargets);
+    
+    // Automatically update categories
+    const newCategories = (newTargets || []).map(t => ({
+      id: t.id,
+      label: t.label || ''
+    }));
+    setCategories(newCategories);
+
+    // Update items' categoryId if their mapped target/category was deleted
+    const validIds = new Set(newCategories.map(c => c.id));
+    const fallbackId = newCategories[0]?.id || '';
+    setCategorizationItems(prev => prev.map(item => {
+      if (!validIds.has(item.categoryId)) {
+        return { ...item, categoryId: fallbackId };
+      }
+      return item;
+    }));
+  };
+
   const handleUpdateCategoryLabel = (index, value) => {
     ignoreDirtyChange.current = false;
     setIsDirty(true);
@@ -1222,6 +1248,16 @@ export default function AdminConsolePage() {
     updated[index] = { ...updated[index], label: value, id: uniqueNewId };
     setCategories(updated);
     
+    // Keep targets in sync if they exist
+    if (targets) {
+      setTargets(prev => prev.map(t => {
+        if (t.id === oldId) {
+          return { ...t, label: value, id: uniqueNewId };
+        }
+        return t;
+      }));
+    }
+
     setCategorizationItems(prev => prev.map(item => {
       if (item.categoryId === oldId) {
         return { ...item, categoryId: uniqueNewId };
@@ -1235,7 +1271,23 @@ export default function AdminConsolePage() {
     setIsDirty(true);
     const nextIdx = categories.length + 1;
     const nextId = `cat_${nextIdx}`;
-    setCategories([...categories, { id: nextId, label: `Category ${nextIdx}` }]);
+    const newCategory = { id: nextId, label: `Category ${nextIdx}` };
+    setCategories([...categories, newCategory]);
+    
+    // Also add to targets if targets exist
+    if (targets) {
+      setTargets([...targets, {
+        id: nextId,
+        label: newCategory.label,
+        x: Math.max(0, Math.min(85, 10 + ((nextIdx - 1) * 20))),
+        y: 40,
+        width: 15,
+        height: 8,
+        pointerX: Math.max(0, Math.min(100, 10 + ((nextIdx - 1) * 20) + 7.5)),
+        pointerY: 60,
+        unit: '%'
+      }]);
+    }
   };
 
   const handleRemoveCategory = (index) => {
@@ -1245,6 +1297,11 @@ export default function AdminConsolePage() {
     const remaining = categories.filter((_, idx) => idx !== index);
     setCategories(remaining);
 
+    // Keep targets in sync
+    if (targets) {
+      setTargets(targets.filter(t => t.id !== categoryToRemove.id));
+    }
+
     const fallbackCatId = remaining[0]?.id || '';
     setCategorizationItems(prev => prev.map(item => {
       if (item.categoryId === categoryToRemove.id) {
@@ -1252,6 +1309,211 @@ export default function AdminConsolePage() {
       }
       return item;
     }));
+  };
+
+  // Diagram Labeling Editor helpers
+  const handleDiagramImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result;
+      setBackgroundImage(dataUrl);
+      setCanvas(prev => ({
+        ...(prev || { width: 800 }),
+        backgroundImage: dataUrl
+      }));
+      setIsDirty(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDiagramImageUrlChange = (val) => {
+    setBackgroundImage(val);
+    setCanvas(prev => ({
+      ...(prev || { width: 800 }),
+      backgroundImage: val
+    }));
+    setIsDirty(true);
+  };
+
+  const handleCanvasWidthChange = (val) => {
+    const w = parseInt(val, 10) || 800;
+    setCanvas(prev => ({
+      ...(prev || {}),
+      width: w
+    }));
+    setIsDirty(true);
+  };
+
+  const handleCanvasClick = (e) => {
+    // Only trigger if clicking directly on canvas or the background image, not on child boxes or pins
+    if (e.target !== canvasRef.current && e.target.tagName !== 'IMG') return;
+    if (!canvasRef.current) return;
+    
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const clickX = e.clientX - canvasRect.left;
+    const clickY = e.clientY - canvasRect.top;
+    
+    const xPct = parseFloat(((clickX / canvasRect.width) * 100).toFixed(2));
+    const yPct = parseFloat(((clickY / canvasRect.height) * 100).toFixed(2));
+    
+    const newId = `target_${Date.now()}`;
+    const nextNum = (targets || []).length + 1;
+    
+    const newX = Math.max(0, Math.min(85, xPct - 7.5));
+    const newY = Math.max(0, Math.min(92, yPct - 4));
+    
+    const newTarget = {
+      id: newId,
+      label: `Target ${nextNum}`,
+      x: newX,
+      y: newY,
+      width: 15,
+      height: 8,
+      pointerX: xPct,
+      pointerY: Math.max(0, Math.min(100, yPct + 8)),
+      unit: '%'
+    };
+    
+    const newTargets = [...(targets || []), newTarget];
+    syncTargetsToCategoriesAndItems(newTargets);
+    setSelectedTargetId(newId);
+    setIsDirty(true);
+  };
+
+  const handleDeleteTarget = (targetId) => {
+    const updatedTargets = (targets || []).filter(t => t.id !== targetId);
+    syncTargetsToCategoriesAndItems(updatedTargets);
+    if (selectedTargetId === targetId) {
+      setSelectedTargetId(null);
+    }
+    setIsDirty(true);
+  };
+
+  const handleUpdateTargetLabel = (targetId, newLabel) => {
+    const updatedTargets = (targets || []).map(t => {
+      if (t.id === targetId) {
+        return { ...t, label: newLabel };
+      }
+      return t;
+    });
+    syncTargetsToCategoriesAndItems(updatedTargets);
+    setIsDirty(true);
+  };
+
+  const handleUpdateTargetDimensions = (targetId, field, val) => {
+    const num = parseFloat(val) || 0;
+    const updatedTargets = (targets || []).map(t => {
+      if (t.id === targetId) {
+        return { ...t, [field]: num };
+      }
+      return t;
+    });
+    if (field === 'label') {
+      syncTargetsToCategoriesAndItems(updatedTargets);
+    } else {
+      setTargets(updatedTargets);
+    }
+    setIsDirty(true);
+  };
+
+  // Pointer dragging logic using React pointer capture
+  const handleBoxPointerDown = (e, targetId) => {
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const boxRect = e.currentTarget.getBoundingClientRect();
+    setDragging({
+      id: targetId,
+      type: 'box',
+      offsetX: e.clientX - boxRect.left,
+      offsetY: e.clientY - boxRect.top
+    });
+    setSelectedTargetId(targetId);
+  };
+
+  const handleBoxPointerMove = (e, targetId) => {
+    if (!dragging || dragging.id !== targetId || dragging.type !== 'box') return;
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    const activeTarget = (targets || []).find(t => t.id === targetId);
+    const boxWidth = activeTarget ? (activeTarget.width || 15) : 15;
+    const boxHeight = activeTarget ? (activeTarget.height || 8) : 8;
+
+    // Top-left corner position relative to canvas
+    let xPx = e.clientX - dragging.offsetX - canvasRect.left;
+    let yPx = e.clientY - dragging.offsetY - canvasRect.top;
+    
+    let xPct = Math.max(0, Math.min(100 - boxWidth, (xPx / canvasRect.width) * 100));
+    let yPct = Math.max(0, Math.min(100 - boxHeight, (yPx / canvasRect.height) * 100));
+    
+    // Keep 2 decimal precision
+    xPct = parseFloat(xPct.toFixed(2));
+    yPct = parseFloat(yPct.toFixed(2));
+    
+    setTargets(prev => (prev || []).map(t => {
+      if (t.id === targetId) {
+        return { ...t, x: xPct, y: yPct };
+      }
+      return t;
+    }));
+  };
+
+  const handleBoxPointerUp = (e, targetId) => {
+    e.stopPropagation();
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+    setDragging(null);
+    setIsDirty(true);
+  };
+
+  const handlePinPointerDown = (e, targetId) => {
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging({
+      id: targetId,
+      type: 'pin'
+    });
+    setSelectedTargetId(targetId);
+  };
+
+  const handlePinPointerMove = (e, targetId) => {
+    if (!dragging || dragging.id !== targetId || dragging.type !== 'pin') return;
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    let xPx = e.clientX - canvasRect.left;
+    let yPx = e.clientY - canvasRect.top;
+    
+    let xPct = Math.max(0, Math.min(100, (xPx / canvasRect.width) * 100));
+    let yPct = Math.max(0, Math.min(100, (yPx / canvasRect.height) * 100));
+    
+    xPct = parseFloat(xPct.toFixed(2));
+    yPct = parseFloat(yPct.toFixed(2));
+    
+    setTargets(prev => (prev || []).map(t => {
+      if (t.id === targetId) {
+        return { ...t, pointerX: xPct, pointerY: yPct };
+      }
+      return t;
+    }));
+  };
+
+  const handlePinPointerUp = (e, targetId) => {
+    e.stopPropagation();
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+    setDragging(null);
+    setIsDirty(true);
   };
 
   const handleUpdateItemContent = (index, value) => {
@@ -3926,49 +4188,411 @@ export default function AdminConsolePage() {
 
                           {(type === 'categorizationv2' || type === 'categorization') && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                              {/* Categories Editor */}
-                              <div className={styles.formGroup}>
-                                <label className={styles.filterLabel}>
-                                  Categories (Min 1, Max 5)
-                                </label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-                                  {categories.map((cat, idx) => (
-                                    <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                      <span style={{ fontSize: 13, fontWeight: 700, minWidth: 80 }}>
-                                        Category #{idx + 1}
-                                      </span>
+                              {/* Layout Mode Selector */}
+                              <div className={styles.formGroup} style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
+                                <label className={styles.filterLabel}>Layout Mode</label>
+                                <select
+                                  className={styles.formSelect}
+                                  value={layoutMode}
+                                  onChange={(e) => {
+                                    const mode = e.target.value;
+                                    ignoreDirtyChange.current = false;
+                                    setIsDirty(true);
+                                    setLayoutMode(mode);
+                                    if (mode === 'diagram_labeling') {
+                                      setInteraction('universal_dnd');
+                                      if (!targets || targets.length === 0) {
+                                        // Initialize targets from categories
+                                        const initialTargets = categories.map((cat, idx) => ({
+                                          id: cat.id,
+                                          label: cat.label,
+                                          x: Math.max(0, Math.min(85, 10 + (idx * 20))),
+                                          y: 40,
+                                          width: 15,
+                                          height: 8,
+                                          pointerX: Math.max(0, Math.min(100, 10 + (idx * 20) + 7.5)),
+                                          pointerY: 60,
+                                          unit: '%'
+                                        }));
+                                        setTargets(initialTargets);
+                                      }
+                                      if (!canvas) {
+                                        setCanvas({ width: 800, backgroundImage: backgroundImage });
+                                      }
+                                    } else {
+                                      setInteraction('');
+                                    }
+                                  }}
+                                  style={{ marginTop: 6 }}
+                                >
+                                  <option value="">Standard Grid</option>
+                                  <option value="diagram_labeling">Diagram Labeling</option>
+                                </select>
+                              </div>
+
+                              {layoutMode === 'diagram_labeling' ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                  {/* Diagram Image / Canvas Settings */}
+                                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                                    <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
+                                      <label className={styles.filterLabel}>Diagram Image URL</label>
                                       <input
                                         type="text"
                                         className={styles.formInput}
-                                        value={cat.label}
-                                        onChange={(e) => handleUpdateCategoryLabel(idx, e.target.value)}
-                                        placeholder={`Category ${idx + 1} Label`}
-                                        style={{ flex: 1 }}
+                                        value={backgroundImage || ''}
+                                        onChange={(e) => handleDiagramImageUrlChange(e.target.value)}
+                                        placeholder="https://example.com/diagram.png"
+                                        style={{ marginTop: 6 }}
                                       />
-                                      <button
-                                        type="button"
-                                        className={`${styles.btnDanger} ${styles.btnCompact}`}
-                                        onClick={() => handleRemoveCategory(idx)}
-                                        disabled={categories.length <= 1}
-                                        style={{ padding: '6px 12px' }}
-                                        title="Delete Category"
-                                      >
-                                        × Delete
-                                      </button>
                                     </div>
-                                  ))}
+                                    <div className={styles.formGroup} style={{ width: 220 }}>
+                                      <label className={styles.filterLabel}>Or Upload Local Image</label>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className={styles.formInput}
+                                        onChange={handleDiagramImageUpload}
+                                        style={{ marginTop: 6, padding: '4px' }}
+                                      />
+                                    </div>
+                                    <div className={styles.formGroup} style={{ width: 140 }}>
+                                      <label className={styles.filterLabel}>Canvas Max Width (px)</label>
+                                      <input
+                                        type="number"
+                                        className={styles.formInput}
+                                        value={canvas?.width || 800}
+                                        onChange={(e) => handleCanvasWidthChange(e.target.value)}
+                                        placeholder="800"
+                                        min={300}
+                                        max={1600}
+                                        style={{ marginTop: 6 }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Interactive Canvas Editor Section */}
+                                  <div className={styles.formGroup}>
+                                    <label className={styles.filterLabel}>
+                                      Interactive Diagram Canvas
+                                    </label>
+                                    <span style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 8 }}>
+                                      Click on the diagram to add a new target hotspot. Drag boxes to position labels, and drag pointer pins to locate targets.
+                                    </span>
+                                    
+                                    {/* The Canvas */}
+                                    <div
+                                      ref={canvasRef}
+                                      onClick={handleCanvasClick}
+                                      style={{
+                                        position: 'relative',
+                                        width: '100%',
+                                        maxWidth: canvas?.width ? `${canvas.width}px` : '800px',
+                                        aspectRatio: backgroundImage ? 'auto' : '16/9',
+                                        minHeight: backgroundImage ? 'auto' : '300px',
+                                        backgroundColor: '#f8fafc',
+                                        backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+                                        backgroundSize: '16px 16px',
+                                        border: '2px dashed #cbd5e1',
+                                        borderRadius: 8,
+                                        overflow: 'hidden',
+                                        cursor: 'crosshair',
+                                        userSelect: 'none'
+                                      }}
+                                    >
+                                      {backgroundImage ? (
+                                        <img
+                                          src={backgroundImage}
+                                          alt="Diagram Background"
+                                          style={{
+                                            width: '100%',
+                                            height: 'auto',
+                                            display: 'block',
+                                            pointerEvents: 'none',
+                                            userSelect: 'none'
+                                          }}
+                                        />
+                                      ) : (
+                                        <div style={{
+                                          position: 'absolute',
+                                          inset: 0,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          color: '#94a3b8',
+                                          fontSize: 14,
+                                          fontWeight: 500
+                                        }}>
+                                          Please upload or enter a diagram image URL to start.
+                                        </div>
+                                      )}
+
+                                      {/* SVG Connector Lines */}
+                                      <svg
+                                        style={{
+                                          position: 'absolute',
+                                          top: 0,
+                                          left: 0,
+                                          width: '100%',
+                                          height: '100%',
+                                          pointerEvents: 'none',
+                                          zIndex: 5
+                                        }}
+                                      >
+                                        {(targets || []).map(t => {
+                                          if (t.pointerX === undefined || t.pointerY === undefined) return null;
+                                          // Calculate target center relative to canvas (using percent coordinates)
+                                          const fromX = `${t.x + (t.width / 2)}%`;
+                                          const fromY = `${t.y + (t.height / 2)}%`;
+                                          const toX = `${t.pointerX}%`;
+                                          const toY = `${t.pointerY}%`;
+
+                                          return (
+                                            <g key={`line-${t.id}`}>
+                                              <line
+                                                x1={fromX}
+                                                y1={fromY}
+                                                x2={toX}
+                                                y2={toY}
+                                                stroke="#64748b"
+                                                strokeWidth="2"
+                                                strokeDasharray="4,4"
+                                              />
+                                            </g>
+                                          );
+                                        })}
+                                      </svg>
+
+                                      {/* Target Boxes */}
+                                      {(targets || []).map(t => {
+                                        const isSelected = selectedTargetId === t.id;
+                                        return (
+                                          <div
+                                            key={t.id}
+                                            onPointerDown={(e) => handleBoxPointerDown(e, t.id)}
+                                            onPointerMove={(e) => handleBoxPointerMove(e, t.id)}
+                                            onPointerUp={(e) => handleBoxPointerUp(e, t.id)}
+                                            style={{
+                                              position: 'absolute',
+                                              left: `${t.x}%`,
+                                              top: `${t.y}%`,
+                                              width: `${t.width}%`,
+                                              height: `${t.height}%`,
+                                              border: isSelected ? '2px solid #2563eb' : '1.5px dashed #64748b',
+                                              backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : 'rgba(255, 255, 255, 0.85)',
+                                              borderRadius: 6,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontSize: 11,
+                                              fontWeight: 600,
+                                              color: isSelected ? '#1e40af' : '#334155',
+                                              cursor: 'move',
+                                              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                              zIndex: isSelected ? 12 : 10,
+                                              padding: '2px',
+                                              textAlign: 'center',
+                                              boxSizing: 'border-box',
+                                              userSelect: 'none',
+                                              touchAction: 'none'
+                                            }}
+                                          >
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                                              {t.label || '(Empty Target)'}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+
+                                      {/* Pointer Hotspot Dots */}
+                                      {(targets || []).map(t => {
+                                        if (t.pointerX === undefined || t.pointerY === undefined) return null;
+                                        const isSelected = selectedTargetId === t.id;
+                                        return (
+                                          <div
+                                            key={`pin-${t.id}`}
+                                            onPointerDown={(e) => handlePinPointerDown(e, t.id)}
+                                            onPointerMove={(e) => handlePinPointerMove(e, t.id)}
+                                            onPointerUp={(e) => handlePinPointerUp(e, t.id)}
+                                            style={{
+                                              position: 'absolute',
+                                              left: `${t.pointerX}%`,
+                                              top: `${t.pointerY}%`,
+                                              width: 14,
+                                              height: 14,
+                                              backgroundColor: isSelected ? '#2563eb' : '#475569',
+                                              border: '2.5px solid #ffffff',
+                                              borderRadius: '50%',
+                                              transform: 'translate(-50%, -50%)',
+                                              boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                                              cursor: 'crosshair',
+                                              zIndex: isSelected ? 13 : 11,
+                                              touchAction: 'none'
+                                            }}
+                                            title="Pointer pin"
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Selected Target Inspector */}
+                                  {selectedTargetId && (() => {
+                                    const activeTarget = (targets || []).find(t => t.id === selectedTargetId);
+                                    if (!activeTarget) return null;
+                                    return (
+                                      <div style={{
+                                        border: '1.5px solid #e2e8f0',
+                                        borderRadius: 8,
+                                        padding: '16px',
+                                        backgroundColor: '#f8fafc',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 12
+                                      }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <span style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>
+                                            Selected Target Properties ({activeTarget.label})
+                                          </span>
+                                          <button
+                                            type="button"
+                                            className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                            onClick={() => handleDeleteTarget(activeTarget.id)}
+                                            style={{ padding: '4px 10px', fontSize: 11 }}
+                                          >
+                                            × Delete Target
+                                          </button>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 11 }}>Label Text</label>
+                                            <input
+                                              type="text"
+                                              className={styles.formInput}
+                                              value={activeTarget.label || ''}
+                                              onChange={(e) => handleUpdateTargetLabel(activeTarget.id, e.target.value)}
+                                              placeholder="Target label text"
+                                              style={{ marginTop: 4, fontSize: 12 }}
+                                            />
+                                          </div>
+                                          
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 11 }}>Box Width (%)</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeTarget.width}
+                                              onChange={(e) => handleUpdateTargetDimensions(activeTarget.id, 'width', e.target.value)}
+                                              min={3}
+                                              max={100}
+                                              style={{ marginTop: 4, fontSize: 12 }}
+                                            />
+                                          </div>
+
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 11 }}>Box Height (%)</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeTarget.height}
+                                              onChange={(e) => handleUpdateTargetDimensions(activeTarget.id, 'height', e.target.value)}
+                                              min={2}
+                                              max={100}
+                                              style={{ marginTop: 4, fontSize: 12 }}
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 10 }}>Box X (%)</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeTarget.x}
+                                              onChange={(e) => handleUpdateTargetDimensions(activeTarget.id, 'x', e.target.value)}
+                                              style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                            />
+                                          </div>
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 10 }}>Box Y (%)</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeTarget.y}
+                                              onChange={(e) => handleUpdateTargetDimensions(activeTarget.id, 'y', e.target.value)}
+                                              style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                            />
+                                          </div>
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 10 }}>Pin X (%)</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeTarget.pointerX}
+                                              onChange={(e) => handleUpdateTargetDimensions(activeTarget.id, 'pointerX', e.target.value)}
+                                              style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                            />
+                                          </div>
+                                          <div className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 10 }}>Pin Y (%)</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeTarget.pointerY}
+                                              onChange={(e) => handleUpdateTargetDimensions(activeTarget.id, 'pointerY', e.target.value)}
+                                              style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
-                                {categories.length < 5 && (
-                                  <button
-                                    type="button"
-                                    className={styles.btnOutline}
-                                    onClick={handleAddCategory}
-                                    style={{ padding: '6px 12px', marginTop: 10, alignSelf: 'flex-start' }}
-                                  >
-                                    + Add Category
-                                  </button>
-                                )}
-                              </div>
+                              ) : (
+                                <div className={styles.formGroup}>
+                                  <label className={styles.filterLabel}>
+                                    Categories (Min 1, Max 5)
+                                  </label>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                                    {categories.map((cat, idx) => (
+                                      <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 700, minWidth: 80 }}>
+                                          Category #{idx + 1}
+                                        </span>
+                                        <input
+                                          type="text"
+                                          className={styles.formInput}
+                                          value={cat.label}
+                                          onChange={(e) => handleUpdateCategoryLabel(idx, e.target.value)}
+                                          placeholder={`Category ${idx + 1} Label`}
+                                          style={{ flex: 1 }}
+                                        />
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                          onClick={() => handleRemoveCategory(idx)}
+                                          disabled={categories.length <= 1}
+                                          style={{ padding: '6px 12px' }}
+                                          title="Delete Category"
+                                        >
+                                          × Delete
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {categories.length < 5 && (
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={handleAddCategory}
+                                      style={{ padding: '6px 12px', marginTop: 10, alignSelf: 'flex-start' }}
+                                    >
+                                      + Add Category
+                                    </button>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Items Editor */}
                               <div className={styles.formGroup}>

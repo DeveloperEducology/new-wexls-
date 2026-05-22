@@ -16,6 +16,9 @@ export default function ConnectorLayer({
 
       // 1. Diagram Labeling: Draw lines from targets to their designated hotspot coordinates
       if (layoutMode === 'diagram_labeling' && question.targets) {
+        const canvasEl = containerRef.current.querySelector('[data-diagram-canvas="true"]');
+        const baseRect = canvasEl ? canvasEl.getBoundingClientRect() : containerRect;
+
         question.targets.forEach(target => {
           if (target.pointerX === undefined || target.pointerY === undefined) return;
 
@@ -29,14 +32,14 @@ export default function ConnectorLayer({
           const fromY = targetRect.top - containerRect.top + targetRect.height / 2;
 
           // Calculate pointer coordinates
-          // If unit is '%', calculate based on container width/height. Else treat as absolute px.
+          // If unit is '%', calculate based on canvas width/height. Else treat as absolute px.
           const unit = target.unit || 'px';
           let toX = target.pointerX;
           let toY = target.pointerY;
 
           if (unit === '%') {
-            toX = (target.pointerX / 100) * containerRect.width;
-            toY = (target.pointerY / 100) * containerRect.height;
+            toX = (baseRect.left - containerRect.left) + (target.pointerX / 100) * baseRect.width;
+            toY = (baseRect.top - containerRect.top) + (target.pointerY / 100) * baseRect.height;
           }
 
           newConnectors.push({
