@@ -170,7 +170,7 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
   }
 
   // Check if client-side on-device synthesis should be used
-  const useClientTts = typeof window !== 'undefined' && window.localStorage.getItem('useClientTts') !== 'false';
+  const useClientTts = typeof window !== 'undefined' && window.localStorage.getItem('useClientTts') === 'true';
   const localVoiceOverride = typeof window !== 'undefined' && window.localStorage.getItem('localVoiceOverride');
   const activeVoice = (useClientTts && localVoiceOverride && localVoiceOverride !== 'none') ? localVoiceOverride : voice;
   const isPiperVoice = activeVoice.startsWith('piper:') || activeVoice.startsWith('en_US-');

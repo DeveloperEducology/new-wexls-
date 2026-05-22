@@ -500,7 +500,7 @@ function PracticePageContent() {
 
   // Client-Side TTS States
   const [clientTtsSupported, setClientTtsSupported] = useState(false);
-  const [useClientTts, setUseClientTts] = useState(true);
+  const [useClientTts, setUseClientTts] = useState(false);
   const [localVoiceOverride, setLocalVoiceOverride] = useState('none');
   const [storedModels, setStoredModels] = useState([]);
   const [downloadingVoice, setDownloadingVoice] = useState(null);
@@ -511,7 +511,7 @@ function PracticePageContent() {
       const supported = isClientTtsSupported();
       setClientTtsSupported(supported);
       
-      const savedUseClient = window.localStorage.getItem('useClientTts') !== 'false';
+      const savedUseClient = window.localStorage.getItem('useClientTts') === 'true';
       setUseClientTts(savedUseClient);
       
       const savedOverride = window.localStorage.getItem('localVoiceOverride') || 'none';
