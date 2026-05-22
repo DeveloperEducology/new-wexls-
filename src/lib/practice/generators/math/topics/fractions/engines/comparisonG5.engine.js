@@ -54,6 +54,57 @@ function makeFractionStripsSvg(n1, d1, n2, d2, palette1, palette2) {
   </svg>`;
 }
 
+function latexPart(content) {
+  return {
+    type: 'latex',
+    content,
+    style: {
+      display: 'inline-block',
+      width: 'auto',
+      margin: 0,
+      fontSize: 'clamp(26px, 5vw, 34px)',
+      flex: '0 0 auto'
+    }
+  };
+}
+
+function comparisonSelect() {
+  return {
+    type: 'option_select',
+    id: 'selected',
+    options: ['<', '>', '='],
+    style: {
+      width: 'auto',
+      flex: '0 0 auto',
+      gap: 'clamp(6px, 1.6vw, 10px)',
+      flexWrap: 'nowrap'
+    },
+    buttonStyle: {
+      minWidth: 'clamp(48px, 10vw, 68px)',
+      minHeight: 'clamp(42px, 8vw, 54px)',
+      padding: '8px clamp(12px, 2vw, 18px)',
+      fontSize: 'clamp(20px, 5vw, 28px)',
+      borderRadius: 6
+    }
+  };
+}
+
+function comparisonRow(left, right) {
+  return {
+    type: 'group',
+    direction: 'row',
+    style: {
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: 'clamp(10px, 2vw, 16px)',
+      margin: 'clamp(18px, 3vw, 28px) 0',
+      width: '100%',
+      flexWrap: 'wrap'
+    },
+    parts: [latexPart(left), comparisonSelect(), latexPart(right)]
+  };
+}
+
 function generateCompareLike(params, random) {
   const d = getRandomInt(3, 12, random);
   const n1 = getRandomInt(1, d - 1, random);
@@ -88,20 +139,7 @@ function generateCompareLike(params, random) {
     parts: [
       { type: 'text', content: `Compare the fractions below:`, style: { fontWeight: 900 } },
       { type: 'svg', content: svgContent },
-      {
-        type: 'group',
-        direction: 'row',
-        style: { alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '14px 0' },
-        parts: [
-          { type: 'latex', content: `\\frac{${n1}}{${d}}`, style: { display: 'inline-block' } },
-          {
-            type: 'option_select',
-            id: 'selected',
-            options: ['<', '>', '=']
-          },
-          { type: 'latex', content: `\\frac{${n2}}{${d}}`, style: { display: 'inline-block' } }
-        ]
-      }
+      comparisonRow(`\\frac{${n1}}{${d}}`, `\\frac{${n2}}{${d}}`)
     ],
     answer: { selected: symbol },
     validation: {
@@ -178,20 +216,7 @@ function generateCompareUnlike(params, random) {
     parts: [
       { type: 'text', content: `Compare the fractions below:`, style: { fontWeight: 900 } },
       { type: 'svg', content: svgContent },
-      {
-        type: 'group',
-        direction: 'row',
-        style: { alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '14px 0' },
-        parts: [
-          { type: 'latex', content: `\\frac{${n1}}{${d1}}`, style: { display: 'inline-block' } },
-          {
-            type: 'option_select',
-            id: 'selected',
-            options: ['<', '>', '=']
-          },
-          { type: 'latex', content: `\\frac{${n2}}{${d2}}`, style: { display: 'inline-block' } }
-        ]
-      }
+      comparisonRow(`\\frac{${n1}}{${d1}}`, `\\frac{${n2}}{${d2}}`)
     ],
     answer: { selected: symbol },
     validation: {

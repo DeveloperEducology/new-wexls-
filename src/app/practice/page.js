@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionRenderer from '../../components/practice/QuestionRenderer';
 import LabLayout from '../../components/practice/LabLayout';
@@ -22,8 +22,10 @@ import { additionSkillsByGrade } from '../../lib/practice/generators/math/topics
 import { multiplicationSkillsByGrade } from '../../lib/practice/generators/math/topics/multiplication/skills/index.js';
 
 import { subtractionSkillsByGrade } from '../../lib/practice/generators/math/topics/subtraction/skills/index.js';
+import { placeValueSkillsByGrade } from '../../lib/practice/generators/math/topics/place-values/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../../lib/practice/generators/english/topics/grammar/skills/index.js';
+import { shapesSkillsByGrade } from '../../lib/practice/generators/math/topics/shapes/skills/index.js';
 
 const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
@@ -42,6 +44,14 @@ const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([g
 );
 
 const MULTIPLICATION_OPTIONS = Object.entries(multiplicationSkillsByGrade).flatMap(([grade, skills]) =>
+  skills.map((skill) => ({
+    group: `Grade ${grade}`,
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+);
+
+const SHAPES_OPTIONS = Object.entries(shapesSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
     group: `Grade ${grade}`,
     label: `${skill.code} ${skill.title}`,
@@ -118,16 +128,13 @@ const FRACTIONS_OPTIONS = [
   { group: 'Operations', label: 'Add and subtract fractions with unlike denominators', value: 'fractions-g5-add-subtract-unlike-denominators' },
 ];
 
-const PLACE_VALUE_OPTIONS = [
-  { group: 'Grade 1', label: 'Identify numbers from tens and ones blocks', value: 'pv-g1-blocks-units' },
-  { group: 'Grade 1', label: 'Name the place value of a digit', value: 'pv-g1-place-name' },
-  { group: 'Grade 1', label: 'Which model shows the number?', value: 'pv-g1-match-blocks-to-number' },
-  { group: 'Grade 2', label: 'Identify hundreds, tens, and ones blocks', value: 'pv-g2-blocks-hundreds' },
-  { group: 'Grade 2', label: 'Write numbers in expanded form', value: 'pv-g2-expanded-form' },
-  { group: 'Grade 2', label: 'Break down numbers in a table', value: 'pv-g2-breakdown-table' },
-  { group: 'Grade 3', label: 'Identify thousands blocks', value: 'pv-g3-blocks-thousands' },
-  { group: 'Grade 3', label: 'Write word form as a number', value: 'pv-g3-word-to-number' },
-];
+const PLACE_VALUE_OPTIONS = Object.entries(placeValueSkillsByGrade).flatMap(([grade, skills]) => (
+  skills.map((skill) => ({
+    group: gradeLabel(grade),
+    label: `${skill.code} ${skill.title}`,
+    value: skill.id
+  }))
+));
 
 const SOCIAL_GK_OPTIONS = [
   { group: 'People', label: 'Identify famous persons', value: 'gk_identify_person_v1' },
@@ -153,7 +160,26 @@ const TESTING_OPTIONS = [
   { group: 'Composition', label: 'Inputs + options', value: 'testing-doubles-plus-one-mixed' },
 ];
 
+const LKG_OPTIONS = [
+  { group: 'Counting', label: 'Learn to count - up to 5', value: 'lkg_counting_5' },
+  { group: 'Counting', label: 'Learn to count - up to 10', value: 'lkg_comparison_5' },
+];
+
 const SOURCE_CONFIGS = {
+  lkg: {
+    label: 'LKG Practice',
+    api: '/api/practice',
+    badge: 'LKG',
+    description: 'Learn to count up to 5 with tactile objects and speaker support.',
+    defaultLogicType: 'lkg_counting_5',
+    subject: 'math',
+    topic: 'lkg',
+    options: LKG_OPTIONS,
+    tips: [
+      { label: 'Interactive badging', text: 'Click each object to badge it with its count sequence.' },
+      { label: 'Web speech read-aloud', text: 'Click the speaker buttons to read instructions out loud.' },
+    ],
+  },
   'addition-topic': {
     label: 'Addition Practice',
     api: '/api/practice',
@@ -228,14 +254,28 @@ const SOURCE_CONFIGS = {
     label: 'Place Value Practice',
     api: '/api/practice',
     badge: 'PV',
-    description: 'Base-ten blocks, place names, expanded form, word form, tables, and remediation-ready scaffolds.',
+    description: 'Base-ten blocks, place names, expanded form, word form, Indian/international systems, rounding, magnitude, and decomposition.',
     defaultLogicType: 'pv-g1-blocks-units',
     subject: 'math',
     topic: 'place-values',
     options: PLACE_VALUE_OPTIONS,
     tips: [
-      { label: 'Topic families', text: 'Blocks, place names, expanded form, and word form use separate family engines.' },
-      { label: 'Markdown ready', text: 'Tables and highlighted text render directly from generator JSON.' },
+      { label: 'Visual-first', text: 'Charts, grouping visuals, number lines, and magnitude bars come from generator JSON.' },
+      { label: 'Remediation-ready', text: 'Skills carry prerequisites, misconceptions, and scaffold metadata.' },
+    ],
+  },
+  shapes: {
+    label: 'Shapes Practice',
+    api: '/api/practice',
+    badge: 'SHAPES',
+    description: 'Identify shapes by visual representation or name, with multi-step graphical explanation support.',
+    defaultLogicType: 'shapes-g1-identify-visual-text-opts',
+    subject: 'math',
+    topic: 'shapes',
+    options: SHAPES_OPTIONS,
+    tips: [
+      { label: 'Interactive SVGs', text: 'Questions feature interactive visual SVG representation.' },
+      { label: 'Multi-step Solution', text: 'Solutions feature step-by-step visual corner and side explanations.' },
     ],
   },
   'social-gk': {
@@ -302,21 +342,78 @@ function resolveSearchValue(searchParams, key, fallback = null) {
   return raw && String(raw).trim() ? String(raw).trim() : fallback;
 }
 
-function getSourceConfig(sourceKey) {
-  return SOURCE_CONFIGS[sourceKey] || SOURCE_CONFIGS['addition-topic'];
+function buildPracticeOptionsFromDbTopic(topicNode) {
+  const options = [];
+  
+  const processNode = (node, currentGroup) => {
+    if (node.type === 'skill') {
+      const code = node.code || node.metadata?.code || '';
+      const title = node.title || node.name || node.skillId || node.id;
+      const label = code ? `${code} ${title}` : title;
+      options.push({
+        group: currentGroup || 'Skills',
+        label,
+        value: node.skillId || node.id
+      });
+    } else if (node.type === 'chapter') {
+      const chapterTitle = node.title || node.name || 'Chapter';
+      if (Array.isArray(node.children)) {
+        node.children.forEach(child => processNode(child, chapterTitle));
+      }
+    } else {
+      if (Array.isArray(node.children)) {
+        node.children.forEach(child => processNode(child, currentGroup));
+      }
+    }
+  };
+
+  if (Array.isArray(topicNode.children)) {
+    topicNode.children.forEach(child => {
+      if (child.type === 'chapter') {
+        const chapterTitle = child.title || child.name || 'Chapter';
+        if (Array.isArray(child.children)) {
+          child.children.forEach(subChild => processNode(subChild, chapterTitle));
+        }
+      } else {
+        const gradeVal = child.grade || child.metadata?.grade;
+        const groupName = gradeVal ? (gradeVal === 'remediation' ? 'Remediation' : `Grade ${gradeVal}`) : 'Skills';
+        processNode(child, groupName);
+      }
+    });
+  }
+
+  const defaultLogicType = options[0]?.value || '';
+
+  return {
+    label: `${topicNode.title || topicNode.name || topicNode.topicId || 'Custom'} Practice`,
+    api: '/api/practice',
+    badge: topicNode.metadata?.badge || topicNode.subjectId?.substring(0, 4).toUpperCase() || 'DB',
+    description: topicNode.description || topicNode.metadata?.description || 'Curriculum topic from database.',
+    defaultLogicType,
+    subject: topicNode.subjectId || 'math',
+    topic: topicNode.topicId || topicNode.id,
+    options,
+    tips: topicNode.metadata?.tips || [
+      { label: 'Database Stored', text: 'This topic was loaded dynamically from the curriculum database.' }
+    ],
+  };
 }
 
 function sourceFromSubjectTopic(subject, topic, fallback) {
-  if (subject === 'math' && topic === 'time') return 'time';
-  if (subject === 'math' && topic === 'fractions') return 'fractions';
-  if (subject === 'math' && topic === 'place-values') return 'place-values';
-  if (subject === 'math' && topic === 'addition') return 'addition-topic';
-  if (subject === 'math' && topic === 'subtraction') return 'subtraction';
-  if (subject === 'math' && topic === 'testing') return 'testing';
-  if (subject === 'social' && topic === 'gk') return 'social-gk';
-  if (subject === 'science' && topic === 'units-measurement') return 'units-measurement';
-  if (subject === 'english' && topic === 'grammar') return 'english-grammar';
-  return fallback;
+  if (!topic) return fallback;
+  const normTopic = String(topic).toLowerCase().trim();
+  if (subject === 'math' && normTopic === 'lkg') return 'lkg';
+  if (subject === 'math' && normTopic === 'time') return 'time';
+  if (subject === 'math' && normTopic === 'fractions') return 'fractions';
+  if (subject === 'math' && normTopic === 'place-values') return 'place-values';
+  if (subject === 'math' && normTopic === 'shapes') return 'shapes';
+  if (subject === 'math' && normTopic === 'addition') return 'addition-topic';
+  if (subject === 'math' && normTopic === 'subtraction') return 'subtraction';
+  if (subject === 'math' && normTopic === 'testing') return 'testing';
+  if (subject === 'social' && normTopic === 'gk') return 'social-gk';
+  if (subject === 'science' && normTopic === 'units-measurement') return 'units-measurement';
+  if (subject === 'english' && normTopic === 'grammar') return 'english-grammar';
+  return topic; // return the topic ID for db fetched topics
 }
 
 function CorrectPraiseCard({ praiseMessage }) {
@@ -332,6 +429,8 @@ function CorrectPraiseCard({ praiseMessage }) {
 function PracticePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const submittingRef = useRef(false);
+  const loadingRef = useRef(false);
   const urlSubject = resolveSearchValue(searchParams, 'subject');
   const urlTopic = resolveSearchValue(searchParams, 'topic');
   const urlSkill = resolveSearchValue(searchParams, 'skill');
@@ -341,11 +440,39 @@ function PracticePageContent() {
     || resolveSearchValue(searchParams, 'forcedTask')
     || resolveSearchValue(searchParams, 'logic_type');
 
+  const [dbConfigs, setDbConfigs] = useState({});
+  const [curriculumLoading, setCurriculumLoading] = useState(true);
+
+  const mergedConfigs = useMemo(() => {
+    const result = { ...SOURCE_CONFIGS };
+    
+    Object.entries(dbConfigs).forEach(([dbKey, dbConfig]) => {
+      const matchingKey = Object.keys(result).find(
+        (key) => result[key].subject === dbConfig.subject && result[key].topic === dbConfig.topic
+      );
+      
+      if (matchingKey) {
+        result[matchingKey] = {
+          ...result[matchingKey],
+          ...dbConfig,
+          label: dbConfig.label || result[matchingKey].label,
+          description: dbConfig.description || result[matchingKey].description,
+          options: dbConfig.options?.length ? dbConfig.options : result[matchingKey].options || [],
+        };
+      } else {
+        result[dbKey] = dbConfig;
+      }
+    });
+    
+    return result;
+  }, [dbConfigs]);
+
   const [sourceKey, setSourceKey] = useState(resolvedInitialSource);
-  const [logicType, setLogicType] = useState(initialLogicType || getSourceConfig(resolvedInitialSource).defaultLogicType);
+  const [logicType, setLogicType] = useState(initialLogicType || 'addition-g1-e3-model-match-to-10');
   const [question, setQuestion] = useState(null);
   const [templateJson, setTemplateJson] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartScore, setSmartScore] = useState(0);
   const [correctStreak, setCorrectStreak] = useState(0);
   const [practiceLevel, setPracticeLevel] = useState(1);
@@ -363,7 +490,10 @@ function PracticePageContent() {
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
 
-  const sourceConfig = useMemo(() => getSourceConfig(sourceKey), [sourceKey]);
+  const sourceConfig = useMemo(() => {
+    return mergedConfigs[sourceKey] || mergedConfigs['addition-topic'];
+  }, [mergedConfigs, sourceKey]);
+
   const questionJson = useMemo(() => (
     JSON.stringify({ question, template: templateJson }, null, 2)
   ), [question, templateJson]);
@@ -399,7 +529,7 @@ function PracticePageContent() {
 
   const syncRoute = useCallback((nextSource, nextLogicType) => {
     const params = new URLSearchParams();
-    const nextConfig = getSourceConfig(nextSource);
+    const nextConfig = mergedConfigs[nextSource] || mergedConfigs['addition-topic'];
 
     if (urlSubject || urlTopic || urlSkill) {
       params.set('subject', nextConfig.subject);
@@ -411,13 +541,17 @@ function PracticePageContent() {
     }
 
     router.replace(`/practice?${params.toString()}`, { scroll: false });
-  }, [router, urlSkill, urlSubject, urlTopic]);
+  }, [router, urlSkill, urlSubject, urlTopic, mergedConfigs]);
 
   const fetchQuestion = useCallback(async (resetSession = false, sessionOverride = {}) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(!sessionOverride.keepTransition);
     setLastResult('none');
     setUserAnswer(null);
     setIsAnswered(false);
+    submittingRef.current = false;
+    setIsSubmitting(false);
     setIsCorrect(false);
     if (!sessionOverride.keepTransition) {
       setTransitionState('idle');
@@ -481,20 +615,58 @@ function PracticePageContent() {
       setTemplateJson(error.message);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [correctStreak, difficulty, lastResult, levelStreak, logicType, practiceLevel, sourceConfig, urlSubject, urlTopic]);
 
   useEffect(() => {
+    async function loadCurriculum() {
+      try {
+        const res = await fetch('/api/curriculum?tree=true');
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.tree)) {
+          const loadedConfigs = {};
+          
+          const traverse = (nodes) => {
+            nodes.forEach(node => {
+              if (node.type === 'topic') {
+                const config = buildPracticeOptionsFromDbTopic(node);
+                if (config && config.topic) {
+                  loadedConfigs[config.topic] = config;
+                }
+              }
+              if (Array.isArray(node.children)) {
+                traverse(node.children);
+              }
+            });
+          };
+          
+          traverse(data.tree);
+          setDbConfigs(loadedConfigs);
+        }
+      } catch (err) {
+        console.error('Failed to load curriculum tree:', err);
+      } finally {
+        setCurriculumLoading(false);
+      }
+    }
+    loadCurriculum();
+  }, []);
+
+  useEffect(() => {
+    if (curriculumLoading) return;
     const nextSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
+    const nextConfig = mergedConfigs[nextSource] || mergedConfigs['addition-topic'];
     const nextLogicType = urlSkill
       || resolveSearchValue(searchParams, 'forcedTask')
       || resolveSearchValue(searchParams, 'logic_type')
-      || getSourceConfig(nextSource).defaultLogicType;
+      || nextConfig.defaultLogicType;
     setSourceKey(nextSource);
     setLogicType(nextLogicType);
-  }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource]);
+  }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource, curriculumLoading, mergedConfigs]);
 
   useEffect(() => {
+    if (curriculumLoading) return;
     const competency = resolveCompetency({
       subject: urlSubject || sourceConfig.subject,
       topic: urlTopic || sourceConfig.topic,
@@ -533,12 +705,14 @@ function PracticePageContent() {
       levelStreak: 0,
       lastResult: 'none',
     });
-  }, [sourceKey, logicType, difficulty, urlSubject, urlTopic]);
+  }, [sourceKey, logicType, difficulty, urlSubject, urlTopic, curriculumLoading]);
 
   const handleSubmit = (answerOverride = undefined) => {
     const answerToCheck = answerOverride === undefined ? userAnswer : answerOverride;
-    if (!question || answerToCheck === null || answerToCheck === undefined || isAnswered) return;
+    if (!question || answerToCheck === null || answerToCheck === undefined || isAnswered || submittingRef.current) return;
 
+    submittingRef.current = true;
+    setIsSubmitting(true);
     const correct = isAnswerCorrect(question, answerToCheck);
     const newSmartScore = calculateSmartScore(smartScore, correct);
     const competency = question.metadata?.competency || currentCompetency;
@@ -619,6 +793,8 @@ function PracticePageContent() {
           slideIn: true,
         });
       }, 950);
+    } else {
+      setIsSubmitting(false);
     }
   };
 
@@ -651,8 +827,19 @@ function PracticePageContent() {
       question={question}
       isCorrect={isCorrect}
       onNext={() => fetchQuestion()}
+      loading={loading}
     />
   ) : null;
+
+  if (curriculumLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc', gap: 16 }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #dbeafe', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#64748b' }}>Loading practice environment...</div>
+      </div>
+    );
+  }
 
   const leftPanel = (
     <div className={styles.panel}>
@@ -669,7 +856,8 @@ function PracticePageContent() {
         value={sourceKey}
         onChange={(event) => {
           const nextSource = event.target.value;
-          const nextLogicType = getSourceConfig(nextSource).defaultLogicType;
+          const nextConfig = mergedConfigs[nextSource] || mergedConfigs['addition-topic'];
+          const nextLogicType = nextConfig.defaultLogicType;
           setSourceKey(nextSource);
           setLogicType(nextLogicType);
           syncRoute(nextSource, nextLogicType);
@@ -685,7 +873,7 @@ function PracticePageContent() {
           fontWeight: 800,
         }}
       >
-        {Object.entries(SOURCE_CONFIGS).map(([key, config]) => (
+        {Object.entries(mergedConfigs).map(([key, config]) => (
           <option key={key} value={key}>{config.label}</option>
         ))}
       </select>
@@ -903,6 +1091,7 @@ function PracticePageContent() {
         setAutoSubmit={setAutoSubmit}
         practiceLevel={practiceLevel}
         levelStreak={levelStreak}
+        isSubmitting={isSubmitting}
       >
         {question ? (
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>
@@ -916,6 +1105,7 @@ function PracticePageContent() {
                 isAnswered={isAnswered}
                 isCorrect={isCorrect}
                 onAnswer={(answer) => {
+                  if (isSubmitting || submittingRef.current || isAnswered) return;
                   setUserAnswer(answer);
                   if (
                     autoSubmit

@@ -1,0 +1,61 @@
+{
+  "id": "qb_sample_time_categorizationv2_1",
+  "type": "categorizationv2",
+  "renderer": "html",
+  "questionText": "Sort the clocks into the correct time groups.",
+  "categories": [
+    {
+      "id": "o_clock",
+      "label": "O'clock"
+    },
+    {
+      "id": "half_past",
+      "label": "Half past"
+    }
+  ],
+  "items": [
+    {
+      "id": "clock_1",
+      "content": "3:00",
+      "target": "o_clock",
+      "categoryId": "o_clock"
+    },
+    {
+      "id": "clock_2",
+      "content": "4:30",
+      "target": "half_past",
+      "categoryId": "half_past"
+    },
+    {
+      "id": "clock_3",
+      "content": "8:00",
+      "target": "o_clock",
+      "categoryId": "o_clock"
+    }
+  ],
+  "answer": {
+    "clock_1": "o_clock",
+    "clock_2": "half_past",
+    "clock_3": "o_clock"
+  },
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "3:00 and 8:00 are o'clock times."
+      },
+      {
+        "type": "text",
+        "content": "4:30 is half past."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "math",
+    "topic": "time",
+    "skillId": "time-g1-categorize-clocks",
+    "templateId": "time.clock.categories",
+    "engine": "time"
+  }
+}
+

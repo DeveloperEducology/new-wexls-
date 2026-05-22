@@ -1,0 +1,2038 @@
+/* Color Palette & Custom Properties */
+.adminContainer {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --color-text-main: #0f172a;
+  --color-text-muted: #475569;
+  --color-border: #0f172a;
+  --color-primary: #4f46e5;
+  --color-primary-hover: #3f51b5;
+  --color-success: #10b981;
+  --color-success-bg: #d1fae5;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-danger-bg: #fee2e2;
+  --color-warning: #f97316;
+  --color-warning-bg: #ffedd5;
+  --color-info-bg: #e0f2fe;
+  --color-info-text: #0369a1;
+
+  min-height: 100vh;
+  padding: 32px 24px;
+  background-color: var(--bg-secondary);
+  color: var(--color-text-main);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.adminHeader {
+  width: min(1400px, 100%);
+  margin-bottom: 24px;
+  border-bottom: 2.5px solid var(--color-border);
+  padding-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+  .adminHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+.headerInfo h1 {
+  margin: 0 0 6px;
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--color-text-main);
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.headerInfo p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.headerStatus {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.compactStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.statusIndicatorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+}
+
+.dotGreen { background-color: var(--color-success); }
+.dotRed { background-color: var(--color-danger); }
+
+/* Tabs Bar */
+.tabsContainer {
+  width: min(1400px, 100%);
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  border-bottom: 2.5px solid var(--color-border);
+  padding-bottom: 0px;
+  overflow-x: auto;
+}
+
+.tabButton {
+  background-color: var(--bg-primary);
+  color: var(--color-text-main);
+  border: 1.5px solid var(--color-border);
+  border-bottom: none;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  top: 1.5px;
+  transition: all 0.1s ease;
+}
+
+.tabButton:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.tabButtonActive {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+  border-color: var(--color-border);
+}
+
+/* Alert system */
+.alertBox {
+  width: min(1400px, 100%);
+  padding: 14px 18px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.alertSuccess { background-color: var(--color-success-bg); color: #065f46; }
+.alertError { background-color: var(--color-danger-bg); color: #991b1b; }
+.alertInfo { background-color: var(--color-info-bg); color: var(--color-info-text); }
+
+.alertClose {
+  background: none;
+  border: none;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+  color: inherit;
+  line-height: 1;
+}
+
+/* Main Area Container */
+.consoleContent {
+  width: min(1400px, 100%);
+}
+
+/* 1. Dashboard Styles */
+.dashboardLayout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .dashboardLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboardMain {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.metricsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metricsSectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.primaryStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.primaryCard {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.primaryValue {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--color-text-main);
+}
+
+.secondaryStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.secondaryCard {
+  background-color: var(--bg-secondary);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.secondaryValue {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text-main);
+}
+
+.statsLabel {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.03em;
+}
+
+/* Charts and Activity Cards */
+.borderedPanel {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px solid var(--color-border);
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chartSubtitle {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* SVG Chart styled details */
+.svgProgressContainer {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background-color: var(--bg-secondary);
+  border: 1.5px solid #cbd5e1;
+  padding: 16px;
+  border-radius: 4px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.progressDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progressPercentText {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--color-text-main);
+}
+
+.progressSubText {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+/* Custom CSS bar lists */
+.barList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.barRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.barTrack {
+  height: 10px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background-color: var(--color-border);
+}
+
+/* Sidebar log and activity queue */
+.dashboardSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.activityFeedList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.activityItemCard {
+  padding: 10px 12px;
+  background-color: var(--bg-secondary);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activityMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.emptyFeedText {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* Queue visualization */
+.queueStatusPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: #fffbeb;
+  border: 1.5px solid #d97706;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.queueTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  color: #b45309;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progressInfo {
+  font-size: 12px;
+  font-weight: 700;
+  color: #78350f;
+  line-height: 1.4;
+}
+
+.progressBar {
+  width: 100%;
+  height: 12px;
+  background-color: #fef3c7;
+  border: 1px solid #d97706;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background-color: #d97706;
+  transition: width 0.3s ease;
+}
+
+/* Buttons style */
+.btnSolid {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.1s ease;
+}
+
+.btnSolid:hover:not(:disabled) {
+  background-color: var(--bg-primary);
+  color: var(--color-border);
+}
+
+.btnSolid:disabled {
+  background-color: #94a3b8;
+  border-color: #94a3b8;
+  color: var(--bg-secondary);
+  cursor: not-allowed;
+}
+
+.btnOutline {
+  background-color: var(--bg-primary);
+  color: var(--color-border);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.1s ease;
+}
+
+.btnOutline:hover:not(:disabled) {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+}
+
+.btnOutline:disabled {
+  background-color: var(--bg-primary);
+  color: #94a3b8;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.btnDanger {
+  background-color: var(--color-danger);
+  color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.1s ease;
+}
+
+.btnDanger:hover:not(:disabled) {
+  background-color: var(--bg-primary);
+  color: var(--color-danger);
+}
+
+.btnDanger:disabled {
+  background-color: #fca5a5;
+  border-color: #fca5a5;
+  cursor: not-allowed;
+}
+
+.btnCompact {
+  padding: 4px 6px;
+  font-size: 11px;
+  border-radius: 4px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* 2. Questions Library */
+.stickyFiltersBar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.columnsDropdownBtn {
+  background-color: var(--bg-primary);
+  color: var(--color-text-main);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 41px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.columnsDropdownBtn:hover {
+  background-color: var(--bg-secondary);
+}
+
+.columnsDropdownPopup {
+  position: absolute;
+  top: 105%;
+  right: 0;
+  z-index: 101;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 4px 4px 0px rgba(15, 23, 42, 0.15);
+}
+
+.columnToggleItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.columnToggleItem input {
+  cursor: pointer;
+  accent-color: var(--color-border);
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 900px) {
+  .stickyFiltersBar {
+    grid-template-columns: 1fr;
+    position: relative;
+    top: auto;
+  }
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterLabel {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.formInput, .formSelect {
+  padding: 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  background-color: var(--bg-primary);
+  outline: none;
+  height: 41px;
+  box-sizing: border-box;
+}
+
+.formInput:focus, .formSelect:focus {
+  background-color: var(--bg-secondary);
+}
+
+.tableContainer {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.adminTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.adminTable th {
+  background-color: var(--bg-tertiary);
+  border-bottom: 1.5px solid var(--color-border);
+  border-right: 1.5px solid var(--color-border);
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-main);
+}
+
+.adminTable th:last-child {
+  border-right: none;
+}
+
+.adminTable td {
+  border-bottom: 1.5px solid #cbd5e1;
+  border-right: 1.5px solid #cbd5e1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-main);
+  vertical-align: middle;
+  transition: background-color 120ms ease;
+}
+
+.adminTable td:last-child {
+  border-right: none;
+}
+
+.adminTable tr:last-child td {
+  border-bottom: none;
+}
+
+.adminTable tr:hover td {
+  background-color: #f8fafc;
+}
+
+.idCol {
+  font-size: 11px;
+  font-weight: 700;
+  max-width: 75px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idCol code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: none;
+  padding: 0;
+  color: var(--color-text-muted);
+}
+
+.truncatedText {
+  max-width: 480px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionIconGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.actionRowInline {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+
+.actionRowInline button {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.actionIconGroup button {
+  width: 100%;
+}
+
+/* Pagination Footer */
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  margin-top: -1.5px;
+}
+
+.paginationText {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--color-text-muted);
+}
+
+.paginationButtons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Play button compact */
+.iconPlayBtn {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-border);
+  transition: all 0.1s ease;
+  padding: 0;
+}
+
+.iconPlayBtn:hover {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+}
+
+.iconPlayActive {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+}
+
+/* Badges */
+.badgeSolid {
+  display: inline-flex;
+  padding: 1.5px 5.5px;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  font-size: 8.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.badgeGreen { background-color: var(--color-success-bg); color: #065f46; }
+.badgeRed { background-color: var(--color-danger-bg); color: #991b1b; }
+
+/* 3. Authoring Center Layout */
+.authoringWorkspaceContainer {
+  display: grid;
+  grid-template-columns: 240px minmax(500px, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1280px) {
+  .authoringWorkspaceContainer {
+    grid-template-columns: 200px 1fr;
+  }
+  .previewStickyColumn {
+    grid-column: span 2;
+    position: relative;
+    top: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .authoringWorkspaceContainer {
+    grid-template-columns: 1fr;
+  }
+  .templatesSidebar {
+    position: relative;
+    top: auto;
+  }
+  .previewStickyColumn {
+    grid-column: span 1;
+  }
+}
+
+.formCard {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formCard h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 12px;
+}
+
+.formSectionGroup {
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  overflow: hidden;
+}
+
+.formSectionHeader {
+  background-color: var(--bg-tertiary);
+  border-bottom: 1.5px solid var(--color-border);
+  padding: 10px 14px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-main);
+  letter-spacing: 0.05em;
+}
+
+.formSectionBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.textareaInput {
+  padding: 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: var(--bg-primary);
+  min-height: 70px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.textareaInput:focus {
+  background-color: var(--bg-secondary);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.checkboxInput {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-border);
+  border: 1.5px solid var(--color-border);
+  cursor: pointer;
+}
+
+/* MCQ Options list */
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.optionItemRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--bg-secondary);
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.radioInput {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-border);
+  cursor: pointer;
+}
+
+.optionTextInput {
+  flex: 1;
+  padding: 8px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: var(--bg-primary);
+  outline: none;
+}
+
+/* 4. Sticky Preview Column */
+.previewStickyColumn {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .previewStickyColumn {
+    position: relative;
+    top: auto;
+  }
+}
+
+.studentCardFrame {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0px rgba(15, 23, 42, 0.1);
+}
+
+.studentCardHeader {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.studentCardBody {
+  padding: 24px;
+  background-color: var(--bg-primary);
+  min-height: 200px;
+}
+
+.previewInteractiveRow {
+  padding: 16px;
+  background-color: var(--bg-secondary);
+  border-top: 1.5px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previewButtonsRow {
+  display: flex;
+  gap: 10px;
+}
+
+.previewFeedbackBox {
+  padding: 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.previewFeedbackBoxSuccess { background-color: var(--color-success-bg); color: #065f46; }
+.previewFeedbackBoxError { background-color: var(--color-danger-bg); color: #991b1b; }
+
+.explanationBlock {
+  font-size: 12px;
+  border: 1.5px solid var(--color-border);
+  padding: 12px;
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+}
+
+/* MCQ Options override within Student Preview wrapper */
+.previewStudentWrapper {
+  width: 100%;
+}
+
+/* Target elements rendered inside the student preview to styled like IXL options */
+.previewStudentWrapper button[class*="optionButton"] {
+  background-color: var(--bg-primary) !important;
+  color: var(--color-text-main) !important;
+  border: 2.5px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  padding: 16px 20px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  box-shadow: 2px 2px 0px var(--color-border) !important;
+  transition: all 0.1s ease !important;
+  width: 100% !important;
+  text-align: left !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  cursor: pointer !important;
+  position: relative !important;
+  margin-bottom: 10px !important;
+}
+
+.previewStudentWrapper button[class*="optionButtonActive"] {
+  background-color: #eff6ff !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 2px 2px 0px var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+.previewStudentWrapper button[class*="optionButton"]:hover:not(:disabled) {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0px var(--color-border) !important;
+}
+
+/* Sound button custom style */
+.previewStudentWrapper button[onClick*="speakText"] {
+  background: var(--bg-tertiary) !important;
+  border: 1.5px solid var(--color-border) !important;
+  color: var(--color-border) !important;
+  box-shadow: none !important;
+}
+
+/* FIB override in student preview wrapper */
+.previewStudentWrapper input[class*="fibInput"] {
+  border: 2.5px solid var(--color-border) !important;
+  border-radius: 4px !important;
+  padding: 10px 14px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  background-color: var(--bg-primary) !important;
+  color: var(--color-text-main) !important;
+  outline: none !important;
+  width: 100% !important;
+  box-shadow: 2px 2px 0px var(--color-border) !important;
+}
+
+.previewStudentWrapper input[class*="fibInput"]:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 2px 2px 0px var(--color-primary) !important;
+}
+
+/* 5. General Layout items */
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  border: 2px dashed #9ca3af;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--color-text-muted);
+  background-color: var(--bg-primary);
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(15, 23, 42, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--color-border);
+  animation: spin 0.8s linear infinite;
+}
+
+.spinnerWhite {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Sidebar Templates styles */
+.templatesSidebar {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 20px;
+}
+
+.sidebarHeader h3 {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-main);
+  letter-spacing: 0.03em;
+}
+
+.sidebarSubtext {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.templateList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.templateCard {
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.templateCard:hover {
+  background-color: var(--bg-secondary);
+  transform: translateY(-1px);
+}
+
+.templateCardName {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--color-text-main);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.templateCardDesc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* Center main Content styles */
+.authoringMainContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Sticky Action Bar */
+.stickyActionBar {
+  background-color: var(--bg-primary);
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.actionBarLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.authoringStatusTitle {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-main);
+  letter-spacing: 0.03em;
+}
+
+.autosaveBadge {
+  font-size: 11px;
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.actionBarRight {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Recovery banner style */
+.recoveryBanner {
+  background-color: #fef3c7;
+  border: 2px solid #d97706;
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.recoveryText {
+  font-size: 12px;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.recoveryButtons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Mode Segmented selectors */
+.modeSegmentedSelector {
+  display: flex;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+}
+
+.selectorButton {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.selectorButton:not(:last-child) {
+  border-right: 2px solid var(--color-border);
+}
+
+.selectorButton:hover {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+.selectorButtonActive {
+  background-color: var(--bg-primary);
+  color: var(--color-text-main);
+}
+
+/* Accordion sections */
+.accordionGroup {
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.accordionHeader {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-tertiary);
+  border: none;
+  border-bottom: 1.5px solid var(--color-border);
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-main);
+  cursor: pointer;
+  text-align: left;
+}
+
+.accordionHeader:hover {
+  background-color: var(--bg-secondary);
+}
+
+.accordionBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* MCQ option sub-controls */
+.optionControlsGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.moveBtn {
+  padding: 4px 6px;
+  font-size: 9px;
+  background: var(--bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.moveBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Device simulation toggles and device frames */
+.previewConfigBar, .simulateStatesRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.previewConfigTitle {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.deviceButtonsGroup, .simulateButtonsGroup {
+  display: flex;
+  gap: 4px;
+}
+
+.deviceBtn, .simulateBtn {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border: 1.5px solid var(--color-border);
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.deviceBtnActive {
+  background-color: var(--color-border);
+  color: var(--bg-primary);
+}
+
+.simulateBtn {
+  transition: all 0.1s ease;
+}
+
+.simulateBtnCorrectActive {
+  background-color: var(--color-success-bg);
+  border-color: #059669;
+  color: #065f46;
+}
+
+.simulateBtnWrongActive {
+  background-color: var(--color-danger-bg);
+  border-color: #dc2626;
+  color: #991b1b;
+}
+
+.frameMobile {
+  width: 340px !important;
+  margin: 0 auto;
+  border: 8px solid var(--color-border) !important;
+  border-radius: 20px !important;
+}
+
+.frameTablet {
+  max-width: 500px !important;
+  width: 100% !important;
+  margin: 0 auto;
+  border: 8px solid var(--color-border) !important;
+  border-radius: 16px !important;
+}
+
+.frameDesktop {
+  width: 100%;
+}
+
+/* Paste & Ingestion layouts */
+.parseWorkspaceContainer, .importWorkspaceContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.parseInstructions {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-main);
+}
+
+.parseInstructions h4 {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.parseFormatExample {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 8px 0 0 0;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.uploadDropZone {
+  border: 2px dashed var(--color-border);
+  border-radius: 4px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--bg-secondary);
+}
+
+.uploadLabelBtn {
+  padding: 8px 14px;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.uploadLabelBtn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.validationErrorCard p {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* --- CURRICULUM BUILDER TABS & PANELS (Namespaced with curr) --- */
+
+.currContainer {
+  width: min(1400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.currHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  box-shadow: 4px 4px 0px rgba(15, 23, 42, 0.1);
+}
+
+.currEyebrow {
+  margin: 0 0 4px;
+  color: var(--color-info-text);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.currHero h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.currHero p {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.currHeroActions,
+.currActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.currLayout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.currPanel {
+  min-width: 0;
+  padding: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  box-shadow: 4px 4px 0px rgba(15, 23, 42, 0.05);
+}
+
+.currPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.currPanelHeader h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.currPanelHeader p {
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.currNotice,
+.currError {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.currNotice {
+  border: 2px solid #16a34a;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.currError {
+  border: 2px solid #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.currForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.currImportBox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+}
+
+.currImportBox h3 {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.currImportBox p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.currImportBox textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--color-text-main);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+
+.currImportBox textarea:focus {
+  background-color: var(--bg-secondary);
+}
+
+.currFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.currForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--color-text-main);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.currForm input,
+.currForm select,
+.currForm textarea,
+.currPanelHeader select {
+  width: 100%;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--color-text-main);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+}
+
+.currForm input,
+.currForm select,
+.currPanelHeader select {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.currForm textarea {
+  padding: 10px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.currForm input:focus,
+.currForm select:focus,
+.currForm textarea:focus,
+.currPanelHeader select:focus {
+  background-color: var(--bg-secondary);
+}
+
+.currTreeListRoot,
+.currTreeList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.currTreeList {
+  padding-left: 14px;
+  margin-top: 6px;
+  border-left: 1.5px dashed var(--color-border);
+}
+
+.currTreeItem {
+  margin: 6px 0;
+}
+
+.currNodeRow {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+}
+
+.currNodeRowActive {
+  background: var(--bg-tertiary);
+  box-shadow: inset 4px 0 0 var(--color-primary);
+}
+
+.currNodeMain {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  min-width: 0;
+  flex: 1;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.currNodeType {
+  align-self: start;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.currNodeTitle {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-main);
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currNodeId {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currNodeActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.currNodeActions button,
+.currTypeTabs button,
+.currHeroActions button,
+.currActions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--color-text-main);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.currNodeActions button {
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: 9px;
+}
+
+.currPrimaryButton {
+  background: var(--color-border) !important;
+  color: var(--bg-primary) !important;
+}
+
+.currPrimaryButton:hover {
+  background: var(--color-text-muted) !important;
+}
+
+.currDangerButton {
+  border-color: var(--color-danger) !important;
+  background: var(--color-danger-bg) !important;
+  color: var(--color-danger-hover) !important;
+}
+
+.currTypeTabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.currTypeTabActive {
+  background: var(--color-border) !important;
+  color: var(--bg-primary) !important;
+}
+
+.currEmptyState {
+  padding: 20px;
+  border: 1.5px dashed var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  background: var(--bg-secondary);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.currPreview {
+  margin-top: 18px;
+  border-top: 1.5px solid var(--color-border);
+  padding-top: 14px;
+}
+
+.currPreview summary {
+  cursor: pointer;
+  color: var(--color-text-main);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.currPreview pre {
+  max-height: 300px;
+  overflow: auto;
+  padding: 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--color-text-main);
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 1100px) {
+  .currLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .currHero,
+  .currPanelHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .currFormGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .currNodeRow {
+    flex-direction: column;
+  }
+}
+
+.partsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.partItem {
+  padding: 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--bg-secondary);
+}
+
+.partHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.partHeaderLabel {
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-main);
+}
+
+.partBadge {
+  background: var(--color-border);
+  color: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.partControls {
+  display: flex;
+  gap: 4px;
+}
+
+.partBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addButtonRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.blankAnswersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.blankAnswerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blankIdBadge {
+  background: #cbd5e1;
+  color: var(--color-border);
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}

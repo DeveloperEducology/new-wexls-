@@ -1,0 +1,68 @@
+{
+  "id": "qb_sample_addition_sorting_1",
+  "type": "sorting",
+  "questionText": "Sort the facts by sum.",
+  "categories": [
+    {
+      "id": "sum_14",
+      "label": "Equal to 14"
+    },
+    {
+      "id": "sum_15",
+      "label": "Equal to 15"
+    },
+    {
+      "id": "sum_16",
+      "label": "Equal to 16"
+    }
+  ],
+  "items": [
+    {
+      "id": "fact_9_5",
+      "content": "9 + 5",
+      "target": "sum_14",
+      "categoryId": "sum_14"
+    },
+    {
+      "id": "fact_8_7",
+      "content": "8 + 7",
+      "target": "sum_15",
+      "categoryId": "sum_15"
+    },
+    {
+      "id": "fact_10_6",
+      "content": "10 + 6",
+      "target": "sum_16",
+      "categoryId": "sum_16"
+    }
+  ],
+  "answer": {
+    "fact_9_5": "sum_14",
+    "fact_8_7": "sum_15",
+    "fact_10_6": "sum_16"
+  },
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "9 + 5 = 14."
+      },
+      {
+        "type": "text",
+        "content": "8 + 7 = 15."
+      },
+      {
+        "type": "text",
+        "content": "10 + 6 = 16."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "math",
+    "topic": "addition",
+    "skillId": "addition-g1-q13b-sort-values-html-sums-to-20",
+    "templateId": "addition.sort.valuesTo20Html",
+    "engine": "sortFacts"
+  }
+}
+

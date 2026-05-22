@@ -4,6 +4,10 @@ import { additionSkillsByGrade } from '../lib/practice/generators/math/topics/ad
 import { multiplicationSkillsByGrade } from '../lib/practice/generators/math/topics/multiplication/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../lib/practice/generators/english/topics/grammar/skills/index.js';
+import { shapesSkillsByGrade } from '../lib/practice/generators/math/topics/shapes/skills/index.js';
+import { getCurriculumTree } from '../lib/curriculum/index.js';
+
+export const dynamic = 'force-dynamic';
 
 const additionHomeGroups = Object.entries(additionSkillsByGrade).map(([grade, skills]) => ({
   title: grade === 'remediation' ? 'Remediation skills' : `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`,
@@ -26,6 +30,12 @@ const grammarHomeGroups = Object.entries(grammarSkillsByGrade).map(([grade, skil
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
+
+const shapesHomeGroups = Object.entries(shapesSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
+
 
 const TOPICS = [
   {
@@ -340,14 +350,153 @@ const TOPICS = [
       },
     ],
   },
+  {
+    id: 'shapes',
+    title: 'Shapes',
+    color: '#059669',
+    subject: 'math',
+    topic: 'shapes',
+    includes: [
+      'Identify shapes by visual',
+      'Identify shapes by name',
+      'Counting sides',
+      'Counting corners'
+    ],
+    groups: shapesHomeGroups,
+  },
 ];
 
+
+const DB_TOPIC_COLORS = ['#ff951f', '#2fbfd0', '#7a56d6', '#4db46b', '#3f8bd6', '#d64d3d', '#9b4fe8', '#0ea5e9', '#ea580c', '#059669'];
+
+function normalizeTopicId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function flattenTree(nodes = []) {
+  return nodes.flatMap((node) => [node, ...flattenTree(node.children || [])]);
+}
+
+function collectSkillNodes(node) {
+  if (!node) return [];
+  return [
+    ...(node.type === 'skill' ? [node] : []),
+    ...(node.children || []).flatMap((child) => collectSkillNodes(child)),
+  ];
+}
+
+function dbSkillTuple(skill, index) {
+  return [
+    skill.code || skill.metadata?.code || `S.${index + 1}`,
+    skill.title || skill.name || skill.skillId || skill.id,
+    skill.skillId || skill.id,
+  ];
+}
+
+function groupTitleForNode(node) {
+  if (node.type === 'chapter') return node.title || 'Skills';
+
+  const grade = node.grade ?? node.metadata?.grade;
+  if (grade === 'remediation') return 'Remediation skills';
+  if (grade) return gradeOrdinal(String(grade));
+
+  return 'Skills';
+}
+
+function buildGroupsFromDbTopic(topicNode) {
+  const children = topicNode.children || [];
+  const chapterGroups = children
+    .filter((child) => child.type === 'chapter')
+    .map((chapter) => ({
+      title: groupTitleForNode(chapter),
+      skills: collectSkillNodes(chapter).map(dbSkillTuple),
+    }))
+    .filter((group) => group.skills.length);
+
+  const directSkills = children.filter((child) => child.type === 'skill');
+  if (directSkills.length) {
+    chapterGroups.unshift({
+      title: 'Skills',
+      skills: directSkills.map(dbSkillTuple),
+    });
+  }
+
+  if (chapterGroups.length) return chapterGroups;
+
+  const allSkills = collectSkillNodes(topicNode);
+  return allSkills.length ? [{ title: 'Skills', skills: allSkills.map(dbSkillTuple) }] : [];
+}
+
+function includesFromTopic(topicNode, groups) {
+  const metadataIncludes = topicNode.metadata?.includes;
+  if (Array.isArray(metadataIncludes) && metadataIncludes.length) return metadataIncludes;
+
+  const tags = Array.isArray(topicNode.tags) ? topicNode.tags : [];
+  if (tags.length) return tags.slice(0, 5);
+
+  return groups.flatMap((group) => group.skills.map(([, name]) => name)).slice(0, 5);
+}
+
+function dbTopicFromNode(node, index) {
+  const groups = buildGroupsFromDbTopic(node);
+  const id = normalizeTopicId(node.topicId || node.id);
+
+  return {
+    id,
+    title: node.title || node.name || id,
+    color: node.metadata?.color || DB_TOPIC_COLORS[index % DB_TOPIC_COLORS.length],
+    subject: node.subjectId || node.metadata?.subject || 'math',
+    topic: node.topicId || id,
+    includes: includesFromTopic(node, groups),
+    groups,
+    source: 'db',
+  };
+}
+
+function topicsFromCurriculum(data) {
+  return flattenTree(data?.tree || [])
+    .filter((node) => node.type === 'topic')
+    .map(dbTopicFromNode);
+}
+
+function mergeTopics(staticTopics, dbTopics) {
+  if (!dbTopics.length) return staticTopics;
+
+  const merged = new Map(staticTopics.map((topic) => [topic.id, topic]));
+  dbTopics.forEach((dbTopic) => {
+    const existing = merged.get(dbTopic.id);
+    merged.set(dbTopic.id, {
+      ...(existing || {}),
+      ...dbTopic,
+      color: dbTopic.color || existing?.color || '#ff951f',
+      includes: dbTopic.includes?.length ? dbTopic.includes : existing?.includes || [],
+      groups: dbTopic.groups?.length ? dbTopic.groups : existing?.groups || [],
+    });
+  });
+
+  return Array.from(merged.values());
+}
+
+async function loadDbTopics() {
+  try {
+    const curriculum = await getCurriculumTree({ status: 'active', limit: 1000 });
+    return topicsFromCurriculum(curriculum);
+  } catch (error) {
+    console.warn('Home curriculum fallback:', error?.message || error);
+    return [];
+  }
+}
+
 function countSkills(topic) {
-  return topic.groups.reduce((total, group) => total + group.skills.length, 0);
+  return (topic.groups || []).reduce((total, group) => total + (group.skills?.length || 0), 0);
 }
 
 function practiceHref(topic, skill) {
-  return `/practice?subject=${topic.subject}&topic=${topic.topic}&skill=${skill}`;
+  return `/practice?subject=${topic.subject || 'math'}&topic=${topic.topic || topic.id}&skill=${skill}`;
 }
 
 function HomeHero() {
@@ -375,7 +524,7 @@ function HomeHero() {
   );
 }
 
-function TopicCatalog() {
+function TopicCatalog({ topics = TOPICS }) {
   return (
     <main className="topic-catalog-page">
       <HomeHero />
@@ -384,14 +533,14 @@ function TopicCatalog() {
         <h1>Choose a topic</h1>
       </section>
       <section className="topic-card-list" aria-label="Practice topics">
-        {TOPICS.map((topic) => (
+        {topics.map((topic) => (
           <article className="topic-row-card" key={topic.id} style={{ '--topic-color': topic.color }}>
             <div className="topic-color-bar" />
             <div className="topic-row-copy">
               <h2>{topic.title}</h2>
               <p>
                 <span>Includes:</span>{' '}
-                {topic.includes.map((item, index) => (
+                {(topic.includes || []).map((item, index) => (
                   <span key={item}>
                     {index > 0 ? <b aria-hidden="true"> | </b> : null}
                     {item}
@@ -409,13 +558,13 @@ function TopicCatalog() {
   );
 }
 
-function TopicSkillsPage({ selectedTopic }) {
-  const selected = TOPICS.find((topic) => topic.id === selectedTopic) || TOPICS[0];
+function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
+  const selected = topics.find((topic) => topic.id === selectedTopic || topic.topic === selectedTopic) || topics[0];
 
   return (
     <main className="topic-detail-page">
       <aside className="topic-side-nav" aria-label="Topic navigation">
-        {TOPICS.map((topic) => (
+        {topics.map((topic) => (
           <Link
             key={topic.id}
             href={`/?topic=${topic.id}`}
@@ -435,20 +584,26 @@ function TopicSkillsPage({ selectedTopic }) {
           Here is a list of skills for {selected.title.toLowerCase()}. Skills are organized by level, and each link opens in the shared adaptive practice shell.
         </p>
         <div className="skill-columns">
-          {selected.groups.map((group) => (
-            <section key={group.title} className="skill-column">
-              <h2>{group.title}</h2>
-              <ol>
-                {group.skills.map(([code, name, skill]) => (
-                  <li key={skill}>
-                    <span>{code}</span>
-                    <Link href={practiceHref(selected, skill)}>{name}</Link>
-                    <small aria-hidden="true"> ✎ ⊙</small>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          ))}
+          {selected.groups?.length ? (
+            selected.groups.map((group) => (
+              <section key={group.title} className="skill-column">
+                <h2>{group.title}</h2>
+                <ol>
+                  {group.skills.map(([code, name, skill]) => (
+                    <li key={skill}>
+                      <span>{code}</span>
+                      <Link href={practiceHref(selected, skill)}>{name}</Link>
+                      <small aria-hidden="true"> ✎ ⊙</small>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))
+          ) : (
+            <p className="topic-skill-intro">
+              No skills have been added yet. Create skills in AdminV2 and refresh this page.
+            </p>
+          )}
         </div>
       </section>
     </main>
@@ -458,10 +613,12 @@ function TopicSkillsPage({ selectedTopic }) {
 export default async function HomePage({ searchParams }) {
   const params = await searchParams;
   const selectedTopic = params?.topic;
+  const dbTopics = await loadDbTopics();
+  const topics = mergeTopics(TOPICS, dbTopics);
 
   if (selectedTopic) {
-    return <TopicSkillsPage selectedTopic={selectedTopic} />;
+    return <TopicSkillsPage selectedTopic={selectedTopic} topics={topics} />;
   }
 
-  return <TopicCatalog />;
+  return <TopicCatalog topics={topics} />;
 }

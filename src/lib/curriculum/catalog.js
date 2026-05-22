@@ -1,7 +1,9 @@
 import { additionSkillsByGrade } from '../practice/generators/math/topics/addition/skills/index.js';
 import { multiplicationSkillsByGrade } from '../practice/generators/math/topics/multiplication/skills/index.js';
 import { subtractionSkillsByGrade } from '../practice/generators/math/topics/subtraction/skills/index.js';
+import { placeValueSkillsByGrade } from '../practice/generators/math/topics/place-values/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../practice/generators/science/topics/units-measurement/skills/index.js';
+import { shapesSkillsByGrade } from '../practice/generators/math/topics/shapes/skills/index.js';
 
 const unitsMeasurementGrades = Object.entries(unitsMeasurementSkillsByGrade).map(([grade, skills]) => ({
   id: isNaN(Number(grade)) ? grade : Number(grade),
@@ -24,6 +26,18 @@ const multiplicationGrades = Object.entries(multiplicationSkillsByGrade).map(([g
 const subtractionGrades = Object.entries(subtractionSkillsByGrade).map(([grade, skills]) => ({
   id: isNaN(Number(grade)) ? grade : Number(grade),
   title: grade === 'prek' ? 'Pre-K' : `Grade ${grade}`,
+  skills: skills.map((skill) => skill.id),
+}));
+
+const placeValueGrades = Object.entries(placeValueSkillsByGrade).map(([grade, skills]) => ({
+  id: isNaN(Number(grade)) ? grade : Number(grade),
+  title: `Grade ${grade}`,
+  skills: skills.map((skill) => skill.id),
+}));
+
+const shapesGrades = Object.entries(shapesSkillsByGrade).map(([grade, skills]) => ({
+  id: isNaN(Number(grade)) ? grade : Number(grade),
+  title: `Grade ${grade}`,
   skills: skills.map((skill) => skill.id),
 }));
 
@@ -134,11 +148,7 @@ export const curriculumCatalog = {
         {
           id: 'place-values',
           title: 'Place Values',
-          grades: [
-            { id: 1, title: 'Grade 1', skills: ['pv-g1-blocks-units', 'pv-g1-place-name', 'pv-g1-match-blocks-to-number'] },
-            { id: 2, title: 'Grade 2', skills: ['pv-g2-blocks-hundreds', 'pv-g2-expanded-form', 'pv-g2-breakdown-table'] },
-            { id: 3, title: 'Grade 3', skills: ['pv-g3-blocks-thousands', 'pv-g3-word-to-number'] },
-          ],
+          grades: placeValueGrades,
         },
         {
           id: 'testing',
@@ -149,6 +159,11 @@ export const curriculumCatalog = {
           id: 'multiplication',
           title: 'Multiplication',
           grades: multiplicationGrades,
+        },
+        {
+          id: 'shapes',
+          title: 'Shapes',
+          grades: shapesGrades,
         }
       ],
     },
@@ -159,19 +174,22 @@ export const curriculumCatalog = {
         {
           id: 'gk',
           title: 'General Knowledge',
-          grades: [{
-            id: 'gk',
-            title: 'GK',
-            skills: [
-              'gk_identify_person_v1',
-              'gk_identify_image_v1',
-              'gk_trivia_v1',
-              'gk_fill_blanks_v1',
-              'gk_sort_people_v1',
-              'gk_true_false_v1',
-              'gk_misconception_v1',
-              'gk_inference_v1',
-            ],
+          grades: [
+            {
+              id: 'gk',
+              title: 'GK',
+              skills: [
+                'gk_identify_person_v1',
+                'gk_identify_image_v1',
+                'gk_trivia_v1',
+                'gk_fill_blanks_v1',
+                'gk_sort_people_v1',
+                'gk_true_false_v1',
+                'gk_misconception_v1',
+                'gk_inference_v1',
+              ],
+            },
+          ],
         },
       ],
     },

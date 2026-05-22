@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import CategorizationRenderer from './CategorizationRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
+import { speakText } from '@/lib/ttsClient';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -131,9 +132,10 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
-function TextPart({ part, userAnswer, onAnswer, isAnswered }) {
+function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue }) {
   const content = part.content || part.text || '';
-  return (
+  
+  const textElement = (
     <div
       style={{
         fontSize: responsivePx(part.style?.fontSize, 16, 22),
@@ -152,6 +154,42 @@ function TextPart({ part, userAnswer, onAnswer, isAnswered }) {
       )}
     </div>
   );
+
+  if (showSpeaker) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+        <button
+          type="button"
+          onClick={() => speakText(speakTextValue || content, question?.voice || 'Puck', question?.audioUrl)}
+          style={{
+            background: '#e0f2fe',
+            border: 'none',
+            borderRadius: '50%',
+            width: '38px',
+            height: '38px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#0284c7',
+            boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+            transition: 'transform 0.2s ease, background 0.2s ease',
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+          title="Read question out loud"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+          </svg>
+        </button>
+        {textElement}
+      </div>
+    );
+  }
+
+  return textElement;
 }
 
 function SvgPart({ part, inGroup = false }) {
@@ -1290,14 +1328,17 @@ function CompactClockCategorizationPart({ part, userAnswer, onAnswer, isAnswered
       key={item.id}
       type="button"
       draggable={draggable && !isAnswered}
-      onDragStart={(event) => event.dataTransfer.setData('text/plain', item.id)}
-      onClick={() => (selectedId === item.id ? clearSelection() : writeSelection(item.id))}
+      onDragStart={(event) => {
+        event.dataTransfer.setData('text/plain', item.id);
+        event.dataTransfer.effectAllowed = 'move';
+      }}
+      onClick={(event) => event.preventDefault()}
       disabled={isAnswered}
       style={{
         width: cardWidth,
         height: cardHeight,
         boxSizing: 'border-box',
-        border: `3px solid ${selectedId === item.id ? '#2563eb' : '#7dd3fc'}`,
+        border: '3px solid #7dd3fc',
         borderRadius: 20,
         background: '#ffffff',
         boxShadow: isSlotCard ? '0 16px 34px rgba(15, 23, 42, 0.14)' : '0 12px 26px rgba(15, 23, 42, 0.10)',
@@ -1308,7 +1349,9 @@ function CompactClockCategorizationPart({ part, userAnswer, onAnswer, isAnswered
         gap: 6,
         cursor: isAnswered ? 'default' : 'grab',
         padding: 10,
-        transition: 'box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease',
+        transition: 'box-shadow 180ms ease, border-color 180ms ease',
+        touchAction: 'none',
+        userSelect: 'none',
       }}
     >
       <ClockSvg hour={item.hour} minute={item.minute} size={clockSize} />
@@ -1322,7 +1365,10 @@ function CompactClockCategorizationPart({ part, userAnswer, onAnswer, isAnswered
         <div
           key={`slot-${index}`}
           data-clock-pattern-slot="true"
-          onDragOver={(event) => event.preventDefault()}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }}
           onDrop={(event) => {
             event.preventDefault();
             const itemId = event.dataTransfer.getData('text/plain');
@@ -1340,10 +1386,10 @@ function CompactClockCategorizationPart({ part, userAnswer, onAnswer, isAnswered
             alignItems: 'center',
             justifyContent: 'center',
             padding: selectedItem ? 0 : 10,
-            transition: 'background 180ms ease, border-color 180ms ease, transform 180ms ease',
+            transition: 'background 180ms ease, border-color 180ms ease',
           }}
         >
-          {selectedItem ? renderClockCard(selectedItem, { draggable: false, isSlotCard: true }) : (
+          {selectedItem ? renderClockCard(selectedItem, { isSlotCard: true }) : (
             <span style={{ fontSize: 58, lineHeight: 1, color: '#2563eb', fontWeight: 900 }}>?</span>
           )}
         </div>
@@ -1362,8 +1408,36 @@ function CompactClockCategorizationPart({ part, userAnswer, onAnswer, isAnswered
         <div style={{ fontSize: 14, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0 }}>
           Drag the suitable clock to the missing slot
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 14 }}>
-          {items.filter((item) => item.id !== selectedId).map((item) => renderClockCard(item))}
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const itemId = event.dataTransfer.getData('text/plain');
+            if (itemId === selectedId) clearSelection();
+          }}
+          style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 14 }}
+        >
+          {items.map((item) => (
+            <div
+              key={`bank-slot-${item.id}`}
+              style={{
+                width: cardWidth,
+                height: cardHeight,
+                boxSizing: 'border-box',
+                border: item.id === selectedId ? '3px solid #dbeafe' : 'none',
+                borderRadius: 20,
+                background: item.id === selectedId ? '#f1f5f9' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {item.id === selectedId ? null : renderClockCard(item)}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -1658,6 +1732,174 @@ function InteractiveProtractorPart({ part, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
+function InteractiveCountingPart({ part, isAnswered }) {
+  const count = part.count || 0;
+  const imageSrc = part.image || '';
+  const [clickedIndices, setClickedIndices] = useState([]);
+
+  const handleItemClick = (index) => {
+    if (isAnswered) return;
+    setClickedIndices((prev) => {
+      const idx = prev.indexOf(index);
+      if (idx !== -1) {
+        return prev.filter((i) => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', alignItems: 'flex-start' }}>
+      {part.instruction ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => speakText(part.instruction)}
+            style={{
+              background: '#e0f2fe',
+              border: 'none',
+              borderRadius: '50%',
+              width: '42px',
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#0284c7',
+              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+              transition: 'transform 0.2s ease, background 0.2s ease',
+            }}
+            title="Read instruction out loud"
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+          
+          <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: '700', color: '#1e293b' }}>
+            {part.instruction}
+          </span>
+        </div>
+      ) : null}
+
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 'clamp(12px, 3vw, 24px)', 
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+          width: '100%',
+          margin: '12px 0'
+        }}
+      >
+        {Array.from({ length: count }).map((_, index) => {
+          const clickOrder = clickedIndices.indexOf(index);
+          const isClicked = clickOrder !== -1;
+          const displayNum = clickOrder + 1;
+
+          return (
+            <div
+              key={index}
+              onClick={() => handleItemClick(index)}
+              style={{
+                position: 'relative',
+                cursor: isAnswered ? 'default' : 'pointer',
+                width: 'clamp(90px, 20vw, 130px)',
+                height: 'clamp(70px, 16vw, 100px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isAnswered) e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+              }}
+            >
+              {imageSrc ? (
+                <img
+                  src={imageSrc}
+                  alt={part.itemLabel || 'counting item'}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    filter: isClicked ? 'drop-shadow(0 8px 16px rgba(99, 102, 241, 0.15))' : 'none',
+                  }}
+                />
+              ) : (
+                <div style={{ width: 60, height: 60, borderRadius: 12, background: '#e2e8f0', border: '2px dashed #94a3b8' }} />
+              )}
+
+              {isClicked ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 'clamp(28px, 6vw, 38px)',
+                    height: 'clamp(28px, 6vw, 38px)',
+                    borderRadius: '50%',
+                    background: '#6366f1',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 'clamp(14px, 3vw, 18px)',
+                    fontWeight: '900',
+                    boxShadow: '0 4px 8px rgba(99, 102, 241, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)',
+                    border: '2px solid #ffffff',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {displayNum}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      
+      {part.subInstruction ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+          <button
+            type="button"
+            onClick={() => speakText(part.subInstruction)}
+            style={{
+              background: '#e0f2fe',
+              border: 'none',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#0284c7',
+              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+              transition: 'transform 0.2s ease, background 0.2s ease',
+            }}
+            title="Read question out loud"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+          
+          <span style={{ fontSize: 'clamp(15px, 3.8vw, 20px)', fontWeight: '700', color: '#1e293b' }}>
+            {part.subInstruction}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
   text: TextPart,
   svg: SvgPart,
@@ -1701,6 +1943,7 @@ const PART_RENDERERS = {
   interactive_fraction_model: InteractiveFractionModelPart,
   interactive_fraction_cutter: InteractiveFractionCutterPart,
   fraction: FractionPart,
+  interactive_counting: InteractiveCountingPart,
 };
 
 export default function PartRenderer({
@@ -1710,6 +1953,8 @@ export default function PartRenderer({
   onAnswer,
   isAnswered,
   inGroup = false,
+  showSpeaker,
+  speakTextValue,
 }) {
   if (!part) return null;
   const Renderer = PART_RENDERERS[part.type];
@@ -1730,6 +1975,8 @@ export default function PartRenderer({
       onAnswer={onAnswer}
       isAnswered={isAnswered}
       inGroup={inGroup}
+      showSpeaker={showSpeaker}
+      speakTextValue={speakTextValue}
     />
   );
 }

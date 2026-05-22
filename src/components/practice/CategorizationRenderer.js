@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Stage, Layer, Rect, Text, Group, Circle, Image as KonvaImage } from 'react-konva';
 import styles from '../FillInTheBlankRenderer.module.css';
+import { speakText } from '@/lib/ttsClient';
+import UniversalDndRenderer from './universal-dnd/UniversalDndRenderer';
 
 function useLoadedImage(url) {
   const [image, setImage] = useState(null);
@@ -67,9 +69,18 @@ function CategorizationImage({ url, altText, width, height, x, y }) {
   return <KonvaImage image={image} x={x} y={y} width={width} height={height} cornerRadius={4} />;
 }
 
-function SpeakerIcon({ x = 0, y = 0, scale = 1 }) {
+function SpeakerIcon({ x = 0, y = 0, scale = 1, onClick, onTap }) {
   return (
-    <Group x={x} y={y} scaleX={scale} scaleY={scale}>
+    <Group
+      x={x}
+      y={y}
+      scaleX={scale}
+      scaleY={scale}
+      onClick={onClick}
+      onTap={onTap}
+      onMouseEnter={() => { document.body.style.cursor = 'pointer'; }}
+      onMouseLeave={() => { document.body.style.cursor = 'default'; }}
+    >
       <Circle radius={11} fill="#e0f2fe" stroke="#5cc4ed" strokeWidth={1.5} />
       <Text text="♪" x={-5} y={-9} width={10} align="center" fill="#0369a1" fontSize={14} fontStyle="bold" />
     </Group>
@@ -79,6 +90,8 @@ function SpeakerIcon({ x = 0, y = 0, scale = 1 }) {
 function HtmlCategorizationFallback({
   categories,
   items,
+  cardStyle,
+  hideItemLabels = false,
   isCopiable = false,
   isRemoval = false,
   isV2 = false,
@@ -93,6 +106,7 @@ function HtmlCategorizationFallback({
   const [draggingId, setDraggingId] = useState(null);
   const [dragState, setDragState] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [sourceSlots, setSourceSlots] = useState(() => items.map((item) => item.id));
   const dragMetaRef = useRef(null);
 
   const cardWidth = 174;
@@ -104,12 +118,59 @@ function HtmlCategorizationFallback({
     const contentLength = String(item.content || '').replace(/\s+/g, '').length;
     return Math.max(textCardMinWidth, Math.min(textCardMaxWidth, contentLength * 15 + 34));
   };
-  const itemCardWidth = (item) => (isV2 && !item.imageUrl ? getTextCardWidth(item) : cardWidth);
-  const itemCardHeight = (item) => (isV2 && !item.imageUrl ? textCardHeight : cardHeight);
-  const gridCardWidth = isV2 && items.every((item) => !item.imageUrl)
+  // When imageWidth is specified, shrink the card to wrap tightly around the image
+  const getImageCardSize = (item) => {
+    if (item.imageUrl && item.imageWidth) {
+      const sz = Math.max(60, Math.min(200, Number(item.imageWidth) + 24));
+      return sz;
+    }
+    return null;
+  };
+  const itemCardWidth = (item) => {
+    if (isV2 && !item.imageUrl) return getTextCardWidth(item);
+    return getImageCardSize(item) || cardWidth;
+  };
+  const itemCardHeight = (item) => {
+    if (isV2 && !item.imageUrl) return textCardHeight;
+    // image-only cards: square; image+label: add ~30px for label
+    const sz = getImageCardSize(item);
+    if (sz) return item.content && item.content.trim() ? sz + 30 : sz;
+    return cardHeight;
+  };
+  const normalizeStyleToken = (value) => String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const questionCardStyle = normalizeStyleToken(cardStyle);
+  const isTransparentImageStyle = (item) => {
+    const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
+    const itemBorder = normalizeStyleToken(item.border || item.cardBorder);
+    const transparentStyles = new Set(['transparent_png', 'transparent', 'borderless', 'border_none', 'none', 'png_only']);
+
+    return Boolean(item.imageUrl) && (
+      transparentStyles.has(questionCardStyle) ||
+      transparentStyles.has(itemCardStyle) ||
+      itemBorder === 'none' ||
+      item.transparent === true ||
+      item.showCard === false ||
+      item.borderless === true
+    );
+  };
+  const shouldHideImageLabel = (item) => {
+    const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
+    return hideItemLabels || item.hideLabel === true || itemCardStyle === 'transparent_png' || questionCardStyle === 'transparent_png' || questionCardStyle === 'png_only';
+  };
+  const allItemsHaveImageWidth = items.length > 0 && items.every((item) => item.imageUrl && item.imageWidth);
+  const gridCardWidth = isV2 && !allItemsHaveImageWidth && items.every((item) => !item.imageUrl)
     ? Math.max(...items.map(getTextCardWidth), textCardMinWidth)
-    : cardWidth;
-  const gridCardHeight = isV2 && items.every((item) => !item.imageUrl) ? textCardHeight : cardHeight;
+    : allItemsHaveImageWidth
+      ? Math.max(60, Math.min(200, Number(items[0]?.imageWidth || 100) + 24))
+      : cardWidth;
+  const responsiveGridCardWidth = isV2 && items.some((item) => item.imageUrl)
+    ? `clamp(96px, 28vw, ${gridCardWidth}px)`
+    : `${gridCardWidth}px`;
+  const gridCardHeight = isV2 && items.every((item) => !item.imageUrl) ? textCardHeight : gridCardWidth;
+  const sourceSlotHeight = Math.max(gridCardHeight, ...items.map(itemCardHeight));
+  const responsiveSourceSlotHeight = isV2 && items.some((item) => item.imageUrl)
+    ? `clamp(96px, 28vw, ${sourceSlotHeight}px)`
+    : `${sourceSlotHeight}px`;
   useEffect(() => {
     setZones({});
     setCopyZones({});
@@ -118,6 +179,7 @@ function HtmlCategorizationFallback({
     setDraggingId(null);
     setDragState(null);
     setSelectedItemId(null);
+    setSourceSlots(items.map((item) => item.id));
   }, [items]);
 
   useEffect(() => () => {
@@ -125,7 +187,7 @@ function HtmlCategorizationFallback({
     document.body.style.cursor = '';
   }, []);
 
-  const placeItem = (itemId, categoryId) => {
+  const placeItem = (itemId, categoryId, options = {}) => {
     if (isAnswered) return;
     const next = { ...zones };
     if (categoryId) {
@@ -134,6 +196,27 @@ function HtmlCategorizationFallback({
       delete next[itemId];
     }
     setZones(next);
+    setSourceSlots((currentSlots) => {
+      const validItemIds = new Set(items.map((item) => item.id));
+      const normalizedSlots = (
+        currentSlots.length === items.length
+        && currentSlots.every((slotId) => slotId === null || validItemIds.has(slotId))
+      )
+        ? [...currentSlots]
+        : items.map((item) => (next[item.id] ? null : item.id));
+      const openSlots = normalizedSlots.map((slotId) => (slotId === itemId ? null : slotId));
+
+      if (categoryId) return openSlots;
+
+      const requestedSlotIndex = Number.isInteger(options.sourceSlotIndex)
+        && openSlots[options.sourceSlotIndex] === null
+        ? options.sourceSlotIndex
+        : null;
+      const openIndex = requestedSlotIndex ?? openSlots.findIndex((slotId) => slotId === null);
+      if (openIndex === -1) return openSlots;
+      openSlots[openIndex] = itemId;
+      return openSlots;
+    });
     if (items.every((item) => next[item.id])) {
       onAnswer?.(next);
     } else {
@@ -142,7 +225,6 @@ function HtmlCategorizationFallback({
     setSelectedItemId(null);
   };
 
-  const unsortedItems = items.filter((item) => !zones[item.id]);
   const itemById = new Map(items.map((item) => [item.id, item]));
 
   const buildCopyAnswer = (nextCopyZones) => Object.fromEntries(
@@ -281,6 +363,22 @@ function HtmlCategorizationFallback({
 
   const findPointerDropZone = (clientX, clientY) => {
     const magnetPadding = isV2 ? 46 : 0;
+    const sourceSlotElement = Array.from(document.querySelectorAll('[data-source-slot-index]')).find((element) => {
+      const rect = element.getBoundingClientRect();
+      return (
+        clientX >= rect.left - magnetPadding
+        && clientX <= rect.right + magnetPadding
+        && clientY >= rect.top - magnetPadding
+        && clientY <= rect.bottom + magnetPadding
+      );
+    });
+    if (sourceSlotElement?.dataset.sourceSlotIndex) {
+      return {
+        id: 'pool',
+        sourceSlotIndex: Number(sourceSlotElement.dataset.sourceSlotIndex),
+      };
+    }
+
     const categoryElement = Array.from(document.querySelectorAll('[data-category-zone-id]')).find((element) => {
       const rect = element.getBoundingClientRect();
       return (
@@ -290,7 +388,7 @@ function HtmlCategorizationFallback({
         && clientY <= rect.bottom + magnetPadding
       );
     });
-    if (categoryElement?.dataset.categoryZoneId) return categoryElement.dataset.categoryZoneId;
+    if (categoryElement?.dataset.categoryZoneId) return { id: categoryElement.dataset.categoryZoneId };
 
     const sourceTray = document.querySelector('[data-source-tray="true"]');
     if (sourceTray) {
@@ -301,7 +399,7 @@ function HtmlCategorizationFallback({
         && clientY >= rect.top - magnetPadding
         && clientY <= rect.bottom + magnetPadding
       ) {
-        return 'pool';
+        return { id: 'pool' };
       }
     }
 
@@ -344,9 +442,10 @@ function HtmlCategorizationFallback({
     });
   };
 
-  const commitPointerDrop = (categoryId) => {
+  const commitPointerDrop = (dropTarget) => {
     const meta = dragMetaRef.current;
     if (!meta) return;
+    const targetId = typeof dropTarget === 'string' ? dropTarget : dropTarget?.id;
 
     const firstRect = {
       left: meta.lastX,
@@ -356,7 +455,9 @@ function HtmlCategorizationFallback({
     };
 
     flushSync(() => {
-      placeItem(meta.itemId, categoryId === 'pool' ? null : categoryId);
+      placeItem(meta.itemId, targetId === 'pool' ? null : targetId, {
+        sourceSlotIndex: dropTarget?.sourceSlotIndex,
+      });
       setDraggingId(null);
       setDragState(null);
       setActiveDropZone(null);
@@ -374,8 +475,8 @@ function HtmlCategorizationFallback({
 
     const element = event.currentTarget;
     const rect = element.getBoundingClientRect();
-    const pointerOffsetX = isV2 ? rect.width / 2 : event.clientX - rect.left;
-    const pointerOffsetY = isV2 ? rect.height / 2 : event.clientY - rect.top;
+    const pointerOffsetX = event.clientX - rect.left;
+    const pointerOffsetY = event.clientY - rect.top;
     const initialX = event.clientX - pointerOffsetX;
     const initialY = event.clientY - pointerOffsetY;
 
@@ -398,8 +499,6 @@ function HtmlCategorizationFallback({
       lastY: initialY,
     };
 
-    setDraggingId(item.id);
-    setSelectedItemId(null);
     setActiveDropZone(null);
     setDragState({
       item,
@@ -407,6 +506,7 @@ function HtmlCategorizationFallback({
       y: initialY,
       width: rect.width,
       height: rect.height,
+      isActive: false,
     });
   };
 
@@ -422,16 +522,17 @@ function HtmlCategorizationFallback({
       const nextY = event.clientY - meta.pointerOffsetY;
       if (Math.abs(event.clientX - meta.startClientX) > 5 || Math.abs(event.clientY - meta.startClientY) > 5) {
         meta.moved = true;
+        setDraggingId(meta.itemId);
       }
       meta.lastX = nextX;
       meta.lastY = nextY;
 
       const zone = findPointerDropZone(event.clientX, event.clientY);
-      setActiveDropZone(zone);
+      setActiveDropZone(zone?.id || null);
 
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(() => {
-        setDragState((current) => (current ? { ...current, x: nextX, y: nextY } : current));
+        setDragState((current) => (current ? { ...current, x: nextX, y: nextY, isActive: meta.moved } : current));
       });
     };
 
@@ -439,7 +540,6 @@ function HtmlCategorizationFallback({
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
       const meta = dragMetaRef.current;
       if (isV2 && meta && !meta.moved) {
-        setSelectedItemId((current) => (current === meta.itemId ? null : meta.itemId));
         dragMetaRef.current = null;
         setDraggingId(null);
         setDragState(null);
@@ -475,14 +575,13 @@ function HtmlCategorizationFallback({
     };
   }, [dragState]);
 
-  const placeItemWithRealCardAnimation = (itemId, categoryId) => {
+  const placeItemWithRealCardAnimation = (itemId, categoryId, options = {}) => {
     const source = getCardElement(itemId);
     const firstRect = source?.getBoundingClientRect();
 
     flushSync(() => {
-      placeItem(itemId, categoryId);
+      placeItem(itemId, categoryId, options);
       setDraggingId(null);
-      setSelectedItemId(null);
     });
 
     if (!firstRect) return;
@@ -531,7 +630,11 @@ function HtmlCategorizationFallback({
       return;
     }
     if (itemById.has(itemId)) {
-      placeItemWithRealCardAnimation(itemId, categoryId);
+      const sourceSlot = event.target.closest?.('[data-source-slot-index]');
+      const sourceSlotIndex = categoryId === null && sourceSlot
+        ? Number(sourceSlot.dataset.sourceSlotIndex)
+        : undefined;
+      placeItemWithRealCardAnimation(itemId, categoryId, { sourceSlotIndex });
     }
     setActiveDropZone(null);
   };
@@ -624,8 +727,34 @@ function HtmlCategorizationFallback({
                 transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
               }}
             >
-              <div style={{ marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
-                {category.label}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
+                <button
+                  type="button"
+                  onClick={() => speakText(category.label)}
+                  style={{
+                    background: '#e0f2fe',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#0284c7',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+                    transition: 'transform 0.2s ease, background 0.2s ease',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                  title="Read category name out loud"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                </button>
+                <span>{category.label}</span>
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 {Array.from({ length: prefilledCount }).map((_, index) => (
@@ -756,8 +885,34 @@ function HtmlCategorizationFallback({
               boxShadow: '0 8px 22px rgba(15, 23, 42, 0.05)',
             }}
           >
-            <div style={{ marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
-              {category.label}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
+              <button
+                type="button"
+                onClick={() => speakText(category.label)}
+                style={{
+                  background: '#e0f2fe',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#0284c7',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+                  transition: 'transform 0.2s ease, background 0.2s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                title="Read category name out loud"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+              </button>
+              <span>{category.label}</span>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               {Array.from({ length: prefilledCount }).map((_, index) => {
@@ -819,11 +974,13 @@ function HtmlCategorizationFallback({
 
   const renderCard = (item, origin = 'pool', options = {}) => {
     const isDragging = draggingId === item.id && !options.isDragLayer;
-    const isSelected = selectedItemId === item.id;
+    const isSelected = selectedItemId === item.id && !options.isDragLayer;
     const showCompactImage = Boolean(item.imageUrl);
     const mediaCard = Boolean(item.imageUrl);
-    const effectiveWidth = options.width || itemCardWidth(item);
-    const effectiveHeight = options.height || itemCardHeight(item);
+    const transparentImageCard = isV2 && isTransparentImageStyle(item);
+    const showImageLabel = item.content && item.content.trim() && !shouldHideImageLabel(item);
+    const effectiveWidth = options.width || (isV2 && mediaCard ? responsiveGridCardWidth : itemCardWidth(item));
+    const effectiveHeight = options.height || (isV2 && mediaCard ? responsiveSourceSlotHeight : itemCardHeight(item));
 
     return (
     <div
@@ -831,29 +988,37 @@ function HtmlCategorizationFallback({
       data-card-id={item.id}
       onPointerDown={(event) => beginPointerDrag(item, event)}
       onClick={(event) => {
-        if (isV2) event.stopPropagation();
+        if (!isV2) return;
+        event.stopPropagation();
+        if (dragMetaRef.current?.moved) return;
+        setSelectedItemId((current) => (current === item.id ? null : item.id));
       }}
-      onDoubleClick={() => origin !== 'pool' && !isAnswered && placeItem(item.id, null)}
       title={origin === 'pool' ? 'Drag into a group' : 'Drag to another group or back to the pool'}
       style={{
         width: effectiveWidth,
         maxWidth: options.maxWidth || effectiveWidth,
         minWidth: options.minWidth || effectiveWidth,
         height: effectiveHeight,
-        border: `2px solid ${isSelected ? '#2563eb' : '#5cc4ed'}`,
-        borderRadius: 9,
-        background: '#ffffff',
+        border: transparentImageCard ? '2px solid transparent' : `2px solid ${isSelected ? '#2563eb' : '#5cc4ed'}`,
+        borderRadius: transparentImageCard ? 0 : 9,
+        background: transparentImageCard ? 'transparent' : '#ffffff',
         boxShadow: options.isDragLayer
-          ? '0 24px 48px rgba(15, 23, 42, 0.22)'
+          ? transparentImageCard
+            ? '0 18px 34px rgba(15, 23, 42, 0.18)'
+            : '0 24px 48px rgba(15, 23, 42, 0.22)'
           : isSelected
-            ? '0 18px 34px rgba(37, 99, 235, 0.16)'
-            : '0 10px 22px rgba(15, 23, 42, 0.08)',
+            ? transparentImageCard
+              ? '0 0 0 4px rgba(37, 99, 235, 0.14)'
+              : '0 16px 30px rgba(37, 99, 235, 0.16)'
+            : transparentImageCard
+              ? 'none'
+              : '0 10px 22px rgba(15, 23, 42, 0.08)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         justifySelf: 'center',
         flexDirection: mediaCard ? 'column' : 'row',
-        overflow: 'hidden',
+        overflow: transparentImageCard ? 'visible' : 'hidden',
         cursor: isAnswered ? 'default' : 'grab',
         opacity: isDragging ? 0 : 1,
         transform: 'scale(1)',
@@ -869,43 +1034,49 @@ function HtmlCategorizationFallback({
           <div
             style={{
               width: '100%',
-              height: 104,
-              padding: 6,
-              background: '#f8fafc',
+              flex: 1,
+              padding: transparentImageCard ? 0 : showImageLabel ? '6px 6px 0' : 6,
+              background: transparentImageCard ? 'transparent' : '#f8fafc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: transparentImageCard ? 'visible' : 'hidden',
             }}
           >
             <img
               src={item.imageUrl}
               alt={item.content || item.id}
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: showCompactImage ? 'cover' : 'contain',
-                objectPosition: 'center top',
-                borderRadius: 6,
+                maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
+                maxHeight: '100%',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: transparentImageCard ? 0 : 6,
+                display: 'block',
+                mixBlendMode: transparentImageCard ? 'multiply' : 'normal'
               }}
             />
           </div>
-          <span
-            style={{
-              minHeight: 34,
-              width: '100%',
-              padding: '4px 6px 6px',
-              textAlign: 'center',
-              fontSize: 13,
-              lineHeight: 1.1,
-              fontWeight: 900,
-              color: '#0f172a',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {item.content}
-          </span>
+          {showImageLabel && (
+            <span
+              style={{
+                width: '100%',
+                padding: '4px 6px 6px',
+                textAlign: 'center',
+                fontSize: 13,
+                lineHeight: 1.1,
+                fontWeight: 900,
+                color: '#0f172a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {item.content}
+            </span>
+          )}
         </>
       ) : (
         <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1, fontWeight: 900, color: '#0f172a' }}>{item.content}</span>
@@ -918,11 +1089,11 @@ function HtmlCategorizationFallback({
     <div
       key={key}
       style={{
-        width: gridCardWidth,
-        height: gridCardHeight,
-        border: '2px dashed #dbeafe',
+        width: '100%',
+        height: '100%',
+        border: `2px ${label ? 'dashed' : 'solid'} #dbeafe`,
         borderRadius: 8,
-        background: '#f8fafc',
+        background: label ? '#f8fafc' : '#f1f5f9',
         color: '#94a3b8',
         display: 'flex',
         alignItems: 'center',
@@ -943,8 +1114,11 @@ function HtmlCategorizationFallback({
       <div className="categories-grid-container" style={{ gap: 16 }}>
         {categories.map((category) => {
           const placedItems = items.filter((item) => zones[item.id] === category.id);
-          const rows = Math.max(1, Math.ceil(placedItems.length / 2));
-          const minHeight = 108 + rows * (gridCardHeight + 12);
+          const rowCount = Math.max(1, Math.ceil(placedItems.length / 3));
+          const tallestPlacedItem = placedItems.length
+            ? Math.max(...placedItems.map(itemCardHeight))
+            : sourceSlotHeight;
+          const minHeight = 66 + rowCount * tallestPlacedItem + Math.max(0, rowCount - 1) * 12;
 
           return (
           <div
@@ -967,32 +1141,58 @@ function HtmlCategorizationFallback({
             onDrop={(event) => handleDrop(event, category.id)}
             style={{
               minHeight,
-              padding: 16,
+              padding: '14px 16px',
               border: `2px solid ${activeDropZone === category.id || (isV2 && selectedItemId) ? '#2563eb' : '#5cc4ed'}`,
               borderRadius: 10,
               background: '#ffffff',
               boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
+              gap: 10,
               transform: 'scale(1)',
               transition: 'min-height 220ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 120ms ease',
               width: '100%',
               boxSizing: 'border-box',
             }}
           >
-            <div style={{ borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18 }}>
-              ♪ {category.label}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18 }}>
+              <button
+                type="button"
+                onClick={() => speakText(category.label)}
+                style={{
+                  background: '#e0f2fe',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#0284c7',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+                  transition: 'transform 0.2s ease, background 0.2s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                title="Read category name out loud"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+              </button>
+              <span>{category.label}</span>
             </div>
             <div
               data-zone-grid
               style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardWidth}px, ${gridCardWidth}px))`,
+                gridTemplateColumns: `repeat(auto-fill, minmax(${responsiveGridCardWidth}, ${responsiveGridCardWidth}))`,
                 gap: 12,
                 alignContent: 'start',
                 justifyContent: 'center',
-                minHeight: gridCardHeight,
+                minHeight: placedItems.length ? tallestPlacedItem : sourceSlotHeight,
                 transition: 'all 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
                 width: '100%',
               }}
@@ -1006,11 +1206,13 @@ function HtmlCategorizationFallback({
 
       <div
         data-zone-id="pool"
-        data-source-tray="true"
-        data-zone-grid
-        onClick={() => {
+          data-source-tray="true"
+          data-zone-grid
+        onClick={(event) => {
           if (isV2 && selectedItemId && zones[selectedItemId] && !isAnswered) {
-            placeItemWithRealCardAnimation(selectedItemId, null);
+            const sourceSlot = event.target.closest?.('[data-source-slot-index]');
+            const sourceSlotIndex = sourceSlot ? Number(sourceSlot.dataset.sourceSlotIndex) : undefined;
+            placeItemWithRealCardAnimation(selectedItemId, null, { sourceSlotIndex });
           }
         }}
         onDragEnter={() => setActiveDropZone('pool')}
@@ -1023,24 +1225,46 @@ function HtmlCategorizationFallback({
         }}
         onDrop={(event) => handleDrop(event, null)}
         style={{
-          padding: 14,
-          border: `2px dashed ${activeDropZone === 'pool' ? '#2563eb' : '#dbeafe'}`,
-          borderRadius: 12,
-          background: '#f8fafc',
-          display: 'grid',
-          gridTemplateColumns: `repeat(auto-fit, minmax(${gridCardWidth}px, ${gridCardWidth}px))`,
+          padding: 0,
+          border: 'none',
+          borderRadius: 0,
+          background: 'transparent',
+          display: 'flex',
           gap: 12,
-          justifyContent: 'center',
-          minHeight: gridCardHeight + 32,
+          justifyContent: isV2 ? 'flex-start' : 'center',
+          alignItems: 'center',
+          minHeight: responsiveSourceSlotHeight,
+          overflowX: isV2 ? 'auto' : 'visible',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollSnapType: isV2 ? 'x proximity' : 'none',
           transition: 'border-color 120ms ease',
           width: '100%',
           boxSizing: 'border-box',
         }}
       >
-        {unsortedItems.map((item) => renderCard(item, 'pool'))}
-        {Array.from({ length: Math.max(0, items.length - unsortedItems.length) }).map((_, index) => (
-          renderPlaceholder(`pool-slot-${index}`, activeDropZone === 'pool' ? 'Release back' : 'Empty slot')
-        ))}
+        {sourceSlots.map((itemId, index) => {
+          const item = itemId && !zones[itemId] ? itemById.get(itemId) : null;
+          return (
+            <div
+              key={`source-slot-${index}`}
+              data-source-slot-index={index}
+              style={{
+                width: responsiveGridCardWidth,
+                height: responsiveSourceSlotHeight,
+                flex: `0 0 ${responsiveGridCardWidth}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                scrollSnapAlign: 'center',
+              }}
+            >
+              {item
+                ? renderCard(item, 'pool')
+                : renderPlaceholder(`pool-slot-${index}`, activeDropZone === 'pool' ? 'Release back' : '')}
+            </div>
+          );
+        })}
       </div>
 
       {userAnswer ? (
@@ -1048,7 +1272,7 @@ function HtmlCategorizationFallback({
           All items sorted. Verify your answer.
         </p>
       ) : null}
-      {dragState ? (
+      {dragState?.isActive ? (
         <div
           style={{
             position: 'fixed',
@@ -1142,6 +1366,17 @@ export default function CategorizationRenderer({
   onAnswer,
   isAnswered,
 }) {
+  if (question.interaction === 'universal_dnd' || question.layoutMode) {
+    return (
+      <UniversalDndRenderer
+        question={question}
+        userAnswer={userAnswer}
+        onAnswer={onAnswer}
+        isAnswered={isAnswered}
+      />
+    );
+  }
+
   const rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization')?.categories || [];
   const categories = rawCategories.map((cat) => {
     if (typeof cat === 'string') {
@@ -1410,22 +1645,24 @@ export default function CategorizationRenderer({
                 url={item.imageUrl}
                 altText={item.content || item.target || item.id}
                 width={layout.cardWidth - 14}
-                height={82}
+                height={item.content && item.content.trim() ? 82 : layout.cardHeight - 14}
                 x={0}
                 y={0}
               />
             </Group>
-            <Text
-              text={item.content}
-              width={layout.cardWidth - 12}
-              x={-layout.cardWidth / 2 + 6}
-              y={layout.cardHeight / 2 - 31}
-              align="center"
-              fill="#0f172a"
-              fontSize={13}
-              fontStyle="bold"
-              listening={false}
-            />
+            {item.content && item.content.trim() && (
+              <Text
+                text={item.content}
+                width={layout.cardWidth - 12}
+                x={-layout.cardWidth / 2 + 6}
+                y={layout.cardHeight / 2 - 31}
+                align="center"
+                fill="#0f172a"
+                fontSize={13}
+                fontStyle="bold"
+                listening={false}
+              />
+            )}
           </>
         ) : (
           <Text
@@ -1448,7 +1685,33 @@ export default function CategorizationRenderer({
     <section className={styles.container} ref={containerRef}>
       <div className={styles.questionCard}>
         {question.questionText ? (
-          <div className={styles.questionTextRow}>
+          <div className={styles.questionTextRow} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => speakText(question.questionText)}
+              style={{
+                background: '#e0f2fe',
+                border: 'none',
+                borderRadius: '50%',
+                width: '38px',
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#0284c7',
+                boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+                transition: 'transform 0.2s ease, background 0.2s ease',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+              title="Read question out loud"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+            </button>
             <span className={styles.questionText}>{question.questionText}</span>
           </div>
         ) : null}
@@ -1457,6 +1720,8 @@ export default function CategorizationRenderer({
           <HtmlCategorizationFallback
             categories={categories}
             items={items}
+            cardStyle={question.cardStyle || question.behavior?.cardStyle || question.itemCardStyle || question.imageCardStyle || question.cardVariant}
+            hideItemLabels={Boolean(question.hideItemLabels || question.behavior?.hideItemLabels)}
             isCopiable={Boolean(question.isCopiable)}
             isRemoval={Boolean(question.isRemoval)}
             isV2={useHtmlRenderer || isMobile}
@@ -1533,7 +1798,13 @@ export default function CategorizationRenderer({
                     />
 
                     <Group y={24}>
-                      <SpeakerIcon x={24} y={2} scale={0.72} />
+                      <SpeakerIcon
+                        x={24}
+                        y={2}
+                        scale={0.72}
+                        onClick={() => speakText(category.label)}
+                        onTap={() => speakText(category.label)}
+                      />
                       <Text
                         text={category.label}
                         x={42}
@@ -1568,7 +1839,7 @@ export default function CategorizationRenderer({
         </div>
         )}
 
-        {!question.isCopiable && userAnswer ? (
+        {!useHtmlRenderer && !question.isCopiable && userAnswer ? (
           <p style={{ margin: '8px 0 0', textAlign: 'center', color: '#475569', fontSize: 13, fontWeight: 800 }}>
             All items sorted. Verify your answer.
           </p>

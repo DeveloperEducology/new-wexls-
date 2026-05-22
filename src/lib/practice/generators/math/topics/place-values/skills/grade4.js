@@ -1,0 +1,117 @@
+const commonMisconceptions = [
+  'digit_place_confusion',
+  'comma_grouping_error',
+  'expanded_form_missing_zero',
+  'lakh_crore_reversal',
+  'magnitude_underestimation',
+  'rounding_direction_error',
+];
+
+const remediation = (prerequisiteSkills = [], hintStrategy = []) => ({
+  prerequisiteSkills,
+  scaffoldLevels: ['visual', 'guided', 'independent'],
+  hintStrategy: hintStrategy.length ? hintStrategy : [
+    'show_place_value_chart',
+    'highlight_digit_value',
+    'use_grouped_number_visual',
+  ],
+});
+
+const adaptiveDifficulty = {
+  easy: { digits: [3, 4], visual: true, guided: true },
+  medium: { digits: [5, 6], visual: true, guided: false },
+  hard: { digits: [7, 9], visual: false, guided: false },
+};
+
+export const grade4PlaceValueSkills = [
+  {
+    id: 'pv-g4-indian-comma-placement',
+    code: 'G4.PV.8',
+    grade: 4,
+    topic: 'place-values',
+    competencyId: 'indian_number_system',
+    title: 'Place commas in the Indian number system',
+    templateId: 'place-values.comma.indian',
+    engine: 'system',
+    difficulty: adaptiveDifficulty,
+    prerequisites: ['pv-g3-word-to-number'],
+    misconceptions: commonMisconceptions,
+    remediation: remediation(['pv-g3-word-to-number'], [
+      'color_group_lakhs_and_thousands',
+      'compare_with_ungrouped_number',
+    ]),
+    config: { forcedTask: 'indian_comma_grouping', difficulty: 'medium' },
+  },
+  {
+    id: 'pv-g4-place-value-chart-large',
+    code: 'G4.PV.9',
+    grade: 4,
+    topic: 'place-values',
+    competencyId: 'indian_number_system',
+    title: 'Read large numbers in a place-value chart',
+    templateId: 'place-values.chart.large',
+    engine: 'system',
+    difficulty: adaptiveDifficulty,
+    prerequisites: ['pv-g2-breakdown-table'],
+    misconceptions: ['digit_place_confusion', 'lakh_crore_reversal', 'place_value_column_skip'],
+    remediation: remediation(['pv-g2-breakdown-table'], [
+      'show_place_value_chart',
+      'blink_target_column',
+    ]),
+    config: { forcedTask: 'indian_place_chart', difficulty: 'medium' },
+  },
+  {
+    id: 'pv-g4-expanded-form-large',
+    code: 'G4.PV.10',
+    grade: 4,
+    topic: 'place-values',
+    competencyId: 'place_value_forms',
+    title: 'Write large numbers in expanded form',
+    templateId: 'place-values.expanded-form.large',
+    engine: 'system',
+    difficulty: adaptiveDifficulty,
+    prerequisites: ['pv-g2-expanded-form'],
+    misconceptions: ['expanded_form_missing_zero', 'digit_place_confusion'],
+    remediation: remediation(['pv-g2-expanded-form'], [
+      'connect_digits_to_place_values',
+      'show_additive_expansion',
+    ]),
+    config: { forcedTask: 'expanded_form_large', difficulty: 'medium' },
+  },
+  {
+    id: 'pv-g4-compare-large-numbers',
+    code: 'G4.PV.11',
+    grade: 4,
+    topic: 'place-values',
+    competencyId: 'large_number_magnitude',
+    title: 'Compare large numbers',
+    templateId: 'place-values.compare.large',
+    engine: 'system',
+    difficulty: adaptiveDifficulty,
+    prerequisites: ['pv-g4-place-value-chart-large'],
+    misconceptions: ['magnitude_underestimation', 'left_to_right_comparison_error'],
+    remediation: remediation(['pv-g4-place-value-chart-large'], [
+      'align_numbers_by_place',
+      'highlight_first_different_digit',
+    ]),
+    config: { forcedTask: 'compare_large_numbers', difficulty: 'medium' },
+  },
+  {
+    id: 'pv-g4-order-large-numbers',
+    code: 'G4.PV.12',
+    grade: 4,
+    topic: 'place-values',
+    competencyId: 'large_number_magnitude',
+    title: 'Order large numbers',
+    templateId: 'place-values.order.large',
+    engine: 'system',
+    difficulty: adaptiveDifficulty,
+    prerequisites: ['pv-g4-compare-large-numbers'],
+    misconceptions: ['magnitude_underestimation', 'comma_grouping_error'],
+    remediation: remediation(['pv-g4-compare-large-numbers'], [
+      'sort_by_largest_place',
+      'use_place_value_chart',
+    ]),
+    config: { forcedTask: 'order_large_numbers', difficulty: 'medium' },
+  },
+];

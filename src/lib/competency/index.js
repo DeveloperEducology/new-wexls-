@@ -482,6 +482,42 @@ export const competencyGraphs = {
           prerequisites: ['place_value_tens_ones'],
           remediation: ['place_value_tens_ones'],
         },
+        {
+          id: 'indian_number_system',
+          title: 'Read and structure large numbers in the Indian number system',
+          prerequisites: ['place_value_forms'],
+          remediation: ['place_value_forms'],
+        },
+        {
+          id: 'international_number_system',
+          title: 'Read and structure large numbers in the international number system',
+          prerequisites: ['indian_number_system'],
+          remediation: ['indian_number_system'],
+        },
+        {
+          id: 'large_number_magnitude',
+          title: 'Compare, order, and reason about large-number magnitude',
+          prerequisites: ['place_value_forms', 'indian_number_system'],
+          remediation: ['place_value_forms'],
+        },
+        {
+          id: 'rounding_estimation',
+          title: 'Round and estimate large numbers using benchmarks',
+          prerequisites: ['large_number_magnitude'],
+          remediation: ['large_number_magnitude'],
+        },
+        {
+          id: 'flexible_decomposition',
+          title: 'Compose and decompose numbers flexibly by place value',
+          prerequisites: ['place_value_forms'],
+          remediation: ['place_value_tens_ones', 'place_value_forms'],
+        },
+        {
+          id: 'shortcut_scaling',
+          title: 'Scale numbers by 10, 100, and 1,000',
+          prerequisites: ['place_value_forms'],
+          remediation: ['place_value_forms'],
+        },
       ],
       skillMap: {
         'pv-g1-blocks-units': 'place_value_tens_ones',
@@ -492,6 +528,19 @@ export const competencyGraphs = {
         'pv-g2-breakdown-table': 'place_value_forms',
         'pv-g3-blocks-thousands': 'place_value_hundreds_thousands',
         'pv-g3-word-to-number': 'place_value_forms',
+        'pv-g4-indian-comma-placement': 'indian_number_system',
+        'pv-g4-place-value-chart-large': 'indian_number_system',
+        'pv-g4-expanded-form-large': 'place_value_forms',
+        'pv-g4-compare-large-numbers': 'large_number_magnitude',
+        'pv-g4-order-large-numbers': 'large_number_magnitude',
+        'pv-g5-round-nearest-thousand': 'rounding_estimation',
+        'pv-g5-round-nearest-lakh': 'rounding_estimation',
+        'pv-g5-button-machine-decomposition': 'flexible_decomposition',
+        'pv-g5-number-magnitude-benchmarks': 'large_number_magnitude',
+        'pv-g5-shortcut-multiply-10-100-1000': 'shortcut_scaling',
+        'pv-g6-international-comma-placement': 'international_number_system',
+        'pv-g6-indian-international-compare': 'international_number_system',
+        'pv-g6-large-number-system-conversion': 'indian_number_system',
       },
     },
     testing: {
@@ -504,6 +553,20 @@ export const competencyGraphs = {
         },
       ],
       skillMap: {},
+    },
+    lkg: {
+      competencies: [
+        {
+          id: 'lkg_counting_5',
+          title: 'Learn to count - up to 5',
+          prerequisites: [],
+          remediation: [],
+        },
+      ],
+      skillMap: {
+        'lkg_counting_5': 'lkg_counting_5',
+        'lkg.count.objects_up_to_5': 'lkg_counting_5',
+      },
     },
   },
   social: {
@@ -716,7 +779,20 @@ export const competencyGraphs = {
     'multiplication-g3-c2-vertical-3digit-carry': 'multiplication_vertical_3digit_regrouping',
     'multiplication-g4-d1-vertical-4digit-no-carry': 'multiplication_vertical_4digit',
     'multiplication-g4-d2-vertical-4digit-carry': 'multiplication_vertical_4digit_regrouping',
-
+  },
+  shapes: {
+    competencies: [
+      {
+        id: 'identify_shapes_visual',
+        title: 'Identify shapes by their visual appearance or name',
+        prerequisites: [],
+        remediation: [],
+      },
+    ],
+    skillMap: {
+      'shapes-g1-identify-visual-text-opts': 'identify_shapes_visual',
+      'shapes-g1-identify-name-visual-opts': 'identify_shapes_visual',
+    },
   }
 },
   english: {

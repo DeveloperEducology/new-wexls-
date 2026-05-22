@@ -1,0 +1,41 @@
+{
+  "id": "qb_sample_addition_dragdrop_1",
+  "type": "dragDrop",
+  "questionText": "Drag the 2 cubes into the train to make 5 cubes in all.",
+  "items": [
+    {
+      "id": "cube_1",
+      "content": "1"
+    },
+    {
+      "id": "cube_2",
+      "content": "1"
+    }
+  ],
+  "dropGroups": [
+    {
+      "id": "train_1",
+      "label": "Train"
+    }
+  ],
+  "answer": {
+    "cube_1": "train_1",
+    "cube_2": "train_1"
+  },
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "Place both cubes into the train."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "math",
+    "topic": "addition",
+    "skillId": "addition-g1-c2-copy-cubes-into-boxes",
+    "templateId": "addition.copyDragDrop",
+    "engine": "copyDragDrop"
+  }
+}
+

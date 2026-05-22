@@ -3,6 +3,7 @@
 import PartRenderer from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
+import { speakText, getQuestionSpeechText } from '@/lib/ttsClient';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -123,6 +124,7 @@ function SvgPart({ content, style, inGroup = false }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars
 function InputPart({ id = 'ans', userAnswer, onAnswer, isAnswered, style }) {
   return (
     <input
@@ -190,6 +192,7 @@ function ArithmeticLayout({ layout, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars
 function renderPart(part, props, index, context = {}) {
   if (part.type === 'svg') return <SvgPart key={index} content={part.content} style={part.style} inGroup={context.inGroup} />;
   if (part.type === 'image') {
@@ -282,22 +285,67 @@ export default function FillInTheBlankRenderer({
   onAnswer,
   isAnswered,
 }) {
+  const speechText = getQuestionSpeechText(question);
   const parts = Array.isArray(question.parts) && question.parts.length
     ? question.parts
     : [{ type: 'text', content: question.questionText }];
 
+  const firstPartText = (parts[0]?.content || parts[0]?.text || '').trim();
+  const hasQuestionTextHeader = question.questionText && firstPartText === question.questionText.trim();
+  const displayParts = hasQuestionTextHeader ? parts.slice(1) : parts;
+
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
-      {parts.map((part, index) => (
-        <PartRenderer
-          key={index}
-          part={part}
-          question={question}
-          userAnswer={userAnswer}
-          onAnswer={onAnswer}
-          isAnswered={isAnswered}
-        />
-      ))}
+      {question.questionText ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+          <button
+            type="button"
+            onClick={() => speakText(speechText, question.voice || 'Puck', question.audioUrl)}
+            style={{
+              background: '#e0f2fe',
+              border: 'none',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#0284c7',
+              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+              transition: 'transform 0.2s ease, background 0.2s ease',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+            title="Read instruction out loud"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+          <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
+            {question.questionText}
+          </h2>
+        </div>
+      ) : null}
+
+      {displayParts.map((part, index) => {
+        const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+        return (
+          <PartRenderer
+            key={index}
+            part={part}
+            question={question}
+            userAnswer={userAnswer}
+            onAnswer={onAnswer}
+            isAnswered={isAnswered}
+            showSpeaker={!question.questionText && isFirstTextPart}
+            speakTextValue={speechText}
+          />
+        );
+      })}
     </section>
   );
 }
+

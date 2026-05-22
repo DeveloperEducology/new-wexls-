@@ -56,10 +56,20 @@ export function resolveGrammarGenerator(skillId, config = {}) {
         config: mergedConfig
       };
       
-      return engineFn(newTemplate, {
+      const question = engineFn(newTemplate, {
         ...variables,
         difficulty: config.difficulty || variables.difficulty
       });
+
+      if (question) {
+        question.metaConfig = {
+          ...question.metaConfig,
+          readable: true,
+          readOptions: true
+        };
+      }
+
+      return question;
     }
   };
 }

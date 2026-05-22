@@ -52,6 +52,5 @@ export {
   NOT_NOUNS, 
   PRONOUNS, 
   VERBS, 
-  ADJECTIVES, 
-  SENTENCES 
+  ADJECTIVES 
 } from './content.js';

@@ -22,7 +22,8 @@ export default function LabLayout({
     autoSubmit = false,
     setAutoSubmit,
     practiceLevel = 1,
-    levelStreak = 0
+    levelStreak = 0,
+    isSubmitting = false
 }) {
     const [isMobile, setIsMobile] = useState(false);
 
@@ -150,10 +151,15 @@ export default function LabLayout({
                                             <div className={styles.submitRow}>
                                                 <button 
                                                     onClick={() => handleSubmit()}
-                                                    disabled={userAnswer === null}
+                                                    disabled={userAnswer === null || isSubmitting}
                                                     className={styles.submitButton}
+                                                    style={{
+                                                        ...(question?.submitButtonStyle || {}),
+                                                        cursor: isSubmitting ? 'not-allowed' : (userAnswer === null ? 'default' : 'pointer'),
+                                                        opacity: isSubmitting ? 0.65 : 1,
+                                                    }}
                                                 >
-                                                    Verify Logic <span style={{ fontSize: '18px' }}>→</span>
+                                                    {isSubmitting ? 'Verifying...' : (question?.submitButtonText || 'Verify Logic')} {!question?.submitButtonText && !isSubmitting && <span style={{ fontSize: '18px' }}>→</span>}
                                                 </button>
                                             </div>
                                         )}

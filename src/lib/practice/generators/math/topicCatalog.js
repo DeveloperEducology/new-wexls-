@@ -1,3 +1,6 @@
+import { placeValueMicroSkills } from './topics/place-values/skills/index.js';
+import { shapesSkillsByGrade } from './topics/shapes/skills/index.js';
+
 const ADDITION_TOPICS = [
   {
     code: 'A.1',
@@ -41,7 +44,38 @@ const ADDITION_TOPICS = [
   },  
 ];
 
+const LKG_TOPICS = [
+  {
+    code: 'C.1',
+    name: 'Learn to count - up to 5',
+    href: '/practice?subject=math&topic=lkg&skill=lkg_counting_5',
+  },
+];
+
+const PLACE_VALUE_TOPICS = placeValueMicroSkills.map((skill) => ({
+  code: skill.code,
+  name: skill.title,
+  href: `/practice?subject=math&topic=place-values&skill=${skill.id}`,
+}));
+
+const SHAPES_TOPICS = Object.entries(shapesSkillsByGrade).flatMap(([grade, skills]) =>
+  skills.map((skill) => ({
+    code: skill.code,
+    name: skill.title,
+    href: `/practice?subject=math&topic=shapes&skill=${skill.id}`,
+  }))
+);
+
 const TOPIC_GROUPS = [
+  {
+    id: 'lkg',
+    title: 'Lower Kindergarten',
+    description: 'Learn to count up to 5 with visual tracking badges and speech support.',
+    icon: 'K',
+    color: '#a855f7',
+    bg: '#faf5ff',
+    skills: LKG_TOPICS,
+  },
   {
     id: 'addition',
     title: 'Addition',
@@ -102,20 +136,11 @@ const TOPIC_GROUPS = [
   {
     id: 'place-values',
     title: 'Place Values',
-    description: 'Base-ten blocks, place names, expanded form, word form, and tables.',
+    description: 'Base-ten blocks, place names, expanded form, word form, tables, Indian/international systems, rounding, magnitude, and decomposition.',
     icon: 'PV',
     color: '#0891b2',
     bg: '#ecfeff',
-    skills: [
-      { code: 'PV.1', name: 'Tens and ones blocks', href: '/practice?subject=math&topic=place-values&skill=pv-g1-blocks-units' },
-      { code: 'PV.2', name: 'Place value name', href: '/practice?subject=math&topic=place-values&skill=pv-g1-place-name' },
-      { code: 'PV.3', name: 'Which model shows the number?', href: '/practice?subject=math&topic=place-values&skill=pv-g1-match-blocks-to-number' },
-      { code: 'PV.4', name: 'Hundreds blocks', href: '/practice?subject=math&topic=place-values&skill=pv-g2-blocks-hundreds' },
-      { code: 'PV.5', name: 'Expanded form', href: '/practice?subject=math&topic=place-values&skill=pv-g2-expanded-form' },
-      { code: 'PV.6', name: 'Place-value table', href: '/practice?subject=math&topic=place-values&skill=pv-g2-breakdown-table' },
-      { code: 'PV.7', name: 'Thousands blocks', href: '/practice?subject=math&topic=place-values&skill=pv-g3-blocks-thousands' },
-      { code: 'PV.8', name: 'Word form to number', href: '/practice?subject=math&topic=place-values&skill=pv-g3-word-to-number' },
-    ],
+    skills: PLACE_VALUE_TOPICS,
   },
   {
     id: 'ratio',
@@ -150,6 +175,15 @@ const TOPIC_GROUPS = [
       { code: 'S.3', name: 'Write a ratio using a fraction', href: '/practice?subject=math&topic=ratio&skill=ratio_write_fraction_single_blank' },
       { code: 'S.6', name: 'Which model represents the ratio?', href: '/practice?subject=math&topic=ratio&skill=ratio_which_model_represents_mcq' }
     ],
+  },
+  {
+    id: 'shapes',
+    title: 'Shapes',
+    description: 'Identify shapes by visual representation or name, with multi-step graphical explanations.',
+    icon: 'S',
+    color: '#059669',
+    bg: '#ecfdf5',
+    skills: SHAPES_TOPICS,
   },
 ];
 

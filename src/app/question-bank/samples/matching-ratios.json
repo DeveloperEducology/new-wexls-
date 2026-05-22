@@ -1,0 +1,55 @@
+{
+  "id": "qb_sample_ratios_matching_1",
+  "type": "matching",
+  "questionText": "Match each ratio with its simplified form.",
+  "pairs": [
+    {
+      "id": "pair_1",
+      "left": {
+        "content": "2:4"
+      },
+      "right": {
+        "content": "1:2"
+      }
+    },
+    {
+      "id": "pair_2",
+      "left": {
+        "content": "3:6"
+      },
+      "right": {
+        "content": "1:2"
+      }
+    },
+    {
+      "id": "pair_3",
+      "left": {
+        "content": "4:8"
+      },
+      "right": {
+        "content": "1:2"
+      }
+    }
+  ],
+  "answer": {
+    "pair_1": "1:2",
+    "pair_2": "1:2",
+    "pair_3": "1:2"
+  },
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "Each ratio simplifies to 1:2."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "math",
+    "topic": "ratio",
+    "skillId": "ratio_matching",
+    "templateId": "ratio.matching",
+    "engine": "ratio"
+  }
+}
+

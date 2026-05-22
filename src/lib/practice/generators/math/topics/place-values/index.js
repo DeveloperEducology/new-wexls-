@@ -86,6 +86,8 @@ export * from './engine.js';
 export * from './registry.js';
 export * from './shared/theory.js';
 export * from './shared/svgBlocks.js';
+export * from './shared/visualBuilders.js';
+export * from './engines/system.engine.js';
 export * from './templates/index.js';
 export * from './skills/index.js';
 export default generateSmartPlaceValueQuestion;

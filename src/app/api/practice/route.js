@@ -34,6 +34,8 @@ import { resolveUnitsMeasurementGenerator } from '../../../lib/practice/generato
 import {
   generateRatioQuestion,
 } from '../../../lib/practice/generators/math/topics/ratio/index.js';
+import { resolveStoredPracticePayload } from '../../../lib/practice/questionBank/questionResolver.js';
+import { getCurriculumNode } from '../../../lib/curriculum/index.js';
 
 
 
@@ -50,14 +52,51 @@ export async function GET(request) {
   const topic = searchParams.get('topic') || 'addition';
   const skill = resolveSkill(searchParams);
   const seed = searchParams.get('seed') || Date.now().toString();
+  const source = searchParams.get('source');
+  const difficulty = searchParams.get('difficulty') || 'adaptive';
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios'].includes(topic);
+  // Check stored/DB questions first to support dynamic curriculum/topics
+  try {
+    const storedPayload = await resolveStoredPracticePayload({
+      subject,
+      topic,
+      skill,
+      difficulty,
+      seed,
+      source,
+    });
+
+    if (storedPayload) {
+      return NextResponse.json(withCompetency(storedPayload, { subject, topic, skill }));
+    }
+  } catch (error) {
+    console.error('Practice DB Pre-fetch error:', error);
+  }
+
+  let isDbTopicActive = false;
+  try {
+    let topicNode = await getCurriculumNode(topic);
+    if (!topicNode && !topic.includes('-')) {
+      topicNode = await getCurriculumNode(`${subject}-${topic}`);
+    }
+    isDbTopicActive = topicNode && topicNode.type === 'topic' && topicNode.status === 'active';
+  } catch (error) {
+    console.error('Practice DB node check error:', error);
+  }
+
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes'].includes(topic);
   const isSocialTopic = subject === 'social' && topic === 'gk';
 
   const isScienceTopic = subject === 'science' && topic === 'units-measurement';
   const isEnglishTopic = subject === 'english' && topic === 'grammar';
 
   if (!isMathTopic && !isSocialTopic && !isScienceTopic && !isEnglishTopic) {
+    if (isDbTopicActive) {
+      return NextResponse.json(
+        { success: false, error: `No stored questions found for database-fetched skill: ${skill}` },
+        { status: 404 },
+      );
+    }
     return NextResponse.json(
       { success: false, error: `Unsupported practice route: ${subject}/${topic}` },
       { status: 404 },
@@ -65,7 +104,7 @@ export async function GET(request) {
   }
 
   const config = {
-    difficulty: searchParams.get('difficulty') || 'adaptive',
+    difficulty,
     logic_type: skill,
     forcedTask: skill,
     history: {
@@ -80,6 +119,7 @@ export async function GET(request) {
   };
 
   try {
+
     if (subject === 'social' && topic === 'gk') {
       const question = normalizeGenericTopicQuestion(
         generateSmartGKQuestion(config),
@@ -211,6 +251,45 @@ export async function GET(request) {
       }, { subject, topic, skill }));
     }
 
+    if (topic === 'lkg') {
+      const { generateLkgQuestion } = await import('../../../lib/practice/generators/math/topics/lkg/index.js');
+      const question = normalizeGenericTopicQuestion(
+        generateLkgQuestion(config),
+        { topic, skill, seed, engine: 'lkg' },
+      );
+
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: skill,
+          title: question.metadata?.templateId || skill,
+          description: "LKG Practice Topic"
+        },
+      }, { subject, topic, skill }));
+    }
+
+    if (topic === 'shapes') {
+      const { shapesGenerator, getShapesTemplate } = await import('../../../lib/practice/generators/math/topics/shapes/index.js');
+      const question = normalizeGenericTopicQuestion(
+        shapesGenerator(config),
+        { topic, skill, seed, engine: 'shapes' },
+      );
+
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: getShapesTemplate(question.metadata?.templateId || skill) || {
+          id: skill,
+          family: 'shapes',
+          engine: 'shapes',
+          questionType: 'mcq'
+        },
+      }, { subject, topic, skill }));
+    }
+
     if (topic === 'ratio' || topic === 'ratios') {
       const question = normalizeGenericTopicQuestion(
         generateRatioQuestion(config),
@@ -273,32 +352,37 @@ export async function GET(request) {
 }
 
 function withCompetency(payload, { subject, topic, skill }) {
+  const payloadWithSource = {
+    source: 'generator',
+    ...payload,
+  };
+
   const competency = resolveCompetency({
     subject,
     topic,
     skillId: skill,
-    templateId: payload.question?.metadata?.templateId,
+    templateId: payloadWithSource.question?.metadata?.templateId,
   });
 
-  if (!competency || !payload.question) return payload;
+  if (!competency || !payloadWithSource.question) return payloadWithSource;
 
   return {
-    ...payload,
+    ...payloadWithSource,
     competency,
     question: {
-      ...payload.question,
+      ...payloadWithSource.question,
       metadata: {
-        ...(payload.question.metadata || {}),
+        ...(payloadWithSource.question.metadata || {}),
         competencyId: competency.id,
         competency,
       },
     },
-    template: payload.template
+    template: payloadWithSource.template
       ? {
-          ...payload.template,
+          ...payloadWithSource.template,
           competency,
         }
-      : payload.template,
+      : payloadWithSource.template,
   };
 }
 
@@ -342,6 +426,9 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     id: question.id || `${topic}-${skill}-${seed}`,
     type: question.type,
     questionText: question.questionText || question.text || '',
+    audioUrl: question.audioUrl,
+    voice: question.voice,
+    metaConfig: question.metaConfig,
     parts: normalizedParts,
     options: Array.isArray(question.options) ? question.options : [],
     categories,
@@ -410,6 +497,9 @@ function normalizeFractionsQuestion(question, { skill, seed }) {
     id: question.id || `fractions-${skill}-${seed}`,
     type: question.type,
     questionText: question.questionText || '',
+    audioUrl: question.audioUrl,
+    voice: question.voice,
+    metaConfig: question.metaConfig,
     parts: Array.isArray(question.parts) ? question.parts : [],
     options: Array.isArray(question.options) ? question.options : [],
     answer,
@@ -449,6 +539,9 @@ function normalizeTimeQuestion(question, { skill, seed }) {
     id: question.id || `time-${skill}-${seed}`,
     type: question.type,
     questionText: question.questionText || '',
+    audioUrl: question.audioUrl,
+    voice: question.voice,
+    metaConfig: question.metaConfig,
     parts: normalizedParts,
     options: Array.isArray(question.options) ? question.options : [],
     answer,

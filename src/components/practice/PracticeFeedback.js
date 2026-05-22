@@ -121,6 +121,7 @@ export default function PracticeFeedback({
   isCorrect = false,
   onNext,
   nextLabel = 'Next Challenge',
+  loading = false,
 }) {
   if (!question) return null;
 
@@ -183,6 +184,7 @@ export default function PracticeFeedback({
       <button
         type="button"
         onClick={onNext}
+        disabled={loading}
         style={{
           marginTop: 14,
           padding: '13px 18px',
@@ -192,10 +194,11 @@ export default function PracticeFeedback({
           color: '#fff',
           fontWeight: 900,
           fontSize: 14,
-          cursor: 'pointer',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          opacity: loading ? 0.6 : 1,
         }}
       >
-        {nextLabel}
+        {loading ? 'Loading...' : nextLabel}
       </button>
     </section>
   );

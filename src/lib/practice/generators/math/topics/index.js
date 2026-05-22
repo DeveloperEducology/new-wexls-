@@ -43,3 +43,18 @@ export {
   ratioTheory
 } from './ratio/index.js';
 
+export {
+  generateLkgQuestion,
+  lkgTemplateRegistry,
+  lkgMicroSkillRegistry,
+} from './lkg/index.js';
+
+export {
+  shapesRegistry,
+  shapesGenerator,
+  generateShapesQuestion,
+  shapesMicroSkills,
+  shapesSkillsByGrade,
+  getShapesTemplate,
+  shapesTemplates
+} from './shapes/index.js';

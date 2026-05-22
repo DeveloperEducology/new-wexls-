@@ -1,0 +1,43 @@
+{
+  "id": "qb_sample_addition_mcq_1",
+  "type": "mcq",
+  "questionText": "Which shows 6 + 2 = 8?",
+  "parts": [
+    {
+      "type": "text",
+      "content": "Which shows 6 + 2 = 8?"
+    }
+  ],
+  "options": [
+    {
+      "id": "opt_a",
+      "label": "5 + 3"
+    },
+    {
+      "id": "opt_b",
+      "label": "6 + 2"
+    },
+    {
+      "id": "opt_c",
+      "label": "4 + 4"
+    }
+  ],
+  "answer": "opt_b",
+  "correctAnswerIndex": 1,
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "6 + 2 = 8."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "math",
+    "topic": "addition",
+    "skillId": "addition-g1-e3-model-match-to-10",
+    "templateId": "sample.mcq",
+    "engine": "question-bank"
+  }
+}
+

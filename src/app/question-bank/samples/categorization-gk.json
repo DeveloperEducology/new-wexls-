@@ -1,0 +1,68 @@
+{
+  "id": "qb_sample_gk_categorization_1",
+  "type": "categorization",
+  "renderer": "html",
+  "questionText": "Sort each person into the correct group.",
+  "categories": [
+    {
+      "id": "politics",
+      "label": "Political leaders"
+    },
+    {
+      "id": "sports",
+      "label": "Sports persons"
+    }
+  ],
+  "items": [
+    {
+      "id": "item_1",
+      "content": "Narendra Modi",
+      "target": "politics",
+      "categoryId": "politics"
+    },
+    {
+      "id": "item_2",
+      "content": "PV Sindhu",
+      "target": "sports",
+      "categoryId": "sports"
+    },
+    {
+      "id": "item_3",
+      "content": "Droupadi Murmu",
+      "target": "politics",
+      "categoryId": "politics"
+    },
+    {
+      "id": "item_4",
+      "content": "Sachin Tendulkar",
+      "target": "sports",
+      "categoryId": "sports"
+    }
+  ],
+  "answer": {
+    "item_1": "politics",
+    "item_2": "sports",
+    "item_3": "politics",
+    "item_4": "sports"
+  },
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "Narendra Modi and Droupadi Murmu are political leaders."
+      },
+      {
+        "type": "text",
+        "content": "PV Sindhu and Sachin Tendulkar are sports persons."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "social",
+    "topic": "gk",
+    "skillId": "gk_sort_people_v1",
+    "templateId": "gk.sort.people",
+    "engine": "gk"
+  }
+}
+

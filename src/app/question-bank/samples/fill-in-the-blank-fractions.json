@@ -1,0 +1,45 @@
+{
+  "id": "qb_sample_fractions_fill_1",
+  "type": "fillInTheBlank",
+  "questionText": "What fraction is shaded?",
+  "parts": [
+    {
+      "type": "text",
+      "content": "What fraction is shaded?",
+      "style": {
+        "fontWeight": 900
+      }
+    },
+    {
+      "type": "text",
+      "content": "The fraction is [blank:num] / [blank:den]."
+    }
+  ],
+  "options": [],
+  "answer": {
+    "num": "1",
+    "den": "12"
+  },
+  "correctAnswerIndex": null,
+  "correctAnswerText": "{\"num\":\"1\",\"den\":\"12\"}",
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "There are 1 shaded part out of 12 equal parts."
+      },
+      {
+        "type": "latex",
+        "content": "\\frac{1}{12}"
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "math",
+    "topic": "fractions",
+    "skillId": "fractions-g2-identify-visual",
+    "templateId": "fractions.identify.visual",
+    "engine": "fractions"
+  }
+}
+

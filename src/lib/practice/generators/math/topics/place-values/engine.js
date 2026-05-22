@@ -1,6 +1,7 @@
 
 import { buildPlaceValueSvg } from './shared/svgBlocks.js';
 import { getPlaceValueTheory } from './shared/theory.js';
+import { PLACE_VALUE_SYSTEM_TASKS, generatePlaceValueSystemQuestion } from './engines/system.engine.js';
 
 /**
  * Seeded Random Utility
@@ -29,7 +30,11 @@ export const generatePlaceValueQuestion = (config = {}) => {
     const rng = new SeededRandom(seed);
     const difficulty = config.difficulty || 'easy';
     const engineParams = config.engineParams || {};
-    const forcedTask = engineParams.forcedTask || null;
+    const forcedTask = engineParams.forcedTask || config.forcedTask || null;
+
+    if (forcedTask && PLACE_VALUE_SYSTEM_TASKS.includes(forcedTask)) {
+        return generatePlaceValueSystemQuestion(rng, forcedTask, { difficulty, config });
+    }
 
     const allTasks = {
         'identify_from_blocks': generateEasyQuestion,

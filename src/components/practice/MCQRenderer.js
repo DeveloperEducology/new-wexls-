@@ -3,6 +3,8 @@
 import PartRenderer from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
+import { speakText, getQuestionSpeechText } from '@/lib/ttsClient';
+
 
 function getOptionLabel(option, index) {
   if (typeof option === 'string' || typeof option === 'number') return String(option);
@@ -264,112 +266,260 @@ export default function MCQRenderer({
   const gridClassName = getGridClassName(question, optionLayout);
   const gridStyle = getGridStyle(optionLayout);
 
+  const speechText = getQuestionSpeechText(question);
   const firstPartText = (question.parts?.[0]?.content || question.parts?.[0]?.text || '').trim();
   const hideHeader = question.questionText && firstPartText === question.questionText.trim();
+  const showHeaderSpeaker = question.questionText && !hideHeader;
+  const showInlineSpeaker = !showHeaderSpeaker;
 
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
       {question.questionText && !hideHeader ? (
-        <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
-          <InlineMarkdown text={question.questionText} />
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => speakText(speechText, question.voice || 'Puck', question.audioUrl)}
+            style={{
+              background: '#e0f2fe',
+              border: 'none',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#0284c7',
+              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+              transition: 'transform 0.2s ease, background 0.2s ease',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+            title="Read question out loud"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+          <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
+            <InlineMarkdown text={question.questionText} />
+          </h2>
+        </div>
       ) : null}
 
       {Array.isArray(question.parts) && question.parts.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
-          {question.parts.map((part, index) => (
-            <PartRenderer
-              key={index}
-              part={part}
-              question={question}
-              userAnswer={userAnswer}
-              onAnswer={onAnswer}
-              isAnswered={isAnswered}
-            />
-          ))}
+          {question.parts.map((part, index) => {
+            const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+            return (
+              <PartRenderer
+                key={index}
+                part={part}
+                question={question}
+                userAnswer={userAnswer}
+                onAnswer={onAnswer}
+                isAnswered={isAnswered}
+                showSpeaker={showInlineSpeaker && isFirstTextPart}
+                speakTextValue={speechText}
+              />
+            );
+          })}
         </div>
       ) : null}
 
-      <div className={gridClassName} style={gridStyle} data-option-layout={optionLayout.mode}>
-        {(question.options || []).map((option, index) => {
-          const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
-          const content = getOptionContent(option);
-          const isSvgOption = hasSvgContent(option);
-          const isImageOption = isImageUrl(content);
+      {question.layoutConfig?.variant === 'capsule' ? (
+        <div 
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'clamp(8px, 2.5vw, 16px)',
+            background: '#f1f5f9',
+            padding: 'clamp(10px, 2vw, 14px) clamp(16px, 4vw, 32px)',
+            borderRadius: '9999px',
+            width: 'fit-content',
+            margin: '20px auto',
+            maxWidth: '100%',
+            boxShadow: 'inset 0 2px 5px rgba(15, 23, 42, 0.05)',
+            border: '1px solid rgba(15, 23, 42, 0.04)'
+          }}
+        >
+          {(question.options || []).map((option, index) => {
+            const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
+            const value = getOptionLabel(option, index);
+            
+            return (
+              <button
+                key={option?.id || index}
+                type="button"
+                disabled={isAnswered}
+                onClick={() => {
+                  onAnswer(index);
+                  if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
+                    speakText(value, question.voice || 'Puck', option?.audioUrl);
+                  }
+                }}
+                style={{
+                  width: 'clamp(46px, 11vw, 64px)',
+                  height: 'clamp(46px, 11vw, 64px)',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: selected 
+                    ? 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)' 
+                    : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: '#ffffff',
+                  fontSize: 'clamp(18px, 4vw, 24px)',
+                  fontWeight: '900',
+                  cursor: isAnswered ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: selected 
+                    ? '0 0 0 4px #93c5fd, 0 8px 16px rgba(29, 78, 216, 0.3)' 
+                    : '0 4px 8px rgba(37, 99, 235, 0.2)',
+                  transform: selected ? 'scale(1.05)' : 'none',
+                  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  outline: 'none',
+                }}
+              >
+                {value}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={gridClassName} style={gridStyle} data-option-layout={optionLayout.mode}>
+          {(question.options || []).map((option, index) => {
+            const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
+            const content = getOptionContent(option);
+            const isSvgOption = hasSvgContent(option);
+            const isImageOption = isImageUrl(content);
 
-          return (
-            <button
-              key={option?.id || index}
-              type="button"
-              disabled={isAnswered}
-              onClick={() => onAnswer(index)}
-              className={`${styles.optionButton} ${selected ? styles.optionButtonActive : ''}`}
-              style={{
-                minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
-                ...(optionLayout.mode === 'compact' ? { borderRadius: 4, minHeight: 44 } : {}),
-              }}
-            >
-              {content && isSvgString(content) ? (
-                <div
-                  className={styles.optionMedia}
-                  aria-hidden="true"
-                  style={{
-                    width: optionLayout.mediaWidth || '100%',
-                    maxWidth: optionLayout.mediaMaxWidth || 360,
-                    minHeight: optionLayout.mediaMinHeight || 0,
-                    marginBottom: optionLayout.mediaMarginBottom ?? 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  dangerouslySetInnerHTML={{ __html: content }}
-                />
-              ) : null}
-              {content && isImageOption ? (
-                <div
-                  className={styles.optionMedia}
-                  aria-hidden="true"
-                  style={{
-                    width: optionLayout.mediaWidth || '100%',
-                    maxWidth: optionLayout.mediaMaxWidth || 360,
-                    minHeight: optionLayout.mediaMinHeight || 0,
-                    marginBottom: optionLayout.mediaMarginBottom ?? 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                    <img
-                      src={content}
-                      alt=""
-                      style={{
-                        width: '100%',
-                        maxWidth: optionLayout.mediaMaxWidth || 260,
-                        maxHeight: 220,
-                        objectFit: 'contain',
-                        borderRadius: 14,
-                      }}
-                    />
-                </div>
-              ) : null}
-              {!isSvgOption && !isImageOption ? (
-                <div style={{ fontSize: 'clamp(14px, 3.8vw, 17px)', fontWeight: 'inherit', lineHeight: 1.35 }}>
-                  {option?.type === 'latex' ? (
-                    <KaTeXRenderer math={getOptionLabel(option, index)} />
-                  ) : (
+             return (
+              <button
+                key={option?.id || index}
+                type="button"
+                disabled={isAnswered}
+                onClick={() => {
+                  onAnswer(index);
+                  if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
+                    speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
+                  }
+                }}
+                className={`${styles.optionButton} ${selected ? styles.optionButtonActive : ''}`}
+                style={{
+                  position: 'relative',
+                  minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
+                  cursor: isAnswered ? 'default' : 'pointer',
+                  ...(optionLayout.mode === 'compact' ? { borderRadius: 4, minHeight: 44 } : {}),
+                }}
+              >
+                {(question.metaConfig?.readOptions || question.metaConfig?.readable) ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      background: '#f0f9ff',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '26px',
+                      height: '26px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: '#0369a1',
+                      boxShadow: '0 2px 4px rgba(2, 132, 199, 0.1)',
+                      transition: 'transform 0.2s ease, background 0.2s ease',
+                      zIndex: 10,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#f0f9ff'; }}
+                    title="Read option out loud"
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                  </span>
+                ) : null}
+                {content && isSvgString(content) ? (
+                  <div
+                    className={styles.optionMedia}
+                    aria-hidden="true"
+                    style={{
+                      width: optionLayout.mediaWidth || '100%',
+                      maxWidth: optionLayout.mediaMaxWidth || 360,
+                      minHeight: optionLayout.mediaMinHeight || 0,
+                      marginBottom: optionLayout.mediaMarginBottom ?? 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: content }}
+                  />
+                ) : null}
+                {content && isImageOption ? (
+                  <div
+                    className={styles.optionMedia}
+                    aria-hidden="true"
+                    style={{
+                      width: optionLayout.mediaWidth || '100%',
+                      maxWidth: optionLayout.mediaMaxWidth || 360,
+                      minHeight: optionLayout.mediaMinHeight || 0,
+                      marginBottom: optionLayout.mediaMarginBottom ?? 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                      <img
+                        src={content}
+                        alt=""
+                        style={{
+                          width: '100%',
+                          maxWidth: optionLayout.mediaMaxWidth || 260,
+                          maxHeight: 220,
+                          objectFit: 'contain',
+                          borderRadius: 14,
+                        }}
+                      />
+                  </div>
+                ) : null}
+                {!isSvgOption && !isImageOption ? (
+                  <div style={{ fontSize: 'clamp(14px, 3.8vw, 17px)', fontWeight: 'inherit', lineHeight: 1.35 }}>
+                    {option?.type === 'latex' ? (
+                      <KaTeXRenderer math={getOptionLabel(option, index)} />
+                    ) : (
+                      <InlineMarkdown text={getOptionLabel(option, index)} />
+                    )}
+                  </div>
+                ) : null}
+                {isImageOption && getOptionLabel(option, index) ? (
+                  <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 500, lineHeight: 1.25, color: '#334155' }}>
                     <InlineMarkdown text={getOptionLabel(option, index)} />
-                  )}
-                </div>
-              ) : null}
-              {isImageOption && getOptionLabel(option, index) ? (
-                <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 500, lineHeight: 1.25, color: '#334155' }}>
-                  <InlineMarkdown text={getOptionLabel(option, index)} />
-                </div>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+                  </div>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
