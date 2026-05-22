@@ -511,8 +511,15 @@ function PracticePageContent() {
       const supported = isClientTtsSupported();
       setClientTtsSupported(supported);
       
-      const savedUseClient = window.localStorage.getItem('useClientTts') === 'true';
-      setUseClientTts(savedUseClient);
+      const storedVal = window.localStorage.getItem('useClientTts');
+      let isEnabled = false;
+      if (storedVal !== null) {
+        isEnabled = storedVal === 'true';
+      } else {
+        isEnabled = supported;
+        window.localStorage.setItem('useClientTts', isEnabled ? 'true' : 'false');
+      }
+      setUseClientTts(isEnabled);
       
       const savedOverride = window.localStorage.getItem('localVoiceOverride') || 'none';
       setLocalVoiceOverride(savedOverride);
