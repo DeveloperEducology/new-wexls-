@@ -311,6 +311,13 @@ function TreeNode({ node, selectedId, onSelect, onChild }) {
   );
 }
 
+function getNormalizedVoiceValue(v) {
+  if (!v) return 'gemini:Puck';
+  if (v.startsWith('gemini:') || v.startsWith('piper:')) return v;
+  if (v.startsWith('en_US-')) return `piper:${v}`;
+  return `gemini:${v}`;
+}
+
 export default function AdminConsolePage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -5018,13 +5025,22 @@ export default function AdminConsolePage() {
                               <label className={styles.filterLabel}>Voice Actor profile</label>
                               <select 
                                 className={styles.formSelect} 
-                                value={voice} 
+                                value={getNormalizedVoiceValue(voice)} 
                                 onChange={(e) => setVoice(e.target.value)}
                               >
-                                <option value="Puck">Puck (Friendly energetic boy)</option>
-                                <option value="Charon">Charon (Calm adult male)</option>
-                                <option value="Kore">Kore (Warm adult female)</option>
-                                <option value="Fenrir">Fenrir (Deep male voice)</option>
+                                <optgroup label="Gemini Studio Voices (High Expressive)">
+                                  <option value="gemini:Puck">Puck (Gemini - friendly boy)</option>
+                                  <option value="gemini:Kore">Kore (Gemini - warm female)</option>
+                                  <option value="gemini:Charon">Charon (Gemini - calm male)</option>
+                                  <option value="gemini:Fenrir">Fenrir (Gemini - deep male)</option>
+                                </optgroup>
+                                <optgroup label="Piper Local Voices (Cost Saving)">
+                                  <option value="piper:en_US-ryan-medium">Ryan Medium (Piper - male)</option>
+                                  <option value="piper:en_US-amy-medium">Amy Medium (Piper - female)</option>
+                                  <option value="piper:en_US-joe-medium">Joe Medium (Piper - male)</option>
+                                  <option value="piper:en_US-lessac-medium">Lessac Medium (Piper - female)</option>
+                                  <option value="piper:en_US-ryan-high">Ryan High (Piper - high quality male)</option>
+                                </optgroup>
                               </select>
                             </div>
 

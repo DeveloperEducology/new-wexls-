@@ -12,7 +12,8 @@ import { saveStoredPracticeQuestion } from '@/lib/practice/questionBank/question
 export async function getOrGenerateR2Audio(text, voice) {
   if (!text) return null;
   const hash = crypto.createHash('sha256').update(`${text}_${voice}`).digest('hex');
-  const key = `audio/tts/${voice}/${hash}.wav`;
+  const cleanVoiceForPath = voice.replace(':', '_');
+  const key = `audio/tts/${cleanVoiceForPath}/${hash}.wav`;
 
   try {
     const db = await getMongoDb();

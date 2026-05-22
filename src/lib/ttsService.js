@@ -62,13 +62,71 @@ export function getWavHeader(pcmLength, sampleRate = 24000) {
 }
 
 export async function generateTtsBuffer(text, voice = 'Puck') {
+  let provider = process.env.TTS_PROVIDER || (process.env.PIPER_TTS_URL ? 'piper' : 'gemini');
+  let targetVoice = voice;
+
+  if (voice.startsWith('gemini:')) {
+    provider = 'gemini';
+    targetVoice = voice.substring(7);
+  } else if (voice.startsWith('piper:')) {
+    provider = 'piper';
+    targetVoice = voice.substring(6);
+  } else if (voice.startsWith('en_US-')) {
+    provider = 'piper';
+    targetVoice = voice;
+  }
+
+  const cleanText = cleanTextForSpeech(text);
+
+  if (provider === 'piper') {
+    const piperUrlStr = process.env.PIPER_TTS_URL || 'http://localhost:5000/api/tts';
+    try {
+      const voiceMapping = {
+        Puck: 'en_US-ryan-medium',
+        Charon: 'en_US-joe-medium',
+        Kore: 'en_US-amy-medium',
+        Fenrir: 'en_US-lessac-medium',
+      };
+      const piperVoice = voiceMapping[targetVoice] || targetVoice;
+      
+      const url = new URL(piperUrlStr);
+      url.searchParams.append('text', cleanText);
+      url.searchParams.append('voice', piperVoice);
+
+      console.log(`Calling Piper TTS at: ${url.toString()}`);
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+      });
+
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      }
+      
+      const errText = await response.text();
+      console.warn(`Piper TTS failed (status ${response.status}: ${errText}). Falling back to Gemini.`);
+    } catch (err) {
+      console.warn(`Piper TTS connection failed: ${err.message}. Falling back to Gemini.`);
+    }
+
+    // Fallback mapping: if Piper is down, map the Piper voice back to its Gemini equivalent
+    const PIPER_TO_GEMINI_FALLBACK = {
+      'en_US-ryan-medium': 'Puck',
+      'en_US-ryan-high': 'Puck',
+      'en_US-joe-medium': 'Charon',
+      'en_US-amy-medium': 'Kore',
+      'en_US-lessac-medium': 'Fenrir'
+    };
+    targetVoice = PIPER_TO_GEMINI_FALLBACK[targetVoice] || 'Puck';
+  }
+
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not defined');
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
-  const cleanText = cleanTextForSpeech(text);
 
   const payload = {
     contents: [
@@ -83,7 +141,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
       speechConfig: {
         voiceConfig: {
           prebuiltVoiceConfig: {
-            voiceName: voice
+            voiceName: targetVoice
           }
         }
       }

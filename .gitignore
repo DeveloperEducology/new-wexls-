@@ -26,3 +26,6 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+
+# temporary scratch assets
+/scratch/

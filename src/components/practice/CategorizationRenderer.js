@@ -680,8 +680,8 @@ function HtmlCategorizationFallback({
             .inline-svg-wrapper svg {
               max-width: 100%;
               max-height: 100%;
-              width: auto;
-              height: auto;
+              width: 100%;
+              height: 100%;
               display: block;
               pointer-events: none;
             }
@@ -1112,8 +1112,8 @@ function HtmlCategorizationFallback({
                   .inline-svg-wrapper svg {
                     max-width: 100%;
                     max-height: 100%;
-                    width: auto;
-                    height: auto;
+                    width: 100%;
+                    height: 100%;
                     display: block;
                     pointer-events: none;
                   }
@@ -1124,6 +1124,8 @@ function HtmlCategorizationFallback({
                 <div 
                   className="inline-svg-wrapper"
                   style={{
+                    width: '100%',
+                    height: '100%',
                     maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
                     maxHeight: '100%',
                     display: 'flex',

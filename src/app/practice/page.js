@@ -10,6 +10,14 @@ import PracticeFeedback from '../../components/practice/PracticeFeedback';
 import styles from '../../components/practice/FactoryLayout.module.css';
 import { isAnswerCorrect } from '../../lib/practice/answerValidation';
 import { resolveCompetency } from '../../lib/competency';
+import { 
+  isClientTtsSupported, 
+  getStoredVoiceModels, 
+  preloadVoiceModel, 
+  removeVoiceModel, 
+  normalizeVoiceId 
+} from '../../lib/ttsBrowserEngine';
+import { speakText } from '../../lib/ttsClient';
 import {
   appendAttempt,
   calculateSmartScore,
@@ -489,6 +497,96 @@ function PracticePageContent() {
   const [praiseMessage, setPraiseMessage] = useState(null);
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
+
+  // Client-Side TTS States
+  const [clientTtsSupported, setClientTtsSupported] = useState(false);
+  const [useClientTts, setUseClientTts] = useState(true);
+  const [localVoiceOverride, setLocalVoiceOverride] = useState('none');
+  const [storedModels, setStoredModels] = useState([]);
+  const [downloadingVoice, setDownloadingVoice] = useState(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const supported = isClientTtsSupported();
+      setClientTtsSupported(supported);
+      
+      const savedUseClient = window.localStorage.getItem('useClientTts') !== 'false';
+      setUseClientTts(savedUseClient);
+      
+      const savedOverride = window.localStorage.getItem('localVoiceOverride') || 'none';
+      setLocalVoiceOverride(savedOverride);
+      
+      if (supported) {
+        getStoredVoiceModels().then((models) => {
+          setStoredModels(models || []);
+        }).catch((err) => {
+          console.error('Error loading stored models:', err);
+        });
+      }
+    }
+  }, []);
+
+  const handleToggleClientTts = (val) => {
+    setUseClientTts(val);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('useClientTts', val ? 'true' : 'false');
+    }
+  };
+
+  const handleVoiceOverrideChange = (val) => {
+    setLocalVoiceOverride(val);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('localVoiceOverride', val);
+    }
+  };
+
+  const handleDownloadModel = async (voiceId) => {
+    try {
+      setDownloadingVoice(voiceId);
+      setDownloadProgress(0);
+      
+      await preloadVoiceModel(voiceId, (progress) => {
+        if (progress.total > 0) {
+          const pct = Math.round((progress.loaded / progress.total) * 100);
+          setDownloadProgress(pct);
+        }
+      });
+      
+      const models = await getStoredVoiceModels();
+      setStoredModels(models || []);
+    } catch (err) {
+      console.error('Download model failed:', err);
+      alert(`Model download failed: ${err.message}`);
+    } finally {
+      setDownloadingVoice(null);
+      setDownloadProgress(0);
+    }
+  };
+
+  const handleDeleteModel = async (voiceId) => {
+    if (confirm(`Are you sure you want to delete the offline model for ${voiceId}?`)) {
+      try {
+        await removeVoiceModel(voiceId);
+        const models = await getStoredVoiceModels();
+        setStoredModels(models || []);
+      } catch (err) {
+        console.error('Delete model failed:', err);
+      }
+    }
+  };
+
+  const currentVoiceId = useMemo(() => {
+    return normalizeVoiceId(question?.voice || 'Puck');
+  }, [question?.voice]);
+
+  const activeLocalVoice = useMemo(() => {
+    return localVoiceOverride !== 'none' ? localVoiceOverride : currentVoiceId;
+  }, [localVoiceOverride, currentVoiceId]);
+
+  const isModelCached = useMemo(() => {
+    return storedModels.includes(activeLocalVoice);
+  }, [storedModels, activeLocalVoice]);
 
   const sourceConfig = useMemo(() => {
     return mergedConfigs[sourceKey] || mergedConfigs['addition-topic'];
@@ -1002,6 +1100,163 @@ function PracticePageContent() {
           </div>
         </div>
       ) : null}
+
+      {/* On-Device Neural TTS Settings */}
+      <div style={{ background: '#ffffff', padding: 18, borderRadius: 20, border: '1px solid #dbeafe', marginBottom: 20, boxShadow: '0 12px 28px rgba(15, 23, 42, 0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 11, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Local Neural TTS
+          </h3>
+          <span style={{ 
+            fontSize: '9px', 
+            fontWeight: '900', 
+            padding: '4px 8px', 
+            borderRadius: '999px',
+            background: clientTtsSupported ? '#ecfdf5' : '#fef2f2',
+            color: clientTtsSupported ? '#059669' : '#dc2626'
+          }}>
+            {clientTtsSupported ? 'Supported' : 'Unsupported'}
+          </span>
+        </div>
+        
+        {clientTtsSupported ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', fontWeight: '800', color: '#1e293b', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={useClientTts}
+                onChange={(e) => handleToggleClientTts(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
+              />
+              Synthesize On-Device
+            </label>
+
+            {useClientTts && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+                    Local Voice Override
+                  </span>
+                  <select
+                    value={localVoiceOverride}
+                    onChange={(e) => handleVoiceOverrideChange(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: '1px solid #dbeafe',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="none">No override (Question voice)</option>
+                    <option value="en_US-ryan-medium">Ryan Medium (Male)</option>
+                    <option value="en_US-amy-medium">Amy Medium (Female)</option>
+                    <option value="en_US-joe-medium">Joe Medium (Male)</option>
+                    <option value="en_US-lessac-medium">Lessac Medium (Female)</option>
+                    <option value="en_US-ryan-high">Ryan High (HQ Male)</option>
+                  </select>
+                </div>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '750', color: '#475569' }}>
+                      Voice: <code style={{ background: '#e2e8f0', padding: '2px 4px', borderRadius: 4, fontFamily: 'monospace' }}>{activeLocalVoice}</code>
+                    </span>
+                    {isModelCached ? (
+                      <span style={{ fontSize: '10px', fontWeight: '900', color: '#16a34a' }}>✓ Cached</span>
+                    ) : (
+                      <span style={{ fontSize: '10px', fontWeight: '900', color: '#d97706' }}>Server Run</span>
+                    )}
+                  </div>
+
+                  {downloadingVoice === activeLocalVoice ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>
+                        <span>Downloading Model...</span>
+                        <span>{downloadProgress}%</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 999, background: '#cbd5e1', overflow: 'hidden' }}>
+                        <div style={{ width: `${downloadProgress}%`, height: '100%', background: '#3b82f6', borderRadius: 999 }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      {!isModelCached ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadModel(activeLocalVoice)}
+                          style={{
+                            flex: 1,
+                            background: '#2563eb',
+                            color: '#ffffff',
+                            border: 0,
+                            borderRadius: 8,
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: '900',
+                            cursor: 'pointer',
+                            textAlign: 'center'
+                          }}
+                        >
+                          Download Voice (~15MB)
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => speakText("Local speech synthesis test is active and running entirely on your browser.", activeLocalVoice)}
+                            style={{
+                              flex: 2,
+                              background: '#ecfdf5',
+                              color: '#059669',
+                              border: '1px solid #a7f3d0',
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: '11px',
+                              fontWeight: '900',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            🔊 Test Speech
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteModel(activeLocalVoice)}
+                            title="Delete cached model"
+                            style={{
+                              flex: 1,
+                              background: '#fff1f2',
+                              color: '#e11d48',
+                              border: '1px solid #fecdd3',
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: '11px',
+                              fontWeight: '900',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '600', lineHeight: 1.45 }}>
+            Your browser does not support on-device neural speech synthesis. Speech will run via the Gemini Cloud API.
+          </p>
+        )}
+      </div>
 
       <div style={{ background: '#ecfeff', padding: 20, borderRadius: 20, border: '1px solid #cffafe', marginBottom: 20 }}>
         <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#155e75', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

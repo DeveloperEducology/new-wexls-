@@ -15,7 +15,8 @@ export async function GET(request) {
 
   // 1. Generate hash for caching
   const cacheKey = crypto.createHash('sha256').update(`${text}_${voice}`).digest('hex');
-  const r2Key = `audio/tts/${voice}/${cacheKey}.wav`;
+  const cleanVoiceForPath = voice.replace(':', '_');
+  const r2Key = `audio/tts/${cleanVoiceForPath}/${cacheKey}.wav`;
 
   // 2. Check MongoDB cache
   try {

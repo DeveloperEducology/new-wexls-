@@ -1,3 +1,5 @@
+import { isClientTtsSupported, isVoiceModelLoaded, synthesizeClientSide, normalizeVoiceId } from './ttsBrowserEngine';
+
 // Module-level variables to track active audio
 let activeAudio = null;
 let activeText = null;
@@ -167,6 +169,50 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
     return;
   }
 
+  // Check if client-side on-device synthesis should be used
+  const useClientTts = typeof window !== 'undefined' && window.localStorage.getItem('useClientTts') !== 'false';
+  const localVoiceOverride = typeof window !== 'undefined' && window.localStorage.getItem('localVoiceOverride');
+  const activeVoice = (useClientTts && localVoiceOverride && localVoiceOverride !== 'none') ? localVoiceOverride : voice;
+  const isPiperVoice = activeVoice.startsWith('piper:') || activeVoice.startsWith('en_US-');
+  
+  if (typeof window !== 'undefined' && isClientTtsSupported() && useClientTts && isPiperVoice) {
+    handleClientSideTts(plainText, text, activeVoice, cacheKey);
+    return;
+  }
+
+  runServerSideTts(plainText, text, voice, cacheKey);
+}
+
+async function handleClientSideTts(plainText, originalText, voice, cacheKey) {
+  try {
+    const voiceId = normalizeVoiceId(voice);
+    const isLoaded = await isVoiceModelLoaded(voiceId);
+    
+    if (!isLoaded) {
+      console.log(`Voice model ${voiceId} not cached locally in OPFS. Falling back to server-side TTS.`);
+      runServerSideTts(plainText, originalText, voice, cacheKey);
+      return;
+    }
+    
+    // Synthesize locally using WASM/ONNX
+    const wavBlob = await synthesizeClientSide(plainText, voiceId);
+    
+    // Double check we haven't switched to another text in the meantime
+    if (activeText !== originalText) return;
+    
+    // Cache the synthesized blob in memory
+    blobCache.set(cacheKey, wavBlob);
+    
+    playBlob(wavBlob, originalText, plainText);
+  } catch (err) {
+    console.warn('Client-side local TTS synthesis failed, falling back to server-side TTS:', err);
+    if (activeText === originalText) {
+      runServerSideTts(plainText, originalText, voice, cacheKey);
+    }
+  }
+}
+
+function runServerSideTts(plainText, text, voice, cacheKey) {
   // If no support or user is offline, run Web Speech immediately
   if (typeof window === 'undefined' || !navigator.onLine) {
     fallbackToWebSpeech(plainText, text);
