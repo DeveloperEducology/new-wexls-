@@ -1,6 +1,27 @@
 import React, { useContext } from 'react';
 import { UniversalDndContext } from '../UniversalDndRenderer';
 
+const isInlineSvg = (url) => {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  return trimmed.startsWith('<svg') || trimmed.startsWith('<?xml') || trimmed.includes('<svg');
+};
+
+const cleanSvgContent = (svgStr) => {
+  if (!svgStr) return '';
+  let cleaned = svgStr
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\t/g, ' ')
+    .replace(/\\\\/g, '\\');
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  return cleaned;
+};
+
 export default function DragLayer({
   draggingItemId,
   dragState,
@@ -16,7 +37,7 @@ export default function DragLayer({
   const normalizeStyleToken = (value) => String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 
   const checkTransparent = (item, questionCardStyle) => {
-    if (!item.imageUrl) return false;
+    if (!item.imageUrl && !item.svg) return false;
     const qStyle = normalizeStyleToken(questionCardStyle);
     const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
     const itemBorder = normalizeStyleToken(item.border || item.cardBorder);
@@ -47,7 +68,7 @@ export default function DragLayer({
   const isTransparentPng = checkTransparent(item, cardStyle);
   const shouldHideText = checkHideLabel(item, cardStyle, hideItemLabels);
 
-  const hasImage = !!item.imageUrl;
+  const hasImage = !!item.imageUrl || !!item.svg;
   const hasText = !shouldHideText && !!item.content && item.content.trim().length > 0;
 
   const layerStyle = {
@@ -109,16 +130,48 @@ export default function DragLayer({
     lineHeight: '1.4'
   };
 
+  const inlineSvg = item.svg ? cleanSvgContent(item.svg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
+
   return (
     <div style={layerStyle}>
       <div style={cardStyleObj}>
         {hasImage && (
           <div style={imageContainerStyle}>
-            <img 
-              src={item.imageUrl} 
-              alt={item.content || 'draggable item'} 
-              style={imageStyle} 
-            />
+            {inlineSvg ? (
+              <>
+                <style dangerouslySetInnerHTML={{ __html: `
+                  .inline-svg-wrapper svg {
+                    max-width: 100%;
+                    max-height: 100%;
+                    width: auto;
+                    height: auto;
+                    display: block;
+                    pointer-events: none;
+                  }
+                  .inline-svg-wrapper svg * {
+                    pointer-events: none;
+                  }
+                ` }} />
+                <div 
+                  className="inline-svg-wrapper"
+                  style={{
+                    maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
+                    maxHeight: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: inlineSvg }}
+                />
+              </>
+            ) : item.imageUrl ? (
+              <img 
+                src={item.imageUrl} 
+                alt={item.content || 'draggable item'} 
+                style={imageStyle} 
+              />
+            ) : null}
           </div>
         )}
         {hasText && (

@@ -7,6 +7,32 @@ import styles from '../FillInTheBlankRenderer.module.css';
 import { speakText } from '@/lib/ttsClient';
 import UniversalDndRenderer from './universal-dnd/UniversalDndRenderer';
 
+const isInlineSvg = (url) => {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  return trimmed.startsWith('<svg') || trimmed.startsWith('<?xml') || trimmed.includes('<svg');
+};
+
+const cleanSvgContent = (svgStr) => {
+  if (!svgStr) return '';
+  let cleaned = svgStr
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\t/g, ' ')
+    .replace(/\\\\/g, '\\');
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  return cleaned;
+};
+
+const getSvgDataUrl = (svgStr) => {
+  const cleaned = cleanSvgContent(svgStr);
+  return `data:image/svg+xml;utf8,${encodeURIComponent(cleaned)}`;
+};
+
 function useLoadedImage(url) {
   const [image, setImage] = useState(null);
 
@@ -20,18 +46,18 @@ function useLoadedImage(url) {
 
     const loadImage = (useCors) => {
       const img = new window.Image();
-      if (useCors) img.crossOrigin = 'anonymous';
+      if (useCors && !isInlineSvg(url)) img.crossOrigin = 'anonymous';
       img.onload = () => {
         if (isMounted) setImage(img);
       };
       img.onerror = () => {
-        if (useCors) {
+        if (useCors && !isInlineSvg(url)) {
           loadImage(false);
           return;
         }
         if (isMounted) setImage(null);
       };
-      img.src = url;
+      img.src = isInlineSvg(url) ? getSvgDataUrl(url) : url;
     };
 
     setImage(null);
@@ -120,18 +146,18 @@ function HtmlCategorizationFallback({
   };
   // When imageWidth is specified, shrink the card to wrap tightly around the image
   const getImageCardSize = (item) => {
-    if (item.imageUrl && item.imageWidth) {
+    if ((item.imageUrl || item.svg) && item.imageWidth) {
       const sz = Math.max(60, Math.min(200, Number(item.imageWidth) + 24));
       return sz;
     }
     return null;
   };
   const itemCardWidth = (item) => {
-    if (isV2 && !item.imageUrl) return getTextCardWidth(item);
+    if (isV2 && !item.imageUrl && !item.svg) return getTextCardWidth(item);
     return getImageCardSize(item) || cardWidth;
   };
   const itemCardHeight = (item) => {
-    if (isV2 && !item.imageUrl) return textCardHeight;
+    if (isV2 && !item.imageUrl && !item.svg) return textCardHeight;
     // image-only cards: square; image+label: add ~30px for label
     const sz = getImageCardSize(item);
     if (sz) return item.content && item.content.trim() ? sz + 30 : sz;
@@ -144,7 +170,7 @@ function HtmlCategorizationFallback({
     const itemBorder = normalizeStyleToken(item.border || item.cardBorder);
     const transparentStyles = new Set(['transparent_png', 'transparent', 'borderless', 'border_none', 'none', 'png_only']);
 
-    return Boolean(item.imageUrl) && (
+    return Boolean(item.imageUrl || item.svg) && (
       transparentStyles.has(questionCardStyle) ||
       transparentStyles.has(itemCardStyle) ||
       itemBorder === 'none' ||
@@ -157,18 +183,18 @@ function HtmlCategorizationFallback({
     const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
     return hideItemLabels || item.hideLabel === true || itemCardStyle === 'transparent_png' || questionCardStyle === 'transparent_png' || questionCardStyle === 'png_only';
   };
-  const allItemsHaveImageWidth = items.length > 0 && items.every((item) => item.imageUrl && item.imageWidth);
-  const gridCardWidth = isV2 && !allItemsHaveImageWidth && items.every((item) => !item.imageUrl)
+  const allItemsHaveImageWidth = items.length > 0 && items.every((item) => (item.imageUrl || item.svg) && item.imageWidth);
+  const gridCardWidth = isV2 && !allItemsHaveImageWidth && items.every((item) => !item.imageUrl && !item.svg)
     ? Math.max(...items.map(getTextCardWidth), textCardMinWidth)
     : allItemsHaveImageWidth
       ? Math.max(60, Math.min(200, Number(items[0]?.imageWidth || 100) + 24))
       : cardWidth;
-  const responsiveGridCardWidth = isV2 && items.some((item) => item.imageUrl)
+  const responsiveGridCardWidth = isV2 && items.some((item) => item.imageUrl || item.svg)
     ? `clamp(96px, 28vw, ${gridCardWidth}px)`
     : `${gridCardWidth}px`;
-  const gridCardHeight = isV2 && items.every((item) => !item.imageUrl) ? textCardHeight : gridCardWidth;
+  const gridCardHeight = isV2 && items.every((item) => !item.imageUrl && !item.svg) ? textCardHeight : gridCardWidth;
   const sourceSlotHeight = Math.max(gridCardHeight, ...items.map(itemCardHeight));
-  const responsiveSourceSlotHeight = isV2 && items.some((item) => item.imageUrl)
+  const responsiveSourceSlotHeight = isV2 && items.some((item) => item.imageUrl || item.svg)
     ? `clamp(96px, 28vw, ${sourceSlotHeight}px)`
     : `${sourceSlotHeight}px`;
   useEffect(() => {
@@ -643,6 +669,42 @@ function HtmlCategorizationFallback({
     const fill = overrides.color || item.color;
     const stroke = overrides.stroke || item.stroke;
 
+    const svgContent = overrides.svg || item.svg;
+    const imgUrl = overrides.imageUrl || item.imageUrl;
+
+    if (svgContent || (imgUrl && isInlineSvg(imgUrl))) {
+      const cleaned = svgContent ? cleanSvgContent(svgContent) : cleanSvgContent(imgUrl);
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <style dangerouslySetInnerHTML={{ __html: `
+            .inline-svg-wrapper svg {
+              max-width: 100%;
+              max-height: 100%;
+              width: auto;
+              height: auto;
+              display: block;
+              pointer-events: none;
+            }
+            .inline-svg-wrapper svg * {
+              pointer-events: none;
+            }
+          ` }} />
+          <div
+            className="inline-svg-wrapper"
+            style={{
+              width: size * 0.8,
+              height: size * 0.8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none'
+            }}
+            dangerouslySetInnerHTML={{ __html: cleaned }}
+          />
+        </div>
+      );
+    }
+
     if (item.visual === 'emoji' || overrides.visual === 'emoji') {
       return (
         <div style={{ fontSize: size * 0.65, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
@@ -655,7 +717,7 @@ function HtmlCategorizationFallback({
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
           <img 
-            src={overrides.imageUrl || item.imageUrl} 
+            src={imgUrl} 
             alt={item.content || ''}
             style={{ width: size * 0.8, height: size * 0.8, objectFit: 'contain' }}
             draggable="false"
@@ -975,10 +1037,11 @@ function HtmlCategorizationFallback({
   const renderCard = (item, origin = 'pool', options = {}) => {
     const isDragging = draggingId === item.id && !options.isDragLayer;
     const isSelected = selectedItemId === item.id && !options.isDragLayer;
-    const showCompactImage = Boolean(item.imageUrl);
-    const mediaCard = Boolean(item.imageUrl);
+    const showCompactImage = Boolean(item.imageUrl || item.svg);
+    const mediaCard = Boolean(item.imageUrl || item.svg);
     const transparentImageCard = isV2 && isTransparentImageStyle(item);
     const showImageLabel = item.content && item.content.trim() && !shouldHideImageLabel(item);
+    const inlineSvg = item.svg ? cleanSvgContent(item.svg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
     const effectiveWidth = options.width || (isV2 && mediaCard ? responsiveGridCardWidth : itemCardWidth(item));
     const effectiveHeight = options.height || (isV2 && mediaCard ? responsiveSourceSlotHeight : itemCardHeight(item));
 
@@ -1029,7 +1092,7 @@ function HtmlCategorizationFallback({
         ...options.style,
       }}
     >
-      {item.imageUrl ? (
+      {item.imageUrl || item.svg ? (
         <>
           <div
             style={{
@@ -1043,20 +1106,50 @@ function HtmlCategorizationFallback({
               overflow: transparentImageCard ? 'visible' : 'hidden',
             }}
           >
-            <img
-              src={item.imageUrl}
-              alt={item.content || item.id}
-              style={{
-                maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
-                maxHeight: '100%',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                borderRadius: transparentImageCard ? 0 : 6,
-                display: 'block',
-                mixBlendMode: transparentImageCard ? 'multiply' : 'normal'
-              }}
-            />
+            {inlineSvg ? (
+              <>
+                <style dangerouslySetInnerHTML={{ __html: `
+                  .inline-svg-wrapper svg {
+                    max-width: 100%;
+                    max-height: 100%;
+                    width: auto;
+                    height: auto;
+                    display: block;
+                    pointer-events: none;
+                  }
+                  .inline-svg-wrapper svg * {
+                    pointer-events: none;
+                  }
+                ` }} />
+                <div 
+                  className="inline-svg-wrapper"
+                  style={{
+                    maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
+                    maxHeight: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: inlineSvg }}
+                />
+              </>
+            ) : item.imageUrl ? (
+              <img
+                src={item.imageUrl}
+                alt={item.content || item.id}
+                style={{
+                  maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
+                  maxHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: transparentImageCard ? 0 : 6,
+                  display: 'block',
+                  mixBlendMode: transparentImageCard ? 'multiply' : 'normal'
+                }}
+              />
+            ) : null}
           </div>
           {showImageLabel && (
             <span
@@ -1638,11 +1731,11 @@ export default function CategorizationRenderer({
           shadowOffsetY={isDragging ? 12 : 6}
           shadowColor="rgba(15, 23, 42, 0.16)"
         />
-        {item.imageUrl ? (
+        {item.imageUrl || item.svg ? (
           <>
             <Group x={-layout.cardWidth / 2 + 7} y={-layout.cardHeight / 2 + 7}>
               <CategorizationImage
-                url={item.imageUrl}
+                url={item.svg || item.imageUrl}
                 altText={item.content || item.target || item.id}
                 width={layout.cardWidth - 14}
                 height={item.content && item.content.trim() ? 82 : layout.cardHeight - 14}

@@ -6,6 +6,27 @@ import QuestionRenderer from '@/components/practice/QuestionRenderer';
 import { isAnswerCorrect } from '@/lib/practice/answerValidation';
 import { speakText, stopAllSpeech } from '@/lib/ttsClient';
 
+const isInlineSvg = (url) => {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  return trimmed.startsWith('<svg') || trimmed.startsWith('<?xml') || trimmed.includes('<svg');
+};
+
+const cleanSvgContent = (svgStr) => {
+  if (!svgStr) return '';
+  let cleaned = svgStr
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\t/g, ' ')
+    .replace(/\\\\/g, '\\');
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  return cleaned;
+};
+
 const NODE_TYPES = ['subject', 'topic', 'chapter', 'skill'];
 
 const EMPTY_FORM = {
@@ -370,8 +391,8 @@ export default function AdminConsolePage() {
     { id: 'cat_2', label: 'Category 2' }
   ]);
   const [categorizationItems, setCategorizationItems] = useState([
-    { id: 'item_1', content: 'Item 1', categoryId: 'cat_1', imageUrl: '', imageWidth: '' },
-    { id: 'item_2', content: 'Item 2', categoryId: 'cat_2', imageUrl: '', imageWidth: '' }
+    { id: 'item_1', content: 'Item 1', categoryId: 'cat_1', imageUrl: '', imageWidth: '', svg: '', visualType: 'none' },
+    { id: 'item_2', content: 'Item 2', categoryId: 'cat_2', imageUrl: '', imageWidth: '', svg: '', visualType: 'none' }
   ]);
 
   // Universal DnD specific states
@@ -1548,6 +1569,22 @@ export default function AdminConsolePage() {
     setCategorizationItems(updated);
   };
 
+  const handleUpdateItemSvg = (index, value) => {
+    ignoreDirtyChange.current = false;
+    setIsDirty(true);
+    const updated = [...categorizationItems];
+    updated[index] = { ...updated[index], svg: value };
+    setCategorizationItems(updated);
+  };
+
+  const handleUpdateItemVisualType = (index, value) => {
+    ignoreDirtyChange.current = false;
+    setIsDirty(true);
+    const updated = [...categorizationItems];
+    updated[index] = { ...updated[index], visualType: value };
+    setCategorizationItems(updated);
+  };
+
   const handleAddItem = () => {
     ignoreDirtyChange.current = false;
     setIsDirty(true);
@@ -1559,7 +1596,7 @@ export default function AdminConsolePage() {
       counter++;
     }
     const defaultCatId = categories[0]?.id || '';
-    setCategorizationItems([...categorizationItems, { id: itemId, content: `Item ${nextIdx}`, categoryId: defaultCatId, imageUrl: '', imageWidth: '' }]);
+    setCategorizationItems([...categorizationItems, { id: itemId, content: `Item ${nextIdx}`, categoryId: defaultCatId, imageUrl: '', imageWidth: '', svg: '', visualType: 'none' }]);
   };
 
   const handleRemoveItem = (index) => {
@@ -1680,8 +1717,8 @@ export default function AdminConsolePage() {
       { id: 'cat_2', label: 'Category 2' }
     ]);
     setCategorizationItems([
-      { id: 'item_1', content: 'Item 1', categoryId: 'cat_1' },
-      { id: 'item_2', content: 'Item 2', categoryId: 'cat_2' }
+      { id: 'item_1', content: 'Item 1', categoryId: 'cat_1', imageUrl: '', imageWidth: '', svg: '', visualType: 'none' },
+      { id: 'item_2', content: 'Item 2', categoryId: 'cat_2', imageUrl: '', imageWidth: '', svg: '', visualType: 'none' }
     ]);
     setCorrectAnswer('animal');
     setFibAnswers({ ans: 'animal' });
@@ -1782,14 +1819,32 @@ export default function AdminConsolePage() {
     }
 
     setCategories(loadedCategories);
-    setCategorizationItems(loadedItems.map(item => ({
-      ...item,
-      id: item.id,
-      content: item.content || '',
-      categoryId: item.categoryId || item.target || '',
-      imageUrl: item.imageUrl || '',
-      imageWidth: item.imageWidth || ''
-    })));
+    setCategorizationItems(loadedItems.map(item => {
+      let visualType = 'none';
+      let svgVal = item.svg || '';
+      let imageUrlVal = item.imageUrl || '';
+      if (item.svg) {
+        visualType = 'svg';
+      } else if (item.imageUrl) {
+        if (isInlineSvg(item.imageUrl)) {
+          visualType = 'svg';
+          svgVal = item.imageUrl;
+          imageUrlVal = '';
+        } else {
+          visualType = 'imageUrl';
+        }
+      }
+      return {
+        ...item,
+        id: item.id,
+        content: item.content || '',
+        categoryId: item.categoryId || item.target || '',
+        imageUrl: imageUrlVal,
+        svg: svgVal,
+        visualType,
+        imageWidth: item.imageWidth || ''
+      };
+    }));
 
     // Load Universal DnD specific fields
     setLayoutMode(q.layoutMode || '');
@@ -2424,10 +2479,38 @@ export default function AdminConsolePage() {
         { id: 'cat_1', label: 'Category 1' },
         { id: 'cat_2', label: 'Category 2' }
       ]);
-      setCategorizationItems(draft.categorizationItems || [
+      const rawDraftItems = draft.categorizationItems || [
         { id: 'item_1', content: 'Item 1', categoryId: 'cat_1' },
         { id: 'item_2', content: 'Item 2', categoryId: 'cat_2' }
-      ]);
+      ];
+      setCategorizationItems(rawDraftItems.map(item => {
+        let visualType = item.visualType || 'none';
+        let svgVal = item.svg || '';
+        let imageUrlVal = item.imageUrl || '';
+        if (!item.visualType) {
+          if (item.svg) {
+            visualType = 'svg';
+          } else if (item.imageUrl) {
+            if (isInlineSvg(item.imageUrl)) {
+              visualType = 'svg';
+              svgVal = item.imageUrl;
+              imageUrlVal = '';
+            } else {
+              visualType = 'imageUrl';
+            }
+          }
+        }
+        return {
+          ...item,
+          id: item.id,
+          content: item.content || '',
+          categoryId: item.categoryId || item.target || '',
+          imageUrl: imageUrlVal,
+          svg: svgVal,
+          visualType,
+          imageWidth: item.imageWidth || ''
+        };
+      }));
 
       setLayoutMode(draft.layoutMode || '');
       setInteraction(draft.interaction || '');
@@ -2531,15 +2614,41 @@ export default function AdminConsolePage() {
       payload.correctAnswer = itemMapping;
 
       payload.categories = categories.map(cat => ({ ...cat, id: cat.id, label: cat.label }));
-      payload.items = categorizationItems.map(item => ({
-        ...item,
-        id: item.id,
-        content: item.content,
-        target: item.categoryId || item.target || '',
-        categoryId: item.categoryId || item.target || '',
-        ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
-        ...(item.imageWidth ? { imageWidth: item.imageWidth } : {})
-      }));
+      payload.items = categorizationItems.map(item => {
+        const mapped = {
+          ...item,
+          id: item.id,
+          content: item.content,
+          target: item.categoryId || item.target || '',
+          categoryId: item.categoryId || item.target || '',
+        };
+        delete mapped.imageUrl;
+        delete mapped.svg;
+        delete mapped.visualType;
+
+        if (item.imageWidth) {
+          mapped.imageWidth = item.imageWidth;
+        }
+
+        if (item.visualType === 'svg') {
+          if (item.svg) mapped.svg = item.svg;
+        } else if (item.visualType === 'imageUrl') {
+          if (item.imageUrl) mapped.imageUrl = item.imageUrl;
+        } else if (item.visualType === 'none') {
+          // none
+        } else {
+          if (item.svg) {
+            mapped.svg = item.svg;
+          } else if (item.imageUrl) {
+            if (isInlineSvg(item.imageUrl)) {
+              mapped.svg = item.imageUrl;
+            } else {
+              mapped.imageUrl = item.imageUrl;
+            }
+          }
+        }
+        return mapped;
+      });
 
       const categorizationPart = {
         type: 'categorization',
@@ -2706,10 +2815,10 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: 'Validation Error: Please add at least one item to sort.' });
         return;
       }
-      // Each item must have either content text OR an imageUrl
-      const hasInvalidItem = categorizationItems.some(item => !item.content.trim() && !item.imageUrl?.trim());
+      // Each item must have either content text OR an imageUrl OR an svg
+      const hasInvalidItem = categorizationItems.some(item => !item.content.trim() && !item.imageUrl?.trim() && !item.svg?.trim());
       if (hasInvalidItem) {
-        setAlert({ type: 'error', text: 'Validation Error: Each sort item must have either a label or an image URL.' });
+        setAlert({ type: 'error', text: 'Validation Error: Each sort item must have either a label, an image URL, or SVG code.' });
         return;
       }
     } else if (type === 'fillInTheBlank') {
@@ -2864,19 +2973,50 @@ export default function AdminConsolePage() {
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
     const baseParts = parts.map(p => ({ ...p }));
     let mockParts = baseParts;
+
+    const serializedItems = (type === 'categorizationv2' || type === 'categorization') ? categorizationItems.map(item => {
+      const mapped = {
+        ...item,
+        id: item.id,
+        content: item.content,
+        target: item.categoryId || item.target || '',
+        categoryId: item.categoryId || item.target || '',
+      };
+      delete mapped.imageUrl;
+      delete mapped.svg;
+      delete mapped.visualType;
+
+      if (item.imageWidth) {
+        mapped.imageWidth = item.imageWidth;
+      }
+
+      if (item.visualType === 'svg') {
+        if (item.svg) mapped.svg = item.svg;
+      } else if (item.visualType === 'imageUrl') {
+        if (item.imageUrl) mapped.imageUrl = item.imageUrl;
+      } else if (item.visualType === 'none') {
+        // none
+      } else {
+        if (item.svg) {
+          mapped.svg = item.svg;
+        } else if (item.imageUrl) {
+          if (isInlineSvg(item.imageUrl)) {
+            mapped.svg = item.imageUrl;
+          } else {
+            mapped.imageUrl = item.imageUrl;
+          }
+        }
+      }
+      return mapped;
+    }) : [];
+
     if (type === 'categorizationv2' || type === 'categorization') {
       mockParts = [
         ...baseParts,
         {
           type: 'categorization',
           categories: categories.map(c => ({ ...c, id: c.id, label: c.label })),
-          items: categorizationItems.map(item => ({
-            ...item,
-            id: item.id,
-            content: item.content,
-            target: item.categoryId || item.target || '',
-            categoryId: item.categoryId || item.target || ''
-          }))
+          items: serializedItems
         }
       ];
     }
@@ -2890,13 +3030,7 @@ export default function AdminConsolePage() {
       voice,
       options: type === 'mcq' ? options.map((o, idx) => ({ id: `opt_${idx}`, label: o.label, audioUrl: audioUrl ? null : undefined })) : [],
       categories: (type === 'categorizationv2' || type === 'categorization') ? categories.map(c => ({ ...c, id: c.id, label: c.label })) : undefined,
-      items: (type === 'categorizationv2' || type === 'categorization') ? categorizationItems.map(item => ({
-        ...item,
-        id: item.id,
-        content: item.content,
-        target: item.categoryId || item.target || '',
-        categoryId: item.categoryId || item.target || ''
-      })) : undefined,
+      items: (type === 'categorizationv2' || type === 'categorization') ? serializedItems : undefined,
       answer: type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)),
       correctAnswer: type === 'mcq' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)),
       metaConfig: { readable, readOptions },
@@ -4646,42 +4780,97 @@ export default function AdminConsolePage() {
                                           ×
                                         </button>
                                       </div>
-                                      {/* Row 2: optional image URL + width */}
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', minWidth: 60 }}>Image URL</span>
-                                        <input
-                                          type="text"
-                                          className={styles.formInput}
-                                          value={item.imageUrl || ''}
-                                          onChange={(e) => handleUpdateItemImageUrl(idx, e.target.value)}
-                                          placeholder="https://… (optional)"
-                                          style={{ flex: 1, fontSize: 12 }}
-                                        />
-                                        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Width (px)</span>
-                                        <input
-                                          type="number"
-                                          className={styles.formInput}
-                                          value={item.imageWidth || ''}
-                                          onChange={(e) => handleUpdateItemImageWidth(idx, e.target.value)}
-                                          placeholder="e.g. 80"
-                                          min={20}
-                                          max={400}
-                                          style={{ width: 80, fontSize: 12 }}
-                                        />
-                                        {item.imageUrl && (
-                                          <img
-                                            src={item.imageUrl}
-                                            alt={item.content || 'preview'}
-                                            style={{
-                                              height: 36,
-                                              width: item.imageWidth ? `${item.imageWidth}px` : 'auto',
-                                              objectFit: 'contain',
-                                              border: '1px solid #cbd5e1',
-                                              borderRadius: 4,
-                                              background: '#fff'
-                                            }}
-                                            onError={(e) => { e.target.style.display = 'none'; }}
-                                          />
+                                      {/* Row 2: Media Type, Inputs, and Preview */}
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                          <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', minWidth: 60 }}>Media Type</span>
+                                          <select
+                                            className={styles.formSelect}
+                                            value={item.visualType || 'none'}
+                                            onChange={(e) => handleUpdateItemVisualType(idx, e.target.value)}
+                                            style={{ width: 120, fontSize: 12, height: 32, padding: '2px 8px' }}
+                                          >
+                                            <option value="none">None</option>
+                                            <option value="imageUrl">Image URL</option>
+                                            <option value="svg">SVG Code</option>
+                                          </select>
+
+                                          {item.visualType !== 'none' && (
+                                            <>
+                                              <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', marginLeft: 8 }}>Width (px)</span>
+                                              <input
+                                                type="number"
+                                                className={styles.formInput}
+                                                value={item.imageWidth || ''}
+                                                onChange={(e) => handleUpdateItemImageWidth(idx, e.target.value)}
+                                                placeholder="e.g. 80"
+                                                min={20}
+                                                max={400}
+                                                style={{ width: 80, fontSize: 12, height: 32 }}
+                                              />
+                                            </>
+                                          )}
+                                        </div>
+
+                                        {item.visualType === 'imageUrl' && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', minWidth: 60 }}>URL</span>
+                                            <input
+                                              type="text"
+                                              className={styles.formInput}
+                                              value={item.imageUrl || ''}
+                                              onChange={(e) => handleUpdateItemImageUrl(idx, e.target.value)}
+                                              placeholder="https://… (optional)"
+                                              style={{ flex: 1, fontSize: 12, height: 32 }}
+                                            />
+                                            {item.imageUrl && (
+                                              <img
+                                                src={item.imageUrl}
+                                                alt={item.content || 'preview'}
+                                                style={{
+                                                  height: 32,
+                                                  width: item.imageWidth ? `${item.imageWidth}px` : 'auto',
+                                                  objectFit: 'contain',
+                                                  border: '1px solid #cbd5e1',
+                                                  borderRadius: 4,
+                                                  background: '#fff'
+                                                }}
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                              />
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {item.visualType === 'svg' && (
+                                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', minWidth: 60, marginTop: 8 }}>SVG Code</span>
+                                            <textarea
+                                              className={styles.formInput}
+                                              value={item.svg || ''}
+                                              onChange={(e) => handleUpdateItemSvg(idx, e.target.value)}
+                                              placeholder="<svg>...</svg>"
+                                              rows={2}
+                                              style={{ flex: 1, fontSize: 12, fontFamily: 'monospace', resize: 'vertical' }}
+                                            />
+                                            {item.svg && (
+                                              <div
+                                                style={{
+                                                  height: 36,
+                                                  width: item.imageWidth ? `${item.imageWidth}px` : 'auto',
+                                                  minWidth: 36,
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  border: '1px solid #cbd5e1',
+                                                  borderRadius: 4,
+                                                  background: '#fff',
+                                                  padding: 2,
+                                                  overflow: 'hidden'
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: cleanSvgContent(item.svg) }}
+                                              />
+                                            )}
+                                          </div>
                                         )}
                                       </div>
                                     </div>
