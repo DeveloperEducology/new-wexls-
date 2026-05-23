@@ -425,6 +425,7 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
   return {
     id: question.id || `${topic}-${skill}-${seed}`,
     type: question.type,
+    interaction: question.interaction,
     questionText: question.questionText || question.text || '',
     audioUrl: question.audioUrl,
     voice: question.voice,
@@ -496,6 +497,7 @@ function normalizeFractionsQuestion(question, { skill, seed }) {
   return {
     id: question.id || `fractions-${skill}-${seed}`,
     type: question.type,
+    interaction: question.interaction,
     questionText: question.questionText || '',
     audioUrl: question.audioUrl,
     voice: question.voice,
@@ -538,6 +540,7 @@ function normalizeTimeQuestion(question, { skill, seed }) {
   return {
     id: question.id || `time-${skill}-${seed}`,
     type: question.type,
+    interaction: question.interaction,
     questionText: question.questionText || '',
     audioUrl: question.audioUrl,
     voice: question.voice,

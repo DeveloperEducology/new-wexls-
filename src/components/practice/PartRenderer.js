@@ -2098,6 +2098,7 @@ function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }
 // Background SVG/image with absolutely-positioned transparent click zones.
 // Coordinates are percentage-based so the layout is fully responsive.
 function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const selectedIndex = typeof userAnswer === 'object'
     ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
     : Number(userAnswer);
@@ -2124,7 +2125,11 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
       className={styles.hotspotCanvasWrapper}
       style={{ paddingBottom: `${(canvasHeight / canvasWidth) * 100}%` }}
     >
-      <div className={styles.hotspotCanvasInner}>
+      <div 
+        className={styles.hotspotCanvasInner}
+        data-hovered-index={hoveredIndex !== null ? hoveredIndex : undefined}
+        data-selected-index={Number.isFinite(selectedIndex) ? selectedIndex : undefined}
+      >
         {/* Background: inline SVG or <img> */}
         {backgroundSvg && (
           <div
@@ -2146,6 +2151,8 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
               aria-label={hs.label}
               disabled={isAnswered}
               onClick={() => handleClick(hs.optionIndex)}
+              onMouseEnter={() => setHoveredIndex(hs.optionIndex)}
+              onMouseLeave={() => setHoveredIndex(null)}
               className={[
                 styles.hotspotZone,
                 isSelected ? styles.hotspotZoneSelected : '',

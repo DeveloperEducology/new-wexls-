@@ -655,9 +655,9 @@ function lkgPositionsEngine(config, params, random) {
         <text x="12" y="${CH / 2 - 8}" font-size="13" fill="#64748b" font-family="sans-serif" font-weight="700">ABOVE</text>
         <text x="12" y="${CH / 2 + 18}" font-size="13" fill="#64748b" font-family="sans-serif" font-weight="700">BELOW</text>
         <!-- top object -->
-        <text x="200" y="122" font-size="90" text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
+        <text class="svg-object-0" x="200" y="122" font-size="90" text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
         <!-- bottom object -->
-        <text x="200" y="238" font-size="90" text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
+        <text class="svg-object-1" x="200" y="238" font-size="90" text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
       </svg>`;
 
       hotspots = [
@@ -683,9 +683,9 @@ function lkgPositionsEngine(config, params, random) {
         <text x="98"       y="${CH - 8}" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="700">LEFT</text>
         <text x="${CW - 98}" y="${CH - 8}" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="700">RIGHT</text>
         <!-- left object -->
-        <text x="98"  y="${CH / 2 - 6}" font-size="100" text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
+        <text class="svg-object-0" x="98"  y="${CH / 2 - 6}" font-size="100" text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
         <!-- right object -->
-        <text x="${CW - 98}" y="${CH / 2 - 6}" font-size="100" text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
+        <text class="svg-object-1" x="${CW - 98}" y="${CH / 2 - 6}" font-size="100" text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
       </svg>`;
 
       hotspots = [
@@ -716,10 +716,10 @@ function lkgPositionsEngine(config, params, random) {
         <text x="${CW - 95}" y="${BOX.y - 4}" font-size="11" fill="#64748b"
               text-anchor="middle" font-family="sans-serif" font-weight="700">OUTSIDE</text>
         <!-- inside object -->
-        <text x="${BOX.x + BOX.w / 2}" y="${BOX.y + BOX.h / 2 + 2}" font-size="96"
+        <text class="svg-object-0" x="${BOX.x + BOX.w / 2}" y="${BOX.y + BOX.h / 2 + 2}" font-size="96"
               text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
         <!-- outside object -->
-        <text x="${CW - 95}" y="${BOX.y + BOX.h / 2 + 2}" font-size="96"
+        <text class="svg-object-1" x="${CW - 95}" y="${BOX.y + BOX.h / 2 + 2}" font-size="96"
               text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
       </svg>`;
 
