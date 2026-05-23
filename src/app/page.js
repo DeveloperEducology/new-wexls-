@@ -30,7 +30,8 @@ const solarSystemHomeGroups = [
   {
     title: 'Solar system skills',
     skills: [
-      ['SS.1', 'Identify planets in the solar system', 'science-g3-solar-system-planets-hotspot']
+      ['SS.1', 'Identify planets in the solar system', 'science-g3-solar-system-planets-hotspot'],
+      ['SS.2', 'Measure and compare heights', 'science-g3-solar-system-height-measure']
     ]
   }
 ];

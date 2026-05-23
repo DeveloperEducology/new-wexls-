@@ -636,9 +636,11 @@
     position: relative;
     width: 100%;
     max-width: 520px;
+    height: auto;
     margin: 20px auto;
     border-radius: 20px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 /* Inner absolutely fills the wrapper */

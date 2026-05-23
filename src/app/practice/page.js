@@ -44,7 +44,8 @@ const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).
 );
 
 const SOLAR_SYSTEM_OPTIONS = [
-  { group: 'Grade 3', label: 'SS.1 Identify planets in the solar system', value: 'science-g3-solar-system-planets-hotspot' }
+  { group: 'Grade 3', label: 'SS.1 Identify planets in the solar system', value: 'science-g3-solar-system-planets-hotspot' },
+  { group: 'Grade 3', label: 'SS.2 Measure and compare heights', value: 'science-g3-solar-system-height-measure' }
 ];
 
 const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([grade, skills]) =>

@@ -8,6 +8,14 @@ export const solarSystemSkills = {
     grade: '3',
     templateId: 'solar.system.planets',
     params: { subType: 'planets_hotspot' }
+  },
+  'science-g3-solar-system-height-measure': {
+    id: 'science-g3-solar-system-height-measure',
+    code: 'SS.2',
+    title: 'Measure and compare heights',
+    grade: '3',
+    templateId: 'solar.system.height.measure',
+    params: { subType: 'height_measure' }
   }
 };
 

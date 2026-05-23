@@ -2123,7 +2123,10 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
   return (
     <div
       className={styles.hotspotCanvasWrapper}
-      style={{ paddingBottom: `${(canvasHeight / canvasWidth) * 100}%` }}
+      style={{
+        aspectRatio: `${canvasWidth} / ${canvasHeight}`,
+        height: 'auto',
+      }}
     >
       <div 
         className={styles.hotspotCanvasInner}
@@ -2162,6 +2165,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                 top:    `${(hs.y / canvasHeight)     * 100}%`,
                 width:  `${(hs.width / canvasWidth)  * 100}%`,
                 height: `${(hs.height / canvasHeight) * 100}%`,
+                borderRadius: hs.borderRadius || (hs.isCircle || hs.shape === 'circle' ? '50%' : undefined),
               }}
             />
           );

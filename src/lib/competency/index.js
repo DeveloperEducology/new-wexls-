@@ -677,9 +677,16 @@ export const competencyGraphs = {
           prerequisites: [],
           remediation: [],
         },
+        {
+          id: 'height_comparison',
+          title: 'Measure and compare character heights',
+          prerequisites: [],
+          remediation: [],
+        },
       ],
       skillMap: {
         'science-g3-solar-system-planets-hotspot': 'planet_identification',
+        'science-g3-solar-system-height-measure': 'height_comparison',
       },
     },
   },

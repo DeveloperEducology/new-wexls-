@@ -15,6 +15,221 @@ export function generateSolarSystemQuestion(config, params) {
   const seed = config.variables?.seed || Date.now().toString();
   const random = getSeededRandom(seed);
 
+  if (params?.subType === 'height_measure') {
+    const images = [
+      "https://cdn-icons-png.flaticon.com/512/146/146010.png",
+      "https://cdn-icons-png.flaticon.com/512/388/388246.png",
+      "https://cdni.iconscout.com/illustration/premium/thumb/standing-girl-illustration-svg-download-png-4136845.png",
+      "https://cdn.freepixel.com/thumb/free-icons-cartoon-character-of-girl-standing-in-stylish-pose-th-11004470.jpg",
+      "https://static.vecteezy.com/system/resources/thumbnails/014/175/146/small/cute-little-girl-standing-free-vector.jpg",
+      "https://media.lordicon.com/icons/wired/flat/633-female-standing.svg",
+      "https://icons.iconarchive.com/icons/microsoft/fluentui-emoji-flat/512/Woman-Standing-Flat-Medium-icon.png"
+    ];
+
+    const allNames = ["Anna", "Bella", "Chloe", "Daisy", "Emma", "Fiona", "Grace"];
+
+    // Shuffle and pick 3 or 4 characters
+    const count = 3 + Math.floor(random() * 2); // 3 or 4
+    
+    // Seeded shuffle helper
+    const shuffledIndices = [0, 1, 2, 3, 4, 5, 6].sort(() => random() - 0.5);
+    const selectedImages = [];
+    const selectedNames = [];
+    for (let i = 0; i < count; i++) {
+      selectedImages.push(images[shuffledIndices[i]]);
+      selectedNames.push(allNames[shuffledIndices[i]]);
+    }
+
+    // Assign random, distinct heights (multiples of 20 or 30 for clear measurement)
+    // E.g. from 150px to 300px
+    const heightPool = [150, 180, 210, 240, 270, 300];
+    const shuffledHeights = heightPool.sort(() => random() - 0.5);
+    
+    const characters = [];
+    const CW = 800;
+    const CH = 465;
+    const groundY = 380;
+
+    // Distribute X coordinates evenly
+    const startX = count === 3 ? 180 : 120;
+    const gapX = count === 3 ? 220 : 170;
+
+    for (let i = 0; i < count; i++) {
+      const h = shuffledHeights[i];
+      const w = Math.round(h * 0.45); // standard human aspect ratio
+      const cx = startX + i * gapX;
+      characters.push({
+        index: i,
+        name: selectedNames[i],
+        imgUrl: selectedImages[i],
+        height: h,
+        width: w,
+        cx: cx,
+        cy: groundY - h / 2, // center Y
+        x: cx - w / 2,
+        y: groundY - h
+      });
+    }
+
+    // Randomize question types:
+    // 0: Who is the tallest?
+    // 1: Who is the shortest?
+    // 2: Who is the second person from the left?
+    // 3: Who is the third person from the left? (only if count === 4)
+    // 4: Who is the first person from the left (far left)?
+    // 5: Who is the last person (far right)?
+    // 6: Who is taller: Name X or Name Y?
+    const qTypes = [0, 1, 2, 4, 5, 6];
+    if (count === 4) qTypes.push(3);
+
+    const qType = qTypes[Math.floor(random() * qTypes.length)];
+    let questionText = "";
+    let answerIndex = 0;
+    let explanationText = "";
+
+    if (qType === 0) {
+      let maxH = -1;
+      let maxIdx = 0;
+      for (let i = 0; i < count; i++) {
+        if (characters[i].height > maxH) {
+          maxH = characters[i].height;
+          maxIdx = i;
+        }
+      }
+      questionText = `Who is the tallest?`;
+      answerIndex = maxIdx;
+      explanationText = `${characters[maxIdx].name} is the tallest with a height of ${Math.round(characters[maxIdx].height / 30)} units on the scale.`;
+    } else if (qType === 1) {
+      let minH = 9999;
+      let minIdx = 0;
+      for (let i = 0; i < count; i++) {
+        if (characters[i].height < minH) {
+          minH = characters[i].height;
+          minIdx = i;
+        }
+      }
+      questionText = `Who is the shortest?`;
+      answerIndex = minIdx;
+      explanationText = `${characters[minIdx].name} is the shortest with a height of ${Math.round(characters[minIdx].height / 30)} units on the scale.`;
+    } else if (qType === 2) {
+      questionText = `Who is the second person from the left?`;
+      answerIndex = 1;
+      explanationText = `Counting from the left: 1st is ${characters[0].name}, 2nd is ${characters[1].name}.`;
+    } else if (qType === 3) {
+      questionText = `Who is the third person from the left?`;
+      answerIndex = 2;
+      explanationText = `Counting from the left: 1st is ${characters[0].name}, 2nd is ${characters[1].name}, 3rd is ${characters[2].name}.`;
+    } else if (qType === 4) {
+      questionText = `Who is on the far left?`;
+      answerIndex = 0;
+      explanationText = `${characters[0].name} is on the far left.`;
+    } else if (qType === 5) {
+      questionText = `Who is on the far right?`;
+      answerIndex = count - 1;
+      explanationText = `${characters[count - 1].name} is on the far right.`;
+    } else if (qType === 6) {
+      const idxA = Math.floor(random() * count);
+      let idxB = Math.floor(random() * count);
+      while (idxB === idxA) {
+        idxB = Math.floor(random() * count);
+      }
+      const charA = characters[idxA];
+      const charB = characters[idxB];
+      questionText = `Who is taller, ${charA.name} or ${charB.name}?`;
+      if (charA.height > charB.height) {
+        answerIndex = idxA;
+        explanationText = `${charA.name} stands at ${Math.round(charA.height / 30)} units, while ${charB.name} stands at ${Math.round(charB.height / 30)} units. Therefore, ${charA.name} is taller.`;
+      } else {
+        answerIndex = idxB;
+        explanationText = `${charB.name} stands at ${Math.round(charB.height / 30)} units, while ${charA.name} stands at ${Math.round(charA.height / 30)} units. Therefore, ${charB.name} is taller.`;
+      }
+    }
+
+    let gridLinesSvg = "";
+    for (let x = 100; x < CW; x += 100) {
+      gridLinesSvg += `    <line x1="${x}" y1="50" x2="${x}" y2="${groundY}" stroke="#bae6fd" stroke-width="1" stroke-dasharray="3,3" />\n`;
+    }
+    let rulerLabelsSvg = "";
+    for (let y = groundY; y >= 80; y -= 30) {
+      const units = (groundY - y) / 30;
+      gridLinesSvg += `    <line x1="60" y1="${y}" x2="${CW - 40}" y2="${y}" stroke="#bae6fd" stroke-width="1" stroke-dasharray="3,3" />\n`;
+      gridLinesSvg += `    <line x1="50" y1="${y}" x2="60" y2="${y}" stroke="#0369a1" stroke-width="2" />\n`;
+      rulerLabelsSvg += `    <text x="38" y="${y + 4}" font-family="sans-serif" font-size="12" font-weight="700" fill="#0369a1" text-anchor="end">${units}</text>\n`;
+    }
+
+    const groundFloorSvg = `
+      <rect x="0" y="${groundY}" width="${CW}" height="${CH - groundY}" fill="#bae6fd" />
+      <line x1="0" y1="${groundY}" x2="${CW}" y2="${groundY}" stroke="#0284c7" stroke-width="4" />
+      <rect x="0" y="${groundY + 4}" width="${CW}" height="${CH - groundY - 4}" fill="#f0f9ff" opacity="0.9" />
+    `;
+
+    let charsSvg = "";
+    const hotspots = characters.map((c, i) => {
+      charsSvg += `
+        <g>
+          <image href="${c.imgUrl}" x="${c.cx - c.height / 2}" y="${c.y}" width="${c.height}" height="${c.height}" preserveAspectRatio="xMidYMax meet" />
+          <rect x="${c.cx - 35}" y="${groundY + 15}" width="70" height="22" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" />
+          <text x="${c.cx}" y="${groundY + 30}" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">${c.name}</text>
+        </g>
+      `;
+
+      const paddingX = Math.round(c.width / 2) + 12;
+      const paddingY = Math.round(c.height / 2) + 18;
+      return {
+        optionIndex: i,
+        x: Math.round(c.cx - paddingX),
+        y: Math.round(c.cy - paddingY + 8),
+        width: Math.round(paddingX * 2),
+        height: Math.round(paddingY * 2),
+        label: c.name,
+        isCircle: false
+      };
+    });
+
+    const backgroundSvg = `<svg width="${CW}" height="${CH}" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f0f9ff" />
+          <stop offset="100%" stop-color="#bae6fd" />
+        </linearGradient>
+      </defs>
+
+      <rect width="${CW}" height="${CH}" fill="url(#skyGrad)" />
+${gridLinesSvg}
+      <line x1="60" y1="50" x2="60" y2="${groundY}" stroke="#0369a1" stroke-width="3" />
+${rulerLabelsSvg}
+${groundFloorSvg}
+${charsSvg}
+    </svg>`;
+
+    return {
+      type: 'mcq',
+      interaction: 'hotspot_select',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        {
+          type: 'hotspot_canvas',
+          backgroundSvg,
+          canvasWidth: CW,
+          canvasHeight: CH,
+          hotspots,
+        },
+      ],
+      options: characters.map(c => ({
+        id: c.name.toLowerCase(),
+        label: c.name
+      })),
+      answer: characters[answerIndex].name.toLowerCase(),
+      correctAnswerIndex: answerIndex,
+      solution: {
+        sections: [
+          { type: 'text', content: explanationText }
+        ]
+      }
+    };
+  }
+
   const PLANETS = [
     { id: 'mercury', label: 'Mercury', cx: 73,  cy: 197, r: 8,  desc: 'the smallest planet and closest to the Sun' },
     { id: 'venus',   label: 'Venus',   cx: 142, cy: 206, r: 13, desc: 'the second planet from the Sun, bright and yellow' },
@@ -31,7 +246,7 @@ export function generateSolarSystemQuestion(config, params) {
   const targetPlanet = PLANETS[targetIndex];
 
   const CW = 800;
-  const CH = 450;
+  const CH = 465;
 
   // Starfield background
   const starsCount = 60;
@@ -56,7 +271,8 @@ export function generateSolarSystemQuestion(config, params) {
       y: Math.round(planet.cy - paddingY),
       width: Math.round(paddingX * 2),
       height: Math.round(paddingY * 2),
-      label: planet.label
+      label: planet.label,
+      isCircle: true
     };
   });
 
