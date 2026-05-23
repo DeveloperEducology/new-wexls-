@@ -417,6 +417,12 @@ export default function AdminConsolePage() {
   const [selectedTargetId, setSelectedTargetId] = useState(null);
   const [dragging, setDragging] = useState(null);
 
+  // Hotspot MCQ states
+  const [hotspots, setHotspots] = useState([]);
+  const [selectedHotspotId, setSelectedHotspotId] = useState(null);
+  const [backgroundSvg, setBackgroundSvg] = useState('');
+
+
 
   // Preview Answer checking state
   const [previewAnswer, setPreviewAnswer] = useState(null);
@@ -1376,8 +1382,10 @@ export default function AdminConsolePage() {
   };
 
   const handleCanvasClick = (e) => {
-    // Only trigger if clicking directly on canvas or the background image, not on child boxes or pins
-    if (e.target !== canvasRef.current && e.target.tagName !== 'IMG') return;
+    // Only trigger if clicking directly on canvas, the background image, or the SVG background wrapper
+    if (e.target !== canvasRef.current && e.target.tagName !== 'IMG' && !canvasRef.current.contains(e.target)) return;
+    // Don't trigger if clicked on an existing box inside the canvas
+    if (e.target.closest('[style*="position: absolute"]')) return;
     if (!canvasRef.current) return;
     
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -1387,6 +1395,32 @@ export default function AdminConsolePage() {
     const xPct = parseFloat(((clickX / canvasRect.width) * 100).toFixed(2));
     const yPct = parseFloat(((clickY / canvasRect.height) * 100).toFixed(2));
     
+    if (type === 'mcq_hotspot') {
+      const newId = `hs_${Date.now()}`;
+      const nextNum = (hotspots || []).length + 1;
+      
+      const newX = Math.max(0, Math.min(85, xPct - 7.5));
+      const newY = Math.max(0, Math.min(92, yPct - 4));
+      
+      const newHotspot = {
+        id: newId,
+        label: `Hotspot ${nextNum}`,
+        x: newX,
+        y: newY,
+        width: 15,
+        height: 8,
+        isCircle: false,
+        isCorrect: (hotspots || []).length === 0
+      };
+      
+      const nextHotspots = [...(hotspots || []), newHotspot];
+      syncHotspotsToOptions(nextHotspots);
+      setSelectedHotspotId(newId);
+      setIsDirty(true);
+      return;
+    }
+    
+    // Default diagram labeling logic
     const newId = `target_${Date.now()}`;
     const nextNum = (targets || []).length + 1;
     
@@ -1541,6 +1575,77 @@ export default function AdminConsolePage() {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch (err) {}
     setDragging(null);
+    setIsDirty(true);
+  };
+
+  const syncHotspotsToOptions = (nextHotspots) => {
+    setHotspots(nextHotspots);
+    setOptions(nextHotspots.map(hs => ({
+      label: hs.label,
+      isCorrect: hs.isCorrect
+    })));
+  };
+
+  const handleHotspotPointerDown = (e, hsId) => {
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const boxRect = e.currentTarget.getBoundingClientRect();
+    setDragging({
+      id: hsId,
+      type: 'hotspot_box',
+      offsetX: e.clientX - boxRect.left,
+      offsetY: e.clientY - boxRect.top
+    });
+    setSelectedHotspotId(hsId);
+  };
+
+  const handleHotspotPointerMove = (e, hsId) => {
+    if (!dragging || dragging.id !== hsId || dragging.type !== 'hotspot_box') return;
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    const activeHs = (hotspots || []).find(h => h.id === hsId);
+    const boxWidth = activeHs ? (activeHs.width || 15) : 15;
+    const boxHeight = activeHs ? (activeHs.height || 8) : 8;
+
+    let xPx = e.clientX - dragging.offsetX - canvasRect.left;
+    let yPx = e.clientY - dragging.offsetY - canvasRect.top;
+    
+    let xPct = Math.max(0, Math.min(100 - boxWidth, (xPx / canvasRect.width) * 100));
+    let yPct = Math.max(0, Math.min(100 - boxHeight, (yPx / canvasRect.height) * 100));
+    
+    xPct = parseFloat(xPct.toFixed(2));
+    yPct = parseFloat(yPct.toFixed(2));
+    
+    const updated = (hotspots || []).map(h => {
+      if (h.id === hsId) {
+        return { ...h, x: xPct, y: yPct };
+      }
+      return h;
+    });
+    syncHotspotsToOptions(updated);
+  };
+
+  const handleHotspotPointerUp = (e, hsId) => {
+    e.stopPropagation();
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+    setDragging(null);
+    setIsDirty(true);
+  };
+
+  const handleUpdateHotspotDimension = (hsId, field, val) => {
+    const num = parseFloat(val) || 0;
+    const updated = (hotspots || []).map(h => {
+      if (h.id === hsId) {
+        return { ...h, [field]: num };
+      }
+      return h;
+    });
+    syncHotspotsToOptions(updated);
     setIsDirty(true);
   };
 
@@ -1865,6 +1970,42 @@ export default function AdminConsolePage() {
     const extractedHideItemLabels = Boolean(q.hideItemLabels || q.behavior?.hideItemLabels);
     setCardStyle(extractedCardStyle);
     setHideItemLabels(extractedHideItemLabels);
+
+    // Reconstruct MCQ hotspot select variables
+    if (q.interaction === 'hotspot_select' || q.layoutMode === 'height_comparison' || q.layoutMode === 'mcq_hotspot') {
+      setType('mcq_hotspot');
+      const hotspotPart = q.parts?.find(p => p.type === 'hotspot_canvas');
+      const canvasW = hotspotPart?.canvasWidth || 800;
+      const canvasH = hotspotPart?.canvasHeight || 465;
+      
+      const loadedBgImage = q.backgroundImage || hotspotPart?.backgroundUrl || '';
+      const loadedBgSvg = hotspotPart?.backgroundSvg || '';
+      setBackgroundImage(loadedBgImage);
+      setBackgroundSvg(loadedBgSvg);
+      
+      const rawHotspots = q.hotspots || q.metadata?.hotspots;
+      if (rawHotspots && Array.isArray(rawHotspots)) {
+        setHotspots(rawHotspots);
+      } else if (hotspotPart?.hotspots && Array.isArray(hotspotPart.hotspots)) {
+        const correctIdx = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.answer;
+        const loadedHotspots = hotspotPart.hotspots.map((hs, idx) => ({
+          id: `hs_${idx}_${Date.now()}`,
+          label: hs.label || `Hotspot ${idx + 1}`,
+          x: parseFloat(((hs.x / canvasW) * 100).toFixed(2)),
+          y: parseFloat(((hs.y / canvasH) * 100).toFixed(2)),
+          width: parseFloat(((hs.width / canvasW) * 100).toFixed(2)),
+          height: parseFloat(((hs.height / canvasH) * 100).toFixed(2)),
+          isCircle: Boolean(hs.isCircle),
+          isCorrect: idx === correctIdx
+        }));
+        setHotspots(loadedHotspots);
+      } else {
+        setHotspots([]);
+      }
+    } else {
+      setHotspots([]);
+      setBackgroundSvg('');
+    }
 
     // Extract parts or default to first question text part
     if (loadedParts.length > 0) {
@@ -2602,7 +2743,48 @@ export default function AdminConsolePage() {
       payload.solution = { sections: [] };
     }
 
-    if (type === 'mcq') {
+    if (type === 'mcq_hotspot') {
+      payload.type = 'mcq';
+      payload.interaction = 'hotspot_select';
+      
+      const canvasW = canvas?.width || 800;
+      const canvasH = canvas?.height || 465;
+      
+      const serializedHotspots = hotspots.map((hs, idx) => ({
+        optionIndex: idx,
+        x: Math.round((hs.x / 100) * canvasW),
+        y: Math.round((hs.y / 100) * canvasH),
+        width: Math.round((hs.width / 100) * canvasW),
+        height: Math.round((hs.height / 100) * canvasH),
+        label: hs.label,
+        isCircle: hs.isCircle
+      }));
+      
+      payload.options = hotspots.map((hs, idx) => ({
+        id: `opt_${idx}`,
+        label: hs.label.trim(),
+      }));
+      
+      const correctIdx = hotspots.findIndex(hs => hs.isCorrect);
+      payload.correctAnswerIndex = correctIdx;
+      payload.answer = correctIdx;
+      
+      payload.hotspots = hotspots;
+      payload.metadata.hotspots = hotspots;
+      payload.metadata.layoutMode = 'mcq_hotspot';
+      payload.layoutMode = 'mcq_hotspot';
+      
+      const hotspotPart = {
+        type: 'hotspot_canvas',
+        canvasWidth: canvasW,
+        canvasHeight: canvasH,
+        hotspots: serializedHotspots
+      };
+      if (backgroundImage) hotspotPart.backgroundUrl = backgroundImage;
+      if (backgroundSvg) hotspotPart.backgroundSvg = backgroundSvg;
+      
+      payload.parts = [...parts.map(p => ({ ...p })), hotspotPart];
+    } else if (type === 'mcq') {
       payload.options = options.map((opt, idx) => ({
         id: `opt_${idx}`,
         label: opt.label.trim(),
@@ -2808,6 +2990,25 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: 'Validation Error: Please select one option as the Correct Answer.' });
         return;
       }
+    } else if (type === 'mcq_hotspot') {
+      if (hotspots.length < 2) {
+        setAlert({ type: 'error', text: 'Validation Error: Hotspot MCQ must have at least 2 hotspots.' });
+        return;
+      }
+      const hasEmptyLabel = hotspots.some(hs => !hs.label.trim());
+      if (hasEmptyLabel) {
+        setAlert({ type: 'error', text: 'Validation Error: All hotspots must have label/option text.' });
+        return;
+      }
+      if (!backgroundImage.trim() && !backgroundSvg.trim()) {
+        setAlert({ type: 'error', text: 'Validation Error: Either Background Image URL or Background SVG Code must be provided.' });
+        return;
+      }
+      const correctIndex = hotspots.findIndex(hs => hs.isCorrect);
+      if (correctIndex === -1) {
+        setAlert({ type: 'error', text: 'Validation Error: Please select one hotspot as the Correct Answer.' });
+        return;
+      }
     } else if (type === 'categorizationv2' || type === 'categorization') {
       if (categories.length < 1) {
         setAlert({ type: 'error', text: 'Validation Error: Categorization questions must have at least 1 category.' });
@@ -2974,7 +3175,9 @@ export default function AdminConsolePage() {
       JSON.stringify(behavior),
       JSON.stringify(sourceTray),
       cardStyle,
-      hideItemLabels
+      hideItemLabels,
+      JSON.stringify(hotspots),
+      backgroundSvg
     ].join('|');
     
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
@@ -3028,6 +3231,50 @@ export default function AdminConsolePage() {
       ];
     }
     
+    if (type === 'mcq_hotspot') {
+      const canvasW = canvas?.width || 800;
+      const canvasH = canvas?.height || 465;
+      
+      const serializedHotspots = hotspots.map((hs, idx) => ({
+        optionIndex: idx,
+        x: Math.round((hs.x / 100) * canvasW),
+        y: Math.round((hs.y / 100) * canvasH),
+        width: Math.round((hs.width / 100) * canvasW),
+        height: Math.round((hs.height / 100) * canvasH),
+        label: hs.label,
+        isCircle: hs.isCircle
+      }));
+
+      const mockPartsHotspot = [
+        ...baseParts,
+        {
+          type: 'hotspot_canvas',
+          backgroundUrl: backgroundImage || undefined,
+          backgroundSvg: backgroundSvg || undefined,
+          canvasWidth: canvasW,
+          canvasHeight: canvasH,
+          hotspots: serializedHotspots
+        }
+      ];
+
+      return {
+        id: uniqueId,
+        type: 'mcq',
+        interaction: 'hotspot_select',
+        questionText: questionText.trim(),
+        parts: mockPartsHotspot,
+        audioUrl,
+        voice,
+        options: hotspots.map((hs, idx) => ({ id: `opt_${idx}`, label: hs.label })),
+        answer: hotspots.findIndex(hs => hs.isCorrect),
+        correctAnswerIndex: hotspots.findIndex(hs => hs.isCorrect),
+        solution: {
+          sections: explanation.trim() ? explanation.trim().split('\n').map(line => ({ type: 'text', content: line })) : []
+        },
+        metaConfig: { readable, readOptions }
+      };
+    }
+
     return {
       id: uniqueId,
       type,
@@ -3073,7 +3320,9 @@ export default function AdminConsolePage() {
     behavior,
     sourceTray,
     cardStyle,
-    hideItemLabels
+    hideItemLabels,
+    hotspots,
+    backgroundSvg
   ]);
 
   const handleCheckAnswer = () => {
@@ -4238,6 +4487,7 @@ export default function AdminConsolePage() {
                               }}
                             >
                               <option value="mcq">Multiple Choice Question (MCQ)</option>
+                              <option value="mcq_hotspot">Multiple Choice (Hotspot Select)</option>
                               <option value="fillInTheBlank">Fill-In-The-Blank (FIB)</option>
                               <option value="trueOrFalse">True / False</option>
                               <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
@@ -4324,6 +4574,317 @@ export default function AdminConsolePage() {
                                   + Add Option Row
                                 </button>
                               )}
+                            </div>
+                          )}
+
+                          {type === 'mcq_hotspot' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                              {/* Background Options */}
+                              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
+                                <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
+                                  <label className={styles.filterLabel}>Canvas Background Image URL</label>
+                                  <input
+                                    type="text"
+                                    className={styles.formInput}
+                                    value={backgroundImage || ''}
+                                    onChange={(e) => {
+                                      setBackgroundImage(e.target.value);
+                                      ignoreDirtyChange.current = false;
+                                      setIsDirty(true);
+                                    }}
+                                    placeholder="https://example.com/diagram.png"
+                                    style={{ marginTop: 6 }}
+                                  />
+                                </div>
+                                <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
+                                  <label className={styles.filterLabel}>Or Custom Background SVG Code</label>
+                                  <textarea
+                                    className={styles.formInput}
+                                    value={backgroundSvg || ''}
+                                    onChange={(e) => {
+                                      setBackgroundSvg(e.target.value);
+                                      ignoreDirtyChange.current = false;
+                                      setIsDirty(true);
+                                    }}
+                                    placeholder="<svg>...</svg>"
+                                    rows={1}
+                                    style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
+                                  />
+                                </div>
+                                <div className={styles.formGroup} style={{ width: 140 }}>
+                                  <label className={styles.filterLabel}>Canvas Width (px)</label>
+                                  <input
+                                    type="number"
+                                    className={styles.formInput}
+                                    value={canvas?.width || 800}
+                                    onChange={(e) => {
+                                      const w = parseInt(e.target.value, 10) || 800;
+                                      setCanvas(prev => ({ ...(prev || {}), width: w }));
+                                      setIsDirty(true);
+                                    }}
+                                    placeholder="800"
+                                    min={300}
+                                    max={1600}
+                                    style={{ marginTop: 6 }}
+                                  />
+                                </div>
+                                <div className={styles.formGroup} style={{ width: 140 }}>
+                                  <label className={styles.filterLabel}>Canvas Height (px)</label>
+                                  <input
+                                    type="number"
+                                    className={styles.formInput}
+                                    value={canvas?.height || 465}
+                                    onChange={(e) => {
+                                      const h = parseInt(e.target.value, 10) || 465;
+                                      setCanvas(prev => ({ ...(prev || {}), height: h }));
+                                      setIsDirty(true);
+                                    }}
+                                    placeholder="465"
+                                    min={200}
+                                    max={1200}
+                                    style={{ marginTop: 6 }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Interactive Canvas Editor for MCQ Hotspots */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>
+                                  Interactive Hotspots Canvas
+                                </label>
+                                <span style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 8 }}>
+                                  Click on the canvas to add a new option hotspot. Drag boxes to position, and resize or rename using controls.
+                                </span>
+                                
+                                <div
+                                  ref={canvasRef}
+                                  onClick={handleCanvasClick}
+                                  style={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    maxWidth: canvas?.width ? `${canvas.width}px` : '800px',
+                                    aspectRatio: backgroundImage || backgroundSvg ? 'auto' : '16/9',
+                                    minHeight: backgroundImage || backgroundSvg ? 'auto' : '300px',
+                                    backgroundColor: '#f8fafc',
+                                    backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+                                    backgroundSize: '16px 16px',
+                                    border: '2px dashed #cbd5e1',
+                                    borderRadius: 8,
+                                    overflow: 'hidden',
+                                    cursor: 'crosshair',
+                                    userSelect: 'none'
+                                  }}
+                                >
+                                  {/* Custom SVG Background */}
+                                  {backgroundSvg && (
+                                    <div 
+                                      style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }}
+                                      dangerouslySetInnerHTML={{ __html: backgroundSvg }}
+                                    />
+                                  )}
+
+                                  {/* Custom Image Background */}
+                                  {!backgroundSvg && backgroundImage && (
+                                    <img
+                                      src={backgroundImage}
+                                      alt="Diagram Background"
+                                      style={{
+                                        width: '100%',
+                                        height: 'auto',
+                                        display: 'block',
+                                        pointerEvents: 'none',
+                                        userSelect: 'none'
+                                      }}
+                                    />
+                                  )}
+
+                                  {/* Empty state */}
+                                  {!backgroundSvg && !backgroundImage && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      inset: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#94a3b8',
+                                      fontSize: 14,
+                                      fontWeight: 500
+                                    }}>
+                                      Please enter an image URL, upload an image, or paste SVG code above to start.
+                                    </div>
+                                  )}
+
+                                  {/* Hotspot boxes */}
+                                  {(hotspots || []).map((hs, i) => {
+                                    const isSelected = selectedHotspotId === hs.id;
+                                    return (
+                                      <div
+                                        key={hs.id}
+                                        onPointerDown={(e) => handleHotspotPointerDown(e, hs.id)}
+                                        onPointerMove={(e) => handleHotspotPointerMove(e, hs.id)}
+                                        onPointerUp={(e) => handleHotspotPointerUp(e, hs.id)}
+                                        style={{
+                                          position: 'absolute',
+                                          left: `${hs.x}%`,
+                                          top: `${hs.y}%`,
+                                          width: `${hs.width}%`,
+                                          height: `${hs.height}%`,
+                                          border: isSelected ? '2.5px solid #0284c7' : '1.5px dashed #0284c7',
+                                          backgroundColor: hs.isCorrect 
+                                            ? (isSelected ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.08)')
+                                            : (isSelected ? 'rgba(2, 132, 199, 0.12)' : 'rgba(255, 255, 255, 0.75)'),
+                                          borderRadius: hs.isCircle ? '50%' : '8px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color: hs.isCorrect ? '#16a34a' : '#0369a1',
+                                          cursor: 'move',
+                                          boxShadow: '0 2px 6px rgba(15, 23, 42, 0.08)',
+                                          zIndex: isSelected ? 12 : 10,
+                                          padding: '4px',
+                                          textAlign: 'center',
+                                          boxSizing: 'border-box',
+                                          userSelect: 'none',
+                                          touchAction: 'none'
+                                        }}
+                                      >
+                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                                          {hs.isCorrect ? '✅ ' : ''}{hs.label || '(Empty Hotspot)'}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Selected Hotspot Properties Editor */}
+                              {(hotspots || []).some(h => h.id === selectedHotspotId) && (() => {
+                                const activeHs = hotspots.find(h => h.id === selectedHotspotId);
+                                return (
+                                  <div style={{
+                                    padding: 16,
+                                    border: '1.5px solid #bae6fd',
+                                    borderRadius: 8,
+                                    background: '#f0f9ff',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 12
+                                  }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e0f2fe', paddingBottom: 8 }}>
+                                      <span style={{ fontSize: 13, fontWeight: 800, color: '#0369a1' }}>
+                                        Edit Hotspot Option: {activeHs.label}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                        onClick={() => {
+                                          const updated = hotspots.filter(h => h.id !== activeHs.id);
+                                          // Ensure at least one correct option if we deleted the correct one
+                                          if (activeHs.isCorrect && updated.length > 0) {
+                                            updated[0].isCorrect = true;
+                                          }
+                                          syncHotspotsToOptions(updated);
+                                          setSelectedHotspotId(null);
+                                        }}
+                                        style={{ padding: '4px 10px', fontSize: 11 }}
+                                      >
+                                        × Delete Hotspot
+                                      </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 11 }}>Option / Label Text</label>
+                                        <input
+                                          type="text"
+                                          className={styles.formInput}
+                                          value={activeHs.label || ''}
+                                          onChange={(e) => {
+                                            const updated = hotspots.map(h => h.id === activeHs.id ? { ...h, label: e.target.value } : h);
+                                            syncHotspotsToOptions(updated);
+                                          }}
+                                          placeholder="e.g. Earth"
+                                          style={{ marginTop: 4, fontSize: 12 }}
+                                        />
+                                      </div>
+
+                                      <div className={styles.formGroup} style={{ display: 'flex', flexDirection: 'row', gap: 20, alignItems: 'center', marginTop: 16 }}>
+                                        <label className={styles.checkboxLabel}>
+                                          <input
+                                            type="radio"
+                                            name="correctHotspotRadio"
+                                            className={styles.radioInput}
+                                            checked={activeHs.isCorrect}
+                                            onChange={() => {
+                                              const updated = hotspots.map(h => ({ ...h, isCorrect: h.id === activeHs.id }));
+                                              syncHotspotsToOptions(updated);
+                                            }}
+                                          />
+                                          Correct Answer
+                                        </label>
+
+                                        <label className={styles.checkboxLabel}>
+                                          <input
+                                            type="checkbox"
+                                            className={styles.checkboxInput}
+                                            checked={activeHs.isCircle}
+                                            onChange={(e) => {
+                                              const updated = hotspots.map(h => h.id === activeHs.id ? { ...h, isCircle: e.target.checked } : h);
+                                              syncHotspotsToOptions(updated);
+                                            }}
+                                          />
+                                          Circular Highlight
+                                        </label>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, borderTop: '1px solid #e0f2fe', paddingTop: 10 }}>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 10 }}>Box X (%)</label>
+                                        <input
+                                          type="number"
+                                          className={styles.formInput}
+                                          value={activeHs.x}
+                                          onChange={(e) => handleUpdateHotspotDimension(activeHs.id, 'x', e.target.value)}
+                                          style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                        />
+                                      </div>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 10 }}>Box Y (%)</label>
+                                        <input
+                                          type="number"
+                                          className={styles.formInput}
+                                          value={activeHs.y}
+                                          onChange={(e) => handleUpdateHotspotDimension(activeHs.id, 'y', e.target.value)}
+                                          style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                        />
+                                      </div>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 10 }}>Width (%)</label>
+                                        <input
+                                          type="number"
+                                          className={styles.formInput}
+                                          value={activeHs.width}
+                                          onChange={(e) => handleUpdateHotspotDimension(activeHs.id, 'width', e.target.value)}
+                                          style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                        />
+                                      </div>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 10 }}>Height (%)</label>
+                                        <input
+                                          type="number"
+                                          className={styles.formInput}
+                                          value={activeHs.height}
+                                          onChange={(e) => handleUpdateHotspotDimension(activeHs.id, 'height', e.target.value)}
+                                          style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
 
@@ -4987,7 +5548,7 @@ export default function AdminConsolePage() {
                             }
                           })()}
 
-                          {type !== 'mcq' && type !== 'categorizationv2' && type !== 'categorization' && type !== 'fillInTheBlank' && (
+                          {type !== 'mcq' && type !== 'mcq_hotspot' && type !== 'categorizationv2' && type !== 'categorization' && type !== 'fillInTheBlank' && (
                             <div className={styles.formGroup}>
                               <label className={styles.filterLabel}>Correct Answer Phrase</label>
                               <input 
