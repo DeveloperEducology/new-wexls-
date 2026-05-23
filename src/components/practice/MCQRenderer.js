@@ -329,7 +329,7 @@ export default function MCQRenderer({
         </div>
       ) : null}
 
-      {question.layoutConfig?.variant === 'capsule' ? (
+      {question.interaction === 'interactive_svg' ? null : question.layoutConfig?.variant === 'capsule' ? (
         <div 
           style={{
             display: 'flex',

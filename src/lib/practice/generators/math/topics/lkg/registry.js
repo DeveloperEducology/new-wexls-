@@ -52,7 +52,8 @@ export const lkgMicroSkillRegistry = {
   'lkg-compare-counting': { templateId: 'lkg.comparing', code: 'E.4', title: 'Fewer and more - compare by counting', grade: 'LKG', params: { subType: 'counting' } },
   'lkg-compare-mixed': { templateId: 'lkg.comparing', code: 'E.5', title: 'Compare in a mixed group', grade: 'LKG', params: { subType: 'mixed' } },
 
-  // Category F: Positions (F.1 - F.7)
+  // Category F: Positions (F.0 demo + F.1 - F.7)
+  'lkg-position-interactive-demo': { templateId: 'lkg.positions', code: 'F.0', title: 'Interactive SVG Demo (left/right with real animals)', grade: 'LKG', params: { subType: 'interactive_demo' } },
   'lkg-position-inside-outside': { templateId: 'lkg.positions', code: 'F.1', title: 'Inside and outside', grade: 'LKG', params: { subType: 'inside_outside' } },
   'lkg-position-above-below': { templateId: 'lkg.positions', code: 'F.2', title: 'Above and below', grade: 'LKG', params: { subType: 'above_below' } },
   'lkg-position-beside-next': { templateId: 'lkg.positions', code: 'F.3', title: 'Beside and next to', grade: 'LKG', params: { subType: 'beside_next' } },

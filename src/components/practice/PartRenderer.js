@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import CategorizationRenderer from './CategorizationRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
@@ -2039,7 +2039,59 @@ const PART_RENDERERS = {
   fraction: FractionPart,
   interactive_counting: InteractiveCountingPart,
   side_by_side_display: SideBySideDisplayPart,
+  interactive_svg: InteractiveSvgPart,
 };
+
+function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }) {
+  const containerRef = useRef(null);
+  const selectedIndex = typeof userAnswer === 'object'
+    ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
+    : Number(userAnswer);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const elements = containerRef.current.querySelectorAll('[data-option-index]');
+    elements.forEach((el) => {
+      const idx = Number(el.getAttribute('data-option-index'));
+      if (idx === selectedIndex) {
+        el.classList.add('interactive-hotspot-selected');
+      } else {
+        el.classList.remove('interactive-hotspot-selected');
+      }
+      
+      if (isAnswered) {
+        el.style.pointerEvents = 'none';
+      } else {
+        el.style.pointerEvents = 'auto';
+      }
+    });
+  }, [selectedIndex, isAnswered]);
+
+  const handleClick = (e) => {
+    if (isAnswered) return;
+    const target = e.target.closest('[data-option-index]');
+    if (target) {
+      const idx = Number(target.getAttribute('data-option-index'));
+      onAnswer(idx);
+      
+      // Optionally speak option label on select
+      if (question.options?.[idx]) {
+        const option = question.options[idx];
+        const label = option.label || option.text || '';
+        speakText(label, question.voice || 'Puck', option.audioUrl);
+      }
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={handleClick}
+      className={styles.interactiveSvgContainer}
+      dangerouslySetInnerHTML={{ __html: part.content }}
+    />
+  );
+}
 
 export default function PartRenderer({
   part,

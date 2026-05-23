@@ -1,5 +1,28 @@
 import { lkgCountingObjects, lkgSizeImageAssets } from './assets.js';
 import { lkgMicroSkillRegistry } from './registry.js';
+import fs from 'fs';
+import path from 'path';
+
+// Helper to load and embed local SVG files as nested SVGs with precise tap highlight zones
+function loadNestedSvg(filename, x, y, width, height, optionIndex) {
+  try {
+    const filePath = path.join(process.cwd(), 'public/images', filename);
+    const rawContent = fs.readFileSync(filePath, 'utf8');
+    
+    // Extract the inner content of the SVG
+    const innerContentMatch = rawContent.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+    if (!innerContentMatch) return '';
+    const innerContent = innerContentMatch[1];
+    
+    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="0 0 1024 1024" class="interactive-hotspot" data-option-index="${optionIndex}">
+      <rect class="hotspot-highlight" x="20" y="20" width="984" height="984" rx="80" fill="none" stroke="transparent" stroke-width="25"/>
+      ${innerContent}
+    </svg>`;
+  } catch (err) {
+    console.error(`Failed to load nested SVG: ${filename}`, err);
+    return '';
+  }
+}
 
 // Seeded random number generator
 function getSeededRandom(seed) {
@@ -96,68 +119,117 @@ const buildTenFrameSvg = (count) => {
 };
 
 // SVG loaders for Positions engine
+// SVG loaders for Positions engine (Interactive SVG mode)
 const buildInsideOutsideSvg = (insideEmoji = '🐱', outsideEmoji = '🐶') => {
-  return `<svg width="240" height="120" viewBox="0 0 240 120">
-    <rect x="20" y="30" width="80" height="70" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="4"/>
-    <text x="36" y="76" font-size="36">${insideEmoji}</text>
-    <text x="140" y="76" font-size="36">${outsideEmoji}</text>
-    <text x="30" y="20" font-size="12" font-weight="bold" fill="#64748b">INSIDE</text>
-    <text x="135" y="20" font-size="12" font-weight="bold" fill="#64748b">OUTSIDE</text>
+  return `<svg width="240" height="130" viewBox="0 0 240 130">
+    <rect x="20" y="25" width="90" height="85" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="4" rx="8"/>
+    <text x="65" y="18" font-size="11" font-weight="bold" fill="#64748b" text-anchor="middle">INSIDE</text>
+    <text x="175" y="18" font-size="11" font-weight="bold" fill="#64748b" text-anchor="middle">OUTSIDE</text>
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="25" y="30" width="80" height="75" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="65" y="72" font-size="38" text-anchor="middle" dominant-baseline="central">${insideEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="135" y="30" width="80" height="75" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="175" y="72" font-size="38" text-anchor="middle" dominant-baseline="central">${outsideEmoji}</text>
+    </g>
   </svg>`;
 };
 
 const buildAboveBelowSvg = (aboveEmoji = '🍎', belowEmoji = '🍌') => {
-  return `<svg width="240" height="120" viewBox="0 0 240 120">
-    <line x1="20" y1="60" x2="220" y2="60" stroke="#0f172a" stroke-width="4"/>
-    <text x="100" y="46" font-size="36">${aboveEmoji}</text>
-    <text x="100" y="106" font-size="36">${belowEmoji}</text>
+  return `<svg width="240" height="150" viewBox="0 0 240 150">
+    <line x1="20" y1="75" x2="220" y2="75" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="80" y="10" width="80" height="50" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="120" y="47" font-size="38" text-anchor="middle" dominant-baseline="central">${aboveEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="80" y="90" width="80" height="50" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="120" y="127" font-size="38" text-anchor="middle" dominant-baseline="central">${belowEmoji}</text>
+    </g>
   </svg>`;
 };
 
 const buildBesideNextSvg = (centerEmoji = '🌲', besideEmoji = '🐰', farEmoji = '🦊', isCenterLeft = true) => {
-  const centerX = isCenterLeft ? 40 : 180;
-  const besideX = 110;
-  const farX = isCenterLeft ? 180 : 40;
-  return `<svg width="240" height="120" viewBox="0 0 240 120">
-    <text x="${centerX}" y="80" font-size="50">${centerEmoji}</text>
-    <text x="${besideX}" y="80" font-size="36">${besideEmoji}</text>
-    <text x="${farX}" y="80" font-size="36">${farEmoji}</text>
+  const centerX = isCenterLeft ? 45 : 195;
+  const besideX = 120;
+  const farX = isCenterLeft ? 195 : 45;
+  return `<svg width="240" height="130" viewBox="0 0 240 130">
+    <text x="${centerX}" y="70" font-size="52" text-anchor="middle" dominant-baseline="central">${centerEmoji}</text>
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="${besideX - 35}" y="25" width="70" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="${besideX}" y="70" font-size="38" text-anchor="middle" dominant-baseline="central">${besideEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="${farX - 35}" y="25" width="70" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="${farX}" y="70" font-size="38" text-anchor="middle" dominant-baseline="central">${farEmoji}</text>
+    </g>
   </svg>`;
 };
 
 const buildLeftRightSvg = (leftEmoji = '🍎', rightEmoji = '🍓') => {
-  return `<svg width="240" height="100" viewBox="0 0 240 100">
-    <text x="40" y="66" font-size="36">${leftEmoji}</text>
-    <text x="160" y="66" font-size="36">${rightEmoji}</text>
-    <line x1="120" y1="10" x2="120" y2="90" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4"/>
+  return `<svg width="240" height="130" viewBox="0 0 240 130">
+    <line x1="120" y1="15" x2="120" y2="115" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="4"/>
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="20" y="25" width="80" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="60" y="70" font-size="38" text-anchor="middle" dominant-baseline="central">${leftEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="140" y="25" width="80" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="180" y="70" font-size="38" text-anchor="middle" dominant-baseline="central">${rightEmoji}</text>
+    </g>
   </svg>`;
 };
 
 const buildLeftMiddleRightSvg = (leftEmoji = '🍇', middleEmoji = '🍊', rightEmoji = '🍐') => {
-  return `<svg width="240" height="100" viewBox="0 0 240 100">
-    <text x="30" y="66" font-size="36">${leftEmoji}</text>
-    <text x="100" y="66" font-size="36">${middleEmoji}</text>
-    <text x="170" y="66" font-size="36">${rightEmoji}</text>
+  return `<svg width="240" height="110" viewBox="0 0 240 110">
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="10" y="15" width="70" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="45" y="58" font-size="38" text-anchor="middle" dominant-baseline="central">${leftEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="85" y="15" width="70" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="120" y="58" font-size="38" text-anchor="middle" dominant-baseline="central">${middleEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="2">
+      <rect class="hotspot-highlight" x="160" y="15" width="70" height="80" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="195" y="58" font-size="38" text-anchor="middle" dominant-baseline="central">${rightEmoji}</text>
+    </g>
   </svg>`;
 };
 
 const buildTopBottomSvg = (topEmoji = '🐦', bottomEmoji = '🐱') => {
-  return `<svg width="240" height="140" viewBox="0 0 240 140">
-    <line x1="80" y1="10" x2="80" y2="130" stroke="#94a3b8" stroke-width="4"/>
-    <line x1="120" y1="10" x2="120" y2="130" stroke="#94a3b8" stroke-width="4"/>
+  return `<svg width="240" height="150" viewBox="0 0 240 150">
+    <line x1="80" y1="10" x2="80" y2="140" stroke="#94a3b8" stroke-width="4"/>
+    <line x1="120" y1="10" x2="120" y2="140" stroke="#94a3b8" stroke-width="4"/>
     <line x1="80" y1="35" x2="120" y2="35" stroke="#94a3b8" stroke-width="3"/>
-    <line x1="80" y1="65" x2="120" y2="65" stroke="#94a3b8" stroke-width="3"/>
-    <line x1="80" y1="95" x2="120" y2="95" stroke="#94a3b8" stroke-width="3"/>
-    <text x="90" y="30" font-size="32">${topEmoji}</text>
-    <text x="140" y="125" font-size="32">${bottomEmoji}</text>
+    <line x1="80" y1="75" x2="120" y2="75" stroke="#94a3b8" stroke-width="3"/>
+    <line x1="80" y1="115" x2="120" y2="115" stroke="#94a3b8" stroke-width="3"/>
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="135" y="10" width="75" height="55" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="172" y="38" font-size="34" text-anchor="middle" dominant-baseline="central">${topEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="135" y="85" width="75" height="55" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="172" y="113" font-size="34" text-anchor="middle" dominant-baseline="central">${bottomEmoji}</text>
+    </g>
   </svg>`;
 };
 
 const buildTopMiddleBottomSvg = (topEmoji = '🎈', middleEmoji = '⚽', bottomEmoji = '📦') => {
-  return `<svg width="240" height="150" viewBox="0 0 240 150">
-    <text x="100" y="40" font-size="32">${topEmoji}</text>
-    <text x="100" y="90" font-size="32">${middleEmoji}</text>
-    <text x="100" y="140" font-size="32">${bottomEmoji}</text>
+  return `<svg width="240" height="180" viewBox="0 0 240 180">
+    <g class="interactive-hotspot" data-option-index="0">
+      <rect class="hotspot-highlight" x="80" y="5" width="80" height="50" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="120" y="30" font-size="34" text-anchor="middle" dominant-baseline="central">${topEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="1">
+      <rect class="hotspot-highlight" x="80" y="65" width="80" height="50" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="120" y="90" font-size="34" text-anchor="middle" dominant-baseline="central">${middleEmoji}</text>
+    </g>
+    <g class="interactive-hotspot" data-option-index="2">
+      <rect class="hotspot-highlight" x="80" y="125" width="80" height="50" rx="12" fill="none" stroke="transparent" stroke-width="2.5" />
+      <text x="120" y="150" font-size="34" text-anchor="middle" dominant-baseline="central">${bottomEmoji}</text>
+    </g>
   </svg>`;
 };
 
@@ -524,6 +596,124 @@ function lkgComparingEngine(config, params, random) {
 function lkgPositionsEngine(config, params, random) {
   const subType = params.subType;
 
+  if (subType === 'interactive_demo') {
+    // ── All available image assets for interactive demo ──────────────────────────
+    // SVG files are embedded inline; PNG files are referenced via <image href>
+    const allAssets = [
+      { name: 'rabbit',    label: 'Rabbit',    emoji: '🐰', type: 'svg', file: 'rabbit.svg' },
+      { name: 'penguin',   label: 'Penguin',   emoji: '🐧', type: 'svg', file: 'penguin.svg' },
+      { name: 'duck',      label: 'Duck',      emoji: '🦆', type: 'png', url: '/images/lkg/duck.png' },
+      { name: 'frog',      label: 'Frog',      emoji: '🐸', type: 'png', url: '/images/lkg/frog.png' },
+      { name: 'butterfly', label: 'Butterfly', emoji: '🦋', type: 'png', url: '/images/lkg/butterfly.png' },
+      { name: 'hippo',     label: 'Hippo',     emoji: '🦛', type: 'png', url: '/images/lkg/hippo.png' },
+      { name: 'flower',    label: 'Flower',    emoji: '🌸', type: 'png', url: '/images/lkg/flower.png' },
+      { name: 'apple',     label: 'Apple',     emoji: '🍎', type: 'png', url: '/images/lkg/apple.png' },
+      { name: 'ball',      label: 'Ball',      emoji: '⚽', type: 'png', url: '/images/lkg/ball.png' },
+      { name: 'car',       label: 'Car',       emoji: '🚗', type: 'png', url: '/images/lkg/car.png' },
+    ];
+
+    // Pick 2 different assets
+    const idx1 = Math.floor(random() * allAssets.length);
+    let idx2 = Math.floor(random() * allAssets.length);
+    while (idx2 === idx1) idx2 = Math.floor(random() * allAssets.length);
+    const assetA = allAssets[idx1];
+    const assetB = allAssets[idx2];
+
+    // Render an asset as a clickable hotspot group at the given SVG coordinates
+    function renderHotspot(asset, x, y, w, h, optionIndex) {
+      if (asset.type === 'svg') {
+        return loadNestedSvg(asset.file, x, y, w, h, optionIndex);
+      }
+      // PNG: use SVG <image> element wrapped in a hotspot <g>
+      return `<g class="interactive-hotspot" data-option-index="${optionIndex}">
+        <rect class="hotspot-highlight" x="${x - 6}" y="${y - 6}" width="${w + 12}" height="${h + 12}" rx="18" fill="none" stroke="transparent" stroke-width="2.5"/>
+        <image href="${asset.url}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>
+      </g>`;
+    }
+
+    // Randomly pick one of 3 scene types
+    const scenes = ['left_right', 'above_below', 'inside_outside'];
+    const scene = scenes[Math.floor(random() * scenes.length)];
+
+    // Randomise which asset goes in position A and which in B
+    const [assetFirst, assetSecond] = random() > 0.5 ? [assetA, assetB] : [assetB, assetA];
+    const askFirst = random() > 0.5;   // ask about position 0 (first slot) or position 1 (second slot)
+
+    let svgContent, questionText, options, correctAnswerIndex, solutionText;
+
+    // ── Scene 1: LEFT vs RIGHT ─────────────────────────────────────────────────
+    if (scene === 'left_right') {
+      questionText = askFirst ? 'Which one is on the left?' : 'Which one is on the right?';
+      const leftEl  = renderHotspot(assetFirst,  30,  15, 130, 130, 0);
+      const rightEl = renderHotspot(assetSecond, 245, 15, 130, 130, 1);
+      svgContent = `<svg width="420" height="170" viewBox="0 0 420 170">
+        <line x1="210" y1="8" x2="210" y2="162" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="5,4"/>
+        <text x="100" y="160" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="600">LEFT</text>
+        <text x="320" y="160" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="600">RIGHT</text>
+        ${leftEl}
+        ${rightEl}
+      </svg>`;
+      options = [
+        { id: assetFirst.name,  label: `${assetFirst.label} ${assetFirst.emoji}` },
+        { id: assetSecond.name, label: `${assetSecond.label} ${assetSecond.emoji}` },
+      ];
+      correctAnswerIndex = askFirst ? 0 : 1;
+      solutionText = `The ${assetFirst.label} ${assetFirst.emoji} is on the left. The ${assetSecond.label} ${assetSecond.emoji} is on the right.`;
+
+    // ── Scene 2: ABOVE vs BELOW ────────────────────────────────────────────────
+    } else if (scene === 'above_below') {
+      questionText = askFirst ? 'Which one is above the line?' : 'Which one is below the line?';
+      const topEl    = renderHotspot(assetFirst,  120,  5,  120, 120, 0);
+      const bottomEl = renderHotspot(assetSecond, 120, 175, 120, 120, 1);
+      svgContent = `<svg width="360" height="310" viewBox="0 0 360 310">
+        <line x1="20" y1="148" x2="340" y2="148" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+        <text x="20" y="142" font-size="12" fill="#94a3b8" font-family="sans-serif" font-weight="600">ABOVE</text>
+        <text x="20" y="166" font-size="12" fill="#94a3b8" font-family="sans-serif" font-weight="600">BELOW</text>
+        ${topEl}
+        ${bottomEl}
+      </svg>`;
+      options = [
+        { id: assetFirst.name,  label: `${assetFirst.label} ${assetFirst.emoji}` },
+        { id: assetSecond.name, label: `${assetSecond.label} ${assetSecond.emoji}` },
+      ];
+      correctAnswerIndex = askFirst ? 0 : 1;
+      solutionText = `The ${assetFirst.label} ${assetFirst.emoji} is above the line. The ${assetSecond.label} ${assetSecond.emoji} is below the line.`;
+
+    // ── Scene 3: INSIDE vs OUTSIDE a dashed box ────────────────────────────────
+    } else {
+      questionText = askFirst ? `Which one is inside the box?` : `Which one is outside the box?`;
+      const insideEl  = renderHotspot(assetFirst,  60,  35, 115, 115, 0);
+      const outsideEl = renderHotspot(assetSecond, 255, 35, 115, 115, 1);
+      svgContent = `<svg width="410" height="185" viewBox="0 0 410 185">
+        <rect x="25" y="15" width="165" height="155" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="8,5" rx="12"/>
+        <text x="107" y="12" font-size="11" fill="#64748b" text-anchor="middle" font-family="sans-serif" font-weight="700">INSIDE</text>
+        <text x="315" y="12" font-size="11" fill="#64748b" text-anchor="middle" font-family="sans-serif" font-weight="700">OUTSIDE</text>
+        ${insideEl}
+        ${outsideEl}
+      </svg>`;
+      options = [
+        { id: assetFirst.name,  label: `${assetFirst.label} ${assetFirst.emoji}` },
+        { id: assetSecond.name, label: `${assetSecond.label} ${assetSecond.emoji}` },
+      ];
+      correctAnswerIndex = askFirst ? 0 : 1;
+      solutionText = `The ${assetFirst.label} ${assetFirst.emoji} is inside the box. The ${assetSecond.label} ${assetSecond.emoji} is outside the box.`;
+    }
+
+    return {
+      type: 'mcq',
+      interaction: 'interactive_svg',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'interactive_svg', content: svgContent }
+      ],
+      options,
+      answer: askFirst ? assetFirst.name : assetSecond.name,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: solutionText }] }
+    };
+  }
+
   if (subType === 'inside_outside') {
     const pairs = [
       { inside: { name: 'cat', emoji: '🐱', label: 'Cat 🐱' }, outside: { name: 'dog', emoji: '🐶', label: 'Dog 🐶' } },
@@ -544,17 +734,17 @@ function lkgPositionsEngine(config, params, random) {
       { id: pair.inside.name, label: pair.inside.label },
       { id: pair.outside.name, label: pair.outside.label }
     ];
-    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+    const correctAnswerIndex = askInside ? 0 : 1;
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildInsideOutsideSvg(pair.inside.emoji, pair.outside.emoji) }
+        { type: 'interactive_svg', content: buildInsideOutsideSvg(pair.inside.emoji, pair.outside.emoji) }
       ],
-      options: sortedOptions,
+      options,
       answer: target.name,
       correctAnswerIndex,
       solution: { sections: [{ type: 'text', content: `The ${pair.inside.label} is inside the dashed box. The ${pair.outside.label} is outside the box.` }] }
@@ -577,17 +767,17 @@ function lkgPositionsEngine(config, params, random) {
       { id: pair.above.name, label: pair.above.label },
       { id: pair.below.name, label: pair.below.label }
     ];
-    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+    const correctAnswerIndex = isAbove ? 0 : 1;
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildAboveBelowSvg(pair.above.emoji, pair.below.emoji) }
+        { type: 'interactive_svg', content: buildAboveBelowSvg(pair.above.emoji, pair.below.emoji) }
       ],
-      options: sortedOptions,
+      options,
       answer: target.name,
       correctAnswerIndex,
       solution: { sections: [{ type: 'text', content: `The ${pair.above.label} is above the line. The ${pair.below.label} is below the line.` }] }
@@ -628,19 +818,18 @@ function lkgPositionsEngine(config, params, random) {
       { id: beside.name, label: beside.label },
       { id: far.name, label: far.label }
     ];
-    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === beside.name);
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildBesideNextSvg(center.emoji, beside.emoji, far.emoji, isCenterLeft) }
+        { type: 'interactive_svg', content: buildBesideNextSvg(center.emoji, beside.emoji, far.emoji, isCenterLeft) }
       ],
-      options: sortedOptions,
+      options,
       answer: beside.name,
-      correctAnswerIndex,
+      correctAnswerIndex: 0,
       solution: { sections: [{ type: 'text', content: `The ${beside.label} is sitting right next to (beside) the ${center.label}.` }] }
     };
   }
@@ -660,17 +849,17 @@ function lkgPositionsEngine(config, params, random) {
       { id: pair.left.name, label: pair.left.label },
       { id: pair.right.name, label: pair.right.label }
     ];
-    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+    const correctAnswerIndex = isLeft ? 0 : 1;
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildLeftRightSvg(pair.left.emoji, pair.right.emoji) }
+        { type: 'interactive_svg', content: buildLeftRightSvg(pair.left.emoji, pair.right.emoji) }
       ],
-      options: sortedOptions,
+      options,
       answer: target.name,
       correctAnswerIndex,
       solution: { sections: [{ type: 'text', content: isLeft ? `The ${pair.left.label} is on the left side of the dotted line.` : `The ${pair.right.label} is on the right side.` }] }
@@ -703,22 +892,20 @@ function lkgPositionsEngine(config, params, random) {
 
     const options = selected.map((item, index) => ({
       id: item.id,
-      label: item.name,
-      posIndex: index
+      label: item.name
     }));
-    const sortedOptions = random() > 0.5 ? [...options].reverse() : options;
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === targetItem.id);
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildLeftMiddleRightSvg(selected[0].emoji, selected[1].emoji, selected[2].emoji) }
+        { type: 'interactive_svg', content: buildLeftMiddleRightSvg(selected[0].emoji, selected[1].emoji, selected[2].emoji) }
       ],
-      options: sortedOptions.map(o => ({ id: o.id, label: o.label })),
+      options,
       answer: targetItem.id,
-      correctAnswerIndex,
+      correctAnswerIndex: targetPosIndex,
       solution: { sections: [{ type: 'text', content: `The ${selected[0].name} is on the left, the ${selected[1].name} is in the middle, and the ${selected[2].name} is on the right.` }] }
     };
   }
@@ -744,17 +931,17 @@ function lkgPositionsEngine(config, params, random) {
       { id: topItem.name, label: topItem.label },
       { id: bottomItem.name, label: bottomItem.label }
     ];
-    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+    const correctAnswerIndex = isTop ? 0 : 1;
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildTopBottomSvg(topItem.emoji, bottomItem.emoji) }
+        { type: 'interactive_svg', content: buildTopBottomSvg(topItem.emoji, bottomItem.emoji) }
       ],
-      options: sortedOptions,
+      options,
       answer: target.name,
       correctAnswerIndex,
       solution: { sections: [{ type: 'text', content: isTop ? `The ${topItem.label} is at the top of the ladder.` : `The ${bottomItem.label} is at the bottom.` }] }
@@ -787,22 +974,20 @@ function lkgPositionsEngine(config, params, random) {
 
     const options = selected.map((item, index) => ({
       id: item.id,
-      label: item.name,
-      posIndex: index
+      label: item.name
     }));
-    const sortedOptions = random() > 0.5 ? [...options].reverse() : options;
-    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === targetItem.id);
 
     return {
       type: 'mcq',
+      interaction: 'interactive_svg',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildTopMiddleBottomSvg(selected[0].emoji, selected[1].emoji, selected[2].emoji) }
+        { type: 'interactive_svg', content: buildTopMiddleBottomSvg(selected[0].emoji, selected[1].emoji, selected[2].emoji) }
       ],
-      options: sortedOptions.map(o => ({ id: o.id, label: o.label })),
+      options,
       answer: targetItem.id,
-      correctAnswerIndex,
+      correctAnswerIndex: targetPosIndex,
       solution: { sections: [{ type: 'text', content: `The ${selected[0].name} is at the top, the ${selected[1].name} is in the middle, and the ${selected[2].name} is at the bottom.` }] }
     };
   }

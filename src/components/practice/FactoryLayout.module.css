@@ -594,3 +594,37 @@
 .optionButton:disabled {
     cursor: default;
 }
+
+/* Interactive SVG Hotspots styling */
+.interactiveSvgContainer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.interactiveSvgContainer :global(.interactive-hotspot) {
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.interactiveSvgContainer :global(.interactive-hotspot:hover) {
+    transform: scale(1.05);
+}
+
+.interactiveSvgContainer :global(.interactive-hotspot-selected) {
+    /* Scale active hotspot and apply selection accent filter */
+    transform: scale(1.05);
+}
+
+.interactiveSvgContainer :global(.interactive-hotspot-selected .hotspot-highlight) {
+    stroke: #0284c7 !important;
+    fill: rgba(2, 132, 199, 0.08) !important;
+    stroke-dasharray: none !important;
+}
+
+.interactiveSvgContainer :global(.interactive-hotspot:hover .hotspot-highlight) {
+    stroke: #0ea5e9;
+    fill: rgba(14, 165, 233, 0.04);
+}
