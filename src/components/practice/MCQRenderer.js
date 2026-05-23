@@ -23,7 +23,7 @@ function getOptionContent(option) {
   if (isSvgString(option)) return option;
   if (isImageUrl(option)) return option;
   if (typeof option === 'string' || typeof option === 'number') return null;
-  return option?.content || option?.svg || option?.imageUrl || option?.src || null;
+  return option?.content || option?.svg || option?.imageUrl || option?.image || option?.src || null;
 }
 
 function hasSvgContent(option) {
@@ -31,6 +31,7 @@ function hasSvgContent(option) {
 }
 
 function hasVisualContent(option) {
+  if (option && option.emoji) return true;
   const content = getOptionContent(option);
   return isSvgString(content) || isImageUrl(content);
 }
@@ -466,7 +467,7 @@ export default function MCQRenderer({
                       width: optionLayout.mediaWidth || '100%',
                       maxWidth: optionLayout.mediaMaxWidth || 360,
                       minHeight: optionLayout.mediaMinHeight || 0,
-                      marginBottom: optionLayout.mediaMarginBottom ?? 10,
+                      marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -479,10 +480,10 @@ export default function MCQRenderer({
                     className={styles.optionMedia}
                     aria-hidden="true"
                     style={{
-                      width: optionLayout.mediaWidth || '100%',
-                      maxWidth: optionLayout.mediaMaxWidth || 360,
-                      minHeight: optionLayout.mediaMinHeight || 0,
-                      marginBottom: optionLayout.mediaMarginBottom ?? 10,
+                      width: option.width || optionLayout.mediaWidth || '100%',
+                      maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 360),
+                      minHeight: option.height || optionLayout.mediaMinHeight || 0,
+                      marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -492,16 +493,34 @@ export default function MCQRenderer({
                         src={content}
                         alt=""
                         style={{
-                          width: '100%',
-                          maxWidth: optionLayout.mediaMaxWidth || 260,
-                          maxHeight: 220,
+                          width: option.width || '100%',
+                          maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 260),
+                          height: option.height || 'auto',
+                          maxHeight: option.height ? undefined : 220,
                           objectFit: 'contain',
                           borderRadius: 14,
                         }}
                       />
                   </div>
                 ) : null}
-                {!isSvgOption && !isImageOption ? (
+                {option && option.emoji && !isSvgOption && !isImageOption ? (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      width: option.width || '100%',
+                      height: option.height || 'auto',
+                      fontSize: option.fontSize || '64px',
+                      marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {option.emoji}
+                  </div>
+                ) : null}
+                {!isSvgOption && !isImageOption && !(option && option.emoji) ? (
                   <div style={{ fontSize: 'clamp(14px, 3.8vw, 17px)', fontWeight: 'inherit', lineHeight: 1.35 }}>
                     {option?.type === 'latex' ? (
                       <KaTeXRenderer math={getOptionLabel(option, index)} />
@@ -510,7 +529,7 @@ export default function MCQRenderer({
                     )}
                   </div>
                 ) : null}
-                {isImageOption && getOptionLabel(option, index) ? (
+                {(isImageOption || (option && option.emoji)) && getOptionLabel(option, index) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
                   <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 500, lineHeight: 1.25, color: '#334155' }}>
                     <InlineMarkdown text={getOptionLabel(option, index)} />
                   </div>

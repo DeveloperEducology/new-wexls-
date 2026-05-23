@@ -1077,32 +1077,29 @@ function lkgSizeEngine(config, params, random) {
       type: 'mcq',
       questionText,
       parts: [
-        { type: 'text', content: questionText },
-        {
-          type: 'side_by_side_display',
-          groupA: { 
-            count: 1, 
-            itemLabel: 'A', 
-            image: resolveAssetImage(groupA), 
-            emoji: groupA.emoji,
-            width: isFirstLong ? '120px' : '60px',
-            height: '40px',
-            fontSize: isFirstLong ? '48px' : '24px'
-          },
-          groupB: { 
-            count: 1, 
-            itemLabel: 'B', 
-            image: resolveAssetImage(groupB), 
-            emoji: groupB.emoji,
-            width: isFirstLong ? '60px' : '120px',
-            height: '40px',
-            fontSize: isFirstLong ? '24px' : '48px'
-          }
-        }
+        { type: 'text', content: questionText }
       ],
       options: [
-        { id: 'group_a', label: 'Item A' },
-        { id: 'group_b', label: 'Item B' }
+        {
+          id: 'group_a',
+          label: 'Item A',
+          imageUrl: resolveAssetImage(groupA),
+          emoji: groupA.emoji,
+          width: isFirstLong ? '160px' : '80px',
+          height: '60px',
+          fontSize: isFirstLong ? '56px' : '28px',
+          hideLabel: true
+        },
+        {
+          id: 'group_b',
+          label: 'Item B',
+          imageUrl: resolveAssetImage(groupB),
+          emoji: groupB.emoji,
+          width: isFirstLong ? '80px' : '160px',
+          height: '60px',
+          fontSize: isFirstLong ? '28px' : '56px',
+          hideLabel: true
+        }
       ],
       answer: answerId,
       correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
@@ -1129,32 +1126,29 @@ function lkgSizeEngine(config, params, random) {
       type: 'mcq',
       questionText,
       parts: [
-        { type: 'text', content: questionText },
-        {
-          type: 'side_by_side_display',
-          groupA: { 
-            count: 1, 
-            itemLabel: 'A', 
-            image: resolveAssetImage(groupA), 
-            emoji: groupA.emoji,
-            width: '60px',
-            height: isFirstTall ? '120px' : '60px',
-            fontSize: isFirstTall ? '64px' : '32px'
-          },
-          groupB: { 
-            count: 1, 
-            itemLabel: 'B', 
-            image: resolveAssetImage(groupB), 
-            emoji: groupB.emoji,
-            width: '60px',
-            height: isFirstTall ? '60px' : '120px',
-            fontSize: isFirstTall ? '32px' : '64px'
-          }
-        }
+        { type: 'text', content: questionText }
       ],
       options: [
-        { id: 'group_a', label: 'Tree A' },
-        { id: 'group_b', label: 'Tree B' }
+        {
+          id: 'group_a',
+          label: 'Tree A',
+          imageUrl: resolveAssetImage(groupA),
+          emoji: groupA.emoji,
+          width: '70px',
+          height: isFirstTall ? '140px' : '70px',
+          fontSize: isFirstTall ? '72px' : '36px',
+          hideLabel: true
+        },
+        {
+          id: 'group_b',
+          label: 'Tree B',
+          imageUrl: resolveAssetImage(groupB),
+          emoji: groupB.emoji,
+          width: '70px',
+          height: isFirstTall ? '70px' : '140px',
+          fontSize: isFirstTall ? '36px' : '72px',
+          hideLabel: true
+        }
       ],
       answer: answerId,
       correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
@@ -1181,32 +1175,29 @@ function lkgSizeEngine(config, params, random) {
       type: 'mcq',
       questionText,
       parts: [
-        { type: 'text', content: questionText },
-        {
-          type: 'side_by_side_display',
-          groupA: { 
-            count: 1, 
-            itemLabel: 'A', 
-            image: resolveAssetImage(groupA), 
-            emoji: groupA.emoji,
-            width: isFirstWide ? '120px' : '60px',
-            height: '40px',
-            fontSize: isFirstWide ? '48px' : '24px'
-          },
-          groupB: { 
-            count: 1, 
-            itemLabel: 'B', 
-            image: resolveAssetImage(groupB), 
-            emoji: groupB.emoji,
-            width: isFirstWide ? '60px' : '120px',
-            height: '40px',
-            fontSize: isFirstWide ? '24px' : '48px'
-          }
-        }
+        { type: 'text', content: questionText }
       ],
       options: [
-        { id: 'group_a', label: 'Path A' },
-        { id: 'group_b', label: 'Path B' }
+        {
+          id: 'group_a',
+          label: 'Path A',
+          imageUrl: resolveAssetImage(groupA),
+          emoji: groupA.emoji,
+          width: isFirstWide ? '160px' : '80px',
+          height: '60px',
+          fontSize: isFirstWide ? '56px' : '28px',
+          hideLabel: true
+        },
+        {
+          id: 'group_b',
+          label: 'Path B',
+          imageUrl: resolveAssetImage(groupB),
+          emoji: groupB.emoji,
+          width: isFirstWide ? '80px' : '160px',
+          height: '60px',
+          fontSize: isFirstWide ? '28px' : '56px',
+          hideLabel: true
+        }
       ],
       answer: answerId,
       correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
@@ -1233,32 +1224,29 @@ function lkgSizeEngine(config, params, random) {
       type: 'mcq',
       questionText,
       parts: [
-        { type: 'text', content: questionText },
-        {
-          type: 'side_by_side_display',
-          groupA: { 
-            count: 1, 
-            itemLabel: 'A', 
-            image: resolveAssetImage(groupA), 
-            emoji: groupA.emoji,
-            width: isFirstHeavy ? '100px' : '50px',
-            height: isFirstHeavy ? '100px' : '50px',
-            fontSize: isFirstHeavy ? '56px' : '28px'
-          },
-          groupB: { 
-            count: 1, 
-            itemLabel: 'B', 
-            image: resolveAssetImage(groupB), 
-            emoji: groupB.emoji,
-            width: isFirstHeavy ? '50px' : '100px',
-            height: isFirstHeavy ? '50px' : '100px',
-            fontSize: isFirstHeavy ? '28px' : '56px'
-          }
-        }
+        { type: 'text', content: questionText }
       ],
       options: [
-        { id: 'group_a', label: isFirstHeavy ? 'Stone' : 'Feather' },
-        { id: 'group_b', label: isFirstHeavy ? 'Feather' : 'Stone' }
+        {
+          id: 'group_a',
+          label: isFirstHeavy ? 'Stone' : 'Feather',
+          imageUrl: resolveAssetImage(groupA),
+          emoji: groupA.emoji,
+          width: isFirstHeavy ? '110px' : '55px',
+          height: isFirstHeavy ? '110px' : '55px',
+          fontSize: isFirstHeavy ? '64px' : '32px',
+          hideLabel: true
+        },
+        {
+          id: 'group_b',
+          label: isFirstHeavy ? 'Feather' : 'Stone',
+          imageUrl: resolveAssetImage(groupB),
+          emoji: groupB.emoji,
+          width: isFirstHeavy ? '55px' : '110px',
+          height: isFirstHeavy ? '55px' : '110px',
+          fontSize: isFirstHeavy ? '32px' : '64px',
+          hideLabel: true
+        }
       ],
       answer: answerId,
       correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
