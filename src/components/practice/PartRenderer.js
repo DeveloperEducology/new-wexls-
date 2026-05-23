@@ -2040,6 +2040,7 @@ const PART_RENDERERS = {
   interactive_counting: InteractiveCountingPart,
   side_by_side_display: SideBySideDisplayPart,
   interactive_svg: InteractiveSvgPart,
+  hotspot_canvas: HotspotCanvasPart,
 };
 
 function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }) {
@@ -2090,6 +2091,76 @@ function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }
       className={styles.interactiveSvgContainer}
       dangerouslySetInnerHTML={{ __html: part.content }}
     />
+  );
+}
+
+// ─── Option B: Hotspot Canvas Overlay ─────────────────────────────────────────
+// Background SVG/image with absolutely-positioned transparent click zones.
+// Coordinates are percentage-based so the layout is fully responsive.
+function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered }) {
+  const selectedIndex = typeof userAnswer === 'object'
+    ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
+    : Number(userAnswer);
+
+  const {
+    backgroundSvg,
+    backgroundUrl,
+    canvasWidth = 360,
+    canvasHeight = 300,
+    hotspots = [],
+  } = part;
+
+  const handleClick = (optionIndex) => {
+    if (isAnswered) return;
+    onAnswer(optionIndex);
+    if (question.options?.[optionIndex]) {
+      const option = question.options[optionIndex];
+      speakText(option.label || option.text || '', question.voice || 'Puck', option.audioUrl);
+    }
+  };
+
+  return (
+    <div
+      className={styles.hotspotCanvasWrapper}
+      style={{ paddingBottom: `${(canvasHeight / canvasWidth) * 100}%` }}
+    >
+      <div className={styles.hotspotCanvasInner}>
+        {/* Background: inline SVG or <img> */}
+        {backgroundSvg && (
+          <div
+            className={styles.hotspotBg}
+            dangerouslySetInnerHTML={{ __html: backgroundSvg }}
+          />
+        )}
+        {backgroundUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={backgroundUrl} alt="scene" className={styles.hotspotBg} />
+        )}
+
+        {/* Transparent absolute-positioned hotspot buttons */}
+        {hotspots.map((hs, i) => {
+          const isSelected = selectedIndex === hs.optionIndex;
+          return (
+            <button
+              key={i}
+              aria-label={hs.label}
+              disabled={isAnswered}
+              onClick={() => handleClick(hs.optionIndex)}
+              className={[
+                styles.hotspotZone,
+                isSelected ? styles.hotspotZoneSelected : '',
+              ].join(' ')}
+              style={{
+                left:   `${(hs.x / canvasWidth)      * 100}%`,
+                top:    `${(hs.y / canvasHeight)     * 100}%`,
+                width:  `${(hs.width / canvasWidth)  * 100}%`,
+                height: `${(hs.height / canvasHeight) * 100}%`,
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

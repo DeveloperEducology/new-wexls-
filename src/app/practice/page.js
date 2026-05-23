@@ -213,6 +213,7 @@ const LKG_OPTIONS = [
 
   // Positions
   { group: 'Positions', label: '⭐ Interactive SVG Demo (Real Animals)', value: 'lkg-position-interactive-demo' },
+  { group: 'Positions', label: '🎯 Hotspot Canvas Demo', value: 'lkg-position-hotspot-demo' },
   { group: 'Positions', label: 'Inside and outside', value: 'lkg-position-inside-outside' },
   { group: 'Positions', label: 'Above and below', value: 'lkg-position-above-below' },
   { group: 'Positions', label: 'Beside and next to', value: 'lkg-position-beside-next' },

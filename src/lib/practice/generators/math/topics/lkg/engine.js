@@ -596,6 +596,164 @@ function lkgComparingEngine(config, params, random) {
 function lkgPositionsEngine(config, params, random) {
   const subType = params.subType;
 
+  // ── Option B: Hotspot Canvas Overlay ─────────────────────────────────────────
+  if (subType === 'hotspot_demo') {
+    // 10 emoji objects used as background scene elements
+    const OBJECTS = [
+      { name: 'cloud',    label: 'Cloud',     emoji: '☁️' },
+      { name: 'sun',      label: 'Sun',       emoji: '☀️' },
+      { name: 'tree',     label: 'Tree',      emoji: '🌳' },
+      { name: 'flower',   label: 'Flower',    emoji: '🌸' },
+      { name: 'bird',     label: 'Bird',      emoji: '🐦' },
+      { name: 'frog',     label: 'Frog',      emoji: '🐸' },
+      { name: 'rabbit',   label: 'Rabbit',    emoji: '🐰' },
+      { name: 'duck',     label: 'Duck',      emoji: '🦆' },
+      { name: 'apple',    label: 'Apple',     emoji: '🍎' },
+      { name: 'balloon',  label: 'Balloon',   emoji: '🎈' },
+    ];
+
+    // Pick 2 different objects
+    const i1 = Math.floor(random() * OBJECTS.length);
+    let i2 = Math.floor(random() * OBJECTS.length);
+    while (i2 === i1) i2 = Math.floor(random() * OBJECTS.length);
+    const objA = OBJECTS[i1];
+    const objB = OBJECTS[i2];
+
+    // Decide which goes in position 0 (first/top/inside) and position 1 (second/bottom/outside)
+    const [obj0, obj1] = random() > 0.5 ? [objA, objB] : [objB, objA];
+    const askFirst = random() > 0.5;  // true = ask about position 0, false = about position 1
+
+    // Scene types
+    const scenes = ['above_below', 'left_right', 'inside_outside'];
+    const scene = scenes[Math.floor(random() * scenes.length)];
+
+    // Canvas dimensions & layout constants
+    const CW = 400; // canvas width
+    let CH, backgroundSvg, hotspots, questionText, solutionText;
+
+    if (scene === 'above_below') {
+      CH = 310;
+      questionText = askFirst ? 'Which one is above the line?' : 'Which one is below the line?';
+      solutionText = `The ${obj0.label} ${obj0.emoji} is above the line. The ${obj1.label} ${obj1.emoji} is below.`;
+
+      backgroundSvg = `<svg width="${CW}" height="${CH}" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
+        <!-- sky gradient top half -->
+        <defs>
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#e0f2fe"/>
+            <stop offset="100%" stop-color="#bae6fd"/>
+          </linearGradient>
+          <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#dcfce7"/>
+            <stop offset="100%" stop-color="#bbf7d0"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0"   width="${CW}" height="${CH / 2}" fill="url(#skyGrad)"/>
+        <rect x="0" y="${CH / 2}" width="${CW}" height="${CH / 2}" fill="url(#groundGrad)"/>
+        <!-- dividing line -->
+        <line x1="0" y1="${CH / 2}" x2="${CW}" y2="${CH / 2}" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+        <text x="12" y="${CH / 2 - 8}" font-size="13" fill="#64748b" font-family="sans-serif" font-weight="700">ABOVE</text>
+        <text x="12" y="${CH / 2 + 18}" font-size="13" fill="#64748b" font-family="sans-serif" font-weight="700">BELOW</text>
+        <!-- top object -->
+        <text x="200" y="122" font-size="90" text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
+        <!-- bottom object -->
+        <text x="200" y="238" font-size="90" text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
+      </svg>`;
+
+      hotspots = [
+        { optionIndex: 0, x: 60,  y: 8,   width: 280, height: 140, label: obj0.label },
+        { optionIndex: 1, x: 60,  y: 162, width: 280, height: 140, label: obj1.label },
+      ];
+
+    } else if (scene === 'left_right') {
+      CH = 190;
+      questionText = askFirst ? 'Which one is on the left?' : 'Which one is on the right?';
+      solutionText = `The ${obj0.label} ${obj0.emoji} is on the left. The ${obj1.label} ${obj1.emoji} is on the right.`;
+
+      backgroundSvg = `<svg width="${CW}" height="${CH}" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f8fafc"/>
+            <stop offset="100%" stop-color="#e2e8f0"/>
+          </linearGradient>
+        </defs>
+        <rect width="${CW}" height="${CH}" fill="url(#bgGrad)" rx="16"/>
+        <!-- divider -->
+        <line x1="${CW / 2}" y1="10" x2="${CW / 2}" y2="${CH - 10}" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/>
+        <text x="98"       y="${CH - 8}" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="700">LEFT</text>
+        <text x="${CW - 98}" y="${CH - 8}" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="700">RIGHT</text>
+        <!-- left object -->
+        <text x="98"  y="${CH / 2 - 6}" font-size="100" text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
+        <!-- right object -->
+        <text x="${CW - 98}" y="${CH / 2 - 6}" font-size="100" text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
+      </svg>`;
+
+      hotspots = [
+        { optionIndex: 0, x: 8,          y: 10, width: CW / 2 - 16, height: CH - 25, label: obj0.label },
+        { optionIndex: 1, x: CW / 2 + 8, y: 10, width: CW / 2 - 16, height: CH - 25, label: obj1.label },
+      ];
+
+    } else { // inside_outside
+      CH = 210;
+      questionText = askFirst ? 'Which one is inside the box?' : 'Which one is outside the box?';
+      solutionText = `The ${obj0.label} ${obj0.emoji} is inside the box. The ${obj1.label} ${obj1.emoji} is outside.`;
+
+      const BOX = { x: 15, y: 15, w: 180, h: 175 };
+
+      backgroundSvg = `<svg width="${CW}" height="${CH}" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgOut" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fafafa"/>
+            <stop offset="100%" stop-color="#f1f5f9"/>
+          </linearGradient>
+        </defs>
+        <rect width="${CW}" height="${CH}" fill="url(#bgOut)" rx="16"/>
+        <!-- dashed box -->
+        <rect x="${BOX.x}" y="${BOX.y}" width="${BOX.w}" height="${BOX.h}" fill="none"
+              stroke="#475569" stroke-width="3" stroke-dasharray="9,5" rx="14"/>
+        <text x="${BOX.x + BOX.w / 2}" y="${BOX.y - 4}" font-size="11" fill="#64748b"
+              text-anchor="middle" font-family="sans-serif" font-weight="700">INSIDE</text>
+        <text x="${CW - 95}" y="${BOX.y - 4}" font-size="11" fill="#64748b"
+              text-anchor="middle" font-family="sans-serif" font-weight="700">OUTSIDE</text>
+        <!-- inside object -->
+        <text x="${BOX.x + BOX.w / 2}" y="${BOX.y + BOX.h / 2 + 2}" font-size="96"
+              text-anchor="middle" dominant-baseline="middle">${obj0.emoji}</text>
+        <!-- outside object -->
+        <text x="${CW - 95}" y="${BOX.y + BOX.h / 2 + 2}" font-size="96"
+              text-anchor="middle" dominant-baseline="middle">${obj1.emoji}</text>
+      </svg>`;
+
+      hotspots = [
+        { optionIndex: 0, x: BOX.x + 8,  y: BOX.y + 8,  width: BOX.w - 16,       height: BOX.h - 16, label: obj0.label },
+        { optionIndex: 1, x: BOX.x + BOX.w + 10, y: 10,  width: CW - BOX.x - BOX.w - 20, height: CH - 20, label: obj1.label },
+      ];
+    }
+
+    return {
+      type: 'mcq',
+      interaction: 'hotspot_select',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        {
+          type: 'hotspot_canvas',
+          backgroundSvg,
+          canvasWidth: CW,
+          canvasHeight: CH,
+          hotspots,
+        },
+      ],
+      options: [
+        { id: obj0.name, label: `${obj0.label} ${obj0.emoji}` },
+        { id: obj1.name, label: `${obj1.label} ${obj1.emoji}` },
+      ],
+      answer: askFirst ? obj0.name : obj1.name,
+      correctAnswerIndex: askFirst ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: solutionText }] },
+    };
+  }
+
+
   if (subType === 'interactive_demo') {
     // ── All available image assets for interactive demo ──────────────────────────
     // SVG files are embedded inline; PNG files are referenced via <image href>

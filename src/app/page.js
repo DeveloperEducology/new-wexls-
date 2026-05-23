@@ -440,6 +440,7 @@ const TOPICS = [
         title: 'Positions',
         skills: [
           ['F.0', '⭐ Interactive SVG Demo', 'lkg-position-interactive-demo'],
+          ['F.01', '🎯 Hotspot Canvas Demo', 'lkg-position-hotspot-demo'],
           ['F.1', 'Inside and outside', 'lkg-position-inside-outside'],
           ['F.2', 'Above and below', 'lkg-position-above-below'],
           ['F.3', 'Beside and next to', 'lkg-position-beside-next'],
