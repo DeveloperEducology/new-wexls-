@@ -1918,6 +1918,10 @@ function SideBySideDisplayPart({ part }) {
   const groupB = part.groupB || { count: 0, image: '', itemLabel: '' };
 
   const renderGroup = (group, title) => {
+    const itemWidth = group.width || part.itemWidth || '46px';
+    const itemHeight = group.height || part.itemHeight || '46px';
+    const itemFontSize = group.fontSize || part.itemFontSize || '32px';
+
     return (
       <div style={{
         flex: 1,
@@ -1945,7 +1949,7 @@ function SideBySideDisplayPart({ part }) {
           width: '100%'
         }}>
           {Array.from({ length: group.count }).map((_, i) => (
-            <div key={i} style={{ width: '46px', height: '46px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div key={i} style={{ width: itemWidth, height: itemHeight, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {group.image ? (
                 <img
                   src={group.image}
@@ -1956,7 +1960,7 @@ function SideBySideDisplayPart({ part }) {
                     const parent = e.currentTarget.parentElement;
                     if (parent && group.emoji) {
                       const fallbackSpan = document.createElement('span');
-                      fallbackSpan.style.fontSize = '32px';
+                      fallbackSpan.style.fontSize = itemFontSize;
                       fallbackSpan.style.userSelect = 'none';
                       fallbackSpan.innerText = group.emoji;
                       parent.insertBefore(fallbackSpan, parent.firstChild);
@@ -1964,7 +1968,7 @@ function SideBySideDisplayPart({ part }) {
                   }}
                 />
               ) : group.emoji ? (
-                <span style={{ fontSize: '32px', userSelect: 'none' }}>{group.emoji}</span>
+                <span style={{ fontSize: itemFontSize, userSelect: 'none' }}>{group.emoji}</span>
               ) : (
                 <div style={{ width: '100%', height: '100%', borderRadius: '8px', background: '#e2e8f0', border: '1px dashed #94a3b8' }} />
               )}

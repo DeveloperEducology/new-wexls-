@@ -19,6 +19,32 @@ function getSeededRandom(seed) {
   };
 }
 
+// Helper to resolve the correct image URL (preferring a remote sampleUrl if it starts with http/https)
+function resolveAssetImage(item) {
+  if (!item) return '';
+  if (item.sampleUrl && (item.sampleUrl.startsWith('http://') || item.sampleUrl.startsWith('https://'))) {
+    return item.sampleUrl;
+  }
+  if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://'))) {
+    return item.image;
+  }
+  const VALID_LOCAL_IMAGES = [
+    "/images/lkg/apple.png",
+    "/images/lkg/ball.png",
+    "/images/lkg/butterfly.png",
+    "/images/lkg/car.png",
+    "/images/lkg/duck.png",
+    "/images/lkg/frog.png",
+    "/images/lkg/flower.png",
+    "/images/lkg/flowers.png",
+    "/images/lkg/hippo.png"
+  ];
+  if (item.image && VALID_LOCAL_IMAGES.includes(item.image)) {
+    return item.image;
+  }
+  return '';
+}
+
 // Helper SVG build routines
 const buildDotsSvg = (count) => {
   let circles = '';
@@ -291,7 +317,7 @@ function lkgCountingEngine(config, params, random) {
           type: 'interactive_counting',
           instruction,
           subInstruction: questionText,
-          image: item.image,
+          image: resolveAssetImage(item),
           emoji: item.emoji,
           count,
           itemLabel: item.name
@@ -480,8 +506,8 @@ function lkgComparingEngine(config, params, random) {
         { type: 'text', content: questionText },
         {
           type: 'side_by_side_display',
-          groupA: { count: countA, itemLabel: itemA.plural, image: itemA.image, emoji: itemA.emoji },
-          groupB: { count: countB, itemLabel: itemB.plural, image: itemB.image, emoji: itemB.emoji }
+          groupA: { count: countA, itemLabel: itemA.plural, image: resolveAssetImage(itemA), emoji: itemA.emoji },
+          groupB: { count: countB, itemLabel: itemB.plural, image: resolveAssetImage(itemB), emoji: itemB.emoji }
         }
       ],
       options: [
@@ -1054,8 +1080,24 @@ function lkgSizeEngine(config, params, random) {
         { type: 'text', content: questionText },
         {
           type: 'side_by_side_display',
-          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
-          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+          groupA: { 
+            count: 1, 
+            itemLabel: 'A', 
+            image: resolveAssetImage(groupA), 
+            emoji: groupA.emoji,
+            width: isFirstLong ? '120px' : '60px',
+            height: '40px',
+            fontSize: isFirstLong ? '48px' : '24px'
+          },
+          groupB: { 
+            count: 1, 
+            itemLabel: 'B', 
+            image: resolveAssetImage(groupB), 
+            emoji: groupB.emoji,
+            width: isFirstLong ? '60px' : '120px',
+            height: '40px',
+            fontSize: isFirstLong ? '24px' : '48px'
+          }
         }
       ],
       options: [
@@ -1090,8 +1132,24 @@ function lkgSizeEngine(config, params, random) {
         { type: 'text', content: questionText },
         {
           type: 'side_by_side_display',
-          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
-          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+          groupA: { 
+            count: 1, 
+            itemLabel: 'A', 
+            image: resolveAssetImage(groupA), 
+            emoji: groupA.emoji,
+            width: '60px',
+            height: isFirstTall ? '120px' : '60px',
+            fontSize: isFirstTall ? '64px' : '32px'
+          },
+          groupB: { 
+            count: 1, 
+            itemLabel: 'B', 
+            image: resolveAssetImage(groupB), 
+            emoji: groupB.emoji,
+            width: '60px',
+            height: isFirstTall ? '60px' : '120px',
+            fontSize: isFirstTall ? '32px' : '64px'
+          }
         }
       ],
       options: [
@@ -1126,8 +1184,24 @@ function lkgSizeEngine(config, params, random) {
         { type: 'text', content: questionText },
         {
           type: 'side_by_side_display',
-          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
-          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+          groupA: { 
+            count: 1, 
+            itemLabel: 'A', 
+            image: resolveAssetImage(groupA), 
+            emoji: groupA.emoji,
+            width: isFirstWide ? '120px' : '60px',
+            height: '40px',
+            fontSize: isFirstWide ? '48px' : '24px'
+          },
+          groupB: { 
+            count: 1, 
+            itemLabel: 'B', 
+            image: resolveAssetImage(groupB), 
+            emoji: groupB.emoji,
+            width: isFirstWide ? '60px' : '120px',
+            height: '40px',
+            fontSize: isFirstWide ? '24px' : '48px'
+          }
         }
       ],
       options: [
@@ -1144,7 +1218,7 @@ function lkgSizeEngine(config, params, random) {
     const isHeavier = random() > 0.5;
     const questionText = isHeavier ? "Which is heavier?" : "Which is lighter?";
 
-    const heavyItem = lkgSizeImageAssets.find(x => x.id === 'stone_heavy') || { image: '/images/lkg/size/stone_heavy.png', emoji: '🦨' };
+    const heavyItem = lkgSizeImageAssets.find(x => x.id === 'stone_heavy') || { image: '/images/lkg/size/stone_heavy.png', emoji: '🪨' };
     const lightItem = lkgSizeImageAssets.find(x => x.id === 'feather_light') || { image: '/images/lkg/size/feather_light.png', emoji: '🪶' };
 
     const isFirstHeavy = random() > 0.5;
@@ -1162,8 +1236,24 @@ function lkgSizeEngine(config, params, random) {
         { type: 'text', content: questionText },
         {
           type: 'side_by_side_display',
-          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
-          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+          groupA: { 
+            count: 1, 
+            itemLabel: 'A', 
+            image: resolveAssetImage(groupA), 
+            emoji: groupA.emoji,
+            width: isFirstHeavy ? '100px' : '50px',
+            height: isFirstHeavy ? '100px' : '50px',
+            fontSize: isFirstHeavy ? '56px' : '28px'
+          },
+          groupB: { 
+            count: 1, 
+            itemLabel: 'B', 
+            image: resolveAssetImage(groupB), 
+            emoji: groupB.emoji,
+            width: isFirstHeavy ? '50px' : '100px',
+            height: isFirstHeavy ? '50px' : '100px',
+            fontSize: isFirstHeavy ? '28px' : '56px'
+          }
         }
       ],
       options: [

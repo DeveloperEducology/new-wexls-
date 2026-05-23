@@ -91,12 +91,12 @@ export const lkgPatternsImageAssets = [
 export const lkgSizeImageAssets = [
   { id: "pencil_long", name: "long pencil", image: "/images/lkg/size/pencil_long.png", sampleUrl: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/1779512149140-wu9jbjvfmxk.jpg", emoji: "✏️" },
   { id: "pencil_short", name: "short pencil", image: "/images/lkg/size/pencil_short.png", sampleUrl: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/1779512178974-n0mrirya6lm.jpg", emoji: "✏️" },
-  { id: "tree_tall", name: "tall tree", image: "/images/lkg/size/tree_tall.png", sampleUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=200&auto=format&fit=crop", emoji: "🌲" },
-  { id: "tree_short", name: "short tree", image: "/images/lkg/size/tree_short.png", sampleUrl: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=200&auto=format&fit=crop", emoji: "🌳" },
-  { id: "path_wide", name: "wide path", image: "/images/lkg/size/path_wide.png", sampleUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=200&auto=format&fit=crop", emoji: "🛣️" },
-  { id: "path_narrow", name: "narrow path", image: "/images/lkg/size/path_narrow.png", sampleUrl: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=200&auto=format&fit=crop", emoji: "👣" },
-  { id: "feather_light", name: "light feather", image: "/images/lkg/size/feather_light.png", sampleUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=200&auto=format&fit=crop", emoji: "🪶" },
-  { id: "stone_heavy", name: "heavy stone", image: "/images/lkg/size/stone_heavy.png", sampleUrl: "https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=80&w=200&auto=format&fit=crop", emoji: "🪨" }
+  // { id: "tree_tall", name: "tall tree", image: "/images/lkg/size/tree_tall.png", sampleUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=200&auto=format&fit=crop", emoji: "🌲" },
+  // { id: "tree_short", name: "short tree", image: "/images/lkg/size/tree_short.png", sampleUrl: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=200&auto=format&fit=crop", emoji: "🌳" },
+  // { id: "path_wide", name: "wide path", image: "/images/lkg/size/path_wide.png", sampleUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=200&auto=format&fit=crop", emoji: "🛣️" },
+  // { id: "path_narrow", name: "narrow path", image: "/images/lkg/size/path_narrow.png", sampleUrl: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=200&auto=format&fit=crop", emoji: "👣" },
+  // { id: "feather_light", name: "light feather", image: "/images/lkg/size/feather_light.png", sampleUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=200&auto=format&fit=crop", emoji: "🪶" },
+  // { id: "stone_heavy", name: "heavy stone", image: "/images/lkg/size/stone_heavy.png", sampleUrl: "https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=80&w=200&auto=format&fit=crop", emoji: "🪨" }
 ];
 
 // Category J: Money Image Assets
