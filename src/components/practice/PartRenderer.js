@@ -1830,7 +1830,20 @@ function InteractiveCountingPart({ part, isAnswered }) {
                     objectFit: 'contain',
                     filter: isClicked ? 'drop-shadow(0 8px 16px rgba(99, 102, 241, 0.15))' : 'none',
                   }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent && part.emoji) {
+                      const fallbackSpan = document.createElement('span');
+                      fallbackSpan.style.fontSize = '48px';
+                      fallbackSpan.style.userSelect = 'none';
+                      fallbackSpan.innerText = part.emoji;
+                      parent.insertBefore(fallbackSpan, parent.firstChild);
+                    }
+                  }}
                 />
+              ) : part.emoji ? (
+                <span style={{ fontSize: '48px', userSelect: 'none' }}>{part.emoji}</span>
               ) : (
                 <div style={{ width: 60, height: 60, borderRadius: 12, background: '#e2e8f0', border: '2px dashed #94a3b8' }} />
               )}
@@ -1932,13 +1945,26 @@ function SideBySideDisplayPart({ part }) {
           width: '100%'
         }}>
           {Array.from({ length: group.count }).map((_, i) => (
-            <div key={i} style={{ width: '46px', height: '46px', position: 'relative' }}>
+            <div key={i} style={{ width: '46px', height: '46px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {group.image ? (
                 <img
                   src={group.image}
                   alt={group.itemLabel || 'item'}
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent && group.emoji) {
+                      const fallbackSpan = document.createElement('span');
+                      fallbackSpan.style.fontSize = '32px';
+                      fallbackSpan.style.userSelect = 'none';
+                      fallbackSpan.innerText = group.emoji;
+                      parent.insertBefore(fallbackSpan, parent.firstChild);
+                    }
+                  }}
                 />
+              ) : group.emoji ? (
+                <span style={{ fontSize: '32px', userSelect: 'none' }}>{group.emoji}</span>
               ) : (
                 <div style={{ width: '100%', height: '100%', borderRadius: '8px', background: '#e2e8f0', border: '1px dashed #94a3b8' }} />
               )}

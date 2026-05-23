@@ -11,24 +11,27 @@ export const lkgImageAssets = {
 };
 
 export const lkgCountingObjects = [
-  { name: "hippo", plural: "hippos", image: lkgImageAssets.hippo },
-  { name: "duck", plural: "ducks", image: lkgImageAssets.duck },
-  { name: "apple", plural: "apples", image: lkgImageAssets.apple },
-  { name: "ball", plural: "balls", image: lkgImageAssets.ball },
-  { name: "frog", plural: "frogs", image: lkgImageAssets.frog },
-  { name: "butterfly", plural: "butterflies", image: lkgImageAssets.butterfly },
-  { name: "car", plural: "cars", image: lkgImageAssets.car },
-  { name: "flower", plural: "flowers", image: lkgImageAssets.flower },
+  { name: "hippo", plural: "hippos", image: lkgImageAssets.hippo, emoji: "🦛" },
+  { name: "duck", plural: "ducks", image: lkgImageAssets.duck, emoji: "🦆" },
+  { name: "apple", plural: "apples", image: lkgImageAssets.apple, emoji: "🍎" },
+  { name: "ball", plural: "balls", image: lkgImageAssets.ball, emoji: "⚽" },
+  { name: "frog", plural: "frogs", image: lkgImageAssets.frog, emoji: "🐸" },
+  { name: "butterfly", plural: "butterflies", image: lkgImageAssets.butterfly, emoji: "🦋" },
+  { name: "car", plural: "cars", image: lkgImageAssets.car, emoji: "🚗" },
+  { name: "flower", plural: "flowers", image: lkgImageAssets.flower, emoji: "🌸" },
   {
     name: "flowers",
     plural: "flowers",
     image:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSCM1971XPZTMQid5kZ4v91rvLPRKcHBTfoRA&s",
+    emoji: "💐"
   },
   {
     name: "mango",
     plural: "mangoes",
     image:
       "https://static.vecteezy.com/system/resources/thumbnails/057/695/897/small/distinct-mango-tree-outline-art-vector.jpg",
+    emoji: "🥭"
   },
 ];
+

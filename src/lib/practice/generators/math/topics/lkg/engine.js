@@ -70,65 +70,68 @@ const buildTenFrameSvg = (count) => {
 };
 
 // SVG loaders for Positions engine
-const buildInsideOutsideSvg = () => {
+const buildInsideOutsideSvg = (insideEmoji = '🐱', outsideEmoji = '🐶') => {
   return `<svg width="240" height="120" viewBox="0 0 240 120">
     <rect x="20" y="30" width="80" height="70" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="4"/>
-    <text x="36" y="76" font-size="36">🐱</text>
-    <text x="140" y="76" font-size="36">🐶</text>
+    <text x="36" y="76" font-size="36">${insideEmoji}</text>
+    <text x="140" y="76" font-size="36">${outsideEmoji}</text>
     <text x="30" y="20" font-size="12" font-weight="bold" fill="#64748b">INSIDE</text>
     <text x="135" y="20" font-size="12" font-weight="bold" fill="#64748b">OUTSIDE</text>
   </svg>`;
 };
 
-const buildAboveBelowSvg = () => {
+const buildAboveBelowSvg = (aboveEmoji = '🍎', belowEmoji = '🍌') => {
   return `<svg width="240" height="120" viewBox="0 0 240 120">
     <line x1="20" y1="60" x2="220" y2="60" stroke="#0f172a" stroke-width="4"/>
-    <text x="100" y="46" font-size="36">🍎</text>
-    <text x="100" y="106" font-size="36">🍌</text>
+    <text x="100" y="46" font-size="36">${aboveEmoji}</text>
+    <text x="100" y="106" font-size="36">${belowEmoji}</text>
   </svg>`;
 };
 
-const buildBesideNextSvg = () => {
+const buildBesideNextSvg = (centerEmoji = '🌲', besideEmoji = '🐰', farEmoji = '🦊', isCenterLeft = true) => {
+  const centerX = isCenterLeft ? 40 : 180;
+  const besideX = 110;
+  const farX = isCenterLeft ? 180 : 40;
   return `<svg width="240" height="120" viewBox="0 0 240 120">
-    <text x="40" y="80" font-size="50">🌲</text>
-    <text x="110" y="80" font-size="36">🐰</text>
-    <text x="180" y="80" font-size="36">🦊</text>
+    <text x="${centerX}" y="80" font-size="50">${centerEmoji}</text>
+    <text x="${besideX}" y="80" font-size="36">${besideEmoji}</text>
+    <text x="${farX}" y="80" font-size="36">${farEmoji}</text>
   </svg>`;
 };
 
-const buildLeftRightSvg = () => {
+const buildLeftRightSvg = (leftEmoji = '🍎', rightEmoji = '🍓') => {
   return `<svg width="240" height="100" viewBox="0 0 240 100">
-    <text x="40" y="66" font-size="36">🍎</text>
-    <text x="160" y="66" font-size="36">🍓</text>
+    <text x="40" y="66" font-size="36">${leftEmoji}</text>
+    <text x="160" y="66" font-size="36">${rightEmoji}</text>
     <line x1="120" y1="10" x2="120" y2="90" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4"/>
   </svg>`;
 };
 
-const buildLeftMiddleRightSvg = () => {
+const buildLeftMiddleRightSvg = (leftEmoji = '🍇', middleEmoji = '🍊', rightEmoji = '🍐') => {
   return `<svg width="240" height="100" viewBox="0 0 240 100">
-    <text x="30" y="66" font-size="36">🍇</text>
-    <text x="100" y="66" font-size="36">🍊</text>
-    <text x="170" y="66" font-size="36">🍐</text>
+    <text x="30" y="66" font-size="36">${leftEmoji}</text>
+    <text x="100" y="66" font-size="36">${middleEmoji}</text>
+    <text x="170" y="66" font-size="36">${rightEmoji}</text>
   </svg>`;
 };
 
-const buildTopBottomSvg = () => {
+const buildTopBottomSvg = (topEmoji = '🐦', bottomEmoji = '🐱') => {
   return `<svg width="240" height="140" viewBox="0 0 240 140">
     <line x1="80" y1="10" x2="80" y2="130" stroke="#94a3b8" stroke-width="4"/>
     <line x1="120" y1="10" x2="120" y2="130" stroke="#94a3b8" stroke-width="4"/>
     <line x1="80" y1="35" x2="120" y2="35" stroke="#94a3b8" stroke-width="3"/>
     <line x1="80" y1="65" x2="120" y2="65" stroke="#94a3b8" stroke-width="3"/>
     <line x1="80" y1="95" x2="120" y2="95" stroke="#94a3b8" stroke-width="3"/>
-    <text x="90" y="30" font-size="32">🐦</text>
-    <text x="140" y="125" font-size="32">🐱</text>
+    <text x="90" y="30" font-size="32">${topEmoji}</text>
+    <text x="140" y="125" font-size="32">${bottomEmoji}</text>
   </svg>`;
 };
 
-const buildTopMiddleBottomSvg = () => {
+const buildTopMiddleBottomSvg = (topEmoji = '🎈', middleEmoji = '⚽', bottomEmoji = '📦') => {
   return `<svg width="240" height="150" viewBox="0 0 240 150">
-    <text x="100" y="40" font-size="32">🎈</text>
-    <text x="100" y="90" font-size="32">⚽</text>
-    <text x="100" y="140" font-size="32">📦</text>
+    <text x="100" y="40" font-size="32">${topEmoji}</text>
+    <text x="100" y="90" font-size="32">${middleEmoji}</text>
+    <text x="100" y="140" font-size="32">${bottomEmoji}</text>
   </svg>`;
 };
 
@@ -289,6 +292,7 @@ function lkgCountingEngine(config, params, random) {
           instruction,
           subInstruction: questionText,
           image: item.image,
+          emoji: item.emoji,
           count,
           itemLabel: item.name
         }
@@ -476,8 +480,8 @@ function lkgComparingEngine(config, params, random) {
         { type: 'text', content: questionText },
         {
           type: 'side_by_side_display',
-          groupA: { count: countA, itemLabel: itemA.plural, image: itemA.image },
-          groupB: { count: countB, itemLabel: itemB.plural, image: itemB.image }
+          groupA: { count: countA, itemLabel: itemA.plural, image: itemA.image, emoji: itemA.emoji },
+          groupB: { count: countB, itemLabel: itemB.plural, image: itemB.image, emoji: itemB.emoji }
         }
       ],
       options: [
@@ -495,144 +499,285 @@ function lkgPositionsEngine(config, params, random) {
   const subType = params.subType;
 
   if (subType === 'inside_outside') {
-    const questionText = "Which animal is inside the box?";
+    const pairs = [
+      { inside: { name: 'cat', emoji: '🐱', label: 'Cat 🐱' }, outside: { name: 'dog', emoji: '🐶', label: 'Dog 🐶' } },
+      { inside: { name: 'bird', emoji: '🐦', label: 'Bird 🐦' }, outside: { name: 'rabbit', emoji: '🐰', label: 'Rabbit 🐰' } },
+      { inside: { name: 'monkey', emoji: '🐵', label: 'Monkey 🐵' }, outside: { name: 'lion', emoji: '🦁', label: 'Lion 🦁' } },
+      { inside: { name: 'fish', emoji: '🐟', label: 'Fish 🐟' }, outside: { name: 'frog', emoji: '🐸', label: 'Frog 🐸' } }
+    ];
+    const pair = pairs[Math.floor(random() * pairs.length)];
+    const askInside = random() > 0.5;
+
+    const questionText = askInside 
+      ? `Which animal is inside the box?` 
+      : `Which animal is outside the box?`;
+      
+    const target = askInside ? pair.inside : pair.outside;
+
+    const options = [
+      { id: pair.inside.name, label: pair.inside.label },
+      { id: pair.outside.name, label: pair.outside.label }
+    ];
+    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildInsideOutsideSvg() }
+        { type: 'svg', content: buildInsideOutsideSvg(pair.inside.emoji, pair.outside.emoji) }
       ],
-      options: [
-        { id: 'cat', label: 'Cat 🐱' },
-        { id: 'dog', label: 'Dog 🐶' }
-      ],
-      answer: 'cat',
-      correctAnswerIndex: 0,
-      solution: { sections: [{ type: 'text', content: "The Cat 🐱 is inside the dashed box. The Dog 🐶 is outside the box." }] }
+      options: sortedOptions,
+      answer: target.name,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: `The ${pair.inside.label} is inside the dashed box. The ${pair.outside.label} is outside the box.` }] }
     };
   }
 
   if (subType === 'above_below') {
+    const pairs = [
+      { above: { name: 'apple', emoji: '🍎', label: 'Apple 🍎' }, below: { name: 'banana', emoji: '🍌', label: 'Banana 🍌' } },
+      { above: { name: 'sun', emoji: '☀️', label: 'Sun ☀️' }, below: { name: 'flower', emoji: '🌻', label: 'Flower 🌻' } },
+      { above: { name: 'bird', emoji: '🐦', label: 'Bird 🐦' }, below: { name: 'cat', emoji: '🐱', label: 'Cat 🐱' } },
+      { above: { name: 'cloud', emoji: '☁️', label: 'Cloud ☁️' }, below: { name: 'tree', emoji: '🌳', label: 'Tree 🌳' } }
+    ];
+    const pair = pairs[Math.floor(random() * pairs.length)];
     const isAbove = random() > 0.5;
-    const questionText = isAbove ? "Which fruit is above the line?" : "Which fruit is below the line?";
+    const questionText = isAbove ? "Which one is above the line?" : "Which one is below the line?";
+    const target = isAbove ? pair.above : pair.below;
+
+    const options = [
+      { id: pair.above.name, label: pair.above.label },
+      { id: pair.below.name, label: pair.below.label }
+    ];
+    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildAboveBelowSvg() }
+        { type: 'svg', content: buildAboveBelowSvg(pair.above.emoji, pair.below.emoji) }
       ],
-      options: [
-        { id: 'apple', label: 'Apple 🍎' },
-        { id: 'banana', label: 'Banana 🍌' }
-      ],
-      answer: isAbove ? 'apple' : 'banana',
-      correctAnswerIndex: isAbove ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: isAbove ? "The Apple 🍎 is above the line." : "The Banana 🍌 is below the line." }] }
+      options: sortedOptions,
+      answer: target.name,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: `The ${pair.above.label} is above the line. The ${pair.below.label} is below the line.` }] }
     };
   }
 
   if (subType === 'beside_next') {
-    const questionText = "Which animal is beside the tree?";
+    const centers = [
+      { name: 'tree', emoji: '🌲', label: 'tree 🌲' },
+      { name: 'house', emoji: '🏠', label: 'house 🏠' },
+      { name: 'car', emoji: '🚗', label: 'car 🚗' },
+      { name: 'flower', emoji: '🌸', label: 'flower 🌸' }
+    ];
+    const besides = [
+      { name: 'rabbit', emoji: '🐰', label: 'Rabbit 🐰' },
+      { name: 'dog', emoji: '🐶', label: 'Dog 🐶' },
+      { name: 'cat', emoji: '🐱', label: 'Cat 🐱' },
+      { name: 'monkey', emoji: '🐵', label: 'Monkey 🐵' }
+    ];
+    const fars = [
+      { name: 'fox', emoji: '🦊', label: 'Fox 🦊' },
+      { name: 'lion', emoji: '🦁', label: 'Lion 🦁' },
+      { name: 'frog', emoji: '🐸', label: 'Frog 🐸' },
+      { name: 'bear', emoji: '🐻', label: 'Bear 🐻' }
+    ];
+
+    const center = centers[Math.floor(random() * centers.length)];
+    const beside = besides[Math.floor(random() * besides.length)];
+    let far = fars[Math.floor(random() * fars.length)];
+    while (far.name === beside.name) {
+      far = fars[Math.floor(random() * fars.length)];
+    }
+
+    const isCenterLeft = random() > 0.5;
+    const questionText = `Which animal is beside the ${center.name}?`;
+
+    const options = [
+      { id: beside.name, label: beside.label },
+      { id: far.name, label: far.label }
+    ];
+    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === beside.name);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildBesideNextSvg() }
+        { type: 'svg', content: buildBesideNextSvg(center.emoji, beside.emoji, far.emoji, isCenterLeft) }
       ],
-      options: [
-        { id: 'rabbit', label: 'Rabbit 🐰' },
-        { id: 'fox', label: 'Fox 🦊' }
-      ],
-      answer: 'rabbit',
-      correctAnswerIndex: 0,
-      solution: { sections: [{ type: 'text', content: "The Rabbit 🐰 is sitting right beside the tree 🌲." }] }
+      options: sortedOptions,
+      answer: beside.name,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: `The ${beside.label} is sitting right next to (beside) the ${center.label}.` }] }
     };
   }
 
   if (subType === 'left_right') {
+    const pairs = [
+      { left: { name: 'apple', emoji: '🍎', label: 'Apple 🍎' }, right: { name: 'strawberry', emoji: '🍓', label: 'Strawberry 🍓' } },
+      { left: { name: 'orange', emoji: '🍊', label: 'Orange 🍊' }, right: { name: 'grape', emoji: '🍇', label: 'Grape 🍇' } },
+      { left: { name: 'pear', emoji: '🍐', label: 'Pear 🍐' }, right: { name: 'cherry', emoji: '🍒', label: 'Cherry 🍒' } }
+    ];
+    const pair = pairs[Math.floor(random() * pairs.length)];
     const isLeft = random() > 0.5;
     const questionText = isLeft ? "Which fruit is on the left?" : "Which fruit is on the right?";
+    const target = isLeft ? pair.left : pair.right;
+
+    const options = [
+      { id: pair.left.name, label: pair.left.label },
+      { id: pair.right.name, label: pair.right.label }
+    ];
+    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildLeftRightSvg() }
+        { type: 'svg', content: buildLeftRightSvg(pair.left.emoji, pair.right.emoji) }
       ],
-      options: [
-        { id: 'apple', label: 'Apple 🍎' },
-        { id: 'strawberry', label: 'Strawberry 🍓' }
-      ],
-      answer: isLeft ? 'apple' : 'strawberry',
-      correctAnswerIndex: isLeft ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: isLeft ? "The Apple 🍎 is on the left side of the dotted line." : "The Strawberry 🍓 is on the right side." }] }
+      options: sortedOptions,
+      answer: target.name,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: isLeft ? `The ${pair.left.label} is on the left side of the dotted line.` : `The ${pair.right.label} is on the right side.` }] }
     };
   }
 
   if (subType === 'left_middle_right') {
-    const choices = [
-      { id: 'grape', name: 'Grape 🍇', position: 'left', index: 0 },
-      { id: 'orange', name: 'Orange 🍊', position: 'middle', index: 1 },
-      { id: 'pear', name: 'Pear 🍐', position: 'right', index: 2 }
+    const items = [
+      { id: 'grape', name: 'Grape 🍇', emoji: '🍇' },
+      { id: 'orange', name: 'Orange 🍊', emoji: '🍊' },
+      { id: 'pear', name: 'Pear 🍐', emoji: '🍐' },
+      { id: 'apple', name: 'Apple 🍎', emoji: '🍎' },
+      { id: 'banana', name: 'Banana 🍌', emoji: '🍌' },
+      { id: 'strawberry', name: 'Strawberry 🍓', emoji: '🍓' }
     ];
-    const target = choices[Math.floor(random() * choices.length)];
-    const questionText = `Which fruit is in the ${target.position}?`;
+    const selected = [];
+    while (selected.length < 3) {
+      const it = items[Math.floor(random() * items.length)];
+      if (!selected.find(x => x.id === it.id)) {
+        selected.push(it);
+      }
+    }
+
+    const positions = ['left', 'middle', 'right'];
+    const targetPosIndex = Math.floor(random() * 3);
+    const targetPos = positions[targetPosIndex];
+    const targetItem = selected[targetPosIndex];
+
+    const questionText = `Which fruit is in the ${targetPos}?`;
+
+    const options = selected.map((item, index) => ({
+      id: item.id,
+      label: item.name,
+      posIndex: index
+    }));
+    const sortedOptions = random() > 0.5 ? [...options].reverse() : options;
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === targetItem.id);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildLeftMiddleRightSvg() }
+        { type: 'svg', content: buildLeftMiddleRightSvg(selected[0].emoji, selected[1].emoji, selected[2].emoji) }
       ],
-      options: choices.map(c => ({ id: c.id, label: c.name })),
-      answer: target.id,
-      correctAnswerIndex: target.index,
-      solution: { sections: [{ type: 'text', content: `The Grape 🍇 is on the left, the Orange 🍊 is in the middle, and the Pear 🍐 is on the right.` }] }
+      options: sortedOptions.map(o => ({ id: o.id, label: o.label })),
+      answer: targetItem.id,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: `The ${selected[0].name} is on the left, the ${selected[1].name} is in the middle, and the ${selected[2].name} is on the right.` }] }
     };
   }
 
   if (subType === 'top_bottom') {
+    const items = [
+      { name: 'bird', emoji: '🐦', label: 'Bird 🐦' },
+      { name: 'cat', emoji: '🐱', label: 'Cat 🐱' },
+      { name: 'squirrel', emoji: '🐿️', label: 'Squirrel 🐿️' },
+      { name: 'dog', emoji: '🐶', label: 'Dog 🐶' }
+    ];
+    const topItem = items[Math.floor(random() * items.length)];
+    let bottomItem = items[Math.floor(random() * items.length)];
+    while (bottomItem.name === topItem.name) {
+      bottomItem = items[Math.floor(random() * items.length)];
+    }
+
     const isTop = random() > 0.5;
     const questionText = isTop ? "Which animal is at the top?" : "Which animal is at the bottom?";
+    const target = isTop ? topItem : bottomItem;
+
+    const options = [
+      { id: topItem.name, label: topItem.label },
+      { id: bottomItem.name, label: bottomItem.label }
+    ];
+    const sortedOptions = random() > 0.5 ? options : [options[1], options[0]];
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === target.name);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildTopBottomSvg() }
+        { type: 'svg', content: buildTopBottomSvg(topItem.emoji, bottomItem.emoji) }
       ],
-      options: [
-        { id: 'bird', label: 'Bird 🐦' },
-        { id: 'cat', label: 'Cat 🐱' }
-      ],
-      answer: isTop ? 'bird' : 'cat',
-      correctAnswerIndex: isTop ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: isTop ? "The Bird 🐦 is sitting at the top of the ladder." : "The Cat 🐱 is at the bottom." }] }
+      options: sortedOptions,
+      answer: target.name,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: isTop ? `The ${topItem.label} is at the top of the ladder.` : `The ${bottomItem.label} is at the bottom.` }] }
     };
   }
 
   if (subType === 'top_middle_bottom') {
-    const choices = [
-      { id: 'balloon', name: 'Balloon 🎈', position: 'top', index: 0 },
-      { id: 'ball', name: 'Ball ⚽', position: 'middle', index: 1 },
-      { id: 'box', name: 'Box 📦', position: 'bottom', index: 2 }
+    const items = [
+      { id: 'balloon', name: 'Balloon 🎈', emoji: '🎈' },
+      { id: 'ball', name: 'Ball ⚽', emoji: '⚽' },
+      { id: 'box', name: 'Box 📦', emoji: '📦' },
+      { id: 'gift', name: 'Gift 🎁', emoji: '🎁' },
+      { id: 'book', name: 'Book 📖', emoji: '📖' },
+      { id: 'hat', name: 'Hat 🎩', emoji: '🎩' }
     ];
-    const target = choices[Math.floor(random() * choices.length)];
-    const questionText = `Which item is at the ${target.position}?`;
+    const selected = [];
+    while (selected.length < 3) {
+      const it = items[Math.floor(random() * items.length)];
+      if (!selected.find(x => x.id === it.id)) {
+        selected.push(it);
+      }
+    }
+
+    const positions = ['top', 'middle', 'bottom'];
+    const targetPosIndex = Math.floor(random() * 3);
+    const targetPos = positions[targetPosIndex];
+    const targetItem = selected[targetPosIndex];
+
+    const questionText = `Which item is at the ${targetPos}?`;
+
+    const options = selected.map((item, index) => ({
+      id: item.id,
+      label: item.name,
+      posIndex: index
+    }));
+    const sortedOptions = random() > 0.5 ? [...options].reverse() : options;
+    const correctAnswerIndex = sortedOptions.findIndex(o => o.id === targetItem.id);
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildTopMiddleBottomSvg() }
+        { type: 'svg', content: buildTopMiddleBottomSvg(selected[0].emoji, selected[1].emoji, selected[2].emoji) }
       ],
-      options: choices.map(c => ({ id: c.id, label: c.name })),
-      answer: target.id,
-      correctAnswerIndex: target.index,
-      solution: { sections: [{ type: 'text', content: `The Balloon 🎈 is at the top, the Ball ⚽ is in the middle, and the Box 📦 is at the bottom.` }] }
+      options: sortedOptions.map(o => ({ id: o.id, label: o.label })),
+      answer: targetItem.id,
+      correctAnswerIndex,
+      solution: { sections: [{ type: 'text', content: `The ${selected[0].name} is at the top, the ${selected[1].name} is in the middle, and the ${selected[2].name} is at the bottom.` }] }
     };
   }
 }
@@ -643,12 +788,30 @@ function lkgClassifyEngine(config, params, random) {
     subType = random() > 0.5 ? 'same' : 'different';
   }
 
+  const shapes = [
+    { type: 'circle', svg: (color) => `<svg width="80" height="80"><circle cx="40" cy="40" r="30" fill="${color.value}" stroke="${color.stroke}" stroke-width="3"/></svg>` },
+    { type: 'square', svg: (color) => `<svg width="80" height="80"><rect x="15" y="15" width="50" height="50" fill="${color.value}" stroke="${color.stroke}" stroke-width="3" rx="2"/></svg>` },
+    { type: 'triangle', svg: (color) => `<svg width="80" height="80"><polygon points="40,15 15,65 65,65" fill="${color.value}" stroke="${color.stroke}" stroke-width="3"/></svg>` }
+  ];
+  const colors = [
+    { name: 'blue', value: '#3b82f6', stroke: '#1d4ed8' },
+    { name: 'red', value: '#ef4444', stroke: '#b91c1c' },
+    { name: 'green', value: '#10b981', stroke: '#047857' },
+    { name: 'yellow', value: '#eab308', stroke: '#a16207' }
+  ];
+
   if (subType === 'same') {
-    const targetSvg = `<svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="30" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/></svg>`; 
-    const decoySvg = `<svg width="80" height="80" viewBox="0 0 80 80"><rect x="15" y="15" width="50" height="50" fill="#ef4444" stroke="#b91c1c" stroke-width="3" rx="2"/></svg>`; 
+    const chosenShape = shapes[Math.floor(random() * shapes.length)];
+    const color = colors[Math.floor(random() * colors.length)];
+    
+    const decoyShape = shapes.find(s => s.type !== chosenShape.type);
+    const decoyColor = colors.find(c => c.name !== color.name);
+
+    const targetSvg = chosenShape.svg(color);
+    const decoySvg = decoyShape.svg(decoyColor);
 
     const isFirstCorrect = random() > 0.5;
-    const questionText = "Which shape is the same as this blue circle?";
+    const questionText = `Which shape is the same as this ${color.name} ${chosenShape.type}?`;
     return {
       type: 'mcq',
       questionText,
@@ -662,18 +825,30 @@ function lkgClassifyEngine(config, params, random) {
       ],
       answer: isFirstCorrect ? 'opt_a' : 'opt_b',
       correctAnswerIndex: isFirstCorrect ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: `The blue circle matches Option ${isFirstCorrect ? 'A' : 'B'}.` }] },
+      solution: { sections: [{ type: 'text', content: `The ${color.name} ${chosenShape.type} matches Option ${isFirstCorrect ? 'A' : 'B'}.` }] },
       layoutConfig: { variant: 'pictureSentence', columns: 2 }
     };
   }
 
   if (subType === 'different') {
-    const appleSvg = `<svg width="60" height="60"><text x="10" y="45" font-size="36">🍎</text></svg>`;
-    const bananaSvg = `<svg width="60" height="60"><text x="10" y="45" font-size="36">🍌</text></svg>`;
+    const items = [
+      { name: 'Apple', emoji: '🍎' },
+      { name: 'Banana', emoji: '🍌' },
+      { name: 'Grape', emoji: '🍇' },
+      { name: 'Orange', emoji: '🍊' },
+      { name: 'Strawberry', emoji: '🍓' },
+      { name: 'Watermelon', emoji: '🍉' },
+      { name: 'Cherry', emoji: '🍒' }
+    ];
+    const targetItem = items[Math.floor(random() * items.length)];
+    let decoyItem = items[Math.floor(random() * items.length)];
+    while (decoyItem.name === targetItem.name) {
+      decoyItem = items[Math.floor(random() * items.length)];
+    }
 
     const isFirstCorrect = random() > 0.5;
-    const optionASvg = isFirstCorrect ? bananaSvg : appleSvg;
-    const optionBSvg = isFirstCorrect ? appleSvg : bananaSvg;
+    const optionASvg = isFirstCorrect ? `<svg width="60" height="60"><text x="10" y="45" font-size="36">${decoyItem.emoji}</text></svg>` : `<svg width="60" height="60"><text x="10" y="45" font-size="36">${targetItem.emoji}</text></svg>`;
+    const optionBSvg = isFirstCorrect ? `<svg width="60" height="60"><text x="10" y="45" font-size="36">${targetItem.emoji}</text></svg>` : `<svg width="60" height="60"><text x="10" y="45" font-size="36">${decoyItem.emoji}</text></svg>`;
 
     const questionText = "Which one is different?";
     return {
@@ -682,70 +857,81 @@ function lkgClassifyEngine(config, params, random) {
       parts: [
         { type: 'text', content: questionText },
         { type: 'svg', content: `<svg width="240" height="70" viewBox="0 0 240 70">
-          <text x="10" y="50" font-size="36">🍎</text>
-          <text x="70" y="50" font-size="36">🍎</text>
-          <text x="130" y="50" font-size="36">🍎</text>
-          <text x="190" y="50" font-size="36">🍌</text>
+          <text x="10" y="50" font-size="36">${targetItem.emoji}</text>
+          <text x="70" y="50" font-size="36">${targetItem.emoji}</text>
+          <text x="130" y="50" font-size="36">${targetItem.emoji}</text>
+          <text x="190" y="50" font-size="36">${decoyItem.emoji}</text>
         </svg>` }
       ],
       options: [
-        { id: 'banana', label: 'Banana 🍌', svg: optionASvg },
-        { id: 'apple', label: 'Apple 🍎', svg: optionBSvg }
+        { id: decoyItem.name.toLowerCase(), label: `${decoyItem.name} ${decoyItem.emoji}`, svg: optionASvg },
+        { id: targetItem.name.toLowerCase(), label: `${targetItem.name} ${targetItem.emoji}`, svg: optionBSvg }
       ],
-      answer: isFirstCorrect ? 'banana' : 'apple',
+      answer: isFirstCorrect ? decoyItem.name.toLowerCase() : targetItem.name.toLowerCase(),
       correctAnswerIndex: isFirstCorrect ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: "The Banana 🍌 is different because all other items are Apples 🍎." }] },
+      solution: { sections: [{ type: 'text', content: `The ${decoyItem.name} ${decoyItem.emoji} is different because all other items are ${targetItem.name}s ${targetItem.emoji}.` }] },
       layoutConfig: { variant: 'pictureSentence', columns: 2 }
     };
   }
 
   if (subType === 'shapes_color') {
-    const redCircle = `<svg width="80" height="80"><circle cx="40" cy="40" r="30" fill="#ef4444" stroke="#b91c1c" stroke-width="3"/></svg>`;
-    const blueCircle = `<svg width="80" height="80"><circle cx="40" cy="40" r="30" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/></svg>`;
+    const targetColor = colors[Math.floor(random() * colors.length)];
+    const decoyColor = colors.filter(c => c.name !== targetColor.name)[Math.floor(random() * (colors.length - 1))];
+    const chosenShape = shapes[Math.floor(random() * shapes.length)];
+
+    const targetSvg = chosenShape.svg(targetColor);
+    const decoySvg = chosenShape.svg(decoyColor);
 
     const isFirstCorrect = random() > 0.5;
-    const questionText = "Which shape is red?";
+    const questionText = `Which shape is ${targetColor.name}?`;
     return {
       type: 'mcq',
       questionText,
       parts: [{ type: 'text', content: questionText }],
       options: [
-        { id: 'opt_a', label: 'Option A', svg: isFirstCorrect ? redCircle : blueCircle },
-        { id: 'opt_b', label: 'Option B', svg: isFirstCorrect ? blueCircle : redCircle }
+        { id: 'opt_a', label: 'Option A', svg: isFirstCorrect ? targetSvg : decoySvg },
+        { id: 'opt_b', label: 'Option B', svg: isFirstCorrect ? decoySvg : targetSvg }
       ],
       answer: isFirstCorrect ? 'opt_a' : 'opt_b',
       correctAnswerIndex: isFirstCorrect ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: `The red circle is Option ${isFirstCorrect ? 'A' : 'B'}.` }] },
+      solution: { sections: [{ type: 'text', content: `The ${targetColor.name} shape is Option ${isFirstCorrect ? 'A' : 'B'}.` }] },
       layoutConfig: { variant: 'pictureSentence', columns: 2 }
     };
   }
 
   if (subType === 'sort_color' || subType === 'sort_shape') {
     const isSortColor = subType === 'sort_color';
+    
+    const targetColor = colors[Math.floor(random() * colors.length)];
+    const decoyColor = colors.filter(c => c.name !== targetColor.name)[Math.floor(random() * (colors.length - 1))];
+    
+    const chosenShape = shapes[Math.floor(random() * shapes.length)];
+    const decoyShape = shapes.filter(s => s.type !== chosenShape.type)[Math.floor(random() * (shapes.length - 1))];
+
     const targetGroup = isSortColor 
       ? `<svg width="180" height="80" viewBox="0 0 180 80">
-          <circle cx="40" cy="40" r="24" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/>
-          <rect x="110" y="16" width="48" height="48" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3" rx="2"/>
+          <circle cx="40" cy="40" r="24" fill="${targetColor.value}" stroke="${targetColor.stroke}" stroke-width="3"/>
+          <rect x="110" y="16" width="48" height="48" fill="${targetColor.value}" stroke="${targetColor.stroke}" stroke-width="3" rx="2"/>
         </svg>`
       : `<svg width="180" height="80" viewBox="0 0 180 80">
-          <circle cx="40" cy="40" r="24" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/>
-          <circle cx="130" cy="40" r="24" fill="#ef4444" stroke="#b91c1c" stroke-width="3"/>
+          <circle cx="40" cy="40" r="24" fill="${targetColor.value}" stroke="${targetColor.stroke}" stroke-width="3"/>
+          <circle cx="130" cy="40" r="24" fill="${decoyColor.value}" stroke="${decoyColor.stroke}" stroke-width="3"/>
         </svg>`;
 
     const decoyGroup = isSortColor
       ? `<svg width="180" height="80" viewBox="0 0 180 80">
-          <circle cx="40" cy="40" r="24" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/>
-          <rect x="110" y="16" width="48" height="48" fill="#ef4444" stroke="#b91c1c" stroke-width="3" rx="2"/>
+          <circle cx="40" cy="40" r="24" fill="${targetColor.value}" stroke="${targetColor.stroke}" stroke-width="3"/>
+          <rect x="110" y="16" width="48" height="48" fill="${decoyColor.value}" stroke="${decoyColor.stroke}" stroke-width="3" rx="2"/>
         </svg>`
       : `<svg width="180" height="80" viewBox="0 0 180 80">
-          <circle cx="40" cy="40" r="24" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/>
-          <rect x="110" y="16" width="48" height="48" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3" rx="2"/>
+          <circle cx="40" cy="40" r="24" fill="${targetColor.value}" stroke="${targetColor.stroke}" stroke-width="3"/>
+          <rect x="110" y="16" width="48" height="48" fill="${targetColor.value}" stroke="${targetColor.stroke}" stroke-width="3" rx="2"/>
         </svg>`;
 
     const isFirstCorrect = random() > 0.5;
     const questionText = isSortColor 
-      ? "Which group has only blue shapes?" 
-      : "Which group has only circles?";
+      ? `Which group has only ${targetColor.name} shapes?` 
+      : `Which group has only ${chosenShape.type}s?`;
 
     return {
       type: 'mcq',
