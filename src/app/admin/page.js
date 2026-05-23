@@ -2009,7 +2009,7 @@ export default function AdminConsolePage() {
 
     // Extract parts or default to first question text part
     if (loadedParts.length > 0) {
-      setParts(loadedParts.filter(p => p.type !== 'categorization'));
+      setParts(loadedParts.filter(p => p.type !== 'categorization' && p.type !== 'hotspot_canvas'));
     } else {
       setParts([
         { type: 'text', content: q.questionText || '' }
