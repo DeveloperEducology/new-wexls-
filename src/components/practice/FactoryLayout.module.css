@@ -648,7 +648,8 @@
 }
 
 /* Background layer (SVG div or <img>) fills the inner box */
-.hotspotBg {
+.hotspotBg,
+.hotspotBg svg {
     width: 100%;
     height: 100%;
     display: block;
