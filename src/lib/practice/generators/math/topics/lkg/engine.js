@@ -1,4 +1,4 @@
-import { lkgCountingObjects } from './assets.js';
+import { lkgCountingObjects, lkgSizeImageAssets } from './assets.js';
 import { lkgMicroSkillRegistry } from './registry.js';
 
 // Seeded random number generator
@@ -1034,78 +1034,145 @@ function lkgSizeEngine(config, params, random) {
 
   if (subType === 'long_short') {
     const isLonger = random() > 0.5;
-    const questionText = isLonger ? "Which line is longer?" : "Which line is shorter?";
+    const questionText = isLonger ? "Which is longer?" : "Which is shorter?";
+    
+    const longItem = lkgSizeImageAssets.find(x => x.id === 'pencil_long') || { image: '/images/lkg/size/pencil_long.png', emoji: '✏️' };
+    const shortItem = lkgSizeImageAssets.find(x => x.id === 'pencil_short') || { image: '/images/lkg/size/pencil_short.png', emoji: '✏️' };
+
+    const isFirstLong = random() > 0.5;
+    const groupA = isFirstLong ? longItem : shortItem;
+    const groupB = isFirstLong ? shortItem : longItem;
+    
+    const answerId = isLonger 
+      ? (isFirstLong ? 'group_a' : 'group_b')
+      : (isFirstLong ? 'group_b' : 'group_a');
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildLongShortSvg() }
+        {
+          type: 'side_by_side_display',
+          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
+          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+        }
       ],
       options: [
-        { id: 'a', label: 'Line A' },
-        { id: 'b', label: 'Line B' }
+        { id: 'group_a', label: 'Item A' },
+        { id: 'group_b', label: 'Item B' }
       ],
-      answer: isLonger ? 'a' : 'b',
-      correctAnswerIndex: isLonger ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: "Line A is longer than Line B." }] }
+      answer: answerId,
+      correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: `Item A is ${isFirstLong ? 'longer' : 'shorter'} and Item B is ${isFirstLong ? 'shorter' : 'longer'}.` }] }
     };
   }
 
   if (subType === 'tall_short') {
     const isTaller = random() > 0.5;
     const questionText = isTaller ? "Which tree is taller?" : "Which tree is shorter?";
+    
+    const tallItem = lkgSizeImageAssets.find(x => x.id === 'tree_tall') || { image: '/images/lkg/size/tree_tall.png', emoji: '🌲' };
+    const shortItem = lkgSizeImageAssets.find(x => x.id === 'tree_short') || { image: '/images/lkg/size/tree_short.png', emoji: '🌳' };
+
+    const isFirstTall = random() > 0.5;
+    const groupA = isFirstTall ? tallItem : shortItem;
+    const groupB = isFirstTall ? shortItem : tallItem;
+    
+    const answerId = isTaller 
+      ? (isFirstTall ? 'group_a' : 'group_b')
+      : (isFirstTall ? 'group_b' : 'group_a');
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildTallShortSvg() }
+        {
+          type: 'side_by_side_display',
+          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
+          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+        }
       ],
       options: [
-        { id: 'a', label: 'Tree A' },
-        { id: 'b', label: 'Tree B' }
+        { id: 'group_a', label: 'Tree A' },
+        { id: 'group_b', label: 'Tree B' }
       ],
-      answer: isTaller ? 'a' : 'b',
-      correctAnswerIndex: isTaller ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: "Tree A is taller than Tree B." }] }
+      answer: answerId,
+      correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: `Tree A is ${isFirstTall ? 'taller' : 'shorter'} and Tree B is ${isFirstTall ? 'shorter' : 'taller'}.` }] }
     };
   }
 
   if (subType === 'wide_narrow') {
     const isWider = random() > 0.5;
     const questionText = isWider ? "Which path is wider?" : "Which path is narrower?";
+    
+    const wideItem = lkgSizeImageAssets.find(x => x.id === 'path_wide') || { image: '/images/lkg/size/path_wide.png', emoji: '🛣️' };
+    const narrowItem = lkgSizeImageAssets.find(x => x.id === 'path_narrow') || { image: '/images/lkg/size/path_narrow.png', emoji: '👣' };
+
+    const isFirstWide = random() > 0.5;
+    const groupA = isFirstWide ? wideItem : narrowItem;
+    const groupB = isFirstWide ? narrowItem : wideItem;
+    
+    const answerId = isWider 
+      ? (isFirstWide ? 'group_a' : 'group_b')
+      : (isFirstWide ? 'group_b' : 'group_a');
+
     return {
       type: 'mcq',
       questionText,
       parts: [
         { type: 'text', content: questionText },
-        { type: 'svg', content: buildWideNarrowSvg() }
+        {
+          type: 'side_by_side_display',
+          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
+          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+        }
       ],
       options: [
-        { id: 'a', label: 'Path A' },
-        { id: 'b', label: 'Path B' }
+        { id: 'group_a', label: 'Path A' },
+        { id: 'group_b', label: 'Path B' }
       ],
-      answer: isWider ? 'a' : 'b',
-      correctAnswerIndex: isWider ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: "Path A is wider than Path B." }] }
+      answer: answerId,
+      correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: `Path A is ${isFirstWide ? 'wider' : 'narrower'} and Path B is ${isFirstWide ? 'narrower' : 'wider'}.` }] }
     };
   }
 
   if (subType === 'light_heavy') {
     const isHeavier = random() > 0.5;
     const questionText = isHeavier ? "Which is heavier?" : "Which is lighter?";
+
+    const heavyItem = lkgSizeImageAssets.find(x => x.id === 'stone_heavy') || { image: '/images/lkg/size/stone_heavy.png', emoji: '🦨' };
+    const lightItem = lkgSizeImageAssets.find(x => x.id === 'feather_light') || { image: '/images/lkg/size/feather_light.png', emoji: '🪶' };
+
+    const isFirstHeavy = random() > 0.5;
+    const groupA = isFirstHeavy ? heavyItem : lightItem;
+    const groupB = isFirstHeavy ? lightItem : heavyItem;
+
+    const answerId = isHeavier 
+      ? (isFirstHeavy ? 'group_a' : 'group_b')
+      : (isFirstHeavy ? 'group_b' : 'group_a');
+
     return {
       type: 'mcq',
       questionText,
-      parts: [{ type: 'text', content: questionText }],
-      options: [
-        { id: 'elephant', label: 'Elephant 🐘' },
-        { id: 'feather', label: 'Feather 🪶' }
+      parts: [
+        { type: 'text', content: questionText },
+        {
+          type: 'side_by_side_display',
+          groupA: { count: 1, itemLabel: 'A', image: groupA.image, emoji: groupA.emoji },
+          groupB: { count: 1, itemLabel: 'B', image: groupB.image, emoji: groupB.emoji }
+        }
       ],
-      answer: isHeavier ? 'elephant' : 'feather',
-      correctAnswerIndex: isHeavier ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: "An Elephant 🐘 is heavy, whereas a Feather 🪶 is very light." }] }
+      options: [
+        { id: 'group_a', label: isFirstHeavy ? 'Stone' : 'Feather' },
+        { id: 'group_b', label: isFirstHeavy ? 'Feather' : 'Stone' }
+      ],
+      answer: answerId,
+      correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: "The heavy stone weighs more than the light feather." }] }
     };
   }
 }
