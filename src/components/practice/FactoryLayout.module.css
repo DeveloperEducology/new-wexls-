@@ -702,27 +702,39 @@
 
 /* Style transition on background SVG text elements */
 .hotspotCanvasInner svg :global(.svg-object-0),
-.hotspotCanvasInner svg :global(.svg-object-1) {
+.hotspotCanvasInner svg :global(.svg-object-1),
+.hotspotCanvasInner svg :global(.svg-object-2),
+.hotspotCanvasInner svg :global(.svg-object-3),
+.hotspotCanvasInner svg :global(.svg-object-4),
+.hotspotCanvasInner svg :global(.svg-object-5),
+.hotspotCanvasInner svg :global(.svg-object-6),
+.hotspotCanvasInner svg :global(.svg-object-7) {
     transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease;
     transform-origin: center;
     transform-box: fill-box;
 }
 
 /* Hover and selection states for SVG objects */
-.hotspotCanvasInner[data-hovered-index="0"] svg :global(.svg-object-0) {
-    transform: scale(1.12);
-    filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
-}
-.hotspotCanvasInner[data-hovered-index="1"] svg :global(.svg-object-1) {
+.hotspotCanvasInner[data-hovered-index="0"] svg :global(.svg-object-0),
+.hotspotCanvasInner[data-hovered-index="1"] svg :global(.svg-object-1),
+.hotspotCanvasInner[data-hovered-index="2"] svg :global(.svg-object-2),
+.hotspotCanvasInner[data-hovered-index="3"] svg :global(.svg-object-3),
+.hotspotCanvasInner[data-hovered-index="4"] svg :global(.svg-object-4),
+.hotspotCanvasInner[data-hovered-index="5"] svg :global(.svg-object-5),
+.hotspotCanvasInner[data-hovered-index="6"] svg :global(.svg-object-6),
+.hotspotCanvasInner[data-hovered-index="7"] svg :global(.svg-object-7) {
     transform: scale(1.12);
     filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
 }
 
-.hotspotCanvasInner[data-selected-index="0"] svg :global(.svg-object-0) {
-    transform: scale(1.1);
-    filter: drop-shadow(0 6px 12px rgba(2, 132, 199, 0.4));
-}
-.hotspotCanvasInner[data-selected-index="1"] svg :global(.svg-object-1) {
+.hotspotCanvasInner[data-selected-index="0"] svg :global(.svg-object-0),
+.hotspotCanvasInner[data-selected-index="1"] svg :global(.svg-object-1),
+.hotspotCanvasInner[data-selected-index="2"] svg :global(.svg-object-2),
+.hotspotCanvasInner[data-selected-index="3"] svg :global(.svg-object-3),
+.hotspotCanvasInner[data-selected-index="4"] svg :global(.svg-object-4),
+.hotspotCanvasInner[data-selected-index="5"] svg :global(.svg-object-5),
+.hotspotCanvasInner[data-selected-index="6"] svg :global(.svg-object-6),
+.hotspotCanvasInner[data-selected-index="7"] svg :global(.svg-object-7) {
     transform: scale(1.1);
     filter: drop-shadow(0 6px 12px rgba(2, 132, 199, 0.4));
 }

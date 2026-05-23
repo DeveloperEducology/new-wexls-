@@ -43,6 +43,10 @@ const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).
   }))
 );
 
+const SOLAR_SYSTEM_OPTIONS = [
+  { group: 'Grade 3', label: 'SS.1 Identify planets in the solar system', value: 'science-g3-solar-system-planets-hotspot' }
+];
+
 const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
     group: `Grade ${grade}`,
@@ -393,6 +397,20 @@ const SOURCE_CONFIGS = {
       { label: 'Interactive MCQ', text: 'Compare temperatures using multiple SVGs side by side.' },
     ],
   },
+  'solar-system': {
+    label: 'Solar System Practice',
+    api: '/api/practice',
+    badge: 'SCI',
+    description: 'Identify planets in the solar system, understand orbit hierarchies and visual appearances.',
+    defaultLogicType: 'science-g3-solar-system-planets-hotspot',
+    subject: 'science',
+    topic: 'solar-system',
+    options: SOLAR_SYSTEM_OPTIONS,
+    tips: [
+      { label: 'Interactive Orbits', text: 'Stunning space background with responsive elliptical orbits.' },
+      { label: 'Hotspot Canvas', text: 'Click directly on the animated planets to answer.' },
+    ],
+  },
   'english-grammar': {
     label: 'Grammar Practice',
     api: '/api/practice',
@@ -498,6 +516,7 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'math' && normTopic === 'testing') return 'testing';
   if (subject === 'social' && normTopic === 'gk') return 'social-gk';
   if (subject === 'science' && normTopic === 'units-measurement') return 'units-measurement';
+  if (subject === 'science' && normTopic === 'solar-system') return 'solar-system';
   if (subject === 'english' && normTopic === 'grammar') return 'english-grammar';
   return topic; // return the topic ID for db fetched topics
 }

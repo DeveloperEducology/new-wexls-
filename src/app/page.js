@@ -26,6 +26,15 @@ const unitsMeasurementHomeGroups = Object.entries(unitsMeasurementSkillsByGrade)
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
 
+const solarSystemHomeGroups = [
+  {
+    title: 'Solar system skills',
+    skills: [
+      ['SS.1', 'Identify planets in the solar system', 'science-g3-solar-system-planets-hotspot']
+    ]
+  }
+];
+
 const grammarHomeGroups = Object.entries(grammarSkillsByGrade).map(([grade, skills]) => ({
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
@@ -295,6 +304,15 @@ const TOPICS = [
     topic: 'units-measurement',
     includes: ['Units', 'temperature', 'measuring tools', 'metric/customary units', 'conversions'],
     groups: unitsMeasurementHomeGroups,
+  },
+  {
+    id: 'solar-system',
+    title: 'Solar system',
+    color: '#06b6d4',
+    subject: 'science',
+    topic: 'solar-system',
+    includes: ['Planets identification', 'Elliptical orbits', 'Sun & gas giants', 'Rings & orbital order'],
+    groups: solarSystemHomeGroups,
   },
   {
     id: 'ratio',

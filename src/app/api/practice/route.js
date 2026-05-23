@@ -31,6 +31,7 @@ import {
   generateMultiplicationQuestion,
 } from '../../../lib/practice/generators/math/topics/multiplication';
 import { resolveUnitsMeasurementGenerator } from '../../../lib/practice/generators/science/topics/units-measurement/index.js';
+import { resolveSolarSystemGenerator } from '../../../lib/practice/generators/science/topics/solar-system/index.js';
 import {
   generateRatioQuestion,
 } from '../../../lib/practice/generators/math/topics/ratio/index.js';
@@ -87,7 +88,7 @@ export async function GET(request) {
   const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes'].includes(topic);
   const isSocialTopic = subject === 'social' && topic === 'gk';
 
-  const isScienceTopic = subject === 'science' && topic === 'units-measurement';
+  const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system'].includes(topic);
   const isEnglishTopic = subject === 'english' && topic === 'grammar';
 
   if (!isMathTopic && !isSocialTopic && !isScienceTopic && !isEnglishTopic) {
@@ -212,6 +213,26 @@ export async function GET(request) {
 
     if (subject === 'science' && topic === 'units-measurement') {
       const generator = resolveUnitsMeasurementGenerator(skill, config);
+      if (!generator) {
+        throw new Error(`Could not resolve generator for ${skill}`);
+      }
+      
+      const questionData = generator.generate({ ...config.variables, difficulty: config.difficulty });
+      const question = normalizeGenericTopicQuestion(
+        questionData,
+        { topic, skill, seed, engine: generator.template.engine, subject }
+      );
+      
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: generator.template,
+      }, { subject, topic, skill }));
+    }
+
+    if (subject === 'science' && topic === 'solar-system') {
+      const generator = resolveSolarSystemGenerator(skill, config);
       if (!generator) {
         throw new Error(`Could not resolve generator for ${skill}`);
       }

@@ -669,6 +669,19 @@ export const competencyGraphs = {
         'science-g8-ii3-estimate-temperatures': 'temperature_estimation',
       },
     },
+    'solar-system': {
+      competencies: [
+        {
+          id: 'planet_identification',
+          title: 'Identify planets in the solar system',
+          prerequisites: [],
+          remediation: [],
+        },
+      ],
+      skillMap: {
+        'science-g3-solar-system-planets-hotspot': 'planet_identification',
+      },
+    },
   },
   multiplication: {
   competencies: [
