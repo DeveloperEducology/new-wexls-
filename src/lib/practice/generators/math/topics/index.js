@@ -58,3 +58,11 @@ export {
   getShapesTemplate,
   shapesTemplates
 } from './shapes/index.js';
+
+export {
+  generateMeasurementQuestion,
+  measurementRegistry,
+  MEASUREMENT_CATALOG,
+  getMeasurementSkill,
+  measurementTheory
+} from './measurement/index.js';

@@ -34,6 +34,7 @@ import { placeValueSkillsByGrade } from '../../lib/practice/generators/math/topi
 import { unitsMeasurementSkillsByGrade } from '../../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../../lib/practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../../lib/practice/generators/math/topics/shapes/skills/index.js';
+import { MEASUREMENT_CATALOG } from '../../lib/practice/generators/math/topics/measurement/index.js';
 
 const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
@@ -71,6 +72,18 @@ const SHAPES_OPTIONS = Object.entries(shapesSkillsByGrade).flatMap(([grade, skil
     value: skill.id
   }))
 );
+
+const MEASUREMENT_OPTIONS = MEASUREMENT_CATALOG.map((skill) => {
+  let groupName = skill.grade;
+  if (['1','2','3','4','5','6','7','8'].includes(skill.grade)) {
+    groupName = `Grade ${skill.grade}`;
+  }
+  return {
+    group: groupName,
+    label: `${skill.code} ${skill.title}`,
+    value: skill.skillId
+  };
+});
 
 const gradeLabel = (grade) => {
   if (grade === 'remediation') return 'Remediation';
@@ -367,6 +380,20 @@ const SOURCE_CONFIGS = {
     tips: [
       { label: 'Interactive SVGs', text: 'Questions feature interactive visual SVG representation.' },
       { label: 'Multi-step Solution', text: 'Solutions feature step-by-step visual corner and side explanations.' },
+    ],
+  },
+  measurement: {
+    label: 'Measurement Practice',
+    api: '/api/practice',
+    badge: 'MATH',
+    description: 'Customary & metric measurements, rulers, thermometers, scales, unit conversions, rate conversions, precision, greatest possible error, and density calculations.',
+    defaultLogicType: 'meas-prek-long-short',
+    subject: 'math',
+    topic: 'measurement',
+    options: MEASUREMENT_OPTIONS,
+    tips: [
+      { label: 'SVG Instruments', text: 'Questions feature procedural rulers, thermometers, cylinders, and spring scales.' },
+      { label: 'Step-by-Step solutions', text: 'Detailed, conceptual walk-through explanations accompany each problem.' },
     ],
   },
   'social-gk': {

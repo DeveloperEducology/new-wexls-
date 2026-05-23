@@ -85,7 +85,7 @@ export async function GET(request) {
     console.error('Practice DB node check error:', error);
   }
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes'].includes(topic);
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement'].includes(topic);
   const isSocialTopic = subject === 'social' && topic === 'gk';
 
   const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system'].includes(topic);
@@ -307,6 +307,25 @@ export async function GET(request) {
           family: 'shapes',
           engine: 'shapes',
           questionType: 'mcq'
+        },
+      }, { subject, topic, skill }));
+    }
+
+    if (topic === 'measurement') {
+      const { generateMeasurementQuestion } = await import('../../../lib/practice/generators/math/topics/measurement/index.js');
+      const question = normalizeGenericTopicQuestion(
+        generateMeasurementQuestion(config),
+        { topic, skill, seed, engine: 'measurement' },
+      );
+
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: skill,
+          title: question.metadata?.templateId || skill,
+          description: "Measurement Practice Topic"
         },
       }, { subject, topic, skill }));
     }

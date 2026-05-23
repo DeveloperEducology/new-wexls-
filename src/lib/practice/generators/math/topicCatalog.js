@@ -1,5 +1,6 @@
 import { placeValueMicroSkills } from './topics/place-values/skills/index.js';
 import { shapesSkillsByGrade } from './topics/shapes/skills/index.js';
+import { MEASUREMENT_CATALOG } from './topics/measurement/catalog.js';
 
 const ADDITION_TOPICS = [
   {
@@ -65,6 +66,12 @@ const SHAPES_TOPICS = Object.entries(shapesSkillsByGrade).flatMap(([grade, skill
     href: `/practice?subject=math&topic=shapes&skill=${skill.id}`,
   }))
 );
+
+const MEASUREMENT_TOPICS = MEASUREMENT_CATALOG.map((skill) => ({
+  code: skill.code,
+  name: skill.title,
+  href: `/practice?subject=math&topic=measurement&skill=${skill.skillId}`,
+}));
 
 const TOPIC_GROUPS = [
   {
@@ -184,6 +191,15 @@ const TOPIC_GROUPS = [
     color: '#059669',
     bg: '#ecfdf5',
     skills: SHAPES_TOPICS,
+  },
+  {
+    id: 'measurement',
+    title: 'Measurement',
+    description: 'Learn comparison of sizes, non-standard units, ruler readings, temperature, capacity, customary/metric conversions, rates, precision, density, and error analysis.',
+    icon: 'M',
+    color: '#06b6d4',
+    bg: '#ecfeff',
+    skills: MEASUREMENT_TOPICS,
   },
 ];
 

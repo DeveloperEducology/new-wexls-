@@ -128,7 +128,19 @@ export function isAnswerCorrect(question, userAnswer) {
     return JSON.stringify(answerArray.map(normalizeText)) === JSON.stringify(expected.map(normalizeText));
   }
 
-  if (normalizeText(userAnswer) === normalizeText(expected)) {
+  let finalUserAnswer = userAnswer;
+  if (userAnswer && typeof userAnswer === 'object' && !Array.isArray(userAnswer)) {
+    const keys = Object.keys(userAnswer);
+    if (keys.length === 1) {
+      finalUserAnswer = userAnswer[keys[0]];
+    } else if (userAnswer.ans !== undefined) {
+      finalUserAnswer = userAnswer.ans;
+    } else if (userAnswer.answer !== undefined) {
+      finalUserAnswer = userAnswer.answer;
+    }
+  }
+
+  if (normalizeText(finalUserAnswer) === normalizeText(expected)) {
     return true;
   }
 
@@ -141,7 +153,7 @@ export function isAnswerCorrect(question, userAnswer) {
         const answerObject = typeof userAnswer === 'object' && userAnswer !== null ? userAnswer : { ans: String(userAnswer) };
         const altMatch = altKeys.every((key) => normalizeText(answerObject[key]) === normalizeText(alt[key]));
         if (altMatch) return true;
-      } else if (normalizeText(userAnswer) === normalizeText(alt)) {
+      } else if (normalizeText(finalUserAnswer) === normalizeText(alt)) {
         return true;
       }
     }

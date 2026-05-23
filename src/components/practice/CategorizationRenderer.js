@@ -705,6 +705,21 @@ function HtmlCategorizationFallback({
       );
     }
 
+    if (item.visual === 'circle' || item.visual === 'counter' || overrides.visual === 'circle' || overrides.visual === 'counter') {
+      return (
+        <div
+          style={{
+            width: size * 0.8,
+            height: size * 0.8,
+            borderRadius: '50%',
+            background: fill || '#ef4444',
+            border: `3px solid ${stroke || '#b91c1c'}`,
+            boxShadow: 'inset -4px -4px 0 rgba(0, 0, 0, 0.15), 0 4px 10px rgba(15, 23, 42, 0.15)',
+          }}
+        />
+      );
+    }
+
     if (item.visual === 'emoji' || overrides.visual === 'emoji') {
       return (
         <div style={{ fontSize: size * 0.65, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
@@ -713,7 +728,7 @@ function HtmlCategorizationFallback({
       );
     }
 
-    if (item.visual === 'image' || overrides.visual === 'image') {
+    if (item.visual === 'image' || overrides.visual === 'image' || imgUrl) {
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
           <img 
@@ -767,6 +782,9 @@ function HtmlCategorizationFallback({
           const prefilledCount = Number(category.prefilledCount || 0);
           const placedCopies = copyZones[category.id] || [];
           const isActive = activeDropZone === category.id;
+          const numRows = Number(category.rows);
+          const numCols = Number(category.columns);
+          const hasGrid = Number.isInteger(numRows) && Number.isInteger(numCols) && numRows > 0 && numCols > 0;
 
           return (
             <div
@@ -791,26 +809,26 @@ function HtmlCategorizationFallback({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
                 <button
-                  type="button"
-                  onClick={() => speakText(category.label)}
-                  style={{
-                    background: '#e0f2fe',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: '#0284c7',
-                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
-                    transition: 'transform 0.2s ease, background 0.2s ease',
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-                  title="Read category name out loud"
+                   type="button"
+                   onClick={() => speakText(category.label)}
+                   style={{
+                     background: '#e0f2fe',
+                     border: 'none',
+                     borderRadius: '50%',
+                     width: '30px',
+                     height: '30px',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     cursor: 'pointer',
+                     color: '#0284c7',
+                     boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+                     transition: 'transform 0.2s ease, background 0.2s ease',
+                     flexShrink: 0,
+                   }}
+                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                   title="Read category name out loud"
                 >
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
@@ -818,50 +836,163 @@ function HtmlCategorizationFallback({
                 </button>
                 <span>{category.label}</span>
               </div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                {Array.from({ length: prefilledCount }).map((_, index) => (
-                  <div key={`prefilled-${index}`} style={{ width: 76, height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {renderCopyVisual(items[0], 64, { color: category.prefillColor, stroke: category.prefillStroke })}
-                  </div>
-                ))}
-                {Array.from({ length: requiredCount }).map((_, index) => {
-                  const copy = placedCopies[index];
-                  const sourceItem = copy ? itemById.get(copy.itemId) : null;
-                  return (
-                    <div
-                      key={`slot-${index}`}
-                      style={{
-                        width: 76,
-                        height: 76,
-                        border: `2px ${copy ? 'solid' : 'dashed'} ${copy ? '#5cc4ed' : '#dbeafe'}`,
-                        borderRadius: 12,
-                        background: copy ? '#ffffff' : '#f8fafc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'background 220ms ease, border-color 220ms ease, transform 220ms ease',
-                      }}
-                    >
-                      {copy && sourceItem ? (
-                        <div
-                          data-copy-instance-id={copy.instanceId}
-                          draggable={!isAnswered}
-                          onDragStart={(event) => {
-                            event.dataTransfer.setData('text/plain', sourceItem.id);
-                            event.dataTransfer.setData('application/x-copy-instance', copy.instanceId);
-                            event.dataTransfer.setData('application/x-copy-category', category.id);
-                            event.dataTransfer.effectAllowed = 'move';
-                          }}
-                          onClick={() => removeCopyFromZone(category.id, copy.instanceId)}
-                          style={{ cursor: isAnswered ? 'default' : 'pointer', animation: 'copyDropIn 260ms cubic-bezier(0.2, 0.8, 0.2, 1)', touchAction: 'manipulation' }}
-                        >
-                          {renderCopyVisual(sourceItem, 64)}
+
+              {hasGrid ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${numCols}, 1fr)`,
+                    gridTemplateRows: `repeat(${numRows}, 1fr)`,
+                    gap: 0,
+                    border: '3px solid #3b5166',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    width: 'max-content',
+                    background: '#ffffff',
+                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+                  }}
+                >
+                  {Array.from({ length: numRows * numCols }).map((_, cellIndex) => {
+                    const r = Math.floor(cellIndex / numCols);
+                    const c = cellIndex % numCols;
+                    const isPrefilled = cellIndex < prefilledCount;
+                    const isActiveSlot = cellIndex >= prefilledCount && cellIndex < prefilledCount + requiredCount;
+                    
+                    const cellStyle = {
+                      width: 76,
+                      height: 76,
+                      borderBottom: r < numRows - 1 ? '2px solid #3b5166' : 'none',
+                      borderRight: c < numCols - 1 ? '2px solid #3b5166' : 'none',
+                      background: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxSizing: 'border-box',
+                      position: 'relative',
+                    };
+
+                    if (isPrefilled) {
+                      return (
+                        <div key={`cell-${cellIndex}`} style={cellStyle}>
+                          {renderCopyVisual(items[0] || {}, 60, {
+                            color: category.prefillColor,
+                            stroke: category.prefillStroke,
+                            svg: category.prefillSvg || category.svg,
+                            imageUrl: category.prefillImageUrl || category.imageUrl
+                          })}
                         </div>
-                      ) : null}
+                      );
+                    }
+
+                    if (isActiveSlot) {
+                      const slotIndex = cellIndex - prefilledCount;
+                      const copy = placedCopies[slotIndex];
+                      const sourceItem = copy ? itemById.get(copy.itemId) : null;
+                      
+                      return (
+                        <div
+                          key={`cell-${cellIndex}`}
+                          onDragEnter={() => setActiveDropZone(category.id)}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = 'copy';
+                          }}
+                          onDrop={(event) => handleDrop(event, category.id)}
+                          style={{
+                            ...cellStyle,
+                            background: copy ? '#ffffff' : '#f8fafc',
+                            cursor: isAnswered ? 'default' : 'pointer',
+                          }}
+                        >
+                          {copy && sourceItem ? (
+                            <div
+                              data-copy-instance-id={copy.instanceId}
+                              draggable={!isAnswered}
+                              onDragStart={(event) => {
+                                event.dataTransfer.setData('text/plain', sourceItem.id);
+                                event.dataTransfer.setData('application/x-copy-instance', copy.instanceId);
+                                event.dataTransfer.setData('application/x-copy-category', category.id);
+                                event.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onClick={() => removeCopyFromZone(category.id, copy.instanceId)}
+                              style={{
+                                cursor: isAnswered ? 'default' : 'pointer',
+                                animation: 'copyDropIn 260ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                                touchAction: 'manipulation',
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              {renderCopyVisual(sourceItem, 60)}
+                            </div>
+                          ) : (
+                            <div style={{
+                              position: 'absolute',
+                              inset: 6,
+                              border: '2px dashed #cbd5e1',
+                              borderRadius: 8,
+                              pointerEvents: 'none'
+                            }} />
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // Inactive empty cell (e.g. spacer cells in a Ten Frame)
+                    return (
+                      <div key={`cell-${cellIndex}`} style={{ ...cellStyle, background: '#f1f5f9' }} />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {Array.from({ length: prefilledCount }).map((_, index) => (
+                    <div key={`prefilled-${index}`} style={{ width: 76, height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {renderCopyVisual(items[0], 64, { color: category.prefillColor, stroke: category.prefillStroke })}
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                  {Array.from({ length: requiredCount }).map((_, index) => {
+                    const copy = placedCopies[index];
+                    const sourceItem = copy ? itemById.get(copy.itemId) : null;
+                    return (
+                      <div
+                        key={`slot-${index}`}
+                        style={{
+                          width: 76,
+                          height: 76,
+                          border: `2px ${copy ? 'solid' : 'dashed'} ${copy ? '#5cc4ed' : '#dbeafe'}`,
+                          borderRadius: 12,
+                          background: copy ? '#ffffff' : '#f8fafc',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background 220ms ease, border-color 220ms ease, transform 220ms ease',
+                        }}
+                      >
+                        {copy && sourceItem ? (
+                          <div
+                            data-copy-instance-id={copy.instanceId}
+                            draggable={!isAnswered}
+                            onDragStart={(event) => {
+                              event.dataTransfer.setData('text/plain', sourceItem.id);
+                              event.dataTransfer.setData('application/x-copy-instance', copy.instanceId);
+                              event.dataTransfer.setData('application/x-copy-category', category.id);
+                              event.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onClick={() => removeCopyFromZone(category.id, copy.instanceId)}
+                            style={{ cursor: isAnswered ? 'default' : 'pointer', animation: 'copyDropIn 260ms cubic-bezier(0.2, 0.8, 0.2, 1)', touchAction: 'manipulation' }}
+                          >
+                            {renderCopyVisual(sourceItem, 64)}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}

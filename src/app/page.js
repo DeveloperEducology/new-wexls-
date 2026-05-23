@@ -5,6 +5,7 @@ import { multiplicationSkillsByGrade } from '../lib/practice/generators/math/top
 import { unitsMeasurementSkillsByGrade } from '../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../lib/practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../lib/practice/generators/math/topics/shapes/skills/index.js';
+import { MEASUREMENT_CATALOG } from '../lib/practice/generators/math/topics/measurement/index.js';
 import { getCurriculumTree } from '../lib/curriculum/index.js';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,26 @@ const shapesHomeGroups = Object.entries(shapesSkillsByGrade).map(([grade, skills
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
+
+const measurementHomeGroupsMap = {};
+MEASUREMENT_CATALOG.forEach((skill) => {
+  const gradeKey = skill.grade;
+  if (!measurementHomeGroupsMap[gradeKey]) {
+    measurementHomeGroupsMap[gradeKey] = [];
+  }
+  measurementHomeGroupsMap[gradeKey].push(skill);
+});
+
+const measurementHomeGroups = Object.entries(measurementHomeGroupsMap).map(([grade, skills]) => {
+  let title = `${grade} skills`;
+  if (grade === '1' || grade === '2' || grade === '3' || grade === '4' || grade === '5' || grade === '6' || grade === '7' || grade === '8') {
+    title = gradeOrdinal(grade);
+  }
+  return {
+    title,
+    skills: skills.map((s) => [s.code, s.title, s.skillId]),
+  };
+});
 
 
 const TOPICS = [
@@ -382,6 +403,22 @@ const TOPICS = [
       'Counting corners'
     ],
     groups: shapesHomeGroups,
+  },
+  {
+    id: 'measurement',
+    title: 'Measurement',
+    color: '#06b6d4',
+    subject: 'math',
+    topic: 'measurement',
+    includes: [
+      'Compare sizes',
+      'Ruler measurements',
+      'Unit conversions',
+      'Thermometers & liquid volume',
+      'Precision & GPE',
+      'Density math'
+    ],
+    groups: measurementHomeGroups,
   },
   {
     id: 'lkg',
