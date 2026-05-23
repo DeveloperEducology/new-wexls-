@@ -364,6 +364,128 @@ const TOPICS = [
     ],
     groups: shapesHomeGroups,
   },
+  {
+    id: 'lkg',
+    title: 'Lower Kindergarten Math',
+    color: '#0284c7',
+    subject: 'math',
+    topic: 'lkg',
+    includes: [
+      'Name the shape',
+      'Count objects up to 10',
+      'More and fewer',
+      'Inside and outside',
+      'Colour patterns',
+      'Indian coins'
+    ],
+    groups: [
+      {
+        title: 'Shapes',
+        skills: [
+          ['A.1', 'Name the shape', 'lkg-shapes-name-shape'],
+          ['A.2', 'Circles', 'lkg-shapes-circles'],
+          ['A.3', 'Squares', 'lkg-shapes-squares'],
+          ['A.4', 'Triangles', 'lkg-shapes-triangles'],
+          ['A.5', 'Rectangles', 'lkg-shapes-rectangles'],
+          ['A.6', 'Circles, squares and triangles', 'lkg-shapes-mixed'],
+        ],
+      },
+      {
+        title: 'Count to 3',
+        skills: [
+          ['B.1', 'Learn to count - up to 3', 'lkg-count3-learn'],
+          ['B.2', 'Count objects - up to 3', 'lkg-count3-objects'],
+          ['B.3', 'Count dots - up to 3', 'lkg-count3-dots'],
+          ['B.4', 'Count shapes - up to 3', 'lkg-count3-shapes'],
+          ['B.5', 'Count on ten frames - up to 3', 'lkg-count3-ten-frames'],
+          ['B.6', 'Show numbers on ten frames - up to 3', 'lkg-count3-show-ten-frames'],
+          ['B.7', 'Represent numbers - up to 3', 'lkg-count3-represent'],
+        ],
+      },
+      {
+        title: 'Count to 5',
+        skills: [
+          ['C.1', 'Learn to count - up to 5', 'lkg-count5-learn'],
+          ['C.2', 'Count objects - up to 5', 'lkg-count5-objects'],
+          ['C.3', 'Count dots - up to 5', 'lkg-count5-dots'],
+          ['C.4', 'Count shapes - up to 5', 'lkg-count5-shapes'],
+          ['C.5', 'Count on ten frames - up to 5', 'lkg-count5-ten-frames'],
+          ['C.6', 'Show numbers on ten frames - up to 5', 'lkg-count5-show-ten-frames'],
+          ['C.7', 'Represent numbers - up to 5', 'lkg-count5-represent'],
+        ],
+      },
+      {
+        title: 'Count to 10',
+        skills: [
+          ['D.1', 'Learn to count - up to 10', 'lkg-count10-learn'],
+          ['D.2', 'Count objects - up to 10', 'lkg-count10-objects'],
+          ['D.3', 'Count dots - up to 10', 'lkg-count10-dots'],
+          ['D.4', 'Count shapes - up to 10', 'lkg-count10-shapes'],
+          ['D.5', 'Count on ten frames - up to 10', 'lkg-count10-ten-frames'],
+          ['D.6', 'Show numbers on ten frames - up to 10', 'lkg-count10-show-ten-frames'],
+          ['D.7', 'Represent numbers - up to 10', 'lkg-count10-represent'],
+        ],
+      },
+      {
+        title: 'Comparing',
+        skills: [
+          ['E.1', 'Are there enough?', 'lkg-compare-enough'],
+          ['E.2', 'More', 'lkg-compare-more'],
+          ['E.3', 'Fewer', 'lkg-compare-fewer'],
+          ['E.4', 'Fewer and more - compare by counting', 'lkg-compare-counting'],
+          ['E.5', 'Compare in a mixed group', 'lkg-compare-mixed'],
+        ],
+      },
+      {
+        title: 'Positions',
+        skills: [
+          ['F.1', 'Inside and outside', 'lkg-position-inside-outside'],
+          ['F.2', 'Above and below', 'lkg-position-above-below'],
+          ['F.3', 'Beside and next to', 'lkg-position-beside-next'],
+          ['F.4', 'Left and right', 'lkg-position-left-right'],
+          ['F.5', 'Left, middle and right', 'lkg-position-left-middle-right'],
+          ['F.6', 'Top and bottom', 'lkg-position-top-bottom'],
+          ['F.7', 'Top, middle and bottom', 'lkg-position-top-middle-bottom'],
+        ],
+      },
+      {
+        title: 'Classify',
+        skills: [
+          ['G.1', 'Same', 'lkg-classify-same'],
+          ['G.2', 'Different', 'lkg-classify-different'],
+          ['G.3', 'Same and different', 'lkg-classify-same-different'],
+          ['G.4', 'Classify shapes by colour', 'lkg-classify-shapes-color'],
+          ['G.5', 'Classify and sort by colour', 'lkg-classify-sort-color'],
+          ['G.6', 'Classify and sort by shape', 'lkg-classify-sort-shape'],
+        ],
+      },
+      {
+        title: 'Patterns',
+        skills: [
+          ['H.1', 'Colour patterns', 'lkg-patterns-color'],
+          ['H.2', 'Size patterns', 'lkg-patterns-size'],
+          ['H.3', 'Shape patterns', 'lkg-patterns-shape'],
+          ['H.4', 'What comes next?', 'lkg-patterns-next'],
+        ],
+      },
+      {
+        title: 'Size',
+        skills: [
+          ['I.1', 'Long and short', 'lkg-size-long-short'],
+          ['I.2', 'Tall and short', 'lkg-size-tall-short'],
+          ['I.3', 'Wide and narrow', 'lkg-size-wide-narrow'],
+          ['I.4', 'Light and heavy', 'lkg-size-light-heavy'],
+        ],
+      },
+      {
+        title: 'Money',
+        skills: [
+          ['J.1', 'Coin values', 'lkg-money-coin-values'],
+          ['J.2', 'Count 1-rupee coins', 'lkg-money-count-coins'],
+        ],
+      },
+    ],
+  },
 ];
 
 

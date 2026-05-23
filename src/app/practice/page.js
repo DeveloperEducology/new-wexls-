@@ -169,8 +169,84 @@ const TESTING_OPTIONS = [
 ];
 
 const LKG_OPTIONS = [
-  { group: 'Counting', label: 'Learn to count - up to 5', value: 'lkg_counting_5' },
-  { group: 'Counting', label: 'Learn to count - up to 10', value: 'lkg_comparison_5' },
+  // Shapes
+  { group: 'Shapes', label: 'Name the shape', value: 'lkg-shapes-name-shape' },
+  { group: 'Shapes', label: 'Circles', value: 'lkg-shapes-circles' },
+  { group: 'Shapes', label: 'Squares', value: 'lkg-shapes-squares' },
+  { group: 'Shapes', label: 'Triangles', value: 'lkg-shapes-triangles' },
+  { group: 'Shapes', label: 'Rectangles', value: 'lkg-shapes-rectangles' },
+  { group: 'Shapes', label: 'Circles, squares and triangles', value: 'lkg-shapes-mixed' },
+
+  // Count to 3
+  { group: 'Count to 3', label: 'Learn to count - up to 3', value: 'lkg-count3-learn' },
+  { group: 'Count to 3', label: 'Count objects - up to 3', value: 'lkg-count3-objects' },
+  { group: 'Count to 3', label: 'Count dots - up to 3', value: 'lkg-count3-dots' },
+  { group: 'Count to 3', label: 'Count shapes - up to 3', value: 'lkg-count3-shapes' },
+  { group: 'Count to 3', label: 'Count on ten frames - up to 3', value: 'lkg-count3-ten-frames' },
+  { group: 'Count to 3', label: 'Show numbers on ten frames - up to 3', value: 'lkg-count3-show-ten-frames' },
+  { group: 'Count to 3', label: 'Represent numbers - up to 3', value: 'lkg-count3-represent' },
+
+  // Count to 5
+  { group: 'Count to 5', label: 'Learn to count - up to 5', value: 'lkg-count5-learn' },
+  { group: 'Count to 5', label: 'Count objects - up to 5', value: 'lkg-count5-objects' },
+  { group: 'Count to 5', label: 'Count dots - up to 5', value: 'lkg-count5-dots' },
+  { group: 'Count to 5', label: 'Count shapes - up to 5', value: 'lkg-count5-shapes' },
+  { group: 'Count to 5', label: 'Count on ten frames - up to 5', value: 'lkg-count5-ten-frames' },
+  { group: 'Count to 5', label: 'Show numbers on ten frames - up to 5', value: 'lkg-count5-show-ten-frames' },
+  { group: 'Count to 5', label: 'Represent numbers - up to 5', value: 'lkg-count5-represent' },
+
+  // Count to 10
+  { group: 'Count to 10', label: 'Learn to count - up to 10', value: 'lkg-count10-learn' },
+  { group: 'Count to 10', label: 'Count objects - up to 10', value: 'lkg-count10-objects' },
+  { group: 'Count to 10', label: 'Count dots - up to 10', value: 'lkg-count10-dots' },
+  { group: 'Count to 10', label: 'Count shapes - up to 10', value: 'lkg-count10-shapes' },
+  { group: 'Count to 10', label: 'Count on ten frames - up to 10', value: 'lkg-count10-ten-frames' },
+  { group: 'Count to 10', label: 'Show numbers on ten frames - up to 10', value: 'lkg-count10-show-ten-frames' },
+  { group: 'Count to 10', label: 'Represent numbers - up to 10', value: 'lkg-count10-represent' },
+
+  // Comparing
+  { group: 'Comparing', label: 'Are there enough?', value: 'lkg-compare-enough' },
+  { group: 'Comparing', label: 'More', value: 'lkg-compare-more' },
+  { group: 'Comparing', label: 'Fewer', value: 'lkg-compare-fewer' },
+  { group: 'Comparing', label: 'Fewer and more - compare by counting', value: 'lkg-compare-counting' },
+  { group: 'Comparing', label: 'Compare in a mixed group', value: 'lkg-compare-mixed' },
+
+  // Positions
+  { group: 'Positions', label: 'Inside and outside', value: 'lkg-position-inside-outside' },
+  { group: 'Positions', label: 'Above and below', value: 'lkg-position-above-below' },
+  { group: 'Positions', label: 'Beside and next to', value: 'lkg-position-beside-next' },
+  { group: 'Positions', label: 'Left and right', value: 'lkg-position-left-right' },
+  { group: 'Positions', label: 'Left, middle and right', value: 'lkg-position-left-middle-right' },
+  { group: 'Positions', label: 'Top and bottom', value: 'lkg-position-top-bottom' },
+  { group: 'Positions', label: 'Top, middle and bottom', value: 'lkg-position-top-middle-bottom' },
+
+  // Classify
+  { group: 'Classify', label: 'Same', value: 'lkg-classify-same' },
+  { group: 'Classify', label: 'Different', value: 'lkg-classify-different' },
+  { group: 'Classify', label: 'Same and different', value: 'lkg-classify-same-different' },
+  { group: 'Classify', label: 'Classify shapes by colour', value: 'lkg-classify-shapes-color' },
+  { group: 'Classify', label: 'Classify and sort by colour', value: 'lkg-classify-sort-color' },
+  { group: 'Classify', label: 'Classify and sort by shape', value: 'lkg-classify-sort-shape' },
+
+  // Patterns
+  { group: 'Patterns', label: 'Colour patterns', value: 'lkg-patterns-color' },
+  { group: 'Patterns', label: 'Size patterns', value: 'lkg-patterns-size' },
+  { group: 'Patterns', label: 'Shape patterns', value: 'lkg-patterns-shape' },
+  { group: 'Patterns', label: 'What comes next?', value: 'lkg-patterns-next' },
+
+  // Size
+  { group: 'Size', label: 'Long and short', value: 'lkg-size-long-short' },
+  { group: 'Size', label: 'Tall and short', value: 'lkg-size-tall-short' },
+  { group: 'Size', label: 'Wide and narrow', value: 'lkg-size-wide-narrow' },
+  { group: 'Size', label: 'Light and heavy', value: 'lkg-size-light-heavy' },
+
+  // Money
+  { group: 'Money', label: 'Coin values', value: 'lkg-money-coin-values' },
+  { group: 'Money', label: 'Count 1-rupee coins', value: 'lkg-money-count-coins' },
+
+  // Legacy fallback options
+  { group: 'Counting (Legacy)', label: 'Learn to count - up to 5', value: 'lkg_counting_5' },
+  { group: 'Counting (Legacy)', label: 'Learn to count - up to 10', value: 'lkg_comparison_5' }
 ];
 
 const SOURCE_CONFIGS = {
@@ -178,8 +254,8 @@ const SOURCE_CONFIGS = {
     label: 'LKG Practice',
     api: '/api/practice',
     badge: 'LKG',
-    description: 'Learn to count up to 5 with tactile objects and speaker support.',
-    defaultLogicType: 'lkg_counting_5',
+    description: 'LKG mathematics interactive skill practice catalog.',
+    defaultLogicType: 'lkg-count5-learn',
     subject: 'math',
     topic: 'lkg',
     options: LKG_OPTIONS,

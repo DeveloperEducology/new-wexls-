@@ -1900,6 +1900,70 @@ function InteractiveCountingPart({ part, isAnswered }) {
   );
 }
 
+function SideBySideDisplayPart({ part }) {
+  const groupA = part.groupA || { count: 0, image: '', itemLabel: '' };
+  const groupB = part.groupB || { count: 0, image: '', itemLabel: '' };
+
+  const renderGroup = (group, title) => {
+    return (
+      <div style={{
+        flex: 1,
+        minWidth: '180px',
+        padding: '16px',
+        borderRadius: '16px',
+        border: '1.5px solid #0f172a',
+        background: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+        boxShadow: '0 4px 0px #0f172a'
+      }}>
+        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {title}
+        </h4>
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '70px',
+          width: '100%'
+        }}>
+          {Array.from({ length: group.count }).map((_, i) => (
+            <div key={i} style={{ width: '46px', height: '46px', position: 'relative' }}>
+              {group.image ? (
+                <img
+                  src={group.image}
+                  alt={group.itemLabel || 'item'}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', borderRadius: '8px', background: '#e2e8f0', border: '1px dashed #94a3b8' }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '20px',
+      width: '100%',
+      margin: '16px 0',
+      justifyContent: 'center'
+    }}>
+      {renderGroup(groupA, 'Group A')}
+      {renderGroup(groupB, 'Group B')}
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
   text: TextPart,
   svg: SvgPart,
@@ -1944,6 +2008,7 @@ const PART_RENDERERS = {
   interactive_fraction_cutter: InteractiveFractionCutterPart,
   fraction: FractionPart,
   interactive_counting: InteractiveCountingPart,
+  side_by_side_display: SideBySideDisplayPart,
 };
 
 export default function PartRenderer({
