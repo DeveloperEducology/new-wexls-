@@ -4595,6 +4595,24 @@ export default function AdminConsolePage() {
                                     placeholder="https://example.com/diagram.png"
                                     style={{ marginTop: 6 }}
                                   />
+                                  {backgroundImage && (
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => {
+                                        const w = canvas?.width || 800;
+                                        const h = canvas?.height || 465;
+                                        const wrapperSvg = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">\n  <image href="${backgroundImage}" x="0" y="0" width="${w}" height="${h}" />\n</svg>`;
+                                        setBackgroundSvg(wrapperSvg);
+                                        setBackgroundImage('');
+                                        ignoreDirtyChange.current = false;
+                                        setIsDirty(true);
+                                      }}
+                                      style={{ marginTop: 6, padding: '4px 10px', fontSize: 11, width: '100%' }}
+                                    >
+                                      Convert Image URL to Background SVG
+                                    </button>
+                                  )}
                                 </div>
                                 <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
                                   <label className={styles.filterLabel}>Or Custom Background SVG Code</label>
