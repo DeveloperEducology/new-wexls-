@@ -2162,19 +2162,26 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
   const [strokeColor, setStrokeColor] = useState('#b91c1c'); // Red-700
   const [pipColor, setPipColor] = useState('#ffffff');
 
-  // Interactive Stockpile Array representing the dice sitting in the tray
-  const [trayDice] = useState([
-    { id: 1, pips: 3, rot: 5 },
-    { id: 2, pips: 6, rot: -8 },
-    { id: 3, pips: 5, rot: 12 },
-    { id: 4, pips: 3, rot: -3 },
-    { id: 5, pips: 3, rot: 15 },
-    { id: 6, pips: 2, rot: -10 },
-    { id: 7, pips: 4, rot: 0 },
-  ]);
+  // Placed dice array on the canvas
+  const [placedDice, setPlacedDice] = useState([]);
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
 
-  // Dice placed onto the active measurement slots
-  const [placedDiceCount, setPlacedDiceCount] = useState(4); // Default starting count
+  // Line coordinates inside the canvas
+  const lineY = 50;
+  const slotY = lineY + 8;
+  const diceSize = 44;
+
+  const [lineStartX, setLineStartX] = useState(60);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const w = containerRef.current.clientWidth;
+      const start = Math.max(20, (w - targetLength * diceSize) / 2);
+      setLineStartX(start);
+    }
+  }, [targetLength]);
 
   // --- AUDIO SYNTHESIS SNAP TONE ---
   const playSnapTone = (freq = 440) => {
@@ -2193,20 +2200,122 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
     } catch (e) {}
   };
 
-  const handleAddDice = () => {
+  const spawnDice = (pips, clientX, clientY, e) => {
     if (isAnswered) return;
-    if (placedDiceCount < 8) {
-      setPlacedDiceCount(prev => prev + 1);
-      playSnapTone(440);
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left - diceSize / 2;
+    const y = clientY - rect.top - diceSize / 2;
+    
+    // Spawn a new dice in dragging mode
+    const newId = 'dice_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const newDice = {
+      id: newId,
+      x,
+      y,
+      pips,
+      slotIndex: -1
+    };
+    
+    setPlacedDice(prev => [...prev, newDice]);
+    setDraggingId(newId);
+    setDragOffset({ x: diceSize / 2, y: diceSize / 2 });
+    playSnapTone(350);
+
+    // Set pointer capture to track movement correctly
+    if (e && e.target && typeof e.target.setPointerCapture === 'function') {
+      e.target.setPointerCapture(e.pointerId);
     }
   };
 
-  const handleRemoveDice = () => {
+  const grabDice = (id, clientX, clientY, e) => {
     if (isAnswered) return;
-    if (placedDiceCount > 0) {
-      setPlacedDiceCount(prev => prev - 1);
-      playSnapTone(300);
+    e.stopPropagation();
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const dice = placedDice.find(d => d.id === id);
+    if (dice) {
+      setDraggingId(id);
+      setDragOffset({
+        x: clientX - rect.left - dice.x,
+        y: clientY - rect.top - dice.y
+      });
+      // Free its slot when grabbed
+      setPlacedDice(prev => prev.map(d => d.id === id ? { ...d, slotIndex: -1 } : d));
     }
+
+    if (e && e.target && typeof e.target.setPointerCapture === 'function') {
+      e.target.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (draggingId === null) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const rawX = e.clientX - rect.left - dragOffset.x;
+    const rawY = e.clientY - rect.top - dragOffset.y;
+
+    // Boundary constraints
+    const clampedX = Math.max(-10, Math.min(rect.width - (diceSize - 10), rawX));
+    const clampedY = Math.max(-10, Math.min(rect.height - (diceSize - 10), rawY));
+
+    // Determine occupied slots by other dice
+    const occupied = placedDice
+      .filter(d => d.id !== draggingId && d.slotIndex >= 0)
+      .map(d => d.slotIndex);
+
+    // Find the next empty slot index sequentially (left to right)
+    let nextSlotIndex = 0;
+    while (occupied.includes(nextSlotIndex)) {
+      nextSlotIndex++;
+    }
+
+    const targetSlotX = lineStartX + nextSlotIndex * diceSize;
+    const targetSlotY = slotY;
+
+    // Calculate distance for magnetic snap attraction
+    const diceCenterX = clampedX + diceSize / 2;
+    const diceCenterY = clampedY + diceSize / 2;
+    const slotCenterX = targetSlotX + diceSize / 2;
+    const slotCenterY = targetSlotY + diceSize / 2;
+    const dist = Math.hypot(diceCenterX - slotCenterX, diceCenterY - slotCenterY);
+
+    let x = clampedX;
+    let y = clampedY;
+    let tempSlot = -1;
+
+    // Snapping range threshold: 30 pixels
+    if (dist < 30) {
+      x = targetSlotX;
+      y = targetSlotY;
+      tempSlot = nextSlotIndex;
+    }
+
+    setPlacedDice(prev => prev.map(d => d.id === draggingId ? { ...d, x, y, tempSlotIndex: tempSlot } : d));
+  };
+
+  const handlePointerUp = () => {
+    if (draggingId === null) return;
+
+    const dragged = placedDice.find(d => d.id === draggingId);
+    if (dragged) {
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      // If dropped out of bounds or near bottom edge, delete it
+      if (dragged.y > rect.height - 20 || dragged.y < -20 || dragged.x < -20 || dragged.x > rect.width - 20) {
+        setPlacedDice(prev => prev.filter(d => d.id !== draggingId));
+        playSnapTone(250);
+      } else if (dragged.tempSlotIndex !== undefined && dragged.tempSlotIndex >= 0) {
+        // Confirm magnetic snap
+        setPlacedDice(prev => prev.map(d => d.id === draggingId ? { ...d, x: lineStartX + d.tempSlotIndex * diceSize, y: slotY, slotIndex: d.tempSlotIndex, tempSlotIndex: undefined } : d));
+        playSnapTone(440);
+      } else {
+        // Place freely
+        setPlacedDice(prev => prev.map(d => d.id === draggingId ? { ...d, slotIndex: -1, tempSlotIndex: undefined } : d));
+        playSnapTone(320);
+      }
+    }
+
+    setDraggingId(null);
   };
 
   // Color presets
@@ -2219,7 +2328,7 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
     { primary: '#1e293b', stroke: '#0f172a', pip: '#94a3b8', label: 'Slate' },
   ];
 
-  const renderDiceSVG = (pips, size = 52) => {
+  const renderDiceSVG = (pips, size = 44) => {
     const renderPips = () => {
       switch (pips) {
         case 1: return <circle cx="30" cy="30" r="4.5" fill={pipColor} />;
@@ -2268,7 +2377,7 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
     };
 
     return (
-      <svg width={size} height={size} viewBox="0 0 60 60" style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.15))', userSelect: 'none', transition: 'all 0.3s' }}>
+      <svg width={size} height={size} viewBox="0 0 60 60" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.12))', userSelect: 'none', transition: 'all 0.3s' }}>
         <rect x="2" y="5" width="54" height="52" rx="10" fill={strokeColor} />
         <rect x="2" y="2" width="54" height="50" rx="10" fill={cubeColor} stroke={strokeColor} strokeWidth="2" />
         <path d="M 6 6 Q 29 13 52 6" fill="none" stroke="white" strokeWidth="1.5" opacity="0.25" strokeLinecap="round" />
@@ -2279,7 +2388,7 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
 
   return (
     <div style={{ width: '100%', maxWidth: '640px', margin: '16px auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Theme selector */}
+      {/* Theme selector and control bar */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#f8fafc', padding: '12px 16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -2287,7 +2396,7 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
           </svg>
           <span>Dynamic Cube Skins</span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {colorPresets.map((preset, idx) => (
             <button
               key={idx}
@@ -2302,8 +2411,8 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
               style={{
                 backgroundColor: preset.primary,
                 borderColor: preset.stroke,
-                width: '24px',
-                height: '24px',
+                width: '22px',
+                height: '22px',
                 borderRadius: '50%',
                 border: '2px solid',
                 cursor: isAnswered ? 'default' : 'pointer',
@@ -2315,90 +2424,161 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
               onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
             />
           ))}
+          <div style={{ width: '1px', height: '16px', background: '#cbd5e1', margin: '0 4px' }} />
+          <button
+            type="button"
+            disabled={isAnswered}
+            onClick={() => {
+              setPlacedDice([]);
+              playSnapTone(220);
+            }}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: '#475569',
+              cursor: isAnswered ? 'default' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M16 3h5v5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M8 21H3v-5"/>
+            </svg>
+            <span>Reset</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Blue Canvas */}
-      <div style={{ width: '100%', background: '#f0f9ff', border: '1px solid #e0f2fe', borderRadius: '20px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(186, 230, 253, 0.15)' }}>
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          
-          {/* Target line - width scales dynamically with targetLength */}
-          <div style={{ height: '4px', background: '#64748b', borderRadius: '999px', marginBottom: '8px', position: 'relative', width: `${targetLength * 52}px`, transition: 'width 0.3s' }}>
-            <div style={{ position: 'absolute', top: '-4px', left: 0, width: '6px', height: '12px', background: '#64748b', borderRadius: '999px' }} />
-            <div style={{ position: 'absolute', top: '-4px', right: 0, width: '6px', height: '12px', background: '#64748b', borderRadius: '999px' }} />
-          </div>
-
-          {/* Active snap/placement zone */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', minHeight: '56px', borderBottom: '2px dashed #bae6fd', padding: '4px', width: '100%', justifyContent: 'center' }}>
-            {Array.from({ length: placedDiceCount }).map((_, index) => (
-              <div
-                key={index}
-                onClick={handleRemoveDice}
-                style={{ cursor: isAnswered ? 'default' : 'pointer', transition: 'transform 0.2s' }}
-                title={isAnswered ? "" : "Click to remove cube"}
-                onMouseEnter={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1.05)'; }}
-                onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
-              >
-                {renderDiceSVG(((index * 2) % 5) + 1)}
-              </div>
-            ))}
-
-            {placedDiceCount < 8 && !isAnswered && (
-              <button
-                type="button"
-                onClick={handleAddDice}
-                style={{
-                  width: '52px',
-                  height: '52px',
-                  border: '2px dashed #7dd3fc',
-                  background: 'rgba(224, 242, 254, 0.5)',
-                  color: '#0284c7',
-                  borderRadius: '8px',
-                  fontWeight: '900',
-                  fontSize: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  outline: 'none',
-                  marginLeft: '2px'
-                }}
-                title="Add a measuring cube"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#0284c7';
-                  e.currentTarget.style.background = '#e0f2fe';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#7dd3fc';
-                  e.currentTarget.style.background = 'rgba(224, 242, 254, 0.5)';
-                }}
-              >
-                +
-              </button>
-            )}
-          </div>
+      {/* Main Free-Drag Blue Canvas Workspace */}
+      <div 
+        ref={containerRef}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{ 
+          width: '100%', 
+          height: '240px',
+          background: '#f0f9ff', 
+          border: '1px solid #e0f2fe', 
+          borderRadius: '20px', 
+          position: 'relative', 
+          overflow: 'hidden', 
+          boxShadow: '0 4px 12px rgba(186, 230, 253, 0.15)',
+          touchAction: 'none' // Disable pull-to-refresh / touch scrolling during drag
+        }}
+      >
+        {/* Target measurement line */}
+        <div style={{ 
+          position: 'absolute', 
+          left: `${lineStartX}px`, 
+          top: `${lineY}px`, 
+          width: `${targetLength * diceSize}px`, 
+          height: '6px', 
+          background: '#64748b', 
+          borderRadius: '999px',
+          transition: 'left 0.3s, width 0.3s'
+        }}>
+          <div style={{ position: 'absolute', top: '-5px', left: 0, width: '6px', height: '16px', background: '#64748b', borderRadius: '999px' }} />
+          <div style={{ position: 'absolute', top: '-5px', right: 0, width: '6px', height: '16px', background: '#64748b', borderRadius: '999px' }} />
         </div>
 
-        {/* Dice Storage Tray */}
-        <div style={{ width: '100%', background: 'rgba(241, 245, 249, 0.85)', border: '1px solid rgba(226, 232, 240, 0.7)', borderRadius: '16px', padding: '20px', minHeight: '90px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '16px', position: 'relative', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-          <span style={{ position: 'absolute', top: '4px', left: '10px', fontSize: '9px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', pointerEvents: 'none' }}>
-            Storage Tray
-          </span>
-          {trayDice.map((dice) => (
+        {/* Dash border empty slots (Visual Snapping Guide) */}
+        {Array.from({ length: targetLength }).map((_, i) => {
+          const isOccupied = placedDice.some(d => d.slotIndex === i);
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                left: `${lineStartX + i * diceSize}px`,
+                top: `${slotY}px`,
+                width: `${diceSize}px`,
+                height: `${diceSize}px`,
+                border: '2px dashed #bae6fd',
+                borderRadius: '8px',
+                background: isOccupied ? 'transparent' : 'rgba(224, 242, 254, 0.4)',
+                transition: 'background 0.2s',
+                pointerEvents: 'none'
+              }}
+            />
+          );
+        })}
+
+        {/* Render placed/floating dice */}
+        {placedDice.map((dice) => {
+          const isDragging = dice.id === draggingId;
+          return (
             <div
               key={dice.id}
-              onClick={handleAddDice}
+              onPointerDown={(e) => grabDice(dice.id, e.clientX, e.clientY, e)}
               style={{
-                transform: `rotate(${dice.rot}deg)`,
-                cursor: isAnswered ? 'default' : 'pointer',
-                transition: 'transform 0.2s'
+                position: 'absolute',
+                left: `${dice.x}px`,
+                top: `${dice.y}px`,
+                width: `${diceSize}px`,
+                height: `${diceSize}px`,
+                cursor: isAnswered ? 'default' : (isDragging ? 'grabbing' : 'grab'),
+                touchAction: 'none',
+                zIndex: isDragging ? 50 : 10,
+                // Add a smooth slide animation when snapping into grid or dropping freely
+                transition: isDragging ? 'none' : 'left 0.12s ease-out, top 0.12s ease-out'
               }}
-              title={isAnswered ? "" : "Click to use for measurement"}
-              onMouseEnter={(e) => { if(!isAnswered) e.currentTarget.style.transform = `scale(1.15) rotate(${dice.rot}deg)`; }}
-              onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = `scale(1) rotate(${dice.rot}deg)`; }}
             >
-              {renderDiceSVG(dice.pips, 42)}
+              {renderDiceSVG(dice.pips, diceSize)}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Storage Tray source */}
+      <div style={{ 
+        width: '100%', 
+        background: 'rgba(241, 245, 249, 0.85)', 
+        border: '1px solid rgba(226, 232, 240, 0.7)', 
+        borderRadius: '16px', 
+        padding: '16px 20px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '8px', 
+        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' 
+      }}>
+        <span style={{ 
+          fontSize: '9px', 
+          fontWeight: 'bold', 
+          color: '#94a3b8', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.12em', 
+          pointerEvents: 'none' 
+        }}>
+          Drag dice from tray to measure the line
+        </span>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          {[3, 6, 5, 1, 4, 2].map((pips, idx) => (
+            <div
+              key={idx}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                spawnDice(pips, e.clientX, e.clientY, e);
+              }}
+              style={{
+                cursor: isAnswered ? 'default' : 'grab',
+                transition: 'transform 0.2s',
+                userSelect: 'none',
+                touchAction: 'none'
+              }}
+              onMouseEnter={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1.15)'; }}
+              onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              {renderDiceSVG(pips, 38)}
             </div>
           ))}
         </div>
