@@ -280,6 +280,23 @@ export const MEASUREMENT_CATALOG = [
     templateName: 'meas.balance.compare',
     engineName: 'balanceScale'
   },
+  {
+    skillId: 'meas-g1-dice-interactive',
+    grade: '1',
+    code: 'M.1.14',
+    title: 'Measure length with dice (interactive)',
+    description: 'Measure horizontal lines by placing unit dice and counting them.',
+    prerequisiteSkills: ['meas-g1-measure-cubes-length'],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'dice interactive',
+    difficultyLevels: [2],
+    misconceptions: ['leaving_gaps', 'overlapping_units'],
+    remediationPrompt: 'Click the "+" or the dice in the tray to place them under the line end-to-end.',
+    templateName: 'meas.dice.interactive',
+    engineName: 'diceMeasurement'
+  },
 
   // --- Grade 2 ---
   {

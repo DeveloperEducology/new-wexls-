@@ -22,6 +22,7 @@ import { generateMeasurementWordProblemsQuestion } from './engines/measurementWo
 import { generatePrecisionErrorQuestion } from './engines/precisionError.engine.js';
 import { generateDensityQuestion } from './engines/density.engine.js';
 import { generateBalanceScaleQuestion } from './engines/balanceScale.engine.js';
+import { generateDiceMeasurementQuestion } from './engines/diceMeasurement.engine.js';
 
 const ENGINES = {
   compareSize: generateCompareSizeQuestion,
@@ -38,7 +39,8 @@ const ENGINES = {
   measurementWordProblems: generateMeasurementWordProblemsQuestion,
   precisionError: generatePrecisionErrorQuestion,
   density: generateDensityQuestion,
-  balanceScale: generateBalanceScaleQuestion
+  balanceScale: generateBalanceScaleQuestion,
+  diceMeasurement: generateDiceMeasurementQuestion
 };
 
 /**

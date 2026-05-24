@@ -2154,6 +2154,259 @@ function SideBySideDisplayPart({ part }) {
   );
 }
 
+function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered }) {
+  const targetLength = Number(part.targetLength ?? 6);
+  
+  // Dynamic Cube Customization Theme
+  const [cubeColor, setCubeColor] = useState('#ef4444'); // Default Red-500
+  const [strokeColor, setStrokeColor] = useState('#b91c1c'); // Red-700
+  const [pipColor, setPipColor] = useState('#ffffff');
+
+  // Interactive Stockpile Array representing the dice sitting in the tray
+  const [trayDice] = useState([
+    { id: 1, pips: 3, rot: 5 },
+    { id: 2, pips: 6, rot: -8 },
+    { id: 3, pips: 5, rot: 12 },
+    { id: 4, pips: 3, rot: -3 },
+    { id: 5, pips: 3, rot: 15 },
+    { id: 6, pips: 2, rot: -10 },
+    { id: 7, pips: 4, rot: 0 },
+  ]);
+
+  // Dice placed onto the active measurement slots
+  const [placedDiceCount, setPlacedDiceCount] = useState(4); // Default starting count
+
+  // --- AUDIO SYNTHESIS SNAP TONE ---
+  const playSnapTone = (freq = 440) => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    } catch (e) {}
+  };
+
+  const handleAddDice = () => {
+    if (isAnswered) return;
+    if (placedDiceCount < 8) {
+      setPlacedDiceCount(prev => prev + 1);
+      playSnapTone(440);
+    }
+  };
+
+  const handleRemoveDice = () => {
+    if (isAnswered) return;
+    if (placedDiceCount > 0) {
+      setPlacedDiceCount(prev => prev - 1);
+      playSnapTone(300);
+    }
+  };
+
+  // Color presets
+  const colorPresets = [
+    { primary: '#ef4444', stroke: '#b91c1c', pip: '#ffffff', label: 'Red' },
+    { primary: '#3b82f6', stroke: '#1d4ed8', pip: '#ffffff', label: 'Blue' },
+    { primary: '#10b981', stroke: '#047857', pip: '#ffffff', label: 'Emerald' },
+    { primary: '#f59e0b', stroke: '#b45309', pip: '#fffbeb', label: 'Amber' },
+    { primary: '#a78bfa', stroke: '#6d28d9', pip: '#ffffff', label: 'Purple' },
+    { primary: '#1e293b', stroke: '#0f172a', pip: '#94a3b8', label: 'Slate' },
+  ];
+
+  const renderDiceSVG = (pips, size = 52) => {
+    const renderPips = () => {
+      switch (pips) {
+        case 1: return <circle cx="30" cy="30" r="4.5" fill={pipColor} />;
+        case 2: return (
+          <>
+            <circle cx="16" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="44" r="4.5" fill={pipColor} />
+          </>
+        );
+        case 3: return (
+          <>
+            <circle cx="16" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="30" cy="30" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="44" r="4.5" fill={pipColor} />
+          </>
+        );
+        case 4: return (
+          <>
+            <circle cx="16" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="16" cy="44" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="44" r="4.5" fill={pipColor} />
+          </>
+        );
+        case 5: return (
+          <>
+            <circle cx="16" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="30" cy="30" r="4.5" fill={pipColor} />
+            <circle cx="16" cy="44" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="44" r="4.5" fill={pipColor} />
+          </>
+        );
+        case 6: return (
+          <>
+            <circle cx="16" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="16" cy="30" r="4.5" fill={pipColor} />
+            <circle cx="16" cy="44" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="16" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="30" r="4.5" fill={pipColor} />
+            <circle cx="44" cy="44" r="4.5" fill={pipColor} />
+          </>
+        );
+        default: return null;
+      }
+    };
+
+    return (
+      <svg width={size} height={size} viewBox="0 0 60 60" style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.15))', userSelect: 'none', transition: 'all 0.3s' }}>
+        <rect x="2" y="5" width="54" height="52" rx="10" fill={strokeColor} />
+        <rect x="2" y="2" width="54" height="50" rx="10" fill={cubeColor} stroke={strokeColor} strokeWidth="2" />
+        <path d="M 6 6 Q 29 13 52 6" fill="none" stroke="white" strokeWidth="1.5" opacity="0.25" strokeLinecap="round" />
+        {renderPips()}
+      </svg>
+    );
+  };
+
+  return (
+    <div style={{ width: '100%', maxWidth: '640px', margin: '16px auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Theme selector */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#f8fafc', padding: '12px 16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          </svg>
+          <span>Dynamic Cube Skins</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {colorPresets.map((preset, idx) => (
+            <button
+              key={idx}
+              type="button"
+              disabled={isAnswered}
+              onClick={() => {
+                setCubeColor(preset.primary);
+                setStrokeColor(preset.stroke);
+                setPipColor(preset.pip);
+                playSnapTone(600 + idx * 50);
+              }}
+              style={{
+                backgroundColor: preset.primary,
+                borderColor: preset.stroke,
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                border: '2px solid',
+                cursor: isAnswered ? 'default' : 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'transform 0.1s'
+              }}
+              title={preset.label}
+              onMouseEnter={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1.15)'; }}
+              onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Main Blue Canvas */}
+      <div style={{ width: '100%', background: '#f0f9ff', border: '1px solid #e0f2fe', borderRadius: '20px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(186, 230, 253, 0.15)' }}>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          
+          {/* Target line - width scales dynamically with targetLength */}
+          <div style={{ height: '4px', background: '#64748b', borderRadius: '999px', marginBottom: '8px', position: 'relative', width: `${targetLength * 52}px`, transition: 'width 0.3s' }}>
+            <div style={{ position: 'absolute', top: '-4px', left: 0, width: '6px', height: '12px', background: '#64748b', borderRadius: '999px' }} />
+            <div style={{ position: 'absolute', top: '-4px', right: 0, width: '6px', height: '12px', background: '#64748b', borderRadius: '999px' }} />
+          </div>
+
+          {/* Active snap/placement zone */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', minHeight: '56px', borderBottom: '2px dashed #bae6fd', padding: '4px', width: '100%', justifyContent: 'center' }}>
+            {Array.from({ length: placedDiceCount }).map((_, index) => (
+              <div
+                key={index}
+                onClick={handleRemoveDice}
+                style={{ cursor: isAnswered ? 'default' : 'pointer', transition: 'transform 0.2s' }}
+                title={isAnswered ? "" : "Click to remove cube"}
+                onMouseEnter={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1.05)'; }}
+                onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                {renderDiceSVG(((index * 2) % 5) + 1)}
+              </div>
+            ))}
+
+            {placedDiceCount < 8 && !isAnswered && (
+              <button
+                type="button"
+                onClick={handleAddDice}
+                style={{
+                  width: '52px',
+                  height: '52px',
+                  border: '2px dashed #7dd3fc',
+                  background: 'rgba(224, 242, 254, 0.5)',
+                  color: '#0284c7',
+                  borderRadius: '8px',
+                  fontWeight: '900',
+                  fontSize: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  outline: 'none',
+                  marginLeft: '2px'
+                }}
+                title="Add a measuring cube"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#0284c7';
+                  e.currentTarget.style.background = '#e0f2fe';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#7dd3fc';
+                  e.currentTarget.style.background = 'rgba(224, 242, 254, 0.5)';
+                }}
+              >
+                +
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dice Storage Tray */}
+        <div style={{ width: '100%', background: 'rgba(241, 245, 249, 0.85)', border: '1px solid rgba(226, 232, 240, 0.7)', borderRadius: '16px', padding: '20px', minHeight: '90px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '16px', position: 'relative', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+          <span style={{ position: 'absolute', top: '4px', left: '10px', fontSize: '9px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', pointerEvents: 'none' }}>
+            Storage Tray
+          </span>
+          {trayDice.map((dice) => (
+            <div
+              key={dice.id}
+              onClick={handleAddDice}
+              style={{
+                transform: `rotate(${dice.rot}deg)`,
+                cursor: isAnswered ? 'default' : 'pointer',
+                transition: 'transform 0.2s'
+              }}
+              title={isAnswered ? "" : "Click to use for measurement"}
+              onMouseEnter={(e) => { if(!isAnswered) e.currentTarget.style.transform = `scale(1.15) rotate(${dice.rot}deg)`; }}
+              onMouseLeave={(e) => { if(!isAnswered) e.currentTarget.style.transform = `scale(1) rotate(${dice.rot}deg)`; }}
+            >
+              {renderDiceSVG(dice.pips, 42)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
   text: TextPart,
   svg: SvgPart,
@@ -2165,6 +2418,7 @@ const PART_RENDERERS = {
   pick_from_sentence: PickFromSentencePart,
   select_from_sentence: PickFromSentencePart,
   token_select: PickFromSentencePart,
+  interactive_dice_measurement: InteractiveDiceMeasurementPart,
   latex: ({ part }) => {
     const isInline = part.style?.display === 'inline-block' || part.style?.display === 'inline';
     return (

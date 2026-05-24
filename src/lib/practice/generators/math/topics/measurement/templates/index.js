@@ -128,6 +128,13 @@ export const MEASUREMENT_TEMPLATES = {
     engine: 'balanceScale',
     questionType: 'fillInTheBlank',
     defaultConfig: { forcedTask: 'interactive_balance' }
+  },
+  'meas.dice.interactive': {
+    id: 'meas.dice.interactive',
+    family: 'nonstandard',
+    engine: 'diceMeasurement',
+    questionType: 'fillInTheBlank',
+    defaultConfig: { forcedTask: 'interactive_dice_measurement' }
   }
 };
 
