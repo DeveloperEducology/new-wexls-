@@ -297,6 +297,151 @@ export const MEASUREMENT_CATALOG = [
     templateName: 'meas.dice.interactive',
     engineName: 'diceMeasurement'
   },
+  {
+    skillId: 'meas-g1-dice-vertical',
+    grade: '1',
+    code: 'M.1.15',
+    title: 'Measure height with dice (interactive)',
+    description: 'Measure vertical heights of objects by placing unit dice and counting them.',
+    prerequisiteSkills: ['meas-g1-dice-interactive'],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'dice interactive',
+    difficultyLevels: [2],
+    misconceptions: ['leaving_gaps', 'overlapping_units'],
+    remediationPrompt: 'Click or drag dice next to the object starting from the ground up.',
+    templateName: 'meas.dice.vertical',
+    engineName: 'diceMeasurement'
+  },
+  {
+    skillId: 'meas-g1-measure-length-objects',
+    grade: '1',
+    code: 'M.1.16',
+    title: 'Measure length with objects (NEW)',
+    description: 'Measure horizontal lengths of objects by counting pre-placed units.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'nonstandard units',
+    difficultyLevels: [2],
+    misconceptions: ['starts_not_aligned', 'gap_between_units', 'overlap_units'],
+    remediationPrompt: 'Count all units lined up end-to-end with no gaps or overlaps.',
+    templateName: 'meas.nonstandard.multi',
+    engineName: 'nonStandardUnitMeasurement',
+    config: {
+      layoutMode: 'horizontal_row',
+      answerMode: 'count'
+    }
+  },
+  {
+    skillId: 'meas-g1-measure-height-objects',
+    grade: '1',
+    code: 'M.1.17',
+    title: 'Measure height with objects (NEW)',
+    description: 'Measure vertical heights of objects by counting pre-placed units.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'nonstandard units',
+    difficultyLevels: [2],
+    misconceptions: ['starts_not_aligned', 'gap_between_units', 'overlap_units'],
+    remediationPrompt: 'Count all units stacked next to the object from bottom to top.',
+    templateName: 'meas.nonstandard.multi',
+    engineName: 'nonStandardUnitMeasurement',
+    config: {
+      layoutMode: 'vertical_stack',
+      answerMode: 'count'
+    }
+  },
+  {
+    skillId: 'meas-g1-build-unit-trains-length',
+    grade: '1',
+    code: 'M.1.18',
+    title: 'Build block trains to measure length (NEW)',
+    description: 'Interactive drag/snap units horizontally to measure an object.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'nonstandard units interactive',
+    difficultyLevels: [2],
+    misconceptions: ['starts_not_aligned', 'gap_between_units', 'overlap_units'],
+    remediationPrompt: 'Click or drag blocks next to the object to align them end-to-end.',
+    templateName: 'meas.nonstandard.multi',
+    engineName: 'nonStandardUnitMeasurement',
+    config: {
+      layoutMode: 'drag_to_measure',
+      orientation: 'horizontal',
+      answerMode: 'count'
+    }
+  },
+  {
+    skillId: 'meas-g1-build-unit-trains-height',
+    grade: '1',
+    code: 'M.1.19',
+    title: 'Build block trains to measure height (NEW)',
+    description: 'Interactive drag/snap units vertically to measure an object.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'nonstandard units interactive',
+    difficultyLevels: [2],
+    misconceptions: ['starts_not_aligned', 'gap_between_units', 'overlap_units', 'wrong_orientation'],
+    remediationPrompt: 'Click or drag blocks next to the object from bottom to top.',
+    templateName: 'meas.nonstandard.multi',
+    engineName: 'nonStandardUnitMeasurement',
+    config: {
+      layoutMode: 'drag_to_measure',
+      orientation: 'vertical',
+      answerMode: 'count'
+    }
+  },
+  {
+    skillId: 'meas-g1-compare-measured-lengths',
+    grade: '1',
+    code: 'M.1.20',
+    title: 'Compare measured lengths and heights (NEW)',
+    description: 'Compare the sizes of two objects measured with non-standard units.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['mcq'],
+    visualType: 'nonstandard units comparison',
+    difficultyLevels: [2],
+    misconceptions: ['starts_not_aligned', 'counts_object_not_units'],
+    remediationPrompt: 'Count the units for both items. The taller/longer one takes more units.',
+    templateName: 'meas.nonstandard.multi',
+    engineName: 'nonStandardUnitMeasurement',
+    config: {
+      layoutMode: 'compare_two_objects',
+      answerMode: 'compare'
+    }
+  },
+  {
+    skillId: 'meas-g1-identify-measurement-errors',
+    grade: '1',
+    code: 'M.1.21',
+    title: 'Identify measurement errors (NEW)',
+    description: 'Spot correct or incorrect ways of measuring using blocks.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['mcq'],
+    visualType: 'nonstandard units error-spotting',
+    difficultyLevels: [2],
+    misconceptions: ['starts_not_aligned', 'gap_between_units', 'overlap_units'],
+    remediationPrompt: 'Look for gaps, overlaps, or offset starting points.',
+    templateName: 'meas.nonstandard.multi',
+    engineName: 'nonStandardUnitMeasurement',
+    config: {
+      layoutMode: 'wrong_measure_fix',
+      answerMode: 'error_type'
+    }
+  },
 
   // --- Grade 2 ---
   {

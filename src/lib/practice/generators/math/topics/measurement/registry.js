@@ -23,6 +23,7 @@ import { generatePrecisionErrorQuestion } from './engines/precisionError.engine.
 import { generateDensityQuestion } from './engines/density.engine.js';
 import { generateBalanceScaleQuestion } from './engines/balanceScale.engine.js';
 import { generateDiceMeasurementQuestion } from './engines/diceMeasurement.engine.js';
+import { generateNonStandardMeasurementQuestion } from '../../shared/engines/nonStandardUnitMeasurement.engine.js';
 
 const ENGINES = {
   compareSize: generateCompareSizeQuestion,
@@ -40,7 +41,8 @@ const ENGINES = {
   precisionError: generatePrecisionErrorQuestion,
   density: generateDensityQuestion,
   balanceScale: generateBalanceScaleQuestion,
-  diceMeasurement: generateDiceMeasurementQuestion
+  diceMeasurement: generateDiceMeasurementQuestion,
+  nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion
 };
 
 /**
@@ -67,11 +69,13 @@ export function generateMeasurementQuestion(config = {}) {
 
   // Combine configurations
   const mergedConfig = {
+    ...(template?.defaultConfig || {}),
+    ...(skill.config || {}),
     ...config,
     difficulty: config.difficulty || 'medium',
-    forcedTask: skill.config?.forcedTask || (template?.defaultConfig?.forcedTask) || null,
-    system: skill.config?.system || (template?.defaultConfig?.system) || null,
-    compare: skill.config?.compare || (template?.defaultConfig?.compare) || false
+    forcedTask: config.forcedTask || skill.config?.forcedTask || (template?.defaultConfig?.forcedTask) || null,
+    system: config.system || skill.config?.system || (template?.defaultConfig?.system) || null,
+    compare: config.compare || skill.config?.compare || (template?.defaultConfig?.compare) || false
   };
 
   const question = engine(rng, mergedConfig);

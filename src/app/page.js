@@ -544,7 +544,57 @@ const TOPICS = [
       },
     ],
   },
+  {
+    id: 'standard-object-measurement',
+    title: 'Standard Object Measurement',
+    color: '#f59e0b',
+    subject: 'math',
+    topic: 'standard-object-measurement',
+    includes: ['Cubes & Dice', 'Snapping & Stacking', 'Comparison side-by-side', 'Error diagnosing', 'Locked prefilled blocks'],
+    groups: [
+      {
+        title: 'Measurement features',
+        skills: [
+          ['SOM.1', 'Measure length (Interactive Cubes)', 'som-g1-measure-length'],
+          ['SOM.2', 'Measure height (Interactive Dice)', 'som-g1-measure-height'],
+          ['SOM.3', 'Compare measured lengths (Paperclips)', 'som-g1-compare'],
+          ['SOM.4', 'Identify measurement errors (Pennies)', 'som-g1-error-spotting'],
+          ['SOM.7', 'Measure length (Static Paperclips)', 'som-g1-static-length'],
+          ['SOM.8', 'Measure height (Static Pennies)', 'som-g1-static-height'],
+        ],
+      },
+      {
+        title: 'Addition & composition',
+        skills: [
+          ['SOM.5', 'Combine lengths (Cubes sum)', 'som-g1-add-lengths'],
+          ['SOM.6', 'Combine heights (Dice towers sum)', 'som-g1-add-heights'],
+          ['SOM.9', 'Copy cubes: sums up to 3', 'som-g1-copy-cubes-to-3'],
+          ['SOM.10', 'Copy cubes: sums up to 5', 'som-g1-copy-cubes-to-5'],
+          ['SOM.11', 'Copy cubes: sums up to 10', 'som-g1-copy-cubes-to-10'],
+        ],
+      },
+      {
+        title: 'Subtraction & patterns',
+        skills: [
+          ['SOM.12', 'Patterns: Complete ABAB sequence', 'som-g1-pattern-abab'],
+          ['SOM.13', 'Patterns: Complete AABB sequence', 'som-g1-pattern-aabb'],
+          ['SOM.14', 'Subtraction: Take away cubes', 'som-g1-sub-takeaway'],
+          ['SOM.15', 'Subtraction: Compare block trains', 'som-g1-sub-compare'],
+        ],
+      },
+      {
+        title: 'Advanced block concepts',
+        skills: [
+          ['SOM.16', 'Place value: Tens and ones blocks', 'som-g1-place-value-blocks'],
+          ['SOM.17', 'Fractions: Equivalent strip parts', 'som-g1-fraction-strips'],
+          ['SOM.18', 'Multiplication: Stacks array model', 'som-g1-multiplication-array'],
+          ['SOM.19', 'Graphing: Built block charts', 'som-g1-graphing-bars'],
+        ],
+      },
+    ],
+  },
 ];
+
 
 
 const DB_TOPIC_COLORS = ['#ff951f', '#2fbfd0', '#7a56d6', '#4db46b', '#3f8bd6', '#d64d3d', '#9b4fe8', '#0ea5e9', '#ea580c', '#059669'];

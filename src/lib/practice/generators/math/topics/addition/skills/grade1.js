@@ -279,5 +279,31 @@ export const grade1AdditionSkills = [
       range: [1, 20],
       layout: 'horizontal'
     }
+  },
+  {
+    id: 'addition-g1-add-lengths-objects',
+    code: 'N.2',
+    grade: 1,
+    topic: 'addition',
+    competencyId: 'addition_models_to_10',
+    title: 'Add lengths using object models (NEW)',
+    templateId: 'meas.nonstandard.multi',
+    config: {
+      layoutMode: 'add_lengths',
+      answerMode: 'sum'
+    }
+  },
+  {
+    id: 'addition-g1-add-heights-objects',
+    code: 'N.3',
+    grade: 1,
+    topic: 'addition',
+    competencyId: 'addition_models_to_10',
+    title: 'Add heights using object models (NEW)',
+    templateId: 'meas.nonstandard.multi',
+    config: {
+      layoutMode: 'add_heights',
+      answerMode: 'sum'
+    }
   }
 ];

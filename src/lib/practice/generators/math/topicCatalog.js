@@ -1,6 +1,8 @@
 import { placeValueMicroSkills } from './topics/place-values/skills/index.js';
 import { shapesSkillsByGrade } from './topics/shapes/skills/index.js';
 import { MEASUREMENT_CATALOG } from './topics/measurement/catalog.js';
+import { somCatalog } from './topics/standard-object-measurement/index.js';
+
 
 const ADDITION_TOPICS = [
   {
@@ -72,6 +74,13 @@ const MEASUREMENT_TOPICS = MEASUREMENT_CATALOG.map((skill) => ({
   name: skill.title,
   href: `/practice?subject=math&topic=measurement&skill=${skill.skillId}`,
 }));
+
+const SOM_TOPICS = somCatalog.map((skill) => ({
+  code: skill.code,
+  name: skill.title,
+  href: `/practice?subject=math&topic=standard-object-measurement&skill=${skill.skillId}`,
+}));
+
 
 const TOPIC_GROUPS = [
   {
@@ -201,7 +210,17 @@ const TOPIC_GROUPS = [
     bg: '#ecfeff',
     skills: MEASUREMENT_TOPICS,
   },
+  {
+    id: 'standard-object-measurement',
+    title: 'Standard Object Measurement',
+    description: 'Practice interactive non-standard unit measuring, comparison, error spotting, and addition modeling.',
+    icon: '📏',
+    color: '#f59e0b',
+    bg: '#fffbeb',
+    skills: SOM_TOPICS,
+  },
 ];
+
 
 export function getMathTopicGroups() {
   return TOPIC_GROUPS;

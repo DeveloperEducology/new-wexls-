@@ -8,6 +8,7 @@ import { generateSortFactsQuestion } from './engines/sortFacts.engine.js';
 import { generateMakeNumberQuestion } from './engines/makeNumber.engine.js';
 import { generateWordProblemModelQuestion } from './engines/wordProblemModel.engine.js';
 import { generateDoublesPlusOneQuestion } from './engines/doublesPlusOne.engine.js';
+import { generateNonStandardMeasurementQuestion } from '../../shared/engines/nonStandardUnitMeasurement.engine.js';
 import { getAdditionTemplate } from './templates/index.js';
 import { getAdditionSkill } from './skills/index.js';
 
@@ -21,7 +22,8 @@ const ENGINE_GENERATORS = {
   sortFacts: generateSortFactsQuestion,
   makeNumber: generateMakeNumberQuestion,
   wordProblemModel: generateWordProblemModelQuestion,
-  doublesPlusOne: generateDoublesPlusOneQuestion
+  doublesPlusOne: generateDoublesPlusOneQuestion,
+  nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion
 };
 
 export function createAdditionTopicTemplate(skillOrTemplateId, overrides = {}) {

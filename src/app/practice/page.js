@@ -186,6 +186,29 @@ const TESTING_OPTIONS = [
   { group: 'Composition', label: 'Inputs + options', value: 'testing-doubles-plus-one-mixed' },
 ];
 
+const SOM_OPTIONS = [
+  { group: 'Measurement features', label: 'Measure length (Interactive Cubes)', value: 'som-g1-measure-length' },
+  { group: 'Measurement features', label: 'Measure height (Interactive Dice)', value: 'som-g1-measure-height' },
+  { group: 'Measurement features', label: 'Compare measured lengths (Paperclips)', value: 'som-g1-compare' },
+  { group: 'Measurement features', label: 'Identify measurement errors (Pennies)', value: 'som-g1-error-spotting' },
+  { group: 'Measurement features', label: 'Measure length (Static Paperclips)', value: 'som-g1-static-length' },
+  { group: 'Measurement features', label: 'Measure height (Static Pennies)', value: 'som-g1-static-height' },
+  { group: 'Addition & composition', label: 'Combine lengths (Cubes sum)', value: 'som-g1-add-lengths' },
+  { group: 'Addition & composition', label: 'Combine heights (Dice towers sum)', value: 'som-g1-add-heights' },
+  { group: 'Addition & composition', label: 'Copy cubes: sums up to 3', value: 'som-g1-copy-cubes-to-3' },
+  { group: 'Addition & composition', label: 'Copy cubes: sums up to 5', value: 'som-g1-copy-cubes-to-5' },
+  { group: 'Addition & composition', label: 'Copy cubes: sums up to 10', value: 'som-g1-copy-cubes-to-10' },
+  { group: 'Subtraction & patterns', label: 'Patterns: Complete ABAB sequence', value: 'som-g1-pattern-abab' },
+  { group: 'Subtraction & patterns', label: 'Patterns: Complete AABB sequence', value: 'som-g1-pattern-aabb' },
+  { group: 'Subtraction & patterns', label: 'Subtraction: Take away cubes', value: 'som-g1-sub-takeaway' },
+  { group: 'Subtraction & patterns', label: 'Subtraction: Compare block trains', value: 'som-g1-sub-compare' },
+  { group: 'Advanced block concepts', label: 'Place value: Tens and ones blocks', value: 'som-g1-place-value-blocks' },
+  { group: 'Advanced block concepts', label: 'Fractions: Equivalent strip parts', value: 'som-g1-fraction-strips' },
+  { group: 'Advanced block concepts', label: 'Multiplication: Stacks array model', value: 'som-g1-multiplication-array' },
+  { group: 'Advanced block concepts', label: 'Graphing: Built block charts', value: 'som-g1-graphing-bars' },
+];
+
+
 const LKG_OPTIONS = [
   // Shapes
   { group: 'Shapes', label: 'Name the shape', value: 'lkg-shapes-name-shape' },
@@ -467,7 +490,22 @@ const SOURCE_CONFIGS = {
       { label: 'Reusable JSON', text: 'Examples use the same practice API and shared shell.' },
     ],
   },
+  'standard-object-measurement': {
+    label: 'Standard Object Measurement Practice',
+    api: '/api/practice',
+    badge: 'MATH',
+    description: 'Practice interactive non-standard unit measuring, comparison, error spotting, and addition modeling.',
+    defaultLogicType: 'som-g1-measure-length',
+    subject: 'math',
+    topic: 'standard-object-measurement',
+    options: SOM_OPTIONS,
+    tips: [
+      { label: 'Snapping blocks', text: 'Questions feature interactive snapping cube and dice towers.' },
+      { label: 'Addition modeling', text: 'Prefilled locked blocks act as the starting addend.' },
+    ],
+  },
 };
+
 
 function resolveSearchValue(searchParams, key, fallback = null) {
   const raw = searchParams?.get(key);

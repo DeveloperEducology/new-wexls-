@@ -23,6 +23,11 @@ import {
   generateTestingQuestion,
   getTestingTemplateConfig,
 } from '../../../lib/practice/generators/math/topics/testing/index.js';
+import {
+  generateSOMTopicQuestion,
+  getSOMSkill,
+} from '../../../lib/practice/generators/math/topics/standard-object-measurement/index.js';
+
 import { generateSmartGKQuestion } from '../../../lib/practice/generators/social/topics/gk/index.js';
 import { gkGenerators } from '../../../lib/practice/generators/social/topics/gk/registry.js';
 import { resolveCompetency } from '../../../lib/competency/index.js';
@@ -85,7 +90,8 @@ export async function GET(request) {
     console.error('Practice DB node check error:', error);
   }
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement'].includes(topic);
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement', 'standard-object-measurement'].includes(topic);
+
   const isSocialTopic = subject === 'social' && topic === 'gk';
 
   const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system'].includes(topic);
@@ -165,6 +171,21 @@ export async function GET(request) {
         template: getTestingTemplateConfig(skill),
       }, { subject, topic, skill }));
     }
+
+    if (topic === 'standard-object-measurement') {
+      const question = normalizeGenericTopicQuestion(
+        generateSOMTopicQuestion(config),
+        { topic, skill, seed, engine: 'standard-object-measurement' },
+      );
+
+      return NextResponse.json(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: getSOMSkill(skill),
+      }, { subject, topic, skill }));
+    }
+
 
     if (topic === 'fractions') {
       const question = normalizeFractionsQuestion(

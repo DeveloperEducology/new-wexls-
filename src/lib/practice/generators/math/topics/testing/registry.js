@@ -49,4 +49,10 @@ export const testingGenerator = {
     description: 'Tests blanks and selectable options inside one fill blank question.',
     difficulty: 'easy',
   },
+  'testing-non-standard-object-measurement': {
+    title: 'Part Tool: Non-Standard Object Measurement',
+    description: 'Tests all configurations of the non_standard_object_measurement layout.',
+    difficulty: 'easy',
+  },
 };
+

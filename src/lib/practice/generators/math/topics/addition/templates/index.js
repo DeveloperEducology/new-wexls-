@@ -139,6 +139,16 @@ export const additionTemplates = {
       model: 'cubes',
       isVisualShow: true
     }
+  },
+  'meas.nonstandard.multi': {
+    id: 'meas.nonstandard.multi',
+    topic: 'addition',
+    engine: 'nonStandardUnitMeasurement',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      layoutMode: 'add_lengths',
+      answerMode: 'sum'
+    }
   }
 };
 

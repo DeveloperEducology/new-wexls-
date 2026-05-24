@@ -66,3 +66,12 @@ export {
   getMeasurementSkill,
   measurementTheory
 } from './measurement/index.js';
+
+export {
+  generateSOMQuestion,
+  somCatalog,
+  somRegistry,
+  generateSOMTopicQuestion,
+  getSOMSkill
+} from './standard-object-measurement/index.js';
+

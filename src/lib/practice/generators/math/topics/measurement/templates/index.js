@@ -135,6 +135,20 @@ export const MEASUREMENT_TEMPLATES = {
     engine: 'diceMeasurement',
     questionType: 'fillInTheBlank',
     defaultConfig: { forcedTask: 'interactive_dice_measurement' }
+  },
+  'meas.dice.vertical': {
+    id: 'meas.dice.vertical',
+    family: 'nonstandard',
+    engine: 'diceMeasurement',
+    questionType: 'fillInTheBlank',
+    defaultConfig: { forcedTask: 'interactive_dice_vertical' }
+  },
+  'meas.nonstandard.multi': {
+    id: 'meas.nonstandard.multi',
+    family: 'nonstandard',
+    engine: 'nonStandardUnitMeasurement',
+    questionType: 'fillInTheBlank',
+    defaultConfig: { forcedTask: 'non_standard_object_measurement' }
   }
 };
 

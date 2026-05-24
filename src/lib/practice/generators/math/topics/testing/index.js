@@ -399,6 +399,217 @@ function buildFractionModelQuestion(skill) {
   };
 }
 
+function getSeedInt(seed) {
+  let hash = 0;
+  const s = String(seed);
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash << 5) - hash + s.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function buildNonStandardObjectMeasurementQuestion(skill, seed) {
+  const configs = [
+    {
+      layoutMode: 'drag_to_measure',
+      orientation: 'horizontal',
+      unitObject: 'cubes',
+      targetLength: 5,
+      firstLength: 0,
+      secondLength: 0,
+      objectImage: '/images/lkg/car.png',
+      objectName: 'toy car',
+      answerMode: 'count',
+      questionText: 'Use cubes to measure the length of the toy car.',
+      blankText: 'The toy car is about [blank:ans] cubes long.',
+      answerKey: { ans: '5' }
+    },
+    {
+      layoutMode: 'drag_to_measure',
+      orientation: 'vertical',
+      unitObject: 'dice',
+      targetLength: 6,
+      firstLength: 0,
+      secondLength: 0,
+      objectImage: '/images/lkg/flower.png',
+      objectName: 'flower',
+      answerMode: 'count',
+      questionText: 'Use dice to measure the height of the flower.',
+      blankText: 'The flower is about [blank:ans] dice tall.',
+      answerKey: { ans: '6' }
+    },
+    {
+      layoutMode: 'compare_two_objects',
+      orientation: 'vertical',
+      unitObject: 'paperclips',
+      targetLength: 7,
+      firstLength: 6,
+      secondLength: 4,
+      objectImage: '',
+      objectName: '',
+      firstImage: '/images/lkg/duck.png',
+      secondImage: '/images/lkg/frog.png',
+      firstName: 'duck toy',
+      secondName: 'frog toy',
+      answerMode: 'compare',
+      questionText: 'Which toy is taller: the duck toy or the frog toy?',
+      options: [
+        { id: 'opt_1', label: 'the duck toy', isCorrect: true },
+        { id: 'opt_2', label: 'the frog toy', isCorrect: false }
+      ],
+      answer: 'opt_1'
+    },
+    {
+      layoutMode: 'wrong_measure_fix',
+      orientation: 'horizontal',
+      unitObject: 'pennies',
+      targetLength: 5,
+      firstLength: 0,
+      secondLength: 0,
+      errorType: 'gap',
+      objectImage: '',
+      objectName: 'pencil',
+      answerMode: 'error_type',
+      questionText: 'Did Mia measure the length of the pencil correctly?',
+      options: [
+        { id: 'opt_none', label: 'Yes, it is measured correctly.', isCorrect: false },
+        { id: 'opt_gap', label: 'No, because there are gaps between the pennies.', isCorrect: true },
+        { id: 'opt_overlap', label: 'No, because the pennies overlap each other.', isCorrect: false },
+        { id: 'opt_start', label: 'No, because she did not start measuring at the end of the pencil.', isCorrect: false }
+      ],
+      answer: 'opt_gap'
+    },
+    {
+      layoutMode: 'add_lengths',
+      orientation: 'horizontal',
+      unitObject: 'cubes',
+      targetLength: 7,
+      firstLength: 4,
+      secondLength: 3,
+      objectImage: '',
+      objectName: '',
+      answerMode: 'sum',
+      questionText: 'Find the total length of the two trains combined.',
+      blankText: 'The first train is 4 cubes long. The second train is 3 cubes long.\n\nHow many cubes altogether? [blank:ans] cubes',
+      answerKey: { ans: '7' }
+    },
+    {
+      layoutMode: 'add_heights',
+      orientation: 'vertical',
+      unitObject: 'dice',
+      targetLength: 6,
+      firstLength: 2,
+      secondLength: 4,
+      objectImage: '',
+      objectName: '',
+      answerMode: 'sum',
+      questionText: 'Find the total height of the combined towers.',
+      blankText: 'The bottom tower is 2 dice tall. The top tower is 4 dice tall.\n\nHow many dice altogether? [blank:ans] dice',
+      answerKey: { ans: '6' }
+    },
+    {
+      layoutMode: 'horizontal_row',
+      orientation: 'horizontal',
+      unitObject: 'paperclips',
+      targetLength: 4,
+      firstLength: 0,
+      secondLength: 0,
+      objectImage: '/images/lkg/hippo.png',
+      objectName: 'hippo toy',
+      answerMode: 'count',
+      questionText: 'How many paperclips long is the hippo toy?',
+      blankText: 'The hippo toy is about [blank:ans] paperclips long.',
+      answerKey: { ans: '4' }
+    },
+    {
+      layoutMode: 'vertical_stack',
+      orientation: 'vertical',
+      unitObject: 'pennies',
+      targetLength: 5,
+      firstLength: 0,
+      secondLength: 0,
+      objectImage: '/images/lkg/apple.png',
+      objectName: 'apple drawing',
+      answerMode: 'count',
+      questionText: 'How many pennies tall is the apple drawing?',
+      blankText: 'The apple drawing is about [blank:ans] pennies tall.',
+      answerKey: { ans: '5' }
+    },
+    {
+      layoutMode: 'drag_to_measure',
+      orientation: 'horizontal',
+      unitObject: 'cubes',
+      targetLength: 5,
+      firstLength: 2,
+      secondLength: 0,
+      interactionMode: 'drag',
+      objectImage: '',
+      objectName: '',
+      answerMode: 'count',
+      questionText: 'Here are 2 cubes in the boxes. Add 3 more cubes to make 5 cubes.',
+      blankText: 'You added [blank:ans] more cubes to make 5 cubes in total.',
+      answerKey: { ans: '3' }
+    }
+  ];
+
+  const config = configs[getSeedInt(seed) % configs.length];
+
+  const isMcq = config.answerMode === 'compare' || config.answerMode === 'error_type';
+
+  const result = {
+    id: `testing-${skill}`,
+    type: isMcq ? 'mcq' : 'fillInTheBlank',
+    questionText: config.questionText,
+    parts: [
+      {
+        type: 'non_standard_object_measurement',
+        layoutMode: config.layoutMode,
+        dimension: config.orientation === 'vertical' ? 'height' : 'length',
+        orientation: config.orientation || 'horizontal',
+        unitObject: config.unitObject,
+        targetLength: config.targetLength,
+        firstLength: config.firstLength,
+        secondLength: config.secondLength,
+        objectImage: config.objectImage,
+        objectName: config.objectName,
+        interactionMode: config.layoutMode === 'drag_to_measure' ? 'drag' : 'static',
+        errorType: config.errorType || 'none',
+        firstImage: config.firstImage,
+        secondImage: config.secondImage,
+        firstName: config.firstName,
+        secondName: config.secondName,
+        unitColor: '#ef4444',
+        strokeColor: '#b91c1c',
+        pipColor: '#ffffff',
+        secondaryColor: '#3b82f6',
+        secondaryStroke: '#1d4ed8'
+      }
+    ],
+    solution: {
+      sections: [
+        { type: 'text', content: `This question demonstrates the '${config.layoutMode}' layout for testing.` }
+      ]
+    }
+  };
+
+  if (isMcq) {
+    result.options = config.options;
+    result.answer = config.answer;
+    result.correctAnswerIndex = config.options.findIndex(o => o.isCorrect);
+  } else {
+    result.parts.push({
+      type: 'text',
+      content: config.blankText,
+      isVertical: true
+    });
+    result.answer = config.answerKey;
+    result.correctAnswerText = JSON.stringify(config.answerKey);
+  }
+
+  return result;
+}
+
 const BUILDERS = {
   'testing-copy-drag-drop': buildCopyDragQuestion,
   'testing-categorization': buildCategorizationQuestion,
@@ -410,12 +621,14 @@ const BUILDERS = {
   'testing-fraction-model': buildFractionModelQuestion,
   'testing-mixed-parts': buildMixedPartsQuestion,
   'testing-doubles-plus-one-mixed': buildDoublesPlusOneMixedQuestion,
+  'testing-non-standard-object-measurement': buildNonStandardObjectMeasurementQuestion,
 };
 
 export function generateTestingQuestion(config = {}) {
   const skill = config.logic_type || config.forcedTask || 'testing-copy-drag-drop';
   const builder = BUILDERS[skill] || buildCopyDragQuestion;
-  const question = builder(skill);
+  const seed = config.variables?.seed || config.seed || String(Date.now());
+  const question = builder(skill, seed);
 
   return {
     ...question,
@@ -437,3 +650,4 @@ export function getTestingTemplateConfig(skill) {
 }
 
 export { testingGenerator };
+
