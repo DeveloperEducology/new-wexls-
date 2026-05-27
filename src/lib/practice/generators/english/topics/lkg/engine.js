@@ -1,5 +1,6 @@
 import { fruits, animals, things, vehicles } from './assets.js';
 import { lkgEnglishTemplateRegistry, lkgEnglishMicroSkillRegistry } from './registry.js';
+import letterAudios from './letterAudios.json' with { type: 'json' };
 
 function seededRandom(seed) {
   const x = Math.sin(seed) * 10000;
@@ -80,7 +81,8 @@ function generateBeginningSoundsQuestion(seed, r) {
       height: coords.pctH,
       isCircle: false,
       isCorrect: idx === correctAnswerIndex,
-      imageUrl: opt.imageUrl
+      imageUrl: opt.imageUrl,
+      audioUrl: letterAudios[opt.singular]
     };
   });
 
@@ -95,7 +97,8 @@ function generateBeginningSoundsQuestion(seed, r) {
       label: opt.singular,
       isCircle: false,
       imageUrl: opt.imageUrl,
-      id: `hs_${opt.name}_${idx}`
+      id: `hs_${opt.name}_${idx}`,
+      audioUrl: letterAudios[opt.singular]
     };
   });
 
@@ -106,6 +109,7 @@ function generateBeginningSoundsQuestion(seed, r) {
 </svg>`;
 
   const questionText = `Click on the object that starts with the sound of letter **${targetLetter.toUpperCase()}**.`;
+  const audioUrl = letterAudios[questionText];
 
   return {
     id: `english_lkg_beginning_sounds_${seed}`,
@@ -113,12 +117,14 @@ function generateBeginningSoundsQuestion(seed, r) {
     interaction: 'hotspot_select',
     layoutMode: 'mcq_hotspot',
     questionText,
+    audioUrl,
     voice: 'Puck',
     generateAudio: 'all',
     explanation: `**${targetAsset.singular.toUpperCase()}** starts with the letter **${targetLetter.toUpperCase()}**.`,
     options: optionsList.map((opt, idx) => ({
       id: `opt_${idx}`,
-      label: opt.singular
+      label: opt.singular,
+      audioUrl: letterAudios[opt.singular]
     })),
     correctAnswerIndex,
     answer: correctAnswerIndex,
@@ -181,7 +187,8 @@ function generateIdentifyCategoryQuestion(seed, r) {
       height: coords.pctH,
       isCircle: false,
       isCorrect: idx === correctAnswerIndex,
-      imageUrl: opt.imageUrl
+      imageUrl: opt.imageUrl,
+      audioUrl: letterAudios[opt.singular]
     };
   });
 
@@ -196,7 +203,8 @@ function generateIdentifyCategoryQuestion(seed, r) {
       label: opt.singular,
       isCircle: false,
       imageUrl: opt.imageUrl,
-      id: `hs_${opt.name}_${idx}`
+      id: `hs_${opt.name}_${idx}`,
+      audioUrl: letterAudios[opt.singular]
     };
   });
 
@@ -207,6 +215,7 @@ function generateIdentifyCategoryQuestion(seed, r) {
 </svg>`;
 
   const questionText = `Click on the **${targetCategory.label}**.`;
+  const audioUrl = letterAudios[questionText];
 
   return {
     id: `english_lkg_identify_category_${seed}`,
@@ -214,12 +223,14 @@ function generateIdentifyCategoryQuestion(seed, r) {
     interaction: 'hotspot_select',
     layoutMode: 'mcq_hotspot',
     questionText,
+    audioUrl,
     voice: 'Puck',
     generateAudio: 'all',
     explanation: `The **${correctItem.singular}** is a type of **${targetCategory.label}**.`,
     options: optionsList.map((opt, idx) => ({
       id: `opt_${idx}`,
-      label: opt.singular
+      label: opt.singular,
+      audioUrl: letterAudios[opt.singular]
     })),
     correctAnswerIndex,
     answer: correctAnswerIndex,
@@ -788,22 +799,40 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
   }
 
+  // Enrich hotspots with prebaked audio URLs
+  const enrichedHotspots = hotspots.map(hs => ({
+    ...hs,
+    audioUrl: letterAudios[hs.label]
+  }));
+  
+  const enrichedPartHotspots = partHotspots.map(phs => ({
+    ...phs,
+    audioUrl: letterAudios[phs.label]
+  }));
+
+  const audioUrl = letterAudios[questionText];
+
   return {
     id: `english_lkg_letter_recognition_${skillId}_${seed}`,
     type: 'mcq',
     interaction: 'hotspot_select',
     layoutMode: 'mcq_hotspot',
     questionText,
+    audioUrl,
     voice: 'Puck',
     generateAudio: 'all',
     explanation,
     options: optionsList.map((opt, idx) => {
-      const label = typeof opt === 'object' ? opt.label : opt;
-      return { id: `opt_${idx}`, label };
+      const label = typeof opt === 'object' ? (opt.label || opt.singular || opt.name) : opt;
+      return { 
+        id: `opt_${idx}`, 
+        label,
+        audioUrl: letterAudios[label]
+      };
     }),
     correctAnswerIndex,
     answer: correctAnswerIndex,
-    hotspots,
+    hotspots: enrichedHotspots,
     parts: [
       {
         type: 'text',
@@ -813,7 +842,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
         type: 'hotspot_canvas',
         canvasWidth: 800,
         canvasHeight: 465,
-        hotspots: partHotspots,
+        hotspots: enrichedPartHotspots,
         backgroundSvg
       }
     ]
