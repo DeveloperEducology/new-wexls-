@@ -22,8 +22,22 @@ export function generateFactsQuestion(template = {}, variables = {}) {
   const range = template.config?.range || [1, 10];
   const min = Number(range[0] ?? 1);
   const max = Number(range[1] ?? 10);
-  const first = randInt(min, max, random);
-  const second = randInt(min, max, random);
+  const fixedFactor = template.config?.fixedFactor;
+  let first, second;
+  if (fixedFactor !== undefined && fixedFactor !== null) {
+    const fixed = Number(fixedFactor);
+    const variable = randInt(min, max, random);
+    if (random() < 0.5) {
+      first = fixed;
+      second = variable;
+    } else {
+      first = variable;
+      second = fixed;
+    }
+  } else {
+    first = randInt(min, max, random);
+    second = randInt(min, max, random);
+  }
   const product = first * second;
 
   return {

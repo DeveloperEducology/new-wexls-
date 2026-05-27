@@ -1,0 +1,414 @@
+.pizzaApplet {
+  --paper: #FDFCF8;
+  --ink: #43403A;
+  --sage: #8A9A5B;
+  --terra: #D27D56;
+  --wheat: #E6D5B8;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 30px);
+  border: 2px solid rgba(67, 64, 58, 0.12);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(230, 213, 184, 0.38), transparent 34%),
+    var(--paper);
+  color: var(--ink);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.pizzaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.pizzaHeader h1,
+.storyBubble p,
+.quizHeader h2,
+.celebrationBoard h2 {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.pizzaHeader h1 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--sage);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.muteButton,
+.tabButton,
+.primaryButton,
+.softButton,
+.chip,
+.quizCard,
+.monsterButton {
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.muteButton,
+.primaryButton {
+  border-radius: 999px;
+  padding: 11px 16px;
+  background: var(--terra);
+  color: #fffaf2;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.muteButton.muted,
+.softButton {
+  background: var(--wheat);
+  color: var(--ink);
+}
+
+.pizzaTabs {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(67, 64, 58, 0.12);
+  border-radius: 22px;
+  background: rgba(253, 252, 248, 0.86);
+  backdrop-filter: blur(12px);
+}
+
+.tabButton,
+.chip,
+.softButton {
+  border-color: rgba(67, 64, 58, 0.22);
+  border-radius: 999px;
+  background: #fffaf2;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+.tabButton.active,
+.chip.active {
+  background: var(--sage);
+  border-color: var(--ink);
+  color: #fffaf2;
+}
+
+.pizzaStage,
+.storyPanel,
+.monsterPanel,
+.kitchenControls,
+.pizzaWorktop,
+.quizPanel,
+.celebrationBoard {
+  border: 1.5px solid rgba(67, 64, 58, 0.16);
+  border-radius: 26px;
+  background: rgba(255, 250, 242, 0.72);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.pizzaStage {
+  padding: clamp(14px, 2.4vw, 24px);
+}
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+}
+
+.storyPanel,
+.pizzaWorktop,
+.quizPanel,
+.celebrationBoard {
+  padding: 18px;
+}
+
+.storyBubble {
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--wheat);
+  border: 1.5px solid rgba(67, 64, 58, 0.18);
+}
+
+.storyBubble p {
+  margin: 8px 0 0;
+  font-size: clamp(20px, 2.2vw, 28px);
+  line-height: 1.2;
+}
+
+.actBadge,
+.controlLabel {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fffaf2;
+  color: var(--sage);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pizzaSvg {
+  display: block;
+  width: min(430px, 100%);
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.pizzaSvgCompact {
+  width: 150px;
+}
+
+.pizzaSlice path:first-child {
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.pizzaSlice.active path:first-child {
+  filter: drop-shadow(0 0 12px rgba(138, 154, 91, 0.32));
+}
+
+.monsterPanel,
+.monsterRow {
+  display: grid;
+  gap: 12px;
+}
+
+.monsterRow {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-column: 1 / -1;
+}
+
+.monsterButton {
+  position: relative;
+  min-height: 170px;
+  padding: 10px;
+  border-color: rgba(67, 64, 58, 0.18);
+  border-radius: 24px;
+  background: #fffaf2;
+}
+
+.monsterButton:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.monsterButton.eating .monsterSvg {
+  animation: monsterMunch 260ms ease-in-out infinite alternate;
+}
+
+.monsterSvg {
+  width: 112px;
+  max-width: 100%;
+}
+
+.monsterName {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.monsterSpeech {
+  position: absolute;
+  inset: 8px 8px auto;
+  z-index: 2;
+  padding: 7px 9px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 1px solid rgba(67, 64, 58, 0.14);
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.navButtons,
+.quizFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.primaryButton:disabled,
+.softButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sandboxGrid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.kitchenControls {
+  padding: 18px;
+}
+
+.kitchenControls h3 {
+  margin: 0 0 6px;
+  font-family: Georgia, serif;
+  font-size: 26px;
+}
+
+.kitchenControls p {
+  margin: 0 0 18px;
+  color: rgba(67, 64, 58, 0.74);
+  font-weight: 700;
+}
+
+.controlGroup {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.instructionStrip {
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--wheat);
+  font-weight: 900;
+}
+
+.quizHeader {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.quizHeader h2 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 36px);
+}
+
+.quizChoices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.quizCard {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 210px;
+  padding: 14px;
+  border-color: rgba(67, 64, 58, 0.16);
+  border-radius: 24px;
+  background: #fffaf2;
+}
+
+.quizCard.selected {
+  background: rgba(138, 154, 91, 0.18);
+  border-color: var(--sage);
+}
+
+.quizFooter {
+  margin-top: 16px;
+  font-weight: 900;
+}
+
+.celebrationBoard {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 34px;
+}
+
+.celebrationBoard h2 {
+  margin: 0;
+  font-size: clamp(42px, 6vw, 76px);
+}
+
+.celebrationBoard p {
+  max-width: 520px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.confetti {
+  color: var(--terra);
+  font-size: 42px;
+  letter-spacing: 0.18em;
+}
+
+.coasterBox {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  background: #fffaf2;
+}
+
+.coasterTrack {
+  height: 54px;
+  margin-bottom: 12px;
+  border-bottom: 8px solid var(--ink);
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.coasterCart {
+  width: 84px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--terra);
+  color: #fffaf2;
+  font-weight: 900;
+  transition: transform 320ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+@keyframes monsterMunch {
+  from { transform: translateY(0) rotate(-1deg); }
+  to { transform: translateY(-5px) rotate(1deg); }
+}
+
+@media (max-width: 860px) {
+  .pizzaHeader,
+  .modeGrid,
+  .sandboxGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pizzaHeader {
+    display: grid;
+  }
+
+  .monsterRow {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .pizzaApplet {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .monsterRow {
+    grid-template-columns: 1fr;
+  }
+}

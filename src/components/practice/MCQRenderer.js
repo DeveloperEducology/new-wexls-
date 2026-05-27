@@ -1,9 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import PartRenderer from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
 import { speakText, getQuestionSpeechText } from '@/lib/ttsClient';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
 
 
 function getOptionLabel(option, index) {
@@ -23,7 +25,7 @@ function getOptionContent(option) {
   if (isSvgString(option)) return option;
   if (isImageUrl(option)) return option;
   if (typeof option === 'string' || typeof option === 'number') return null;
-  return option?.content || option?.svg || option?.imageUrl || option?.image || option?.src || null;
+  return resolveToolSvg(option) || option?.content || option?.svg || option?.imageUrl || option?.image || option?.src || null;
 }
 
 function hasSvgContent(option) {
@@ -168,18 +170,24 @@ function getGridStyle(optionLayout) {
 
 function Part({ part, inGroup = false }) {
   if (part?.type === 'svg') {
+    const svgContent = resolveToolSvg(part) || part.content || part.svg || '';
+    const widthMatch = svgContent.match(/<svg[^>]*\bwidth=["']?(\d+)/i);
+    const nativeWidth = widthMatch ? parseInt(widthMatch[1], 10) : null;
+    const style = part.style || {};
+    const resolvedMaxWidth = style.maxWidth || (nativeWidth && nativeWidth < 500 ? `${nativeWidth}px` : '100%');
+
     return (
       <div
         className={styles.responsiveSvg}
         style={{
           width: inGroup ? 'auto' : '100%',
-          maxWidth: '100%',
+          maxWidth: resolvedMaxWidth,
           flex: inGroup ? '0 0 auto' : 'initial',
           display: 'flex',
           justifyContent: 'flex-start',
-          ...(part.style || {}),
+          ...style,
         }}
-        dangerouslySetInnerHTML={{ __html: part.content }}
+        dangerouslySetInnerHTML={{ __html: svgContent }}
       />
     );
   }
@@ -259,6 +267,27 @@ export default function MCQRenderer({
   onAnswer,
   isAnswered,
 }) {
+  const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+
+  const selectedIndices = useMemo(() => {
+    if (!isMultiSelect) return [];
+    if (Array.isArray(userAnswer)) {
+      return userAnswer.map(Number);
+    } else if (userAnswer && typeof userAnswer === 'object') {
+      if ('selectedIndex' in userAnswer || 'index' in userAnswer) {
+        const val = Number(userAnswer.selectedIndex ?? userAnswer.index);
+        return Number.isFinite(val) ? [val] : [];
+      }
+      return Object.entries(userAnswer)
+        .filter(([_, val]) => Boolean(val))
+        .map(([key]) => Number(key));
+    } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
+      const val = Number(userAnswer);
+      return Number.isFinite(val) ? [val] : [];
+    }
+    return [];
+  }, [userAnswer, isMultiSelect]);
+
   const selectedIndex = typeof userAnswer === 'object'
     ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
     : Number(userAnswer);
@@ -329,7 +358,7 @@ export default function MCQRenderer({
         </div>
       ) : null}
 
-      {['interactive_svg', 'hotspot_select'].includes(question.interaction) ? null : question.layoutConfig?.variant === 'capsule' ? (
+      {['interactive_svg', 'hotspot_select', 'hotspot_multi_select'].includes(question.interaction) ? null : question.layoutConfig?.variant === 'capsule' ? (
         <div 
           style={{
             display: 'flex',
@@ -348,7 +377,9 @@ export default function MCQRenderer({
           }}
         >
           {(question.options || []).map((option, index) => {
-            const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
+            const selected = isMultiSelect 
+              ? selectedIndices.includes(index)
+              : Number.isFinite(selectedIndex) && selectedIndex === index;
             const value = getOptionLabel(option, index);
             
             return (
@@ -357,7 +388,14 @@ export default function MCQRenderer({
                 type="button"
                 disabled={isAnswered}
                 onClick={() => {
-                  onAnswer(index);
+                  if (isMultiSelect) {
+                    const nextSelected = selectedIndices.includes(index)
+                      ? selectedIndices.filter((i) => i !== index)
+                      : [...selectedIndices, index].sort((a, b) => a - b);
+                    onAnswer(nextSelected);
+                  } else {
+                    onAnswer(index);
+                  }
                   if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(value, question.voice || 'Puck', option?.audioUrl);
                   }
@@ -393,18 +431,27 @@ export default function MCQRenderer({
       ) : (
         <div className={gridClassName} style={gridStyle} data-option-layout={optionLayout.mode}>
           {(question.options || []).map((option, index) => {
-            const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
+            const selected = isMultiSelect
+              ? selectedIndices.includes(index)
+              : Number.isFinite(selectedIndex) && selectedIndex === index;
             const content = getOptionContent(option);
             const isSvgOption = hasSvgContent(option);
             const isImageOption = isImageUrl(content);
-
+ 
              return (
               <button
                 key={option?.id || index}
                 type="button"
                 disabled={isAnswered}
                 onClick={() => {
-                  onAnswer(index);
+                  if (isMultiSelect) {
+                    const nextSelected = selectedIndices.includes(index)
+                      ? selectedIndices.filter((i) => i !== index)
+                      : [...selectedIndices, index].sort((a, b) => a - b);
+                    onAnswer(nextSelected);
+                  } else {
+                    onAnswer(index);
+                  }
                   if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
                   }

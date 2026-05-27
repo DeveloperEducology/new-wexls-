@@ -149,6 +149,13 @@ export const MEASUREMENT_TEMPLATES = {
     engine: 'nonStandardUnitMeasurement',
     questionType: 'fillInTheBlank',
     defaultConfig: { forcedTask: 'non_standard_object_measurement' }
+  },
+  'meas.svg.tool.demo': {
+    id: 'meas.svg.tool.demo',
+    family: 'svg-tools',
+    engine: 'svgToolDemo',
+    questionType: 'fillInTheBlank',
+    defaultConfig: { forcedTask: 'svg_tool_demo' }
   }
 };
 

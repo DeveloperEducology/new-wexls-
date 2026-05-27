@@ -3,13 +3,13 @@
  */
 
 const CURATED_COLORS = {
-  green: '#10b981',
-  yellow: '#f59e0b',
-  blue: '#06b6d4',
-  pink: '#ec4899',
-  purple: '#8b5cf6',
-  indigo: '#6366f1',
-  red: '#ef4444'
+  green: '#ecfdf5',
+  yellow: '#fefcbd',
+  blue: '#f0f9ff',
+  pink: '#fdf2f8',
+  purple: '#f5f3ff',
+  indigo: '#e0e7ff',
+  red: '#fef2f2'
 };
 
 const SHAPE_DEFINITIONS = {

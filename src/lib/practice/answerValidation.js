@@ -1,3 +1,5 @@
+import { validateInteractiveToolAnswer } from './interactiveToolEngines/validateInteractiveToolAnswer.js';
+
 function normalizeText(value) {
   return String(value ?? '').replace(/\s+/g, '').toLowerCase();
 }
@@ -43,12 +45,157 @@ function orderedAnswerDigitKeys(value) {
     .sort((a, b) => Number(a.split('_')[1]) - Number(b.split('_')[1]));
 }
 
+function getOrderingDirection(question) {
+  const prompt = String(question.questionText || question.prompt || '').toLowerCase();
+  if (prompt.includes('largest to smallest') || prompt.includes('greatest to least') || prompt.includes('descending')) {
+    return 'desc';
+  }
+  return 'asc';
+}
+
+function compareOrderingItems(a, b, direction) {
+  const aValue = a.value ?? a.content ?? a.label ?? a.text ?? a.id;
+  const bValue = b.value ?? b.content ?? b.label ?? b.text ?? b.id;
+  const aNumber = Number(aValue);
+  const bNumber = Number(bValue);
+
+  let result;
+  if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) {
+    result = aNumber - bNumber;
+  } else {
+    result = String(aValue).localeCompare(String(bValue), undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  }
+
+  return direction === 'desc' ? -result : result;
+}
+
+function getOrderingSlots(question, items) {
+  const explicitTargets = Array.isArray(question.targets)
+    ? question.targets
+        .filter(target => target && (target.kind === 'order_slot' || target.order !== undefined))
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+    : [];
+
+  if (explicitTargets.length >= items.length) {
+    return explicitTargets.slice(0, items.length).map(target => target.id);
+  }
+
+  return items.map((_, index) => `slot_${index + 1}`);
+}
+
+function getExpectedOrderingAnswer(question) {
+  const items = Array.isArray(question.items) ? question.items : [];
+  if (!items.length) return null;
+
+  const slotIds = getOrderingSlots(question, items);
+  const targetIdSet = new Set(slotIds);
+  const existingAnswer = parseMaybeJson(question.answer ?? question.correctAnswer, null);
+
+  if (
+    existingAnswer
+    && typeof existingAnswer === 'object'
+    && !Array.isArray(existingAnswer)
+    && items.every(item => targetIdSet.has(existingAnswer[item.id]))
+  ) {
+    return existingAnswer;
+  }
+
+  const orderedItems = [...items].sort((a, b) => compareOrderingItems(a, b, getOrderingDirection(question)));
+  return orderedItems.reduce((answer, item, index) => {
+    answer[item.id] = slotIds[index];
+    return answer;
+  }, {});
+}
+
 export function isAnswerCorrect(question, userAnswer) {
   if (!question) return false;
   const type = String(question.type || '').toLowerCase();
+  const interaction = String(question.interaction || '').toLowerCase();
+
+  if (interaction === 'hotspot_multi_select') {
+    const options = Array.isArray(question.options) ? question.options : [];
+    const correctIndices = options
+      .map((opt, idx) => (opt?.isCorrect ? idx : null))
+      .filter((idx) => idx !== null);
+
+    let selectedIndices = [];
+    if (Array.isArray(userAnswer)) {
+      selectedIndices = userAnswer.map(Number);
+    } else if (userAnswer && typeof userAnswer === 'object') {
+      selectedIndices = Object.entries(userAnswer)
+        .filter(([_, val]) => Boolean(val))
+        .map(([key]) => Number(key));
+    } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
+      selectedIndices = [Number(userAnswer)];
+    }
+
+    if (correctIndices.length !== selectedIndices.length) {
+      return false;
+    }
+
+    const sortedCorrect = [...correctIndices].sort((a, b) => a - b);
+    const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
+    return sortedCorrect.every((val, idx) => val === sortedSelected[idx]);
+  }
+
+  if (type === 'categorizationv2' && question.layoutMode === 'ordering') {
+    const expectedOrderingAnswer = getExpectedOrderingAnswer(question);
+    const answerObject = typeof userAnswer === 'object' && userAnswer !== null ? userAnswer : {};
+    if (!expectedOrderingAnswer) return false;
+    return Object.keys(expectedOrderingAnswer).every((key) => (
+      normalizeText(answerObject[key]) === normalizeText(expectedOrderingAnswer[key])
+    ));
+  }
+
+  if (type === 'interactivetool') {
+    return validateInteractiveToolAnswer(question, userAnswer);
+  }
 
   if (type === 'mcq' || type === 'imagechoice' || type === 'multiplechoice') {
     const options = Array.isArray(question.options) ? question.options : [];
+    const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+
+    if (isMultiSelect) {
+      let correctIndices = options
+        .map((opt, idx) => (opt?.isCorrect ? idx : null))
+        .filter((idx) => idx !== null);
+
+      if (correctIndices.length === 0) {
+        const expected = question.correctAnswerIndex ?? question.answer ?? question.correctAnswer;
+        if (Array.isArray(expected)) {
+          correctIndices = expected.map(Number);
+        } else if (expected && typeof expected === 'object') {
+          correctIndices = Object.entries(expected)
+            .filter(([_, val]) => Boolean(val))
+            .map(([key]) => Number(key));
+        } else if (expected !== null && expected !== undefined && expected !== '') {
+          correctIndices = [Number(expected)];
+        }
+      }
+
+      let selectedIndices = [];
+      if (Array.isArray(userAnswer)) {
+        selectedIndices = userAnswer.map(Number);
+      } else if (userAnswer && typeof userAnswer === 'object') {
+        selectedIndices = Object.entries(userAnswer)
+          .filter(([_, val]) => Boolean(val))
+          .map(([key]) => Number(key));
+      } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
+        selectedIndices = [Number(userAnswer)];
+      }
+
+      if (correctIndices.length !== selectedIndices.length) {
+        return false;
+      }
+
+      const sortedCorrect = [...correctIndices].sort((a, b) => a - b);
+      const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
+      return sortedCorrect.every((val, idx) => val === sortedSelected[idx]);
+    }
+
     const selectedIndex = typeof userAnswer === 'object'
       ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
       : Number(userAnswer);

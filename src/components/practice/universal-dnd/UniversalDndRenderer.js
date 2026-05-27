@@ -9,13 +9,16 @@ import CategorySortLayout from './layouts/CategorySortLayout';
 import DiagramLabelingLayout from './layouts/DiagramLabelingLayout';
 import FlowchartLayout from './layouts/FlowchartLayout';
 import TimelineLayout from './layouts/TimelineLayout';
+import OrderingLayout from './layouts/OrderingLayout';
 import MatchingLayout from './layouts/MatchingLayout';
 import TableFillLayout from './layouts/TableFillLayout';
 import HotspotLayout from './layouts/HotspotLayout';
+import ShelfSortLayout from './layouts/ShelfSortLayout';
 
 export const UniversalDndContext = React.createContext({
   cardStyle: null,
-  hideItemLabels: false
+  hideItemLabels: false,
+  layoutMode: null
 });
 
 export default function UniversalDndRenderer({
@@ -74,6 +77,14 @@ export default function UniversalDndRenderer({
             isAnswered={isAnswered}
           />
         );
+      case 'ordering':
+        return (
+          <OrderingLayout
+            question={normalizedQuestion}
+            dndState={dndState}
+            isAnswered={isAnswered}
+          />
+        );
       case 'matching':
         return (
           <MatchingLayout
@@ -93,6 +104,14 @@ export default function UniversalDndRenderer({
       case 'hotspot':
         return (
           <HotspotLayout
+            question={normalizedQuestion}
+            dndState={dndState}
+            isAnswered={isAnswered}
+          />
+        );
+      case 'shelf_sort':
+        return (
+          <ShelfSortLayout
             question={normalizedQuestion}
             dndState={dndState}
             isAnswered={isAnswered}
@@ -127,7 +146,7 @@ export default function UniversalDndRenderer({
   const hideItemLabelsVal = Boolean(normalizedQuestion.hideItemLabels || normalizedQuestion.behavior?.hideItemLabels);
 
   return (
-    <UniversalDndContext.Provider value={{ cardStyle: cardStyleVal, hideItemLabels: hideItemLabelsVal }}>
+    <UniversalDndContext.Provider value={{ cardStyle: cardStyleVal, hideItemLabels: hideItemLabelsVal, layoutMode }}>
       <div 
         ref={containerRef} 
         style={wrapperStyle}

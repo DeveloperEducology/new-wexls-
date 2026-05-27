@@ -6,6 +6,19 @@ import { Stage, Layer, Rect, Text, Group, Circle, Image as KonvaImage } from 're
 import styles from '../FillInTheBlankRenderer.module.css';
 import { speakText } from '@/lib/ttsClient';
 import UniversalDndRenderer from './universal-dnd/UniversalDndRenderer';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
+
+const UNIVERSAL_DND_LAYOUTS = new Set([
+  'category_sort',
+  'diagram_labeling',
+  'flowchart',
+  'timeline',
+  'ordering',
+  'matching',
+  'table_fill',
+  'hotspot',
+  'shelf_sort',
+]);
 
 const isInlineSvg = (url) => {
   if (typeof url !== 'string') return false;
@@ -31,6 +44,80 @@ const cleanSvgContent = (svgStr) => {
 const getSvgDataUrl = (svgStr) => {
   const cleaned = cleanSvgContent(svgStr);
   return `data:image/svg+xml;utf8,${encodeURIComponent(cleaned)}`;
+};
+
+const renderCubeSvg = ({ color, stroke, size = 48, hasRightPeg = true }) => {
+  const pegSize = Math.round(size * 0.38);
+  const rightPegWidth = Math.round(size * 0.12);
+  const rightPegHeight = Math.round(size * 0.32);
+  const r = 6;
+  
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ overflow: 'visible' }}
+    >
+      {hasRightPeg && (
+        <rect
+          x={size - 2}
+          y={(size - rightPegHeight) / 2}
+          width={rightPegWidth + 2}
+          height={rightPegHeight}
+          rx={3}
+          fill={color}
+          stroke={stroke}
+          strokeWidth={1.5}
+        />
+      )}
+      <rect
+        x={1}
+        y={1}
+        width={size - 2}
+        height={size - 2}
+        rx={r}
+        fill={color}
+        stroke={stroke}
+        strokeWidth={1.5}
+      />
+      <rect
+        x={2.5}
+        y={2.5}
+        width={size - 5}
+        height={size - 5}
+        rx={r - 1}
+        stroke="white"
+        strokeWidth={1}
+        strokeOpacity={0.25}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={pegSize / 2}
+        fill={color}
+        stroke={stroke}
+        strokeWidth={1.5}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={pegSize / 2 - 1}
+        stroke="white"
+        strokeWidth={1}
+        strokeOpacity={0.2}
+      />
+      <circle
+        cx={size / 2 - 2}
+        cy={size / 2 - 2}
+        r={pegSize / 4}
+        fill="white"
+        fillOpacity={0.15}
+      />
+    </svg>
+  );
 };
 
 function useLoadedImage(url) {
@@ -133,6 +220,9 @@ function HtmlCategorizationFallback({
   const [dragState, setDragState] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [sourceSlots, setSourceSlots] = useState(() => items.map((item) => item.id));
+  
+  const hasGridCategory = categories.some((cat) => cat.isGrid === true || (Number(cat.rows) > 0 && Number(cat.columns) > 0));
+  const isCubeTrain = !hasGridCategory && (categories.some((cat) => cat.id === 'cube_train') || items.some((item) => item.visual === 'cube'));
   const dragMetaRef = useRef(null);
 
   const cardWidth = 174;
@@ -140,24 +230,25 @@ function HtmlCategorizationFallback({
   const textCardMinWidth = 96;
   const textCardMaxWidth = 154;
   const textCardHeight = 54;
+  const hasItemVisual = (item) => Boolean(item.imageUrl || item.svg || resolveToolSvg(item));
   const getTextCardWidth = (item) => {
     const contentLength = String(item.content || '').replace(/\s+/g, '').length;
     return Math.max(textCardMinWidth, Math.min(textCardMaxWidth, contentLength * 15 + 34));
   };
   // When imageWidth is specified, shrink the card to wrap tightly around the image
   const getImageCardSize = (item) => {
-    if ((item.imageUrl || item.svg) && item.imageWidth) {
+    if (hasItemVisual(item) && item.imageWidth) {
       const sz = Math.max(60, Math.min(200, Number(item.imageWidth) + 24));
       return sz;
     }
     return null;
   };
   const itemCardWidth = (item) => {
-    if (isV2 && !item.imageUrl && !item.svg) return getTextCardWidth(item);
+    if (isV2 && !hasItemVisual(item)) return getTextCardWidth(item);
     return getImageCardSize(item) || cardWidth;
   };
   const itemCardHeight = (item) => {
-    if (isV2 && !item.imageUrl && !item.svg) return textCardHeight;
+    if (isV2 && !hasItemVisual(item)) return textCardHeight;
     // image-only cards: square; image+label: add ~30px for label
     const sz = getImageCardSize(item);
     if (sz) return item.content && item.content.trim() ? sz + 30 : sz;
@@ -170,7 +261,7 @@ function HtmlCategorizationFallback({
     const itemBorder = normalizeStyleToken(item.border || item.cardBorder);
     const transparentStyles = new Set(['transparent_png', 'transparent', 'borderless', 'border_none', 'none', 'png_only']);
 
-    return Boolean(item.imageUrl || item.svg) && (
+    return hasItemVisual(item) && (
       transparentStyles.has(questionCardStyle) ||
       transparentStyles.has(itemCardStyle) ||
       itemBorder === 'none' ||
@@ -183,18 +274,18 @@ function HtmlCategorizationFallback({
     const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
     return hideItemLabels || item.hideLabel === true || itemCardStyle === 'transparent_png' || questionCardStyle === 'transparent_png' || questionCardStyle === 'png_only';
   };
-  const allItemsHaveImageWidth = items.length > 0 && items.every((item) => (item.imageUrl || item.svg) && item.imageWidth);
-  const gridCardWidth = isV2 && !allItemsHaveImageWidth && items.every((item) => !item.imageUrl && !item.svg)
+  const allItemsHaveImageWidth = items.length > 0 && items.every((item) => hasItemVisual(item) && item.imageWidth);
+  const gridCardWidth = isV2 && !allItemsHaveImageWidth && items.every((item) => !hasItemVisual(item))
     ? Math.max(...items.map(getTextCardWidth), textCardMinWidth)
     : allItemsHaveImageWidth
       ? Math.max(60, Math.min(200, Number(items[0]?.imageWidth || 100) + 24))
       : cardWidth;
-  const responsiveGridCardWidth = isV2 && items.some((item) => item.imageUrl || item.svg)
+  const responsiveGridCardWidth = isV2 && items.some((item) => hasItemVisual(item))
     ? `clamp(96px, 28vw, ${gridCardWidth}px)`
     : `${gridCardWidth}px`;
-  const gridCardHeight = isV2 && items.every((item) => !item.imageUrl && !item.svg) ? textCardHeight : gridCardWidth;
+  const gridCardHeight = isV2 && items.every((item) => !hasItemVisual(item)) ? textCardHeight : gridCardWidth;
   const sourceSlotHeight = Math.max(gridCardHeight, ...items.map(itemCardHeight));
-  const responsiveSourceSlotHeight = isV2 && items.some((item) => item.imageUrl || item.svg)
+  const responsiveSourceSlotHeight = isV2 && items.some((item) => hasItemVisual(item))
     ? `clamp(96px, 28vw, ${sourceSlotHeight}px)`
     : `${sourceSlotHeight}px`;
   useEffect(() => {
@@ -669,8 +760,32 @@ function HtmlCategorizationFallback({
     const fill = overrides.color || item.color;
     const stroke = overrides.stroke || item.stroke;
 
-    const svgContent = overrides.svg || item.svg;
+    const svgContent = overrides.svg || item.svg || resolveToolSvg(item);
     const imgUrl = overrides.imageUrl || item.imageUrl;
+
+    if (item.visual === 'cube' || overrides.visual === 'cube') {
+      return renderCubeSvg({
+        color: fill || '#c45add',
+        stroke: stroke || '#a83ac4',
+        size: size,
+        hasRightPeg: true
+      });
+    }
+
+    if (item.visual === 'dot' || overrides.visual === 'dot') {
+      return (
+        <div
+          style={{
+            width: size * 0.7,
+            height: size * 0.7,
+            borderRadius: '50%',
+            background: fill || '#6366f1',
+            border: `2px solid ${stroke || '#4338ca'}`,
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+          }}
+        />
+      );
+    }
 
     if (svgContent || (imgUrl && isInlineSvg(imgUrl))) {
       const cleaned = svgContent ? cleanSvgContent(svgContent) : cleanSvgContent(imgUrl);
@@ -776,15 +891,29 @@ function HtmlCategorizationFallback({
 
   const renderCopyMode = () => (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: categories.some(cat => cat.isTower || cat.layout === 'vertical' || cat.id?.startsWith('tower')) ? 'row' : 'column',
+        gap: categories.some(cat => cat.isTower || cat.layout === 'vertical' || cat.id?.startsWith('tower')) ? 8 : (isCubeTrain ? 12 : 16),
+        flexWrap: categories.some(cat => cat.isTower || cat.layout === 'vertical' || cat.id?.startsWith('tower')) ? 'nowrap' : 'wrap',
+        justifyContent: 'center',
+        alignItems: 'stretch',
+        overflowX: 'auto'
+      }}>
         {categories.map((category) => {
           const requiredCount = Number(category.requiredCount || category.maxCount || 0);
           const prefilledCount = Number(category.prefilledCount || 0);
           const placedCopies = copyZones[category.id] || [];
           const isActive = activeDropZone === category.id;
-          const numRows = Number(category.rows);
-          const numCols = Number(category.columns);
-          const hasGrid = Number.isInteger(numRows) && Number.isInteger(numCols) && numRows > 0 && numCols > 0;
+          const numRows = Number(category.rows || 0);
+          const numCols = Number(category.columns || 0);
+          const hasGrid = (category.isGrid === true || (numRows > 0 && numCols > 0));
+          const isDotGrid = hasGrid && (category.visual === 'dot' || items[0]?.visual === 'dot');
+          const isTower = isCubeTrain && (category.isTower === true || category.layout === 'vertical' || category.id?.startsWith('tower'));
+          // Adaptive cell size: scale down for larger grids to prevent overflow
+          const cellSize = (numCols > 6 || numRows > 5) ? 48 : (numCols > 4 || numRows > 4) ? 60 : 76;
+          const totalCubes = prefilledCount + requiredCount;
+          const cubeSize = totalCubes > 10 ? (totalCubes > 15 ? 32 : 38) : 48;
 
           return (
             <div
@@ -798,7 +927,16 @@ function HtmlCategorizationFallback({
                 if (!event.currentTarget.contains(event.relatedTarget)) setActiveDropZone(null);
               }}
               onDrop={(event) => handleDrop(event, category.id)}
-              style={{
+              style={isCubeTrain ? {
+                padding: '2px 0',
+                border: 'none',
+                background: 'transparent',
+                boxShadow: 'none',
+                width: isTower ? 'auto' : '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              } : {
                 padding: 18,
                 border: `2px solid ${isActive ? '#2563eb' : '#dbeafe'}`,
                 borderRadius: 16,
@@ -807,39 +945,142 @@ function HtmlCategorizationFallback({
                 transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
-                <button
-                   type="button"
-                   onClick={() => speakText(category.label)}
-                   style={{
-                     background: '#e0f2fe',
-                     border: 'none',
-                     borderRadius: '50%',
-                     width: '30px',
-                     height: '30px',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     cursor: 'pointer',
-                     color: '#0284c7',
-                     boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
-                     transition: 'transform 0.2s ease, background 0.2s ease',
-                     flexShrink: 0,
-                   }}
-                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-                   title="Read category name out loud"
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                  </svg>
-                </button>
-                <span>{category.label}</span>
-              </div>
+              {category.label ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
+                  <button
+                     type="button"
+                     onClick={() => speakText(category.label)}
+                     style={{
+                       background: '#e0f2fe',
+                       border: 'none',
+                       borderRadius: '50%',
+                       width: '30px',
+                       height: '30px',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       cursor: 'pointer',
+                       color: '#0284c7',
+                       boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+                       transition: 'transform 0.2s ease, background 0.2s ease',
+                       flexShrink: 0,
+                     }}
+                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                     title="Read category name out loud"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                  </button>
+                  <span>{category.label}</span>
+                </div>
+              ) : null}
 
-              {hasGrid ? (
+              {isCubeTrain ? (
                 <div
-                  style={{
+                  style={isTower ? {
+                    width: 'auto',
+                    maxWidth: '160px',
+                    minHeight: 'auto',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    flexDirection: 'column-reverse',
+                    alignItems: 'center',
+                    padding: '8px 8px',
+                    boxShadow: isActive ? '0 8px 24px rgba(37, 99, 235, 0.1)' : 'inset 0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'border-color 180ms ease, background 180ms ease',
+                    position: 'relative',
+                    boxSizing: 'border-box'
+                  } : {
+                    width: '100%',
+                    maxWidth: '560px',
+                    minHeight: 'auto',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '6px 12px',
+                    boxShadow: isActive ? '0 8px 24px rgba(37, 99, 235, 0.1)' : 'inset 0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'border-color 180ms ease, background 180ms ease',
+                    position: 'relative',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: isTower ? 'column-reverse' : 'row',
+                    alignItems: 'center',
+                    gap: 0,
+                    flexWrap: isTower ? 'nowrap' : 'wrap'
+                  }}>
+                    {/* Prefilled cubes */}
+                    {Array.from({ length: prefilledCount }).map((_, index) => (
+                      <div key={`prefilled-${index}`} style={{ position: 'relative', marginRight: isTower ? 0 : -2, marginBottom: isTower ? -2 : 0 }}>
+                        {renderCubeSvg({
+                          color: category.prefillColor || '#ff8a3d',
+                          stroke: category.prefillStroke || '#e06013',
+                          size: cubeSize,
+                          hasRightPeg: !isTower,
+                          hasTopPeg: isTower
+                        })}
+                      </div>
+                    ))}
+                    
+                    {/* Placed copies */}
+                    {placedCopies.map((copy, index) => {
+                      const sourceItem = itemById.get(copy.itemId);
+                      return (
+                        <button
+                          key={copy.instanceId}
+                          data-copy-instance-id={copy.instanceId}
+                          type="button"
+                          disabled={isAnswered}
+                          onClick={() => removeCopyFromZone(category.id, copy.instanceId)}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            margin: 0,
+                            marginRight: isTower ? 0 : -2,
+                            marginBottom: isTower ? -2 : 0,
+                            cursor: isAnswered ? 'default' : 'pointer',
+                            position: 'relative',
+                            animation: 'copyDropIn 200ms cubic-bezier(0.18, 0.9, 0.2, 1.2)',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          {renderCubeSvg({
+                            color: sourceItem?.color || '#c45add',
+                            stroke: sourceItem?.stroke || '#a83ac4',
+                            size: cubeSize,
+                            hasRightPeg: !isTower,
+                            hasTopPeg: isTower
+                          })}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : hasGrid ? (
+                <div
+                  style={isDotGrid ? {
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${numCols}, 1fr)`,
+                    gridTemplateRows: `repeat(${numRows}, 1fr)`,
+                    gap: '12px',
+                    border: '2px dashed #cbd5e1',
+                    borderRadius: 16,
+                    padding: 16,
+                    width: 'max-content',
+                    background: '#f8fafc',
+                    boxShadow: isActive ? '0 16px 34px rgba(37, 99, 235, 0.08)' : 'none',
+                    transition: 'border-color 180ms ease, background 180ms ease',
+                  } : {
                     display: 'grid',
                     gridTemplateColumns: `repeat(${numCols}, 1fr)`,
                     gridTemplateRows: `repeat(${numRows}, 1fr)`,
@@ -859,11 +1100,11 @@ function HtmlCategorizationFallback({
                     const isActiveSlot = cellIndex >= prefilledCount && cellIndex < prefilledCount + requiredCount;
                     
                     const cellStyle = {
-                      width: 76,
-                      height: 76,
-                      borderBottom: r < numRows - 1 ? '2px solid #3b5166' : 'none',
-                      borderRight: c < numCols - 1 ? '2px solid #3b5166' : 'none',
-                      background: '#ffffff',
+                      width: cellSize,
+                      height: cellSize,
+                      borderBottom: isDotGrid ? 'none' : (r < numRows - 1 ? '2px solid #3b5166' : 'none'),
+                      borderRight: isDotGrid ? 'none' : (c < numCols - 1 ? '2px solid #3b5166' : 'none'),
+                      background: isDotGrid ? 'transparent' : '#ffffff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -874,11 +1115,12 @@ function HtmlCategorizationFallback({
                     if (isPrefilled) {
                       return (
                         <div key={`cell-${cellIndex}`} style={cellStyle}>
-                          {renderCopyVisual(items[0] || {}, 60, {
+                          {renderCopyVisual(items[0] || {}, cellSize - 16, {
                             color: category.prefillColor,
                             stroke: category.prefillStroke,
                             svg: category.prefillSvg || category.svg,
-                            imageUrl: category.prefillImageUrl || category.imageUrl
+                            imageUrl: category.prefillImageUrl || category.imageUrl,
+                            visual: category.visual
                           })}
                         </div>
                       );
@@ -926,7 +1168,7 @@ function HtmlCategorizationFallback({
                                 justifyContent: 'center'
                               }}
                             >
-                              {renderCopyVisual(sourceItem, 60)}
+                              {renderCopyVisual(sourceItem, cellSize - 16)}
                             </div>
                           ) : (
                             <div style={{
@@ -998,56 +1240,113 @@ function HtmlCategorizationFallback({
         })}
       </div>
 
-      <div
-        onDragEnter={() => setActiveDropZone('pool')}
-        onDragOver={(event) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-        }}
-        onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) setActiveDropZone(null);
-        }}
-        onDrop={(event) => handleDrop(event, null)}
-        style={{
-          minHeight: 116,
-          border: `2px dashed ${activeDropZone === 'pool' ? '#2563eb' : '#dbeafe'}`,
-          borderRadius: 16,
-          background: activeDropZone === 'pool' ? '#eff6ff' : '#f8fafc',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 14,
-          padding: 16,
-        }}
-      >
-        {items.map((item) => (
-          <div
-            key={item.id}
-            data-copy-source-id={item.id}
-            draggable={!isAnswered}
-            onDragStart={(event) => {
-              event.dataTransfer.setData('text/plain', item.id);
-              event.dataTransfer.effectAllowed = 'copy';
-            }}
-            onClick={() => copyItemToNextOpenSlot(item.id)}
-            style={{
-              width: 92,
-              height: 92,
-              border: '2px solid #5cc4ed',
-              borderRadius: 14,
-              background: '#ffffff',
-              boxShadow: '0 10px 22px rgba(15, 23, 42, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: isAnswered ? 'default' : 'copy',
-              touchAction: 'manipulation',
-            }}
-          >
-            {renderCopyVisual(item, 68)}
-          </div>
-        ))}
-      </div>
+      {isCopiable && (
+        <div
+          onDragEnter={() => setActiveDropZone('pool')}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setActiveDropZone(null);
+          }}
+          onDrop={(event) => handleDrop(event, null)}
+          style={isCubeTrain ? {
+            display: 'flex',
+            justifyContent: 'flex-start',
+            alignItems: 'center',
+            gap: 14,
+            padding: '8px 0',
+            marginTop: 10
+          } : {
+            minHeight: 116,
+            border: `2px dashed ${activeDropZone === 'pool' ? '#2563eb' : '#dbeafe'}`,
+            borderRadius: 16,
+            background: activeDropZone === 'pool' ? '#eff6ff' : '#f8fafc',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 14,
+            padding: 16,
+          }}
+        >
+          {items.map((item) => {
+            if (isCubeTrain) {
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  data-copy-source-id={item.id}
+                  disabled={isAnswered}
+                  onClick={() => copyItemToNextOpenSlot(item.id)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    margin: 0,
+                    cursor: isAnswered ? 'default' : 'pointer',
+                    transition: 'transform 0.15s ease-out',
+                    display: 'flex',
+                    alignItems: 'center',
+                    outline: 'none',
+                  }}
+                  onMouseEnter={(e) => { if (!isAnswered) e.currentTarget.style.transform = 'scale(1.08)'; }}
+                  onMouseLeave={(e) => { if (!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
+                  onMouseDown={(e) => { if (!isAnswered) e.currentTarget.style.transform = 'scale(0.95)'; }}
+                  onMouseUp={(e) => { if (!isAnswered) e.currentTarget.style.transform = 'scale(1.08)'; }}
+                >
+                  {renderCubeSvg({
+                    color: item.color || '#c45add',
+                    stroke: item.stroke || '#a83ac4',
+                    size: 48,
+                    hasRightPeg: true
+                  })}
+                </button>
+              );
+            }
+
+            return (
+              <div
+                key={item.id}
+                data-copy-source-id={item.id}
+                draggable={!isAnswered}
+                onDragStart={(event) => {
+                  event.dataTransfer.setData('text/plain', item.id);
+                  event.dataTransfer.effectAllowed = 'copy';
+                }}
+                onClick={() => copyItemToNextOpenSlot(item.id)}
+                style={{
+                  cursor: isAnswered ? 'default' : 'pointer',
+                  transition: 'transform 0.15s ease-out',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => { if (!isAnswered) e.currentTarget.style.transform = 'scale(1.08)'; }}
+                onMouseLeave={(e) => { if (!isAnswered) e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                <div
+                  style={{
+                    width: 92,
+                    height: 92,
+                    border: '2px solid #5cc4ed',
+                    borderRadius: 14,
+                    background: '#ffffff',
+                    boxShadow: '0 10px 22px rgba(15, 23, 42, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isAnswered ? 'default' : 'copy',
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  {renderCopyVisual(item, 68)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes copyDropIn {
@@ -1066,11 +1365,19 @@ function HtmlCategorizationFallback({
         const removed = removedZones[category.id] || [];
         const remaining = prefilledCount - removed.length;
         const sourceItem = items[0] || { visual: 'cube', color: category.prefillColor, stroke: category.prefillStroke };
+        const cubeSize = prefilledCount > 10 ? (prefilledCount > 15 ? 32 : 38) : 48;
+        const isTower = isCubeTrain && (category.isTower === true || category.layout === 'vertical' || category.id?.startsWith('tower'));
 
         return (
           <div
             key={category.id}
-            style={{
+            style={isCubeTrain ? {
+              padding: 12,
+              border: 'none',
+              background: 'transparent',
+              boxShadow: 'none',
+              width: '100%',
+            } : {
               padding: 18,
               border: '2px solid #dbeafe',
               borderRadius: 16,
@@ -1078,87 +1385,184 @@ function HtmlCategorizationFallback({
               boxShadow: '0 8px 22px rgba(15, 23, 42, 0.05)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
-              <button
-                type="button"
-                onClick={() => speakText(category.label)}
-                style={{
-                  background: '#e0f2fe',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '30px',
-                  height: '30px',
+            {category.label ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#334155', fontSize: 18, fontWeight: 900 }}>
+                <button
+                  type="button"
+                  onClick={() => speakText(category.label)}
+                  style={{
+                    background: '#e0f2fe',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#0284c7',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+                    transition: 'transform 0.2s ease, background 0.2s ease',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                  title="Read category name out loud"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                </button>
+                <span>{category.label}</span>
+              </div>
+            ) : null}
+
+            {isCubeTrain ? (
+              <div
+                style={isTower ? {
+                  width: 'auto',
+                  maxWidth: '160px',
+                  minHeight: 'auto',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  flexDirection: 'column-reverse',
+                  alignItems: 'center',
+                  padding: '8px 8px',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)',
+                  position: 'relative',
+                  boxSizing: 'border-box'
+                } : {
+                  width: '100%',
+                  maxWidth: '560px',
+                  minHeight: '84px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  background: '#f8fafc',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#0284c7',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
-                  transition: 'transform 0.2s ease, background 0.2s ease',
-                  flexShrink: 0,
+                  padding: '12px 18px',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)',
+                  position: 'relative',
+                  boxSizing: 'border-box'
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-                title="Read category name out loud"
               >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                </svg>
-              </button>
-              <span>{category.label}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-              {Array.from({ length: prefilledCount }).map((_, index) => {
-                const removedCube = removed.includes(index);
-                return (
-                  <button
-                    key={`remove-cube-${index}`}
-                    type="button"
-                    disabled={isAnswered}
-                    onClick={() => toggleRemovedCube(category.id, index)}
-                    style={{
-                      width: 76,
-                      height: 76,
-                      border: `2px solid ${removedCube ? '#fb7185' : '#5cc4ed'}`,
-                      borderRadius: 12,
-                      background: removedCube ? '#fff1f2' : '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: isAnswered ? 'default' : 'pointer',
-                      opacity: removedCube ? 0.38 : 1,
-                      transform: removedCube ? 'scale(0.88)' : 'scale(1)',
-                      position: 'relative',
-                      transition: 'opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease',
-                    }}
-                    aria-pressed={removedCube}
-                  >
-                    {renderCopyVisual(sourceItem, 64, { color: category.prefillColor, stroke: category.prefillStroke })}
-                    {removedCube ? (
-                      <span
-                        aria-hidden="true"
+                <div style={{ display: 'flex', flexDirection: isTower ? 'column-reverse' : 'row', alignItems: 'center', gap: 0, flexWrap: isTower ? 'nowrap' : 'wrap' }}>
+                  {Array.from({ length: prefilledCount }).map((_, index) => {
+                    const removedCube = removed.includes(index);
+                    return (
+                      <button
+                        key={`remove-cube-${index}`}
+                        type="button"
+                        disabled={isAnswered}
+                        onClick={() => toggleRemovedCube(category.id, index)}
                         style={{
-                          position: 'absolute',
-                          inset: 8,
+                          border: 'none',
+                          background: 'transparent',
+                          padding: 0,
+                          margin: 0,
+                          marginRight: isTower ? 0 : -2,
+                          marginBottom: isTower ? -2 : 0,
+                          cursor: isAnswered ? 'default' : 'pointer',
+                          position: 'relative',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#e11d48',
-                          fontSize: 46,
-                          fontWeight: 950,
-                          lineHeight: 1,
+                          opacity: removedCube ? 0.38 : 1,
+                          transform: removedCube ? 'scale(0.92)' : 'scale(1)',
+                          transition: 'opacity 180ms ease, transform 180ms ease',
+                          outline: 'none',
                         }}
+                        aria-pressed={removedCube}
                       >
-                        ×
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ marginTop: 14, color: '#64748b', fontSize: 13, fontWeight: 900 }}>
-              Removed {removed.length}/{removeCount}. {remaining} left.
-            </div>
+                        {renderCubeSvg({
+                          color: category.prefillColor || sourceItem.color || '#ff8a3d',
+                          stroke: category.prefillStroke || sourceItem.stroke || '#e06013',
+                          size: cubeSize,
+                          hasRightPeg: !isTower,
+                          hasTopPeg: isTower
+                        })}
+                        {removedCube ? (
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#e11d48',
+                              fontSize: 34,
+                              fontWeight: 950,
+                              lineHeight: 1,
+                              textShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                              pointerEvents: 'none'
+                            }}
+                          >
+                            ×
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                {Array.from({ length: prefilledCount }).map((_, index) => {
+                  const removedCube = removed.includes(index);
+                  return (
+                    <button
+                      key={`remove-cube-${index}`}
+                      type="button"
+                      disabled={isAnswered}
+                      onClick={() => toggleRemovedCube(category.id, index)}
+                      style={{
+                        width: 76,
+                        height: 76,
+                        border: `2px solid ${removedCube ? '#fb7185' : '#5cc4ed'}`,
+                        borderRadius: 12,
+                        background: removedCube ? '#fff1f2' : '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: isAnswered ? 'default' : 'pointer',
+                        opacity: removedCube ? 0.38 : 1,
+                        transform: removedCube ? 'scale(0.88)' : 'scale(1)',
+                        position: 'relative',
+                        transition: 'opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease',
+                      }}
+                      aria-pressed={removedCube}
+                    >
+                      {renderCopyVisual(sourceItem, 64, { color: category.prefillColor, stroke: category.prefillStroke })}
+                      {removedCube ? (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            position: 'absolute',
+                            inset: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#e11d48',
+                            fontSize: 46,
+                            fontWeight: 950,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ×
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {category.label && !isCubeTrain && (
+              <div style={{ marginTop: 14, color: '#64748b', fontSize: 13, fontWeight: 900 }}>
+                Removed {removed.length}/{removeCount}. {remaining} left.
+              </div>
+            )}
           </div>
         );
       })}
@@ -1168,11 +1572,12 @@ function HtmlCategorizationFallback({
   const renderCard = (item, origin = 'pool', options = {}) => {
     const isDragging = draggingId === item.id && !options.isDragLayer;
     const isSelected = selectedItemId === item.id && !options.isDragLayer;
-    const showCompactImage = Boolean(item.imageUrl || item.svg);
-    const mediaCard = Boolean(item.imageUrl || item.svg);
+    const toolSvg = resolveToolSvg(item);
+    const showCompactImage = Boolean(item.imageUrl || item.svg || toolSvg);
+    const mediaCard = Boolean(item.imageUrl || item.svg || toolSvg);
     const transparentImageCard = isV2 && isTransparentImageStyle(item);
     const showImageLabel = item.content && item.content.trim() && !shouldHideImageLabel(item);
-    const inlineSvg = item.svg ? cleanSvgContent(item.svg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
+    const inlineSvg = item.svg || toolSvg ? cleanSvgContent(item.svg || toolSvg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
     const effectiveWidth = options.width || (isV2 && mediaCard ? responsiveGridCardWidth : itemCardWidth(item));
     const effectiveHeight = options.height || (isV2 && mediaCard ? responsiveSourceSlotHeight : itemCardHeight(item));
 
@@ -1223,7 +1628,7 @@ function HtmlCategorizationFallback({
         ...options.style,
       }}
     >
-      {item.imageUrl || item.svg ? (
+      {item.imageUrl || item.svg || toolSvg ? (
         <>
           <div
             style={{
@@ -1333,9 +1738,11 @@ function HtmlCategorizationFallback({
     </div>
   );
 
+  const hasGridCategories = categories.some((cat) => cat.isGrid === true || (Number(cat.rows) > 0 && Number(cat.columns) > 0));
+
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {isRemoval ? renderRemovalMode() : isCopiable ? renderCopyMode() : (
+      {isRemoval ? renderRemovalMode() : (isCopiable || hasGridCategories || isCubeTrain) ? renderCopyMode() : (
       <>
       <div className="categories-grid-container" style={{ gap: 16 }}>
         {categories.map((category) => {
@@ -1592,7 +1999,7 @@ export default function CategorizationRenderer({
   onAnswer,
   isAnswered,
 }) {
-  if (question.interaction === 'universal_dnd' || question.layoutMode) {
+  if (question.interaction === 'universal_dnd' || UNIVERSAL_DND_LAYOUTS.has(question.layoutMode)) {
     return (
       <UniversalDndRenderer
         question={question}
@@ -1864,11 +2271,11 @@ export default function CategorizationRenderer({
           shadowOffsetY={isDragging ? 12 : 6}
           shadowColor="rgba(15, 23, 42, 0.16)"
         />
-        {item.imageUrl || item.svg ? (
+        {item.imageUrl || item.svg || resolveToolSvg(item) ? (
           <>
             <Group x={-layout.cardWidth / 2 + 7} y={-layout.cardHeight / 2 + 7}>
               <CategorizationImage
-                url={item.svg || item.imageUrl}
+                url={item.svg || resolveToolSvg(item) || item.imageUrl}
                 altText={item.content || item.target || item.id}
                 width={layout.cardWidth - 14}
                 height={item.content && item.content.trim() ? 82 : layout.cardHeight - 14}
@@ -1942,128 +2349,137 @@ export default function CategorizationRenderer({
           </div>
         ) : null}
 
-        {question.isCopiable || question.isRemoval || useHtmlRenderer || isMobile ? (
-          <HtmlCategorizationFallback
-            categories={categories}
-            items={items}
-            cardStyle={question.cardStyle || question.behavior?.cardStyle || question.itemCardStyle || question.imageCardStyle || question.cardVariant}
-            hideItemLabels={Boolean(question.hideItemLabels || question.behavior?.hideItemLabels)}
-            isCopiable={Boolean(question.isCopiable)}
-            isRemoval={Boolean(question.isRemoval)}
-            isV2={useHtmlRenderer || isMobile}
-            userAnswer={userAnswer}
-            onAnswer={onAnswer}
-            isAnswered={isAnswered}
-          />
-        ) : (
-        <div style={{ margin: '8px auto 0', width: '100%', maxWidth: 900, overflow: 'hidden' }}>
-          <Stage
-            width={Math.max(320, dimensions.width - 20)}
-            height={layout.stageHeight * dimensions.scale}
-            scaleX={dimensions.scale}
-            scaleY={dimensions.scale}
-            onContextMenu={(event) => event.evt.preventDefault()}
-          >
-            <Layer>
-              <Rect
-                x={20}
-                y={layout.trayTop}
-                width={layout.designWidth - 40}
-                height={layout.trayHeight}
-                fill={activeZone === 'pool' ? '#eff6ff' : '#f8fafc'}
-                stroke={activeZone === 'pool' ? '#2563eb' : '#dbeafe'}
-                strokeWidth={2}
-                dash={[8, 6]}
-                cornerRadius={14}
+        {(() => {
+          const hasGridCategory = categories.some((cat) => cat.isGrid === true || (Number(cat.rows) > 0 && Number(cat.columns) > 0));
+          const isCubeTrain = !hasGridCategory && (categories.some((cat) => cat.id === 'cube_train') || items.some((item) => item.visual === 'cube'));
+          const useHtml = question.isCopiable || question.isRemoval || useHtmlRenderer || isMobile || hasGridCategory || isCubeTrain;
+          if (useHtml) {
+            return (
+              <HtmlCategorizationFallback
+                categories={categories}
+                items={items}
+                cardStyle={question.cardStyle || question.behavior?.cardStyle || question.itemCardStyle || question.imageCardStyle || question.cardVariant}
+                hideItemLabels={Boolean(question.hideItemLabels || question.behavior?.hideItemLabels)}
+                isCopiable={Boolean(question.isCopiable)}
+                isRemoval={Boolean(question.isRemoval)}
+                isV2={useHtmlRenderer || isMobile}
+                userAnswer={userAnswer}
+                onAnswer={onAnswer}
+                isAnswered={isAnswered}
               />
+            );
+          }
+          return (
+            <div style={{ margin: '8px auto 0', width: '100%', maxWidth: 900, overflow: 'hidden' }}>
+              <Stage
+                width={Math.max(320, dimensions.width - 20)}
+                height={layout.stageHeight * dimensions.scale}
+                scaleX={dimensions.scale}
+                scaleY={dimensions.scale}
+                onContextMenu={(event) => event.evt.preventDefault()}
+              >
+                <Layer>
+                  <Rect
+                    x={20}
+                    y={layout.trayTop}
+                    width={layout.designWidth - 40}
+                    height={layout.trayHeight}
+                    fill={activeZone === 'pool' ? '#eff6ff' : '#f8fafc'}
+                    stroke={activeZone === 'pool' ? '#2563eb' : '#dbeafe'}
+                    strokeWidth={2}
+                    dash={[8, 6]}
+                    cornerRadius={14}
+                  />
 
-              {items.map((item, index) => {
-                const isOpenSlot = pool.find((candidate) => candidate.id === item.id)?.currentZone !== 'pool';
-                return (
-                <Rect
-                  key={`pool-slot-${item.id || index}`}
-                  x={layout.trayStartX + index * (layout.cardWidth + layout.trayGap)}
-                  y={layout.trayCenterY}
-                  width={layout.cardWidth}
-                  height={layout.cardHeight}
-                  fill={isOpenSlot ? '#f8fafc' : '#ffffff'}
-                  stroke={isOpenSlot ? '#dbeafe' : 'transparent'}
-                  strokeWidth={2}
-                  dash={[7, 6]}
-                  cornerRadius={8}
-                  offsetX={layout.cardWidth / 2}
-                  offsetY={layout.cardHeight / 2}
-                  shadowBlur={isOpenSlot ? 0 : 8}
-                  shadowColor="rgba(15, 23, 42, 0.06)"
-                  listening={false}
-                />
-                );
-              })}
-
-              {categories.map((category, index) => {
-                const bx = 20 + index * (layout.binWidth + layout.binGap);
-                const isActive = activeZone === category.id;
-                const placedCount = pool.filter((item) => item.currentZone === category.id).length;
-                const binHeight = getBinHeight(category.id);
-
-                return (
-                  <Group key={category.id} x={bx} y={layout.binTop}>
-                    <Rect
-                      width={layout.binWidth}
-                      height={binHeight}
-                      fill={isActive ? '#f0f9ff' : 'white'}
-                      stroke={isActive ? '#2563eb' : '#5cc4ed'}
-                      strokeWidth={isActive ? 3 : 2}
-                      cornerRadius={9}
-                      shadowBlur={isActive ? 14 : 0}
-                      shadowColor="rgba(37, 99, 235, 0.14)"
-                      scaleX={isActive ? 1.015 : 1}
-                      scaleY={isActive ? 1.015 : 1}
-                      offsetX={isActive ? layout.binWidth * 0.0075 : 0}
-                      offsetY={isActive ? binHeight * 0.0075 : 0}
-                    />
-
-                    <Group y={24}>
-                      <SpeakerIcon
-                        x={24}
-                        y={2}
-                        scale={0.72}
-                        onClick={() => speakText(category.label)}
-                        onTap={() => speakText(category.label)}
+                  {items.map((item, index) => {
+                    const isOpenSlot = pool.find((candidate) => candidate.id === item.id)?.currentZone !== 'pool';
+                    return (
+                      <Rect
+                        key={`pool-slot-${item.id || index}`}
+                        x={layout.trayStartX + index * (layout.cardWidth + layout.trayGap)}
+                        y={layout.trayCenterY}
+                        width={layout.cardWidth}
+                        height={layout.cardHeight}
+                        fill={isOpenSlot ? '#f8fafc' : '#ffffff'}
+                        stroke={isOpenSlot ? '#dbeafe' : 'transparent'}
+                        strokeWidth={2}
+                        dash={[7, 6]}
+                        cornerRadius={8}
+                        offsetX={layout.cardWidth / 2}
+                        offsetY={layout.cardHeight / 2}
+                        shadowBlur={isOpenSlot ? 0 : 8}
+                        shadowColor="rgba(15, 23, 42, 0.06)"
+                        listening={false}
                       />
-                      <Text
-                        text={category.label}
-                        x={42}
-                        y={-9}
-                        width={layout.binWidth - 54}
-                        fill="#4b5563"
-                        fontSize={18}
-                        fontStyle="bold"
-                      />
-                      <Rect width={layout.binWidth - 34} height={2} x={17} y={24} fill="#5cc4ed" opacity={0.42} />
-                    </Group>
+                    );
+                  })}
 
-                    {placedCount === 0 ? (
-                      <Text
-                        text={isActive ? 'release to sort here' : ''}
-                        x={0}
-                        y={binHeight / 2 - 10}
-                        width={layout.binWidth}
-                        align="center"
-                        fill="#93c5fd"
-                        fontSize={14}
-                        fontStyle="bold"
-                      />
-                    ) : null}
-                  </Group>
-                );
-              })}
+                  {categories.map((category, index) => {
+                    const bx = 20 + index * (layout.binWidth + layout.binGap);
+                    const isActive = activeZone === category.id;
+                    const placedCount = pool.filter((item) => item.currentZone === category.id).length;
+                    const binHeight = getBinHeight(category.id);
 
-              {pool.map((item) => renderKonvaCard(item))}
-            </Layer>
-          </Stage>
-        </div>
-        )}
+                    return (
+                      <Group key={category.id} x={bx} y={layout.binTop}>
+                        <Rect
+                          width={layout.binWidth}
+                          height={binHeight}
+                          fill={isActive ? '#f0f9ff' : 'white'}
+                          stroke={isActive ? '#2563eb' : '#5cc4ed'}
+                          strokeWidth={isActive ? 3 : 2}
+                          cornerRadius={9}
+                          shadowBlur={isActive ? 14 : 0}
+                          shadowColor="rgba(37, 99, 235, 0.14)"
+                          scaleX={isActive ? 1.015 : 1}
+                          scaleY={isActive ? 1.015 : 1}
+                          offsetX={isActive ? layout.binWidth * 0.0075 : 0}
+                          offsetY={isActive ? binHeight * 0.0075 : 0}
+                        />
+
+                        <Group y={24}>
+                          <SpeakerIcon
+                            x={24}
+                            y={2}
+                            scale={0.72}
+                            onClick={() => speakText(category.label)}
+                            onTap={() => speakText(category.label)}
+                          />
+                          <Text
+                            text={category.label}
+                            x={42}
+                            y={-9}
+                            width={layout.binWidth - 54}
+                            fill="#4b5563"
+                            fontSize={18}
+                            fontStyle="bold"
+                          />
+                          <Rect width={layout.binWidth - 34} height={2} x={17} y={24} fill="#5cc4ed" opacity={0.42} />
+                        </Group>
+
+                        {placedCount === 0 ? (
+                          <Text
+                            text={isActive ? 'release to sort here' : ''}
+                            x={0}
+                            y={binHeight / 2 - 10}
+                            width={layout.binWidth}
+                            align="center"
+                            fill="#93c5fd"
+                            fontSize={14}
+                            fontStyle="bold"
+                          />
+                        ) : null}
+                      </Group>
+                    );
+                  })}
+
+                  {pool.map((item) => renderKonvaCard(item))}
+                </Layer>
+              </Stage>
+            </div>
+          );
+        })()}
+
 
         {!useHtmlRenderer && !question.isCopiable && userAnswer ? (
           <p style={{ margin: '8px 0 0', textAlign: 'center', color: '#475569', fontSize: 13, fontWeight: 800 }}>

@@ -121,7 +121,6 @@ export const grade2AdditionSkills = [
     templateId: 'addition.sort.valuesTo20Html',
     config: {
       range: [1, 20],
-      sums: [12, 15, 18],
       renderer: 'html'
     }
   },

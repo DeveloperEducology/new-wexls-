@@ -95,7 +95,6 @@ export const additionTemplates = {
     questionType: 'categorization',
     defaultConfig: {
       range: [1, 20],
-      sums: [14, 15, 16]
     }
   },
   'addition.sort.valuesTo20Html': {
@@ -105,7 +104,6 @@ export const additionTemplates = {
     questionType: 'categorization',
     defaultConfig: {
       range: [1, 20],
-      sums: [14, 15, 16],
       renderer: 'html'
     }
   },
@@ -148,6 +146,17 @@ export const additionTemplates = {
     defaultConfig: {
       layoutMode: 'add_lengths',
       answerMode: 'sum'
+    }
+  },
+  'addition.interactive.cubeBuild': {
+    id: 'addition.interactive.cubeBuild',
+    topic: 'addition',
+    engine: 'cubeCounter',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      range: [5, 15],
+      max: 20,
+      mode: 'build'
     }
   }
 };

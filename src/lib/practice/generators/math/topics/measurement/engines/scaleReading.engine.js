@@ -2,7 +2,7 @@
  * Dial Scale and Weight Reading Engine
  */
 
-import { renderSpringScale } from '../shared/svgMeasurementLibrary.js';
+import { getSvgTool } from '@/lib/practice/svgTools';
 
 export function generateScaleReadingQuestion(rng, config = {}) {
   const difficulty = config.difficulty || 'medium';
@@ -22,11 +22,12 @@ export function generateScaleReadingQuestion(rng, config = {}) {
     weight = rng.int(1, 9) + rng.pick([0, 0.25, 0.5, 0.75]);
   }
 
-  const svg = renderSpringScale({
+  const svg = getSvgTool('spring_scale', {
     weight,
     unit,
-    maxWeight
-  });
+    maxWeight,
+    showLabel: false
+  }).svg;
 
   return {
     type: 'fillInTheBlank',

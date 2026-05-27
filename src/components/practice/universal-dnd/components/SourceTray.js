@@ -1,5 +1,6 @@
 import React from 'react';
 import DraggableCard from './DraggableCard';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
 
 export default function SourceTray({
   items,
@@ -63,7 +64,7 @@ export default function SourceTray({
           );
         } else if (placeholderMode === 'fixed' && referenceItem) {
           // Render a fixed placeholder card to prevent layout shifts
-          const hasImage = !!referenceItem.imageUrl || !!referenceItem.svg;
+          const hasImage = !!referenceItem.imageUrl || !!referenceItem.svg || !!resolveToolSvg(referenceItem);
           const imageWidth = referenceItem.imageWidth ? parseInt(referenceItem.imageWidth, 10) : 120;
           const cardWidth = hasImage ? Math.min(200, Math.max(60, imageWidth + 24)) : 80;
 

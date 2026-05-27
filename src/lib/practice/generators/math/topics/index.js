@@ -75,3 +75,18 @@ export {
   getSOMSkill
 } from './standard-object-measurement/index.js';
 
+export {
+  cubeToolsCatalog,
+  generateCubeToolsQuestion,
+  getCubeToolsTemplate
+} from './cube-tools/index.js';
+
+export {
+  multiplicationTopicGenerators,
+  generateMultiplicationQuestion,
+  createMultiplicationTemplate,
+  multiplicationMicroSkills,
+  multiplicationSkillsByGrade,
+  multiplicationTemplates
+} from './multiplication/index.js';
+

@@ -1,3 +1,5 @@
+import { getNextUnlockingSkills, getPrerequisiteFallback } from '../competency';
+
 const STORAGE_KEY = 'wexls.mastery.v1';
 const ATTEMPTS_KEY = 'wexls.attempts.v1';
 
@@ -48,8 +50,10 @@ export function recommendDifficulty({ smartScore = 0, practiceLevel = 1, wrongSt
   return 'easy';
 }
 
-export function getMasteryKey({ subject, topic, skillId, competencyId }) {
-  return [subject || 'math', topic || 'addition', skillId || 'unknown-skill', competencyId || 'unmapped'].join('/');
+export function getMasteryKey(identity) {
+  const { subject, topic, skillId, competencyId, userId } = identity || {};
+  const userPrefix = userId ? `${userId}:` : '';
+  return userPrefix + [subject || 'math', topic || 'addition', skillId || 'unknown-skill', competencyId || 'unmapped'].join('/');
 }
 
 export function loadAllMastery() {
@@ -100,9 +104,15 @@ export function createAttempt({
   smartScoreBefore,
   smartScoreAfter,
   startedAt,
+  userId = 'student_local',
+  hintUsed = false,
+  phase = 'practicing',
+  errorType = null,
+  nextAction = 'stay',
 }) {
   const metadata = question?.metadata || {};
   const createdAt = new Date().toISOString();
+  const seed = question?.seed || metadata.seed || question?.adaptiveConfig?.variables?.seed || question?.variables?.seed || metadata.variables?.seed || null;
 
   return {
     subject: metadata.subject || 'math',
@@ -120,6 +130,13 @@ export function createAttempt({
     smartScoreAfter: Number(smartScoreAfter || 0),
     timeSpentMs: startedAt ? Math.max(0, Date.now() - startedAt) : null,
     createdAt,
+    streakThreshold: Number(metadata.streakThreshold || question?.streakThreshold || 5),
+    seed,
+    userId,
+    hintUsed,
+    phase,
+    errorType,
+    nextAction,
   };
 }
 
@@ -133,20 +150,88 @@ export function appendAttempt(attempt) {
 
 export function updateMasteryState(previousState, attempt) {
   const previous = previousState || {};
+  const streakThreshold = Number(attempt.streakThreshold || 5);
   const smartScoreBefore = Number(previous.smartScore ?? attempt.smartScoreBefore ?? 0);
   const smartScore = Number(attempt.smartScoreAfter ?? calculateSmartScore(smartScoreBefore, attempt.isCorrect));
   const correctStreak = attempt.isCorrect ? Number(previous.correctStreak || 0) + 1 : 0;
   const wrongStreak = attempt.isCorrect ? 0 : Number(previous.wrongStreak || 0) + 1;
   const nextLevelStreak = attempt.isCorrect ? Number(previous.levelStreak || 0) + 1 : 0;
-  const didLevelUp = attempt.isCorrect && nextLevelStreak >= 5;
+  const didLevelUp = attempt.isCorrect && nextLevelStreak >= streakThreshold;
   const practiceLevel = didLevelUp
     ? Math.min(Number(previous.practiceLevel || attempt.practiceLevel || 1) + 1, 5)
     : Number(previous.practiceLevel || attempt.practiceLevel || 1);
   const levelStreak = didLevelUp ? 0 : nextLevelStreak;
   const attempts = Number(previous.attempts || 0) + 1;
+  const sameSkillAttempts = Number(previous.sameSkillAttempts || 0) + 1;
+  const fallbackDepth = Number(previous.fallbackDepth || 0);
+
   const correctCount = Number(previous.correctCount || 0) + (attempt.isCorrect ? 1 : 0);
   const incorrectCount = Number(previous.incorrectCount || 0) + (attempt.isCorrect ? 0 : 1);
   const masteryScore = attempts ? Math.round((correctCount / attempts) * 100) / 100 : 0;
+
+  // Resolve Skill State Transitions
+  let currentState = previous.state || 'practicing';
+  let sourceSkillId = previous.sourceSkillId || attempt.skillId;
+  let fallbackSkillId = previous.fallbackSkillId || null;
+
+  let shouldPromote = false;
+  let shouldFallback = false;
+  let shouldBridgeBack = false;
+  let nextAction = 'stay';
+
+  if (attempt.isCorrect) {
+    if (smartScore >= 100) {
+      currentState = 'mastered';
+      shouldPromote = true;
+      nextAction = 'promote';
+    } else if (currentState === 'remediation') {
+      if (correctStreak >= 1) {
+        currentState = 'practicing';
+      }
+    } else if (currentState === 'prerequisite_review') {
+      if (correctStreak >= 3 || smartScore >= 80) {
+        currentState = 'bridge_back';
+        shouldBridgeBack = true;
+        nextAction = 'bridge_back';
+      }
+    }
+  } else {
+    if (currentState === 'practicing') {
+      if (wrongStreak >= 3) {
+        const resolvedFallback = getPrerequisiteFallback(attempt.subject, attempt.topic, attempt.skillId);
+        if (resolvedFallback && resolvedFallback !== attempt.skillId) {
+          currentState = 'prerequisite_review';
+          shouldFallback = true;
+          fallbackSkillId = resolvedFallback;
+          sourceSkillId = attempt.skillId;
+          nextAction = 'fallback';
+        } else {
+          currentState = 'remediation';
+          nextAction = 'remediating';
+        }
+      }
+    } else if (currentState === 'remediation') {
+      if (wrongStreak >= 2) {
+        if (fallbackDepth < 2) {
+          const resolvedFallback = getPrerequisiteFallback(attempt.subject, attempt.topic, attempt.skillId);
+          if (resolvedFallback && resolvedFallback !== attempt.skillId) {
+            currentState = 'prerequisite_review';
+            shouldFallback = true;
+            fallbackSkillId = resolvedFallback;
+            sourceSkillId = attempt.skillId;
+            nextAction = 'fallback';
+          }
+        }
+      }
+    }
+  }
+
+  let nextFallbackDepth = fallbackDepth;
+  if (shouldFallback) {
+    nextFallbackDepth += 1;
+  } else if (shouldBridgeBack || shouldPromote) {
+    nextFallbackDepth = 0;
+  }
 
   return {
     subject: attempt.subject,
@@ -165,9 +250,20 @@ export function updateMasteryState(previousState, attempt) {
     levelStreak,
     practiceLevel,
     lastResult: attempt.isCorrect ? 'correct' : 'incorrect',
-    remediationNeeded: wrongStreak >= 2,
+    remediationNeeded: wrongStreak >= 2 || currentState === 'remediation',
     recommendedDifficulty: recommendDifficulty({ smartScore, practiceLevel, wrongStreak }),
     recentAttempts: [attempt].concat(previous.recentAttempts || []).slice(0, 10),
     lastAttemptAt: attempt.createdAt,
+    didLevelUp,
+    streakThreshold,
+    state: currentState,
+    sourceSkillId,
+    fallbackSkillId,
+    fallbackDepth: nextFallbackDepth,
+    sameSkillAttempts,
+    shouldPromote,
+    shouldFallback,
+    shouldBridgeBack,
+    nextAction,
   };
 }

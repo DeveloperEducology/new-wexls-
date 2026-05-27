@@ -77,6 +77,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
   }
 
   const cleanText = cleanTextForSpeech(text);
+  console.log(`[TTS] Generating audio using provider: ${provider.toUpperCase()} (voice: ${targetVoice})`);
 
   if (provider === 'piper') {
     const piperUrlStr = process.env.PIPER_TTS_URL || 'http://localhost:5000/api/tts';
@@ -118,6 +119,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
       'en_US-lessac-medium': 'Fenrir'
     };
     targetVoice = PIPER_TO_GEMINI_FALLBACK[targetVoice] || 'Puck';
+    console.log(`[TTS] Falling back to provider: GEMINI (voice: ${targetVoice})`);
   }
 
 

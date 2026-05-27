@@ -1,4 +1,6 @@
 import { buildShapeSvg, getShapeInfo, SUPPORTED_SHAPES, CURATED_COLOR_KEYS } from './shared/svgShapes.js';
+import { generate3DShapesQuestion } from './engines/3dShapes.engine.js';
+import { generateSymmetryQuestion } from './engines/symmetry.engine.js';
 
 const SHAPES_AUDIO_URLS = {
   oval: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/tts/Kore/a0e1b285a930528ee716b939441d996a4507292385fca0e847ae49cb4f64c467.wav',
@@ -37,11 +39,29 @@ const shuffle = (array, rng) => {
 };
 
 export function generateShapesQuestion(config = {}) {
-  const seed = config.variables?.seed || Date.now().toString();
+  const seed = config.variables?.seed || config.seed || Date.now().toString();
   const rng = new SeededRandom(seed);
-  const difficulty = config.difficulty || 'easy';
   const forcedTask = config.forcedTask || config.engineParams?.forcedTask || 'visual_to_text';
 
+  // Route to 3D Shapes Engine
+  if (forcedTask === 'shapes-g2-2d-vs-3d' || forcedTask === 'shapes-g2-vertices-edges-faces') {
+    return generate3DShapesQuestion(config);
+  }
+
+  // Route to Symmetry & Quadrilaterals Engine
+  if (forcedTask === 'shapes-g3-quadrilaterals' || forcedTask === 'shapes-g3-symmetry-lines' || forcedTask === 'shapes-g3-symmetry-check') {
+    return generateSymmetryQuestion(config);
+  }
+
+  // Route to Remediation Tasks
+  if (forcedTask === 'remedial_count_sides') {
+    return generateRemedialCountSidesQuestion(rng, seed);
+  }
+  if (forcedTask === 'remedial_match_basic') {
+    return generateVisualToTextQuestion(rng, seed, ['circle', 'triangle', 'square']);
+  }
+
+  // Default Grade 1 Tasks
   if (forcedTask === 'text_to_visual') {
     return generateTextToVisualQuestion(rng, seed);
   }
@@ -49,8 +69,56 @@ export function generateShapesQuestion(config = {}) {
   return generateVisualToTextQuestion(rng, seed);
 }
 
-function generateVisualToTextQuestion(rng, seed) {
-  const targetShape = rng.pick(SUPPORTED_SHAPES);
+function generateRemedialCountSidesQuestion(rng, seed) {
+  const list = ['triangle', 'square', 'rectangle'];
+  const targetShape = rng.pick(list);
+  const shapeInfo = getShapeInfo(targetShape);
+  const colorKey = rng.pick(CURATED_COLOR_KEYS);
+  const svg = buildShapeSvg(targetShape, 'plain', colorKey);
+
+  const questionText = `How many sides does this shape have?`;
+  const correctAnswerValue = shapeInfo.sides;
+
+  const options = [
+    { id: 'opt_3', label: '3 sides' },
+    { id: 'opt_4', label: '4 sides' },
+    { id: 'opt_5', label: '5 sides' }
+  ];
+  
+  // 3 sides is index 0; 4 sides is index 1.
+  const correctAnswerIndex = correctAnswerValue === 3 ? 0 : 1;
+
+  return {
+    type: 'mcq',
+    questionText,
+    parts: [
+      { type: 'svg', content: svg }
+    ],
+    options,
+    correctAnswerIndex,
+    explanation: {
+      sections: [
+        { content: `### Side Counting:` },
+        { content: `This shape is a **${targetShape}**.` },
+        { content: `A **${targetShape}** has exactly **${correctAnswerValue} straight sides**.` }
+      ]
+    },
+    remediation: `Try counting each straight boundary line around the shape. A triangle has 3 sides, and squares and rectangles have 4 sides.`,
+    metadata: {
+      subject: 'math',
+      topic: 'shapes',
+      skillId: 'shapes-remedial-count-sides',
+      templateId: 'shapes.remedial.sides',
+      engine: 'shapes',
+      targetShape,
+      correctAnswerValue,
+      seed
+    }
+  };
+}
+
+function generateVisualToTextQuestion(rng, seed, shapesList = SUPPORTED_SHAPES) {
+  const targetShape = rng.pick(shapesList);
   const colorKey = rng.pick(CURATED_COLOR_KEYS);
   
   const shapeInfo = getShapeInfo(targetShape);
@@ -68,7 +136,6 @@ function generateVisualToTextQuestion(rng, seed) {
     label: shapeName,
     audioUrl: SHAPES_AUDIO_URLS[shapeName] || null
   }));
-
 
   // Build high-quality visual explanation steps
   const explanationSections = [
@@ -139,6 +206,9 @@ function generateVisualToTextQuestion(rng, seed) {
     content: `**Conclusion:**\n${finalRule}`
   });
 
+  const skillId = shapesList.length === 3 ? 'shapes-remedial-match-basic' : 'shapes-g1-identify-visual-text-opts';
+  const templateId = shapesList.length === 3 ? 'shapes.remedial.match' : 'shapes.identify.visual-to-text';
+
   return {
     type: 'mcq',
     questionText: `What shape is this?`,
@@ -159,10 +229,10 @@ function generateVisualToTextQuestion(rng, seed) {
     metadata: {
       subject: 'math',
       topic: 'shapes',
-      skillId: 'shapes-g1-identify-visual-text-opts',
-      templateId: 'shapes.identify.visual-to-text',
+      skillId,
+      templateId,
       engine: 'shapes',
-      grade: 1,
+      grade: shapesList.length === 3 ? 'remediation' : 1,
       targetShape,
       colorKey,
       seed

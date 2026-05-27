@@ -2,7 +2,7 @@
  * Liquid Volume Reading Engine (Graduated Cylinders & Cups)
  */
 
-import { renderMeasuringCup } from '../shared/svgMeasurementLibrary.js';
+import { getSvgTool } from '@/lib/practice/svgTools';
 
 export function generateLiquidVolumeQuestion(rng, config = {}) {
   const difficulty = config.difficulty || 'medium';
@@ -15,12 +15,12 @@ export function generateLiquidVolumeQuestion(rng, config = {}) {
   const step = isCup ? 1 : 100;
   const level = rng.int(1, capacity / step) * step;
 
-  const svg = renderMeasuringCup({
+  const svg = getSvgTool(isCup ? 'measuring_cup' : 'graduated_cylinder', {
     capacity,
     level,
     unit,
-    vessel: isCup ? 'cup' : 'cylinder'
-  });
+    showLabel: false
+  }).svg;
 
   return {
     type: 'fillInTheBlank',

@@ -50,6 +50,12 @@ export default function HotspotLayout({
     pointerEvents: 'none'
   };
 
+  const showLabels = Boolean(
+    question.showHotspotLabels || 
+    question.metadata?.showHotspotLabels || 
+    question.behavior?.showHotspotLabels
+  );
+
   return (
     <div style={layoutStyle}>
       {/* Hotspot Image Canvas */}
@@ -82,7 +88,8 @@ export default function HotspotLayout({
             top,
             width,
             height,
-            zIndex: 10
+            zIndex: 10,
+            overflow: 'visible'
           };
 
           // For hotspots, if they are empty, we want them to look semi-transparent
@@ -123,6 +130,28 @@ export default function HotspotLayout({
                 onTargetClick={handleTargetClick}
                 style={hotspotCustomStyle}
               />
+              {showLabels && target.label && (
+                <span style={{
+                  position: 'absolute',
+                  bottom: '-22px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '20px',
+                  padding: '2px 10px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  color: '#334155',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                  zIndex: 15
+                }}>
+                  {target.label}
+                </span>
+              )}
             </div>
           );
         })}

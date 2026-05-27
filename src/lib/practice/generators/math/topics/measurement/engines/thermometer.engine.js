@@ -2,7 +2,7 @@
  * Thermometer Reading Engine
  */
 
-import { renderThermometer } from '../shared/svgMeasurementLibrary.js';
+import { getSvgTool } from '@/lib/practice/svgTools';
 
 export function generateThermometerQuestion(rng, config = {}) {
   const difficulty = config.difficulty || 'medium';
@@ -32,13 +32,13 @@ export function generateThermometerQuestion(rng, config = {}) {
     temperature = rng.int(minTemp, maxTemp);
   }
 
-  const svg = renderThermometer({
+  const svg = getSvgTool('thermometer', {
     temperature,
-    scaleSymbol: scale,
-    minTemp,
-    maxTemp,
-    tickInterval
-  });
+    unit: scale,
+    min: minTemp,
+    max: maxTemp,
+    showLabel: false
+  }).svg;
 
   const subTickVal = scale === 'F' ? 4 : 2; // tick resolution: 20/5 = 4 degrees for F, 10/5 = 2 degrees for C
   const majorBase = Math.floor(temperature / tickInterval) * tickInterval;

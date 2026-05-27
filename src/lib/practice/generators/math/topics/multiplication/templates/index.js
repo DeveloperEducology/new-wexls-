@@ -125,6 +125,181 @@ export const multiplicationTemplates = {
       eachRange: [2, 5],
       shape: 'penguin'
     }
+  },
+  'multiplication.cubes.repeatedAddition': {
+    id: 'multiplication.cubes.repeatedAddition',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'repeatedAddition',
+      groupsRange: [2, 4],
+      eachRange: [2, 5]
+    }
+  },
+  'multiplication.cubes.arrays': {
+    id: 'multiplication.cubes.arrays',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'arrayGrid',
+      rowsRange: [2, 4],
+      colsRange: [2, 5]
+    }
+  },
+  'multiplication.cubes.areaModel': {
+    id: 'multiplication.cubes.areaModel',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'areaModel',
+      rowsRange: [3, 6],
+      colsRange: [4, 8]
+    }
+  },
+  'multiplication.cubes.distributiveProperty': {
+    id: 'multiplication.cubes.distributiveProperty',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'distributiveProperty',
+      rowsRange: [3, 5],
+      colsRange: [5, 9]
+    }
+  },
+  'multiplication.cubes.areaGridRectangle': {
+    id: 'multiplication.cubes.areaGridRectangle',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'areaGridRectangle',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.cubes.areaGridRectangleFill': {
+    id: 'multiplication.cubes.areaGridRectangleFill',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'areaGridRectangleFill',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.numberLine.identify': {
+    id: 'multiplication.numberLine.identify',
+    topic: 'multiplication',
+    engine: 'numberLine',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'identify',
+      difficulty: 'easy'
+    }
+  },
+  'multiplication.numberLine.skipCount': {
+    id: 'multiplication.numberLine.skipCount',
+    topic: 'multiplication',
+    engine: 'numberLine',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'skipCount',
+      difficulty: 'easy'
+    }
+  },
+  'multiplication.cubes.repeatedAdditionTower': {
+    id: 'multiplication.cubes.repeatedAdditionTower',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'repeatedAddition',
+      layout: 'vertical',
+      difficulty: 'easy'
+    }
+  },
+  'multiplication.cubes.dotArray': {
+    id: 'multiplication.cubes.dotArray',
+    topic: 'multiplication',
+    engine: 'cubeArray',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'dotArray',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.barModel.findTotalSingle': {
+    id: 'multiplication.barModel.findTotalSingle',
+    topic: 'multiplication',
+    engine: 'barModel',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'findTotalSingle',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.barModel.findValueSingle': {
+    id: 'multiplication.barModel.findValueSingle',
+    topic: 'multiplication',
+    engine: 'barModel',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'findValueSingle',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.barModel.comparisonLarge': {
+    id: 'multiplication.barModel.comparisonLarge',
+    topic: 'multiplication',
+    engine: 'barModel',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'comparisonLarge',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.barModel.comparisonSmall': {
+    id: 'multiplication.barModel.comparisonSmall',
+    topic: 'multiplication',
+    engine: 'barModel',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'comparisonSmall',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.functionMachine.findOutput': {
+    id: 'multiplication.functionMachine.findOutput',
+    topic: 'multiplication',
+    engine: 'functionMachine',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'findOutput',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.functionMachine.findInput': {
+    id: 'multiplication.functionMachine.findInput',
+    topic: 'multiplication',
+    engine: 'functionMachine',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'findInput',
+      difficulty: 'medium'
+    }
+  },
+  'multiplication.functionMachine.findRule': {
+    id: 'multiplication.functionMachine.findRule',
+    topic: 'multiplication',
+    engine: 'functionMachine',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      mode: 'findRule',
+      difficulty: 'medium'
+    }
   }
 };
 

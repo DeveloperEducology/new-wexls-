@@ -1,9 +1,11 @@
 'use client';
 
-import PartRenderer from './PartRenderer';
+import PartRenderer, { SvgPart } from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
 import { speakText, getQuestionSpeechText } from '@/lib/ttsClient';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
+import InteractiveToolWrapper from './InteractiveToolWrapper';
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -107,23 +109,6 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
-function SvgPart({ content, style, inGroup = false }) {
-  return (
-    <div
-      className={styles.responsiveSvg}
-      style={{
-        width: inGroup ? 'auto' : '100%',
-        maxWidth: '100%',
-        flex: inGroup ? '0 0 auto' : 'initial',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        ...style,
-      }}
-      dangerouslySetInnerHTML={{ __html: content }}
-    />
-  );
-}
-
 // eslint-disable-next-line no-unused-vars
 function InputPart({ id = 'ans', userAnswer, onAnswer, isAnswered, style }) {
   return (
@@ -192,9 +177,20 @@ function ArithmeticLayout({ layout, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
-// eslint-disable-next-line no-unused-vars
 function renderPart(part, props, index, context = {}) {
-  if (part.type === 'svg') return <SvgPart key={index} content={part.content} style={part.style} inGroup={context.inGroup} />;
+  if (part.type === 'svg') {
+    return (
+      <SvgPart
+        key={index}
+        part={part}
+        question={props.question}
+        userAnswer={props.userAnswer}
+        onAnswer={props.onAnswer}
+        isAnswered={props.isAnswered}
+        inGroup={context.inGroup}
+      />
+    );
+  }
   if (part.type === 'image') {
     return (
       <div key={index} style={{ width: '100%', display: 'flex', justifyContent: 'flex-start', ...(part.style || {}) }}>
@@ -348,4 +344,3 @@ export default function FillInTheBlankRenderer({
     </section>
   );
 }
-

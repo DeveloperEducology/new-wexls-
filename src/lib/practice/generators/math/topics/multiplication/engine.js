@@ -4,11 +4,19 @@ import { getMultiplicationSkill } from './skills/index.js';
 import { generateFactsQuestion } from './engines/facts.engine.js';
 import { generateVerticalMultiplicationQuestion } from './engines/vertical.engine.js';
 import { generateVisualGroupsQuestion } from './engines/visualGroups.engine.js';
+import { generateCubeArrayQuestion } from './engines/cubeArray.engine.js';
+import { generateNumberLineQuestion } from './engines/numberLine.engine.js';
+import { generateBarModelQuestion } from './engines/barModel.engine.js';
+import { generateFunctionMachineQuestion } from './engines/functionMachine.engine.js';
 
 const ENGINE_GENERATORS = {
   facts: generateFactsQuestion,
   vertical: generateVerticalMultiplicationQuestion,
-  visualGroups: generateVisualGroupsQuestion
+  visualGroups: generateVisualGroupsQuestion,
+  cubeArray: generateCubeArrayQuestion,
+  numberLine: generateNumberLineQuestion,
+  barModel: generateBarModelQuestion,
+  functionMachine: generateFunctionMachineQuestion
 };
 
 export function createMultiplicationTemplate(skillOrTemplateId, overrides = {}) {

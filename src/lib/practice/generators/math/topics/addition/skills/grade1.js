@@ -198,7 +198,6 @@ export const grade1AdditionSkills = [
     templateId: 'addition.sort.factsTo20',
     config: {
       range: [1, 20],
-      sums: [14, 15, 16]
     }
   },
   {
@@ -211,7 +210,6 @@ export const grade1AdditionSkills = [
     templateId: 'addition.sort.valuesTo20Html',
     config: {
       range: [1, 20],
-      sums: [14, 15, 16],
       renderer: 'html'
     }
   },
@@ -304,6 +302,45 @@ export const grade1AdditionSkills = [
     config: {
       layoutMode: 'add_heights',
       answerMode: 'sum'
+    }
+  },
+  {
+    id: 'addition-g1-cube-build-to-5',
+    code: 'C.3',
+    grade: 1,
+    topic: 'addition',
+    competencyId: 'addition_models_to_5',
+    title: 'Build cubes to show numbers - sums up to 5',
+    templateId: 'addition.interactive.cubeBuild',
+    config: {
+      range: [2, 5],
+      max: 5
+    }
+  },
+  {
+    id: 'addition-g1-cube-build-to-10',
+    code: 'C.4',
+    grade: 1,
+    topic: 'addition',
+    competencyId: 'addition_models_to_10',
+    title: 'Build cubes to show numbers - sums up to 10',
+    templateId: 'addition.interactive.cubeBuild',
+    config: {
+      range: [5, 10],
+      max: 10
+    }
+  },
+  {
+    id: 'addition-g1-cube-build-to-20',
+    code: 'C.5',
+    grade: 1,
+    topic: 'addition',
+    competencyId: 'addition_models_to_20',
+    title: 'Build cubes to show numbers - sums up to 20',
+    templateId: 'addition.interactive.cubeBuild',
+    config: {
+      range: [10, 20],
+      max: 20
     }
   }
 ];

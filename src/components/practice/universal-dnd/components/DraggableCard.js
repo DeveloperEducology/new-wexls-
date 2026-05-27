@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { UniversalDndContext } from '../UniversalDndRenderer';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
 
 const isInlineSvg = (url) => {
   if (typeof url !== 'string') return false;
@@ -34,11 +35,12 @@ export default function DraggableCard({
   style = {}
 }) {
   const { cardStyle, hideItemLabels } = useContext(UniversalDndContext) || {};
+  const { disableHover, ...visualStyle } = style;
 
   const normalizeStyleToken = (value) => String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 
   const checkTransparent = (item, questionCardStyle) => {
-    if (!item.imageUrl && !item.svg) return false;
+    if (!item.imageUrl && !item.svg && !resolveToolSvg(item)) return false;
     const qStyle = normalizeStyleToken(questionCardStyle);
     const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
     const itemBorder = normalizeStyleToken(item.border || item.cardBorder);
@@ -69,7 +71,8 @@ export default function DraggableCard({
   const isTransparentPng = checkTransparent(item, cardStyle);
   const shouldHideText = checkHideLabel(item, cardStyle, hideItemLabels);
 
-  const hasImage = !!item.imageUrl || !!item.svg;
+  const toolSvg = resolveToolSvg(item);
+  const hasImage = !!item.imageUrl || !!item.svg || !!toolSvg;
   const hasText = !shouldHideText && !!item.content && item.content.trim().length > 0;
   
   // Compute card size based on imageWidth or defaults
@@ -104,7 +107,7 @@ export default function DraggableCard({
     boxSizing: 'border-box',
     position: 'relative',
     zIndex: isSelected ? 10 : 1,
-    ...style
+    ...visualStyle
   };
 
   const imageContainerStyle = {
@@ -129,9 +132,9 @@ export default function DraggableCard({
 
   const textStyle = {
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#0f172a',
+    fontSize: visualStyle.fontSize || '14px',
+    fontWeight: visualStyle.fontWeight || '500',
+    color: item.textColor || style.color || '#0f172a',
     textAlign: 'center',
     wordBreak: 'break-word',
     lineHeight: '1.4'
@@ -160,7 +163,7 @@ export default function DraggableCard({
 
   // Hover animations using simple standard mouse events
   const handleMouseEnter = (e) => {
-    if (isAnswered || isDragging) return;
+    if (isAnswered || isDragging || disableHover) return;
     e.currentTarget.style.transform = 'translateY(-2px)';
     if (!isTransparentPng) {
       e.currentTarget.style.boxShadow = isSelected
@@ -173,6 +176,7 @@ export default function DraggableCard({
   };
 
   const handleMouseLeave = (e) => {
+    if (disableHover) return;
     e.currentTarget.style.transform = 'none';
     if (!isTransparentPng) {
       e.currentTarget.style.boxShadow = isSelected
@@ -184,7 +188,7 @@ export default function DraggableCard({
     }
   };
 
-  const inlineSvg = item.svg ? cleanSvgContent(item.svg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
+  const inlineSvg = item.svg || toolSvg ? cleanSvgContent(item.svg || toolSvg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
 
   return (
     <div

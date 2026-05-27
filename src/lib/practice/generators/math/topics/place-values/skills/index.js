@@ -4,8 +4,10 @@ import { grade3PlaceValueSkills } from './grade3.js';
 import { grade4PlaceValueSkills } from './grade4.js';
 import { grade5PlaceValueSkills } from './grade5.js';
 import { grade6PlaceValueSkills } from './grade6.js';
+import { remediationPlaceValueSkills } from './remediation.js';
 
 export const placeValueSkillsByGrade = {
+  remediation: remediationPlaceValueSkills,
   1: grade1PlaceValueSkills,
   2: grade2PlaceValueSkills,
   3: grade3PlaceValueSkills,
@@ -15,6 +17,7 @@ export const placeValueSkillsByGrade = {
 };
 
 export const placeValueMicroSkills = [
+  ...remediationPlaceValueSkills,
   ...grade1PlaceValueSkills,
   ...grade2PlaceValueSkills,
   ...grade3PlaceValueSkills,

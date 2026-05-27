@@ -9,7 +9,7 @@ import LabLayout from '../../components/practice/LabLayout';
 import PracticeFeedback from '../../components/practice/PracticeFeedback';
 import styles from '../../components/practice/FactoryLayout.module.css';
 import { isAnswerCorrect } from '../../lib/practice/answerValidation';
-import { resolveCompetency } from '../../lib/competency';
+import { resolveCompetency, getNextUnlockingSkills } from '../../lib/competency';
 import { 
   isClientTtsSupported, 
   getStoredVoiceModels, 
@@ -22,7 +22,10 @@ import {
   appendAttempt,
   calculateSmartScore,
   createAttempt,
+  getMasteryKey,
+  loadAllMastery,
   loadMasteryState,
+  saveAllMastery,
   saveMasteryState,
   updateMasteryState,
 } from '../../lib/mastery';
@@ -35,6 +38,12 @@ import { unitsMeasurementSkillsByGrade } from '../../lib/practice/generators/sci
 import { grammarSkillsByGrade } from '../../lib/practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../../lib/practice/generators/math/topics/shapes/skills/index.js';
 import { MEASUREMENT_CATALOG } from '../../lib/practice/generators/math/topics/measurement/index.js';
+import { topicContracts } from '../../lib/practice/topicContracts.js';
+import { storyMathCatalog } from '../../lib/practice/generators/math/topics/story-math/index.js';
+import { interactiveToolsCatalog } from '../../lib/practice/generators/math/topics/interactive-tools/index.js';
+import { cubeToolsCatalog } from '../../lib/practice/generators/math/topics/cube-tools/index.js';
+import DraggableToolOverlay from '../../components/practice/DraggableToolOverlay';
+import OverlayToolbar from '../../components/practice/OverlayToolbar';
 
 const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
@@ -84,6 +93,24 @@ const MEASUREMENT_OPTIONS = MEASUREMENT_CATALOG.map((skill) => {
     value: skill.skillId
   };
 });
+
+const STORY_MATH_OPTIONS = storyMathCatalog.map((skill) => ({
+  group: skill.group,
+  label: `${skill.code} ${skill.title}`,
+  value: skill.skillId
+}));
+
+const INTERACTIVE_TOOLS_OPTIONS = interactiveToolsCatalog.map((skill) => ({
+  group: skill.group,
+  label: `${skill.code} ${skill.title}`,
+  value: skill.skillId
+}));
+
+const CUBE_TOOLS_OPTIONS = cubeToolsCatalog.map((skill) => ({
+  group: skill.group,
+  label: `${skill.code} ${skill.title}`,
+  value: skill.skillId
+}));
 
 const gradeLabel = (grade) => {
   if (grade === 'remediation') return 'Remediation';
@@ -203,9 +230,27 @@ const SOM_OPTIONS = [
   { group: 'Subtraction & patterns', label: 'Subtraction: Take away cubes', value: 'som-g1-sub-takeaway' },
   { group: 'Subtraction & patterns', label: 'Subtraction: Compare block trains', value: 'som-g1-sub-compare' },
   { group: 'Advanced block concepts', label: 'Place value: Tens and ones blocks', value: 'som-g1-place-value-blocks' },
+  { group: 'Advanced block concepts', label: 'Place value: Numbers up to 50', value: 'som-g1-place-value-50' },
+  { group: 'Advanced block concepts', label: 'Place value: Numbers up to 100', value: 'som-g2-place-value-100' },
+  { group: 'Advanced block concepts', label: 'Place value: Hundreds, tens, and ones', value: 'som-g2-place-value-hundreds' },
+  { group: 'Advanced block concepts', label: 'Place value: Thousands, hundreds, tens, and ones', value: 'som-g3-place-value-thousands' },
   { group: 'Advanced block concepts', label: 'Fractions: Equivalent strip parts', value: 'som-g1-fraction-strips' },
   { group: 'Advanced block concepts', label: 'Multiplication: Stacks array model', value: 'som-g1-multiplication-array' },
   { group: 'Advanced block concepts', label: 'Graphing: Built block charts', value: 'som-g1-graphing-bars' },
+  { group: 'New concepts', label: 'Ten frame: Numbers up to 5', value: 'som-g1-ten-frame-5' },
+  { group: 'New concepts', label: 'Ten frame: Numbers up to 10', value: 'som-g1-ten-frame-10' },
+  { group: 'New concepts', label: 'Ten frame: Double frame up to 20', value: 'som-g1-ten-frame-20' },
+  { group: 'New concepts', label: 'Number bonds: Up to 5', value: 'som-g1-number-bonds-5' },
+  { group: 'New concepts', label: 'Number bonds: Up to 10', value: 'som-g1-number-bonds-10' },
+  { group: 'New concepts', label: 'Number line: 0 to 10', value: 'som-g1-number-line-10' },
+  { group: 'New concepts', label: 'Number line: 0 to 20', value: 'som-g1-number-line-20' },
+  { group: 'New concepts', label: 'Number line: 0 to 100', value: 'som-g2-number-line-100' },
+  { group: 'New concepts', label: 'Area: Count squares (up to 4×4)', value: 'som-g2-area-grid-small' },
+  { group: 'New concepts', label: 'Area: Count squares (up to 6×6)', value: 'som-g2-area-grid-medium' },
+  { group: 'New concepts', label: 'Area: Click to fill the grid', value: 'som-g2-area-grid-click' },
+  { group: 'New concepts', label: 'Division: Share equally into groups', value: 'som-g2-division-sharing' },
+  { group: 'New concepts', label: 'Money: Count rupee coins', value: 'som-g1-money-coins' },
+  { group: 'New concepts', label: 'Odd and even numbers', value: 'som-g1-odd-even' },
 ];
 
 
@@ -419,6 +464,48 @@ const SOURCE_CONFIGS = {
       { label: 'Step-by-Step solutions', text: 'Detailed, conceptual walk-through explanations accompany each problem.' },
     ],
   },
+  'story-math': {
+    label: 'Story Math Applets',
+    api: '/api/practice',
+    badge: 'STORY',
+    description: 'Reusable interactive story applets for lesson stories, sandbox play, quiz games, remediation, demos, and manipulatives.',
+    defaultLogicType: 'story-math-lesson',
+    subject: 'math',
+    topic: 'story-math',
+    options: STORY_MATH_OPTIONS,
+    tips: [
+      { label: 'One renderer, many uses', text: 'Each skill opens the same applet in a different mode or teaching flow.' },
+      { label: 'Config-driven', text: 'Future stories can use the same interactiveApplet contract with a new storyId.' },
+    ],
+  },
+  'interactive-tools': {
+    label: 'Interactive Tools',
+    api: '/api/practice',
+    badge: 'TOOLS',
+    description: 'Centralized interactive manipulatives for visual math practice and future mini-engine activities.',
+    defaultLogicType: 'interactive-tools-fraction-bar',
+    subject: 'math',
+    topic: 'interactive-tools',
+    options: INTERACTIVE_TOOLS_OPTIONS,
+    tips: [
+      { label: 'Tool-first topic', text: 'Each skill opens one reusable manipulative in the shared practice shell.' },
+      { label: 'Mini-engine ready', text: 'This topic can later swap from applets to the new interactiveTool engine contract.' },
+    ],
+  },
+  'cube-tools': {
+    label: 'Cube Tools',
+    api: '/api/practice',
+    badge: 'CUBES',
+    description: 'Reusable cube-counter mini-engine skills for building, adding, subtracting, and missing addends.',
+    defaultLogicType: 'cube-tools-build',
+    subject: 'math',
+    topic: 'cube-tools',
+    options: CUBE_TOOLS_OPTIONS,
+    tips: [
+      { label: 'Engine-driven', text: 'All skills reuse the same cube_counter engine with different parameters.' },
+      { label: 'Template-ready', text: 'New cube skills can be added by changing config, not UI code.' },
+    ],
+  },
   'social-gk': {
     label: 'GK Practice',
     api: '/api/practice',
@@ -506,7 +593,23 @@ const SOURCE_CONFIGS = {
   },
 };
 
-
+function sourceConfigFromContract(contract) {
+  return {
+    label: contract.label,
+    api: '/api/practice',
+    badge: contract.badge || contract.subject.toUpperCase(),
+    description: contract.description,
+    defaultLogicType: contract.defaultSkill,
+    subject: contract.subject,
+    topic: contract.topic,
+    options: contract.catalog.map((skill) => ({
+      group: skill.grade ? `Grade ${skill.grade}` : 'Skills',
+      label: `${skill.code} ${skill.title}`,
+      value: skill.skillId
+    })),
+    tips: contract.tips || []
+  };
+}
 function resolveSearchValue(searchParams, key, fallback = null) {
   const raw = searchParams?.get(key);
   return raw && String(raw).trim() ? String(raw).trim() : fallback;
@@ -578,6 +681,7 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'math' && normTopic === 'place-values') return 'place-values';
   if (subject === 'math' && normTopic === 'shapes') return 'shapes';
   if (subject === 'math' && normTopic === 'addition') return 'addition-topic';
+  if (subject === 'math' && normTopic === 'cube-tools') return 'cube-tools';
   if (subject === 'math' && normTopic === 'subtraction') return 'subtraction';
   if (subject === 'math' && normTopic === 'testing') return 'testing';
   if (subject === 'social' && normTopic === 'gk') return 'social-gk';
@@ -587,7 +691,46 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   return topic; // return the topic ID for db fetched topics
 }
 
-function CorrectPraiseCard({ praiseMessage }) {
+function CorrectPraiseCard({ praiseMessage, isPreK }) {
+  useEffect(() => {
+    if (isPreK && praiseMessage?.title) {
+      // Small delay to let speech synthesis queue cleanly
+      const t = setTimeout(() => {
+        speakText(praiseMessage.title, 'Puck');
+      }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [isPreK, praiseMessage]);
+
+  if (isPreK) {
+    return (
+      <div className={`${styles.correctPraiseCard} ${styles.preKPraiseCard}`}>
+        <div className={styles.preKCelebrationEmojis}>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0s', '--x': '-35px' }}>🎈</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.15s', '--x': '45px' }}>🎉</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.08s', '--x': '-10px' }}>🌟</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.22s', '--x': '25px' }}>🥳</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.3s', '--x': '-50px' }}>🌈</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.4s', '--x': '15px' }}>🍭</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.1s', '--x': '-20px' }}>⭐</span>
+          <span className={styles.floatingEmoji} style={{ '--delay': '0.25s', '--x': '30px' }}>⭐</span>
+        </div>
+        
+        {/* Animated Cheering Mascot */}
+        <div style={{ fontSize: '64px', margin: '0 auto 8px', animation: 'preKMascotCheer 0.6s ease infinite alternate', display: 'inline-block' }}>
+          🐻
+        </div>
+
+        <h2 style={{ fontFamily: 'var(--font-outfit), sans-serif', fontWeight: 950, fontSize: '30px', color: '#15803d', margin: '0 0 4px' }}>
+          ✨ {praiseMessage?.title || 'Great job!'} ✨
+        </h2>
+        <p style={{ color: '#166534', fontSize: '15px', fontWeight: 800, margin: '6px 0 0', fontFamily: 'var(--font-outfit), sans-serif' }}>
+          {praiseMessage?.subtitle || 'You are doing amazing!'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.correctPraiseCard}>
       <div className={styles.correctPraiseBadge}>✓</div>
@@ -597,11 +740,264 @@ function CorrectPraiseCard({ praiseMessage }) {
   );
 }
 
+// ── DiagnosticSummaryCard ─────────────────────────────────────────────────────
+function DiagnosticSummaryCard({ result, sourceConfig, onStartSkill, onRetry }) {
+  const levelPalette = [
+    { color: '#6366f1', light: '#eef2ff', label: 'Foundation',  emoji: '🌱' },
+    { color: '#3b82f6', light: '#eff6ff', label: 'Beginner',    emoji: '💧' },
+    { color: '#10b981', light: '#ecfdf5', label: 'Developing',  emoji: '📈' },
+    { color: '#f59e0b', light: '#fffbeb', label: 'Proficient',  emoji: '⭐' },
+    { color: '#f97316', light: '#fff7ed', label: 'Advanced',    emoji: '🔥' },
+    { color: '#a855f7', light: '#faf5ff', label: 'Expert',      emoji: '💎' },
+  ];
+  const level = Math.min(5, Math.max(0, result.estimatedLevel || 0));
+  const palette = levelPalette[level];
+  const pct = Math.round(result.confidence * 100);
+  const circumference = 2 * Math.PI * 36; // r=36
+  const dash = (pct / 100) * circumference;
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(145deg, #f8f7ff 0%, #eef2ff 40%, #f0fdf4 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '32px 20px',
+        fontFamily: `'Inter', system-ui, sans-serif`,
+      }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        @keyframes popIn { from { opacity:0; transform:scale(0.94) translateY(20px); } to { opacity:1; transform:scale(1) translateY(0); } }
+        @keyframes strokeFill { from { stroke-dashoffset: ${circumference}; } to { stroke-dashoffset: ${circumference - dash}; } }
+        .diag-card { animation: popIn 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+        .diag-ring circle.progress { animation: strokeFill 1s 0.3s cubic-bezier(0.4,0,0.2,1) forwards; stroke-dashoffset: ${circumference}; }
+        .diag-retry-btn:hover { background: #f1f5f9 !important; }
+        .diag-start-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .diag-start-btn { transition: all 180ms ease !important; }
+      ` }} />
+
+      {/* Card */}
+      <div
+        className="diag-card"
+        style={{
+          width: 'min(520px, 100%)',
+          background: '#ffffff',
+          borderRadius: 28,
+          boxShadow: `0 4px 6px rgba(0,0,0,0.04), 0 20px 60px rgba(99,102,241,0.10)`,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Coloured top band */}
+        <div style={{
+          height: 6,
+          background: `linear-gradient(90deg, ${palette.color}, ${palette.color}88)`,
+        }} />
+
+        <div style={{ padding: '32px 32px 28px' }}>
+          {/* Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: palette.light,
+              border: `1px solid ${palette.color}33`,
+              borderRadius: 999,
+              padding: '5px 12px',
+            }}>
+              <span style={{ fontSize: 14 }}>🧭</span>
+              <span style={{ fontSize: 11, fontWeight: 900, color: palette.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Placement Report</span>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>
+              {result.correctCount}/{result.totalQuestions} correct
+            </span>
+          </div>
+
+          {/* Level + Ring row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28 }}>
+            {/* SVG ring */}
+            <div style={{ flexShrink: 0 }}>
+              <svg className="diag-ring" width="88" height="88" viewBox="0 0 88 88">
+                <circle cx="44" cy="44" r="36" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                <circle
+                  className="progress"
+                  cx="44" cy="44" r="36"
+                  fill="none"
+                  stroke={palette.color}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  transform="rotate(-90 44 44)"
+                />
+                <text x="44" y="40" textAnchor="middle" fontSize="16" fontWeight="900" fill={palette.color} fontFamily="Inter, system-ui, sans-serif">{pct}%</text>
+                <text x="44" y="54" textAnchor="middle" fontSize="8" fontWeight="700" fill="#94a3b8" fontFamily="Inter, system-ui, sans-serif" textTransform="uppercase">CONFIDENCE</text>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 4 }}>Estimated Level</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 36 }}>{palette.emoji}</span>
+                <span style={{ fontSize: 26, fontWeight: 950, color: '#0f172a', lineHeight: 1 }}>{palette.label}</span>
+              </div>
+              <div style={{ marginTop: 8, display: 'flex', gap: 4 }}>
+                {levelPalette.map((p, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i <= level ? 20 : 8,
+                      height: 6,
+                      borderRadius: 999,
+                      background: i <= level ? palette.color : '#e2e8f0',
+                      transition: 'all 300ms ease',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Question Breakdown */}
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Question Breakdown</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {result.steps.map((step, i) => (
+                <div
+                  key={step.skillId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    background: step.isCorrect ? '#f0fdf4' : '#fff5f5',
+                    border: `1px solid ${step.isCorrect ? '#bbf7d0' : '#fecaca'}`,
+                    borderRadius: 12,
+                    padding: '9px 14px',
+                  }}
+                >
+                  <div style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    background: step.isCorrect ? '#dcfce7' : '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    fontSize: 12,
+                  }}>
+                    {step.isCorrect ? '✓' : '×'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 750, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      Q{i + 1}: {step.label || step.skillId}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {step.timeSpentMs ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>{(step.timeSpentMs / 1000).toFixed(1)}s</span>
+                    ) : null}
+                    <span style={{
+                      fontSize: 10, fontWeight: 900,
+                      padding: '3px 9px', borderRadius: 999,
+                      background: step.isCorrect ? '#dcfce7' : '#fee2e2',
+                      color: step.isCorrect ? '#16a34a' : '#dc2626',
+                    }}>
+                      {step.isCorrect ? 'Correct' : 'Missed'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recommended Skill */}
+          {result.recommendedStartSkill && (
+            <div
+              style={{
+                background: palette.light,
+                border: `1px solid ${palette.color}33`,
+                borderRadius: 14,
+                padding: '14px 16px',
+                marginBottom: 22,
+                display: 'flex',
+                gap: 10,
+                alignItems: 'flex-start',
+              }}
+            >
+              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>🎯</span>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: palette.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Recommended Starting Skill</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                  {sourceConfig.options.find((o) => o.value === result.recommendedStartSkill)?.label || result.recommendedStartSkill}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              id="diagnostic-retry-btn"
+              className="diag-retry-btn"
+              onClick={onRetry}
+              style={{
+                flex: 1,
+                background: '#f8fafc',
+                border: '1.5px solid #e2e8f0',
+                color: '#475569',
+                borderRadius: 14,
+                padding: '13px 16px',
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'background 160ms',
+              }}
+            >
+              Retake Test
+            </button>
+            <button
+              type="button"
+              id="diagnostic-start-btn"
+              className="diag-start-btn"
+              onClick={() => onStartSkill(result.recommendedStartSkill)}
+              style={{
+                flex: 2,
+                background: `linear-gradient(135deg, ${palette.color} 0%, ${palette.color}bb 100%)`,
+                border: 0,
+                color: '#ffffff',
+                borderRadius: 14,
+                padding: '13px 16px',
+                fontSize: 13,
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: `0 4px 14px ${palette.color}44`,
+              }}
+            >
+              Start Practice →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* footer note */}
+      <p style={{ marginTop: 20, fontSize: 11, color: '#94a3b8', fontWeight: 600, textAlign: 'center' }}>
+        Results are based on {result.totalQuestions} placement questions across the skill ladder.
+      </p>
+    </div>
+  );
+}
+
 function PracticePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const submittingRef = useRef(false);
   const loadingRef = useRef(false);
+  const fetchRequestIdRef = useRef(0);
+  const seedUsedRef = useRef(false);
   const urlSubject = resolveSearchValue(searchParams, 'subject');
   const urlTopic = resolveSearchValue(searchParams, 'topic');
   const urlSkill = resolveSearchValue(searchParams, 'skill');
@@ -615,7 +1011,10 @@ function PracticePageContent() {
   const [curriculumLoading, setCurriculumLoading] = useState(true);
 
   const mergedConfigs = useMemo(() => {
-    const result = { ...SOURCE_CONFIGS };
+    const contractConfigs = Object.fromEntries(
+      topicContracts.map((contract) => [contract.topic, sourceConfigFromContract(contract)])
+    );
+    const result = { ...SOURCE_CONFIGS, ...contractConfigs };
     
     Object.entries(dbConfigs).forEach(([dbKey, dbConfig]) => {
       const matchingKey = Object.keys(result).find(
@@ -641,6 +1040,13 @@ function PracticePageContent() {
   const [sourceKey, setSourceKey] = useState(resolvedInitialSource);
   const [logicType, setLogicType] = useState(initialLogicType || 'addition-g1-e3-model-match-to-10');
   const [question, setQuestion] = useState(null);
+  const isPreK = useMemo(() => {
+    if (urlTopic === 'lkg' || urlTopic === 'prek' || urlTopic === 'ukg') return true;
+    if (logicType && (logicType.includes('lkg') || logicType.includes('prek') || logicType.includes('ukg'))) return true;
+    const skillGrade = question?.metadata?.grade || question?.grade;
+    if (skillGrade && (skillGrade === 'lkg' || skillGrade === 'prek' || skillGrade === 'ukg')) return true;
+    return false;
+  }, [urlTopic, logicType, question]);
   const [templateJson, setTemplateJson] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -652,6 +1058,7 @@ function PracticePageContent() {
   const [lastResult, setLastResult] = useState('none');
   const [difficulty, setDifficulty] = useState('adaptive');
   const [history, setHistory] = useState([]);
+  const [streakThreshold, setStreakThreshold] = useState(5);
   const [userAnswer, setUserAnswer] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -659,7 +1066,58 @@ function PracticePageContent() {
   const [transitionState, setTransitionState] = useState('idle');
   const [praiseMessage, setPraiseMessage] = useState(null);
   const [autoSubmit, setAutoSubmit] = useState(false);
+  const [activeOverlays, setActiveOverlays] = useState([]);
+
+  const handleToggleOverlay = (toolId) => {
+    setActiveOverlays((prev) =>
+      prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
+    );
+  };
   const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
+
+  // Student Profile states
+  const [activeStudent, setActiveStudent] = useState('Alex');
+  const [studentList, setStudentList] = useState(['Alex', 'Sam', 'Charlie', 'Taylor']);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedStudent = window.localStorage.getItem('wexls.activeStudent.v1');
+      if (storedStudent) setActiveStudent(storedStudent);
+
+      const storedList = window.localStorage.getItem('wexls.studentList.v1');
+      if (storedList) {
+        try {
+          const parsed = JSON.parse(storedList);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStudentList(parsed);
+          }
+        } catch (e) {
+          console.warn('Failed to parse student list', e);
+        }
+      }
+    }
+  }, []);
+
+  // ── Adaptive Engine State ─────────────────────────────────────────────────
+  const [skillState, setSkillState] = useState('practicing'); // locked | practicing | mastered | remediation | prerequisite_review | bridge_back
+  const [masteredOverlay, setMasteredOverlay] = useState(null); // { skillLabel, nextSkills[] }
+  const [adaptiveBanner, setAdaptiveBanner] = useState(null);  // { type: 'fallback'|'bridge_back'|'remediating', message, targetSkillId? }
+  const [teacherOverrideOpen, setTeacherOverrideOpen] = useState(false);
+
+  // ── Diagnostic Placement Mode State ──────────────────────────────────────
+  const isDiagnosticMode = resolveSearchValue(searchParams, 'diagnostic') === 'true';
+  const DIAGNOSTIC_TOTAL = 5;
+  const [diagPhase, setDiagPhase] = useState('idle'); // idle | running | done
+  const [diagStep, setDiagStep] = useState(0);        // 0-4
+  const [diagSkillLadder, setDiagSkillLadder] = useState([]); // array of skillId strings
+  const [diagQuestion, setDiagQuestion] = useState(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagAnswer, setDiagAnswer] = useState(null);
+  const [diagAnswered, setDiagAnswered] = useState(false);
+  const [diagCorrect, setDiagCorrect] = useState(false);
+  const [diagSteps, setDiagSteps] = useState([]); // [{skillId, label, isCorrect, timeSpentMs}]
+  const [diagResult, setDiagResult] = useState(null); // final summary
+  const diagStartedAtRef = useRef(Date.now());
 
   // Client-Side TTS States
   const [clientTtsSupported, setClientTtsSupported] = useState(false);
@@ -812,11 +1270,13 @@ function PracticePageContent() {
   }, [router, urlSkill, urlSubject, urlTopic, mergedConfigs]);
 
   const fetchQuestion = useCallback(async (resetSession = false, sessionOverride = {}) => {
-    if (loadingRef.current) return;
+    const requestId = fetchRequestIdRef.current + 1;
+    fetchRequestIdRef.current = requestId;
     loadingRef.current = true;
     setLoading(!sessionOverride.keepTransition);
     setLastResult('none');
     setUserAnswer(null);
+    setActiveOverlays([]);
     setIsAnswered(false);
     submittingRef.current = false;
     setIsSubmitting(false);
@@ -856,19 +1316,43 @@ function PracticePageContent() {
         topic: urlTopic || sourceConfig.topic,
         skillId: logicType,
         competencyId: competency?.id,
+        userId: activeStudent,
       });
       const remediationNeeded = sessionOverride.remediationNeeded ?? storedMastery?.remediationNeeded ?? false;
       url.searchParams.set('remediationActive', remediationNeeded ? 'true' : 'false');
       url.searchParams.set('remediationStep', remediationNeeded ? '1' : '0');
-      url.searchParams.set('seed', String(Date.now()));
+      const urlSeed = resolveSearchValue(searchParams, 'seed');
+      if (urlSeed && !seedUsedRef.current) {
+        url.searchParams.set('seed', urlSeed);
+        seedUsedRef.current = true;
+        try {
+          const currentUrl = new URL(window.location.href);
+          if (currentUrl.searchParams.has('seed')) {
+            currentUrl.searchParams.delete('seed');
+            window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+          }
+        } catch (e) {
+          console.warn('Failed to clean up seed from URL:', e);
+        }
+      } else {
+        url.searchParams.set('seed', String(Date.now()));
+      }
 
       const res = await fetch(url.toString());
       const data = await res.json();
+      if (fetchRequestIdRef.current !== requestId) return;
 
       if (data?.success && data?.question) {
         setQuestion(data.question);
         setTemplateJson(data.template || null);
         setQuestionStartedAt(Date.now());
+        if (data.question.metadata?.streakThreshold) {
+          setStreakThreshold(Number(data.question.metadata.streakThreshold));
+        } else if (data.question.streakThreshold) {
+          setStreakThreshold(Number(data.question.streakThreshold));
+        } else {
+          setStreakThreshold(5);
+        }
         if (sessionOverride.slideIn) {
           setTransitionState('slideIn');
           window.setTimeout(() => setTransitionState('idle'), 520);
@@ -878,12 +1362,15 @@ function PracticePageContent() {
         setTemplateJson(data?.error || null);
       }
     } catch (error) {
+      if (fetchRequestIdRef.current !== requestId) return;
       console.error('Practice fetch error:', error);
       setQuestion(null);
       setTemplateJson(error.message);
     } finally {
-      setLoading(false);
-      loadingRef.current = false;
+      if (fetchRequestIdRef.current === requestId) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     }
   }, [correctStreak, difficulty, lastResult, levelStreak, logicType, practiceLevel, sourceConfig, urlSubject, urlTopic]);
 
@@ -934,6 +1421,10 @@ function PracticePageContent() {
   }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource, curriculumLoading, mergedConfigs]);
 
   useEffect(() => {
+    seedUsedRef.current = false;
+  }, [logicType]);
+
+  useEffect(() => {
     if (curriculumLoading) return;
     const competency = resolveCompetency({
       subject: urlSubject || sourceConfig.subject,
@@ -945,6 +1436,7 @@ function PracticePageContent() {
       topic: urlTopic || sourceConfig.topic,
       skillId: logicType,
       competencyId: competency?.id,
+      userId: activeStudent,
     });
 
     if (storedMastery) {
@@ -953,6 +1445,7 @@ function PracticePageContent() {
       setPracticeLevel(Number(storedMastery.practiceLevel || 1));
       setLevelStreak(Number(storedMastery.levelStreak || 0));
       setLastResult(storedMastery.lastResult || 'none');
+      setStreakThreshold(Number(storedMastery.streakThreshold || 5));
       fetchQuestion(false, {
         correctStreak: Number(storedMastery.correctStreak || 0),
         practiceLevel: Number(storedMastery.practiceLevel || 1),
@@ -967,13 +1460,14 @@ function PracticePageContent() {
     setPracticeLevel(1);
     setLevelStreak(0);
     setLastResult('none');
+    setStreakThreshold(5);
     fetchQuestion(false, {
       correctStreak: 0,
       practiceLevel: 1,
       levelStreak: 0,
       lastResult: 'none',
     });
-  }, [sourceKey, logicType, difficulty, urlSubject, urlTopic, curriculumLoading]);
+  }, [sourceKey, logicType, difficulty, urlSubject, urlTopic, curriculumLoading, activeStudent]);
 
   const handleSubmit = (answerOverride = undefined) => {
     const answerToCheck = answerOverride === undefined ? userAnswer : answerOverride;
@@ -991,8 +1485,10 @@ function PracticePageContent() {
           ...(question.metadata || {}),
           competencyId: competency?.id || question.metadata?.competencyId || null,
           competency: competency || question.metadata?.competency || null,
+          streakThreshold,
         },
       },
+      userId: activeStudent,
       userAnswer: answerToCheck,
       isCorrect: correct,
       difficulty,
@@ -1006,14 +1502,26 @@ function PracticePageContent() {
     saveMasteryState(attempt, nextMastery);
     appendAttempt(attempt);
 
+    // Send attempt to server-side MongoDB analytics
+    fetch('/api/practice/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attempt }),
+    }).catch((err) => {
+      console.warn('Analytics logging skipped (offline/network issue):', err.message);
+    });
+
     const nextCorrectStreak = nextMastery.correctStreak;
-    const nextLevelStreak = correct ? levelStreak + 1 : 0;
     const nextPracticeLevel = nextMastery.practiceLevel;
     const finalLevelStreak = nextMastery.levelStreak;
-    const didLevelUp = correct && nextLevelStreak >= 5;
+    const didLevelUp = nextMastery.didLevelUp;
+    const currentThreshold = nextMastery.streakThreshold || 5;
+    const adaptiveAction = nextMastery.nextAction; // 'stay' | 'promote' | 'fallback' | 'bridge_back' | 'remediating'
 
+    setSkillState(nextMastery.state || 'practicing');
     setSmartScore(nextMastery.smartScore);
     setCorrectStreak(nextCorrectStreak);
+    setStreakThreshold(currentThreshold);
     if (didLevelUp) {
       setPracticeLevel(nextPracticeLevel);
       setLevelStreak(finalLevelStreak);
@@ -1035,6 +1543,71 @@ function PracticePageContent() {
       timestamp: new Date().toLocaleTimeString(),
     }, ...prev].slice(0, 5));
 
+    // ── Adaptive Action Routing ─────────────────────────────────────────────
+    if (adaptiveAction === 'promote') {
+      // Skill mastered — show overlay, queue next unlocking skills
+      const nextSkills = getNextUnlockingSkills(
+        urlSubject || sourceConfig.subject,
+        urlTopic || sourceConfig.topic,
+        logicType
+      );
+      setMasteredOverlay({
+        skillLabel: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
+        nextSkills: nextSkills.slice(0, 3),
+      });
+      setAdaptiveBanner(null);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (adaptiveAction === 'fallback') {
+      // Needs prerequisite review — redirect URL to fallback skill
+      const fallbackSkillId = nextMastery.fallbackSkillId;
+      if (fallbackSkillId) {
+        const fallbackLabel = sourceConfig.options.find((o) => o.value === fallbackSkillId)?.label || fallbackSkillId;
+        setAdaptiveBanner({
+          type: 'fallback',
+          message: `Let's take a step back and review a simpler skill first!`,
+          targetSkillId: fallbackSkillId,
+          targetLabel: fallbackLabel,
+        });
+        window.setTimeout(() => {
+          setLogicType(fallbackSkillId);
+          syncRoute(sourceKey, fallbackSkillId);
+        }, 1800);
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (adaptiveAction === 'bridge_back') {
+      // Prerequisite mastered — navigate back to original skill
+      const targetSkillId = nextMastery.sourceSkillId || logicType;
+      const targetLabel = sourceConfig.options.find((o) => o.value === targetSkillId)?.label || targetSkillId;
+      setAdaptiveBanner({
+        type: 'bridge_back',
+        message: `Great work! You're ready to return to the original skill.`,
+        targetSkillId,
+        targetLabel,
+      });
+      window.setTimeout(() => {
+        setLogicType(targetSkillId);
+        syncRoute(sourceKey, targetSkillId);
+        setAdaptiveBanner(null);
+      }, 2000);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (adaptiveAction === 'remediating') {
+      setAdaptiveBanner({
+        type: 'remediating',
+        message: `No worries — switching to guided practice mode.`,
+      });
+    } else {
+      setAdaptiveBanner(null);
+    }
+
     if (correct) {
       const praisePool = didLevelUp
         ? ['Level up!', 'Brilliant streak!', 'You are moving up!']
@@ -1045,8 +1618,8 @@ function PracticePageContent() {
       setPraiseMessage({
         title: praisePool[nextCorrectStreak % praisePool.length],
         subtitle: didLevelUp
-          ? `Five in a row. Now Level ${nextPracticeLevel}.`
-          : `${finalLevelStreak}/5 correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
+          ? `${currentThreshold} in a row. Now Level ${nextPracticeLevel}.`
+          : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
       });
       setTransitionState('praise');
 
@@ -1065,6 +1638,127 @@ function PracticePageContent() {
       setIsSubmitting(false);
     }
   };
+
+  // ── Diagnostic Helpers ────────────────────────────────────────────────────
+
+  // Build a 5-skill ladder from the current topic's options, evenly spread across available skills
+  const buildDiagnosticLadder = useCallback(() => {
+    const options = sourceConfig.options || [];
+    if (options.length === 0) return [];
+    const total = Math.min(DIAGNOSTIC_TOTAL, options.length);
+    const step = Math.floor(options.length / total);
+    const ladder = [];
+    for (let i = 0; i < total; i++) {
+      const idx = Math.min(i * step, options.length - 1);
+      ladder.push(options[idx].value);
+    }
+    return ladder;
+  }, [sourceConfig.options]);
+
+  const fetchDiagnosticQuestion = useCallback(async (skillId) => {
+    setDiagLoading(true);
+    setDiagAnswer(null);
+    setDiagAnswered(false);
+    setDiagCorrect(false);
+    diagStartedAtRef.current = Date.now();
+    try {
+      const url = new URL(sourceConfig.api, window.location.origin);
+      url.searchParams.set('subject', urlSubject || sourceConfig.subject);
+      url.searchParams.set('topic', urlTopic || sourceConfig.topic);
+      url.searchParams.set('skill', skillId);
+      url.searchParams.set('forcedTask', skillId);
+      url.searchParams.set('difficulty', 'adaptive');
+      url.searchParams.set('seed', String(Date.now()));
+      const res = await fetch(url.toString());
+      const data = await res.json();
+      if (data?.success && data?.question) {
+        setDiagQuestion(data.question);
+      } else {
+        setDiagQuestion(null);
+      }
+    } catch (err) {
+      console.error('Diagnostic fetch error:', err);
+      setDiagQuestion(null);
+    } finally {
+      setDiagLoading(false);
+    }
+  }, [sourceConfig, urlSubject, urlTopic]);
+
+  // Start diagnostic session
+  const startDiagnostic = useCallback(() => {
+    const ladder = buildDiagnosticLadder();
+    setDiagSkillLadder(ladder);
+    setDiagStep(0);
+    setDiagSteps([]);
+    setDiagResult(null);
+    setDiagPhase('running');
+    if (ladder[0]) fetchDiagnosticQuestion(ladder[0]);
+  }, [buildDiagnosticLadder, fetchDiagnosticQuestion]);
+
+  // Auto-start diagnostic when curriculum is loaded
+  useEffect(() => {
+    if (!isDiagnosticMode || curriculumLoading) return;
+    if (diagPhase === 'idle') startDiagnostic();
+  }, [isDiagnosticMode, curriculumLoading, diagPhase, startDiagnostic]);
+
+  const handleDiagnosticAnswer = useCallback((answer) => {
+    if (diagAnswered || !diagQuestion) return;
+    const correct = isAnswerCorrect(diagQuestion, answer);
+    const timeSpentMs = Date.now() - diagStartedAtRef.current;
+    const currentSkillId = diagSkillLadder[diagStep];
+    const label = sourceConfig.options.find((o) => o.value === currentSkillId)?.label || currentSkillId;
+
+    setDiagAnswer(answer);
+    setDiagCorrect(correct);
+    setDiagAnswered(true);
+
+    const newStep = {
+      skillId: currentSkillId,
+      label,
+      isCorrect: correct,
+      timeSpentMs,
+    };
+
+    const updatedSteps = [...diagSteps, newStep];
+    setDiagSteps(updatedSteps);
+
+    const nextStep = diagStep + 1;
+    if (nextStep >= DIAGNOSTIC_TOTAL || nextStep >= diagSkillLadder.length) {
+      // Done — compute result
+      const correctCount = updatedSteps.filter((s) => s.isCorrect).length;
+      const totalQuestions = updatedSteps.length;
+      const confidence = totalQuestions > 0 ? correctCount / totalQuestions : 0;
+      // Estimated level: 0-5 range, scaled from ratio of correct answers
+      // Bias toward end of ladder — later correct answers = higher level
+      let weightedScore = 0;
+      updatedSteps.forEach((s, i) => {
+        if (s.isCorrect) weightedScore += (i + 1); // higher weight for harder questions
+      });
+      const maxWeight = updatedSteps.reduce((acc, _, i) => acc + (i + 1), 0);
+      const estimatedLevel = Math.round((weightedScore / maxWeight) * 5);
+      // recommendedStartSkill: first wrong answer's skill, or last skill if all correct
+      const firstWrong = updatedSteps.find((s) => !s.isCorrect);
+      const recommendedStartSkill = firstWrong ? firstWrong.skillId : updatedSteps[updatedSteps.length - 1].skillId;
+
+      window.setTimeout(() => {
+        setDiagResult({
+          estimatedLevel,
+          confidence,
+          recommendedStartSkill,
+          correctCount,
+          totalQuestions,
+          steps: updatedSteps,
+        });
+        setDiagPhase('done');
+      }, 900);
+    } else {
+      // Next question
+      window.setTimeout(() => {
+        setDiagStep(nextStep);
+        fetchDiagnosticQuestion(diagSkillLadder[nextStep]);
+      }, 900);
+    }
+  }, [diagAnswered, diagQuestion, diagSkillLadder, diagStep, diagSteps, sourceConfig.options, fetchDiagnosticQuestion]);
 
   const copyQuestionJson = useCallback(async () => {
     try {
@@ -1094,6 +1788,7 @@ function PracticePageContent() {
     <PracticeFeedback
       question={question}
       isCorrect={isCorrect}
+      isPreK={isPreK}
       onNext={() => fetchQuestion()}
       loading={loading}
     />
@@ -1109,6 +1804,278 @@ function PracticePageContent() {
     );
   }
 
+  // ── Diagnostic Mode Rendering ──────────────────────────────────────────────
+  if (isDiagnosticMode) {
+    if (diagPhase === 'done' && diagResult) {
+      return (
+        <DiagnosticSummaryCard
+          result={diagResult}
+          sourceConfig={sourceConfig}
+          onStartSkill={(skillId) => {
+            const params = new URLSearchParams();
+            if (urlSubject || urlTopic || urlSkill) {
+              params.set('subject', sourceConfig.subject);
+              params.set('topic', sourceConfig.topic);
+              params.set('skill', skillId || sourceConfig.defaultLogicType);
+            } else {
+              params.set('source', sourceKey);
+              params.set('forcedTask', skillId || sourceConfig.defaultLogicType);
+            }
+            router.push(`/practice?${params.toString()}`);
+          }}
+          onRetry={() => {
+            setDiagPhase('idle');
+            setDiagResult(null);
+            startDiagnostic();
+          }}
+        />
+      );
+    }
+
+    // Running the diagnostic questions
+    const accentColor = '#6366f1';
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(145deg, #f8f7ff 0%, #eef2ff 50%, #f0fdf4 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 20px',
+          fontFamily: `'Inter', system-ui, sans-serif`,
+        }}
+      >
+        <style dangerouslySetInnerHTML={{ __html: `
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+          @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+          @keyframes spinDiag { to { transform: rotate(360deg); } }
+          @keyframes popQ { from { opacity:0; transform:scale(0.97) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+          .diag-submit:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.35) !important; }
+          .diag-submit { transition: all 180ms ease !important; }
+        ` }} />
+
+        {/* Top header strip */}
+        <div style={{ width: 'min(560px, 100%)', marginBottom: 20, animation: 'fadeUp 0.3s ease' }}>
+          {/* Brand row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 32, height: 32,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
+              }}>
+                🧭
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: '#1e293b' }}>Diagnostic Placement</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>{sourceConfig.label}</div>
+              </div>
+            </div>
+            <div style={{
+              background: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              borderRadius: 999,
+              padding: '5px 14px',
+              fontSize: 13,
+              fontWeight: 900,
+              color: accentColor,
+            }}>
+              {diagStep + 1} <span style={{ color: '#a5b4fc' }}>/ {DIAGNOSTIC_TOTAL}</span>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 8, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden', marginBottom: 10 }}>
+            <div style={{
+              width: `${(diagStep / DIAGNOSTIC_TOTAL) * 100}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, #6366f1, #818cf8)',
+              borderRadius: 999,
+              transition: 'width 500ms cubic-bezier(0.4,0,0.2,1)',
+              boxShadow: '0 0 10px rgba(99,102,241,0.4)',
+            }} />
+          </div>
+
+          {/* Step dots */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            {Array.from({ length: DIAGNOSTIC_TOTAL }).map((_, i) => {
+              const stepResult = diagSteps[i];
+              const isCurrent = i === diagStep;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    height: 8,
+                    width: isCurrent ? 24 : 8,
+                    borderRadius: 999,
+                    background: stepResult
+                      ? (stepResult.isCorrect ? '#22c55e' : '#ef4444')
+                      : isCurrent ? accentColor : '#e2e8f0',
+                    transition: 'all 350ms cubic-bezier(0.34,1.56,0.64,1)',
+                    boxShadow: isCurrent ? `0 0 8px ${accentColor}66` : 'none',
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Question Card */}
+        <div
+          key={`card-${diagStep}`}
+          style={{
+            width: 'min(560px, 100%)',
+            background: '#ffffff',
+            borderRadius: 24,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.04), 0 16px 48px rgba(99,102,241,0.10)',
+            overflow: 'hidden',
+            animation: 'popQ 0.3s ease',
+          }}
+        >
+          {/* Top accent line */}
+          <div style={{ height: 4, background: 'linear-gradient(90deg, #6366f1, #818cf8, #a5b4fc)' }} />
+
+          <div style={{ padding: 28 }}>
+            {/* Skill label chip */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              background: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              borderRadius: 999,
+              padding: '4px 12px',
+              marginBottom: 18,
+            }}>
+              <span style={{ fontSize: 10 }}>📌</span>
+              <span style={{ fontSize: 10, fontWeight: 900, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {sourceConfig.options.find((o) => o.value === diagSkillLadder[diagStep])?.label || diagSkillLadder[diagStep]}
+              </span>
+            </div>
+
+            {diagLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '28px 0' }}>
+                <div style={{
+                  width: 34, height: 34,
+                  border: '3px solid #e2e8f0',
+                  borderTopColor: accentColor,
+                  borderRadius: '50%',
+                  animation: 'spinDiag 0.75s linear infinite',
+                }} />
+                <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13 }}>Loading question...</span>
+              </div>
+            ) : diagQuestion ? (
+              <>
+                <QuestionRenderer
+                  key={`diag:${diagStep}:${diagQuestion.id}`}
+                  question={diagQuestion}
+                  userAnswer={diagAnswer}
+                  isAnswered={diagAnswered}
+                  isCorrect={diagCorrect}
+                  onAnswer={(answer) => {
+                    if (diagAnswered) return;
+                    setDiagAnswer(answer);
+                    if (
+                      diagQuestion.type === 'mcq' ||
+                      diagQuestion.type === 'multipleChoice' ||
+                      diagQuestion.type === 'multiplechoice'
+                    ) {
+                      window.setTimeout(() => handleDiagnosticAnswer(answer), 0);
+                    }
+                  }}
+                  onSubmit={handleDiagnosticAnswer}
+                />
+
+                {/* Submit button */}
+                {!diagAnswered && (
+                  <button
+                    type="button"
+                    id="diagnostic-submit-btn"
+                    className="diag-submit"
+                    onClick={() => handleDiagnosticAnswer(diagAnswer)}
+                    disabled={diagAnswer === null || diagAnswer === undefined}
+                    style={{
+                      width: '100%',
+                      marginTop: 20,
+                      background: (diagAnswer === null || diagAnswer === undefined)
+                        ? '#f1f5f9'
+                        : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                      border: 0,
+                      color: (diagAnswer === null || diagAnswer === undefined) ? '#94a3b8' : '#ffffff',
+                      borderRadius: 14,
+                      padding: '13px 20px',
+                      fontSize: 14,
+                      fontWeight: 900,
+                      cursor: (diagAnswer === null || diagAnswer === undefined) ? 'not-allowed' : 'pointer',
+                      boxShadow: (diagAnswer === null || diagAnswer === undefined)
+                        ? 'none'
+                        : '0 4px 14px rgba(99,102,241,0.25)',
+                    }}
+                  >
+                    Submit Answer
+                  </button>
+                )}
+
+                {/* Answer feedback */}
+                {diagAnswered && (
+                  <div
+                    style={{
+                      marginTop: 16,
+                      padding: '12px 16px',
+                      borderRadius: 14,
+                      background: diagCorrect ? '#f0fdf4' : '#fff5f5',
+                      border: `1.5px solid ${diagCorrect ? '#bbf7d0' : '#fecaca'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      animation: 'fadeUp 0.2s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{diagCorrect ? '✅' : '❌'}</span>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: diagCorrect ? '#16a34a' : '#dc2626' }}>
+                        {diagCorrect ? 'Correct!' : 'Incorrect'}
+                      </div>
+                      {diagStep + 1 < DIAGNOSTIC_TOTAL && (
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', marginTop: 2 }}>Next question loading…</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ color: '#ef4444', fontWeight: 700, textAlign: 'center', padding: '24px 0', fontSize: 13 }}>
+                Could not load question. Please refresh.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Exit */}
+        <button
+          type="button"
+          onClick={() => router.push(`/practice?source=${sourceKey}`)}
+          style={{
+            marginTop: 20,
+            background: 'transparent',
+            border: 0,
+            color: '#94a3b8',
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Exit Diagnostic
+        </button>
+      </div>
+    );
+  }
+
   const leftPanel = (
     <div className={styles.panel}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -1120,6 +2087,62 @@ function PracticePageContent() {
       <p style={{ margin: '0 0 14px', fontSize: 12, color: '#64748b', fontWeight: 700, lineHeight: 1.5 }}>
         {sourceConfig.description}
       </p>
+
+      {/* Student Profile Switcher */}
+      <div style={{ marginBottom: 18, background: '#f8fafc', padding: 12, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+        <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+          👤 Active Student
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <select
+            value={activeStudent}
+            onChange={(event) => {
+              const val = event.target.value;
+              if (val === '__custom__') {
+                const name = prompt('Enter student name:');
+                if (name && name.trim()) {
+                  const cleaned = name.trim();
+                  setStudentList((prev) => {
+                    const next = prev.includes(cleaned) ? prev : [...prev, cleaned];
+                    if (typeof window !== 'undefined') {
+                      window.localStorage.setItem('wexls.studentList.v1', JSON.stringify(next));
+                    }
+                    return next;
+                  });
+                  setActiveStudent(cleaned);
+                  if (typeof window !== 'undefined') {
+                    window.localStorage.setItem('wexls.activeStudent.v1', cleaned);
+                  }
+                }
+              } else {
+                setActiveStudent(val);
+                if (typeof window !== 'undefined') {
+                  window.localStorage.setItem('wexls.activeStudent.v1', val);
+                }
+              }
+            }}
+            style={{
+              flex: 1,
+              padding: '8px 10px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#0f172a',
+              fontWeight: 800,
+              fontSize: 13,
+            }}
+          >
+            {studentList.map((student) => (
+              <option key={student} value={student}>{student}</option>
+            ))}
+            <option value="__custom__">+ Add Custom Student...</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+        📚 Select Topic
+      </div>
       <select
         value={sourceKey}
         onChange={(event) => {
@@ -1201,13 +2224,13 @@ function PracticePageContent() {
             </div>
           </div>
           <div style={{ minWidth: 72, textAlign: 'right', color: '#16a34a', fontSize: 12, fontWeight: 900 }}>
-            {levelStreak}/5 correct
+            {levelStreak}/{streakThreshold} correct
           </div>
         </div>
         <div style={{ height: 8, borderRadius: 999, background: '#eef2ff', overflow: 'hidden' }}>
           <div
             style={{
-              width: `${Math.min(100, (levelStreak / 5) * 100)}%`,
+              width: `${Math.min(100, (levelStreak / streakThreshold) * 100)}%`,
               height: '100%',
               borderRadius: 999,
               background: '#4ade80',
@@ -1495,11 +2518,176 @@ function PracticePageContent() {
     </>
   );
 
+  // ── Mastered Overlay Component ────────────────────────────────────────────
+  const masteredOverlayEl = masteredOverlay ? (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Skill mastered"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+        background: 'rgba(15, 23, 42, 0.55)',
+        backdropFilter: 'blur(6px)',
+      }}
+    >
+      <div
+        style={{
+          width: 'min(400px, 100%)',
+          borderRadius: 28,
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
+          border: '1px solid #38bdf8',
+          boxShadow: '0 32px 80px rgba(56, 189, 248, 0.25)',
+          padding: 32,
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 56, marginBottom: 12 }}>🏆</div>
+        <h2 style={{ margin: '0 0 8px', color: '#f8fafc', fontSize: 24, fontWeight: 950 }}>Skill Mastered!</h2>
+        <p style={{ margin: '0 0 6px', color: '#94a3b8', fontSize: 13, fontWeight: 700 }}>
+          {masteredOverlay.skillLabel}
+        </p>
+        <p style={{ margin: '0 0 24px', color: '#38bdf8', fontSize: 13, fontWeight: 750 }}>
+          You have achieved a perfect SmartScore of 100. Outstanding work!
+        </p>
+        {masteredOverlay.nextSkills?.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unlock Next Skills</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {masteredOverlay.nextSkills.map((skillId) => {
+                const label = sourceConfig.options.find((o) => o.value === skillId)?.label || skillId;
+                return (
+                  <button
+                    key={skillId}
+                    type="button"
+                    onClick={() => {
+                      setMasteredOverlay(null);
+                      setLogicType(skillId);
+                      syncRoute(sourceKey, skillId);
+                    }}
+                    style={{
+                      background: '#1e3a5f',
+                      border: '1px solid #38bdf8',
+                      color: '#bae6fd',
+                      borderRadius: 12,
+                      padding: '10px 14px',
+                      fontSize: 12,
+                      fontWeight: 850,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    → {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setMasteredOverlay(null);
+              fetchQuestion(true);
+            }}
+            style={{
+              flex: 1,
+              border: '1px solid #334155',
+              background: 'transparent',
+              color: '#94a3b8',
+              borderRadius: 12,
+              padding: '10px 14px',
+              fontSize: 12,
+              fontWeight: 900,
+              cursor: 'pointer',
+            }}
+          >
+            Practice Again
+          </button>
+          {masteredOverlay.nextSkills?.length === 0 && (
+            <button
+              type="button"
+              onClick={() => setMasteredOverlay(null)}
+              style={{
+                flex: 1,
+                border: 0,
+                background: 'linear-gradient(90deg, #2563eb, #38bdf8)',
+                color: '#ffffff',
+                borderRadius: 12,
+                padding: '10px 14px',
+                fontSize: 12,
+                fontWeight: 900,
+                cursor: 'pointer',
+              }}
+            >
+              Continue
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  // ── Adaptive Banner Component ─────────────────────────────────────────────
+  const adaptiveBannerEl = adaptiveBanner ? (() => {
+    const bannerStyles = {
+      fallback: { bg: '#fef9c3', border: '#fde047', color: '#854d0e', icon: '⬇️', label: 'Prerequisite Review' },
+      bridge_back: { bg: '#dcfce7', border: '#4ade80', color: '#166534', icon: '🔙', label: 'Returning to Skill' },
+      remediating: { bg: '#eff6ff', border: '#93c5fd', color: '#1d4ed8', icon: '🧩', label: 'Guided Practice' },
+    };
+    const style = bannerStyles[adaptiveBanner.type] || bannerStyles.remediating;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 90,
+          background: style.bg,
+          border: `1.5px solid ${style.border}`,
+          color: style.color,
+          borderRadius: 16,
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          maxWidth: 'min(480px, 90vw)',
+          animation: 'slideDown 0.3s ease',
+        }}
+      >
+        <style dangerouslySetInnerHTML={{ __html: '@keyframes slideDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }' }} />
+        <span style={{ fontSize: 20 }}>{style.icon}</span>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>{style.label}</div>
+          <div style={{ fontSize: 13, fontWeight: 800 }}>{adaptiveBanner.message}</div>
+          {adaptiveBanner.targetLabel && (
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2, opacity: 0.8 }}>→ {adaptiveBanner.targetLabel}</div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setAdaptiveBanner(null)}
+          style={{ marginLeft: 'auto', background: 'transparent', border: 0, color: style.color, fontSize: 18, cursor: 'pointer', opacity: 0.6, lineHeight: 1 }}
+          aria-label="Dismiss"
+        >×</button>
+      </div>
+    );
+  })() : null;
+
   return (
     <>
       <LabLayout
         title={sourceConfig.label}
-        grade="Shared Practice Shell"
+        grade={isPreK ? "Pre-K Learning 🌟" : "Shared Practice Shell"}
+        isPreK={isPreK}
         smartScore={smartScore}
         difficulty={difficulty}
         setDifficulty={setDifficulty}
@@ -1521,27 +2709,29 @@ function PracticePageContent() {
         {question ? (
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>
             {transitionState === 'praise' ? (
-              <CorrectPraiseCard praiseMessage={praiseMessage} />
+              <CorrectPraiseCard praiseMessage={praiseMessage} isPreK={isPreK} />
             ) : (
-              <QuestionRenderer
-                key={`${sourceKey}:${logicType}:${question.id}`}
-                question={question}
-                userAnswer={userAnswer}
-                isAnswered={isAnswered}
-                isCorrect={isCorrect}
-                onAnswer={(answer) => {
-                  if (isSubmitting || submittingRef.current || isAnswered) return;
-                  setUserAnswer(answer);
-                  if (
-                    autoSubmit
-                    && !isAnswered
-                    && (question.type === 'mcq' || question.type === 'multipleChoice' || question.type === 'multiplechoice')
-                  ) {
-                    window.setTimeout(() => handleSubmit(answer), 0);
-                  }
-                }}
-                onSubmit={handleSubmit}
-              />
+              <>
+                <QuestionRenderer
+                  key={`${sourceKey}:${logicType}:${question.id}`}
+                  question={question}
+                  userAnswer={userAnswer}
+                  isAnswered={isAnswered}
+                  isCorrect={isCorrect}
+                  onAnswer={(answer) => {
+                    if (isSubmitting || submittingRef.current || isAnswered) return;
+                    setUserAnswer(answer);
+                    if (
+                      autoSubmit
+                      && !isAnswered
+                      && (question.type === 'mcq' || question.type === 'multipleChoice' || question.type === 'multiplechoice')
+                    ) {
+                      window.setTimeout(() => handleSubmit(answer), 0);
+                    }
+                  }}
+                  onSubmit={handleSubmit}
+                />
+              </>
             )}
           </div>
         ) : (
@@ -1550,6 +2740,261 @@ function PracticePageContent() {
           </div>
         )}
       </LabLayout>
+
+      {masteredOverlayEl}
+      {adaptiveBannerEl}
+
+      {/* ── Teacher / Admin Override Panel ── */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 70,
+        }}
+      >
+        {teacherOverrideOpen ? (
+          <div
+            style={{
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: 20,
+              padding: 20,
+              width: 260,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 900, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Teacher Override</span>
+              <button
+                type="button"
+                onClick={() => setTeacherOverrideOpen(false)}
+                style={{ background: 'transparent', border: 0, color: '#94a3b8', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}
+              >×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSkillState('practicing');
+                  setMasteredOverlay(null);
+                  setAdaptiveBanner(null);
+                  fetchQuestion(true);
+                  setTeacherOverrideOpen(false);
+                }}
+                style={{ background: '#1e293b', border: '1px solid #334155', color: '#e2e8f0', borderRadius: 10, padding: '9px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer', textAlign: 'left' }}
+              >
+                🔄 Reset Session
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const competency = resolveCompetency({ subject: urlSubject || sourceConfig.subject, topic: urlTopic || sourceConfig.topic, skillId: logicType });
+                    const key = getMasteryKey({ subject: urlSubject || sourceConfig.subject, topic: urlTopic || sourceConfig.topic, skillId: logicType, competencyId: competency?.id, userId: activeStudent });
+                    const all = loadAllMastery();
+                    delete all[key];
+                    saveAllMastery(all);
+                  }
+                  setSmartScore(0);
+                  setCorrectStreak(0);
+                  setPracticeLevel(1);
+                  setLevelStreak(0);
+                  setSkillState('practicing');
+                  setMasteredOverlay(null);
+                  setAdaptiveBanner(null);
+                  fetchQuestion(true);
+                  setTeacherOverrideOpen(false);
+                }}
+                style={{ background: '#1e293b', border: '1px solid #334155', color: '#fca5a5', borderRadius: 10, padding: '9px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer', textAlign: 'left' }}
+              >
+                🗑️ Clear Mastery Data
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMasteredOverlay({
+                    skillLabel: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
+                    nextSkills: [],
+                  });
+                  setTeacherOverrideOpen(false);
+                }}
+                style={{ background: '#1e293b', border: '1px solid #334155', color: '#86efac', borderRadius: 10, padding: '9px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer', textAlign: 'left' }}
+              >
+                🏆 Simulate Mastered
+              </button>
+              {/* Debug Report button */}
+              <button
+                type="button"
+                id="debug-report-btn"
+                onClick={() => {
+                  try {
+                    const competency = resolveCompetency({
+                      subject: urlSubject || sourceConfig.subject,
+                      topic: urlTopic || sourceConfig.topic,
+                      skillId: logicType,
+                    });
+                    const masteryKey = getMasteryKey({
+                      subject: urlSubject || sourceConfig.subject,
+                      topic: urlTopic || sourceConfig.topic,
+                      skillId: logicType,
+                      competencyId: competency?.id,
+                      userId: activeStudent,
+                    });
+                    const storedMastery = loadAllMastery()[masteryKey] || {};
+
+                    const report = {
+                      _generated: new Date().toISOString(),
+                      url: typeof window !== 'undefined' ? window.location.href : '',
+                      skill: {
+                        id: logicType,
+                        label: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
+                        subject: urlSubject || sourceConfig.subject,
+                        topic: urlTopic || sourceConfig.topic,
+                        competencyId: competency?.id || null,
+                        competencyTitle: competency?.title || null,
+                      },
+                      adaptiveState: {
+                        skillState,
+                        smartScore,
+                        correctStreak,
+                        practiceLevel,
+                        levelStreak,
+                        streakThreshold,
+                        lastResult,
+                        difficulty,
+                        adaptiveBanner: adaptiveBanner || null,
+                        masteredOverlay: masteredOverlay ? { skillLabel: masteredOverlay.skillLabel } : null,
+                      },
+                      masteryEngine: {
+                        masteryKey,
+                        storedState: storedMastery.state || 'not_set',
+                        storedSmartScore: storedMastery.smartScore || 0,
+                        storedCorrectStreak: storedMastery.correctStreak || 0,
+                        storedCorrectCount: storedMastery.correctCount || 0,
+                        storedIncorrectCount: storedMastery.incorrectCount || 0,
+                        storedAttempts: storedMastery.attempts || 0,
+                        storedFallbackDepth: storedMastery.fallbackDepth || 0,
+                        storedSourceSkillId: storedMastery.sourceSkillId || null,
+                        storedFallbackSkillId: storedMastery.fallbackSkillId || null,
+                        storedSameSkillAttempts: storedMastery.sameSkillAttempts || 0,
+                      },
+                      fallbackChain: {
+                        currentSkill: logicType,
+                        sourceSkill: storedMastery.sourceSkillId || null,
+                        fallbackSkill: storedMastery.fallbackSkillId || null,
+                        fallbackDepth: storedMastery.fallbackDepth || 0,
+                        maxFallbackDepth: 2,
+                        bridgeBackThreshold: { correctStreak: 3, smartScore: 80 },
+                        fallbackThreshold: { wrongStreak: 2, fromState: 'remediation' },
+                        remediationThreshold: { wrongStreak: 2, fromState: 'practicing' },
+                      },
+                      recentAttempts: history.slice(0, 10).map((h, i) => ({
+                        index: i + 1,
+                        skill: h.type,
+                        isCorrect: h.isCorrect,
+                        scoreChange: h.scoreChange,
+                        time: h.timestamp,
+                      })),
+                      currentQuestion: question ? {
+                        id: question.id,
+                        type: question.type,
+                        skillId: question.metadata?.skillId,
+                        templateId: question.metadata?.templateId,
+                        engine: question.metadata?.engine,
+                        practiceLevel: question.metadata?.practiceLevel,
+                        difficultyStage: question.metadata?.difficultyStage,
+                        range: question.metadata?.range,
+                        regrouping: question.metadata?.regrouping,
+                        addends: question.metadata?.addends,
+                        total: question.metadata?.total,
+                      } : null,
+                    };
+
+                    const text = JSON.stringify(report, null, 2);
+                    if (navigator.clipboard?.writeText) {
+                      navigator.clipboard.writeText(text);
+                    } else {
+                      const ta = document.createElement('textarea');
+                      ta.value = text;
+                      ta.style.position = 'fixed';
+                      ta.style.opacity = '0';
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(ta);
+                    }
+                    // Flash button
+                    const btn = document.getElementById('debug-report-btn');
+                    if (btn) {
+                      const orig = btn.textContent;
+                      btn.textContent = '✅ Copied!';
+                      btn.style.color = '#4ade80';
+                      setTimeout(() => { btn.textContent = orig; btn.style.color = '#fde68a'; }, 1600);
+                    }
+                  } catch (err) {
+                    console.error('Debug report error:', err);
+                  }
+                }}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid #854d0e',
+                  color: '#fde68a',
+                  borderRadius: 10,
+                  padding: '9px 12px',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  width: '100%',
+                }}
+              >
+                📋 Copy Debug Report
+              </button>
+
+              {/* Live debug snapshot */}
+              <div style={{ marginTop: 2, padding: '8px 10px', background: '#020617', borderRadius: 10, border: '1px solid #1e293b', fontSize: 10, fontFamily: 'monospace', color: '#94a3b8', lineHeight: 1.7 }}>
+                <div><span style={{ color: '#38bdf8' }}>state</span>: <span style={{ color: skillState === 'mastered' ? '#4ade80' : skillState === 'remediation' ? '#f87171' : skillState === 'prerequisite_review' ? '#fbbf24' : '#e2e8f0' }}>{skillState}</span></div>
+                <div><span style={{ color: '#38bdf8' }}>smartScore</span>: <span style={{ color: '#e2e8f0' }}>{smartScore}</span></div>
+                <div><span style={{ color: '#38bdf8' }}>correctStreak</span>: <span style={{ color: '#e2e8f0' }}>{correctStreak}</span></div>
+                <div><span style={{ color: '#38bdf8' }}>level</span>: <span style={{ color: '#e2e8f0' }}>{practiceLevel}/5</span></div>
+                <div><span style={{ color: '#38bdf8' }}>skill</span>: <span style={{ color: '#a5b4fc', wordBreak: 'break-all' }}>{logicType}</span></div>
+                <div><span style={{ color: '#38bdf8' }}>banner</span>: <span style={{ color: adaptiveBanner ? '#fbbf24' : '#475569' }}>{adaptiveBanner?.type || 'none'}</span></div>
+              </div>
+
+              <div style={{ marginTop: 4, padding: '8px 10px', background: '#1e293b', borderRadius: 10, border: '1px solid #334155' }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Skill State</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: skillState === 'mastered' ? '#4ade80' : skillState === 'remediation' ? '#f87171' : skillState === 'prerequisite_review' ? '#fbbf24' : '#94a3b8' }}>
+                  {skillState}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            id="teacher-override-btn"
+            onClick={() => setTeacherOverrideOpen(true)}
+            title="Teacher / Admin Override"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              background: '#0f172a',
+              border: '1px solid #334155',
+              color: '#94a3b8',
+              fontSize: 20,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+            }}
+          >
+            ⚙️
+          </button>
+        )}
+      </div>
 
       {levelModal ? (
         <div
@@ -1609,6 +3054,13 @@ function PracticePageContent() {
           </div>
         </div>
       ) : null}
+      {activeOverlays.map((toolId) => (
+        <DraggableToolOverlay
+          key={toolId}
+          toolId={toolId}
+          onClose={() => handleToggleOverlay(toolId)}
+        />
+      ))}
     </>
   );
 }

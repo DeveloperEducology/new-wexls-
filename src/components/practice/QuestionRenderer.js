@@ -3,6 +3,8 @@
 import MCQRenderer from './MCQRenderer';
 import FillInTheBlankRenderer from './FillInTheBlankRenderer';
 import CategorizationRenderer from './CategorizationRenderer';
+import InteractiveAppletRenderer from './applets/InteractiveAppletRenderer';
+import InteractiveToolRenderer from './interactive-tools/InteractiveToolRenderer';
 
 const RENDERERS = {
   mcq: MCQRenderer,
@@ -19,6 +21,10 @@ const RENDERERS = {
   sorting: CategorizationRenderer,
   sort: CategorizationRenderer,
   matching: CategorizationRenderer,
+  interactiveApplet: InteractiveAppletRenderer,
+  interactiveapplet: InteractiveAppletRenderer,
+  interactiveTool: InteractiveToolRenderer,
+  interactivetool: InteractiveToolRenderer,
 };
 
 export default function QuestionRenderer({

@@ -903,7 +903,44 @@ export const MEASUREMENT_CATALOG = [
     remediationPrompt: 'Density = Mass / Volume. Mass = Density * Volume. Volume = Mass / Density.',
     templateName: 'meas.density',
     engineName: 'density'
-  }
+  },
+
+  // --- SVG Tools Demo Chapter ---
+  ...[
+    ['meas-svg-inch-ruler', 'SVG.1', 'SVG demo: inch ruler', 'inch_ruler'],
+    ['meas-svg-centimeter-ruler', 'SVG.2', 'SVG demo: centimeter ruler', 'centimeter_ruler'],
+    ['meas-svg-measuring-tape', 'SVG.3', 'SVG demo: measuring tape', 'measuring_tape'],
+    ['meas-svg-protractor', 'SVG.4', 'SVG demo: protractor', 'protractor'],
+    ['meas-svg-compass', 'SVG.5', 'SVG demo: compass', 'compass'],
+    ['meas-svg-thermometer', 'SVG.6', 'SVG demo: thermometer', 'thermometer'],
+    ['meas-svg-balance-scale', 'SVG.7', 'SVG demo: balance scale', 'balance_scale'],
+    ['meas-svg-measuring-cup', 'SVG.8', 'SVG demo: measuring cup', 'measuring_cup'],
+    ['meas-svg-stopwatch', 'SVG.9', 'SVG demo: stopwatch', 'stopwatch'],
+    ['meas-svg-number-line', 'SVG.10', 'SVG demo: number line', 'number_line'],
+    ['meas-svg-liter-jug', 'SVG.11', 'SVG demo: liter jug', 'liter_jug'],
+    ['meas-svg-graduated-cylinder', 'SVG.12', 'SVG demo: graduated cylinder', 'graduated_cylinder'],
+    ['meas-svg-beaker', 'SVG.13', 'SVG demo: beaker', 'beaker']
+  ].map(([skillId, code, title, toolId]) => ({
+    skillId,
+    grade: 'SVG Tools Demo',
+    code,
+    title,
+    description: `Dynamic question demo for the shared SVG tool registry item: ${toolId}.`,
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['fill in the blank'],
+    visualType: 'dynamic SVG tool',
+    difficultyLevels: [1],
+    misconceptions: [],
+    remediationPrompt: 'Read the highlighted value shown by the SVG tool.',
+    templateName: 'meas.svg.tool.demo',
+    engineName: 'svgToolDemo',
+    config: {
+      toolId,
+      forcedTask: `svg_tool_demo_${toolId}`
+    }
+  }))
 ];
 
 export function getMeasurementSkill(skillId) {

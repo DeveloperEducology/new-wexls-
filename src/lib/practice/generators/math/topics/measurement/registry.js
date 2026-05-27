@@ -23,6 +23,7 @@ import { generatePrecisionErrorQuestion } from './engines/precisionError.engine.
 import { generateDensityQuestion } from './engines/density.engine.js';
 import { generateBalanceScaleQuestion } from './engines/balanceScale.engine.js';
 import { generateDiceMeasurementQuestion } from './engines/diceMeasurement.engine.js';
+import { generateSvgToolDemoQuestion } from './engines/svgToolDemo.engine.js';
 import { generateNonStandardMeasurementQuestion } from '../../shared/engines/nonStandardUnitMeasurement.engine.js';
 
 const ENGINES = {
@@ -42,6 +43,7 @@ const ENGINES = {
   density: generateDensityQuestion,
   balanceScale: generateBalanceScaleQuestion,
   diceMeasurement: generateDiceMeasurementQuestion,
+  svgToolDemo: generateSvgToolDemoQuestion,
   nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion
 };
 

@@ -9,6 +9,7 @@ import { generateMakeNumberQuestion } from './engines/makeNumber.engine.js';
 import { generateWordProblemModelQuestion } from './engines/wordProblemModel.engine.js';
 import { generateDoublesPlusOneQuestion } from './engines/doublesPlusOne.engine.js';
 import { generateNonStandardMeasurementQuestion } from '../../shared/engines/nonStandardUnitMeasurement.engine.js';
+import { generateCubeCounterQuestion } from './engines/cubeCounter.engine.js';
 import { getAdditionTemplate } from './templates/index.js';
 import { getAdditionSkill } from './skills/index.js';
 
@@ -23,7 +24,8 @@ const ENGINE_GENERATORS = {
   makeNumber: generateMakeNumberQuestion,
   wordProblemModel: generateWordProblemModelQuestion,
   doublesPlusOne: generateDoublesPlusOneQuestion,
-  nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion
+  nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion,
+  cubeCounter: generateCubeCounterQuestion
 };
 
 export function createAdditionTopicTemplate(skillOrTemplateId, overrides = {}) {

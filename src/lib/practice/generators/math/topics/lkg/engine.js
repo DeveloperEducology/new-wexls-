@@ -312,10 +312,10 @@ const buildCoinSvg = (val) => {
 
 function lkgShapesEngine(config, params, random) {
   const shapes = [
-    { id: 'circle', name: 'circle', svg: '<svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="48" fill="#3b82f6" stroke="#1d4ed8" stroke-width="4"/></svg>' },
-    { id: 'square', name: 'square', svg: '<svg width="120" height="120" viewBox="0 0 120 120"><rect x="15" y="15" width="90" height="90" fill="#ef4444" stroke="#b91c1c" stroke-width="4" rx="4"/></svg>' },
-    { id: 'triangle', name: 'triangle', svg: '<svg width="120" height="120" viewBox="0 0 120 120"><polygon points="60,15 15,100 105,100" fill="#10b981" stroke="#047857" stroke-width="4"/></svg>' },
-    { id: 'rectangle', name: 'rectangle', svg: '<svg width="120" height="120" viewBox="0 0 120 120"><rect x="10" y="25" width="100" height="70" fill="#f59e0b" stroke="#b45309" stroke-width="4" rx="4"/></svg>' }
+    { id: 'circle', name: 'circle', svg: '<svg width="160" height="160" viewBox="0 0 120 120"><circle cx="60" cy="60" r="48" fill="#3b82f6" stroke="#1d4ed8" stroke-width="4"/></svg>' },
+    { id: 'square', name: 'square', svg: '<svg width="160" height="160" viewBox="0 0 120 120"><rect x="15" y="15" width="90" height="90" fill="#ef4444" stroke="#b91c1c" stroke-width="4" rx="4"/></svg>' },
+    { id: 'triangle', name: 'triangle', svg: '<svg width="160" height="160" viewBox="0 0 120 120"><polygon points="60,15 15,100 105,100" fill="#10b981" stroke="#047857" stroke-width="4"/></svg>' },
+    { id: 'rectangle', name: 'rectangle', svg: '<svg width="160" height="160" viewBox="0 0 120 120"><rect x="10" y="25" width="100" height="70" fill="#f59e0b" stroke="#b45309" stroke-width="4" rx="4"/></svg>' }
   ];
 
   let subType = params.subType;

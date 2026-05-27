@@ -131,7 +131,7 @@ export function drawRealWorldObject(type, x, y, width, height) {
       return `
         <g transform="translate(${x}, ${y})">
           <rect x="0" y="0" width="${width}" height="${height}" fill="#ca8a04" stroke="#000" stroke-width="2" rx="4" />
-          <text x="${width / 2}" y="${height / 2 + 5}" text-anchor="middle" font-size="14" fill="#fff" font-weight="bold">${type}</text>
+          <text x="${width / 2}" y="${height / 2 + 5}" text-anchor="middle" font-size="14" fill="#fff" font-weight="500">${type}</text>
         </g>
       `;
   }
@@ -165,7 +165,7 @@ export function renderInchRuler({ lengthInches = 6, objectLength = 4, objectOffs
     ticksHTML += `<line x1="${xPos}" y1="${rulerHeight}" x2="${xPos}" y2="${rulerHeight - tickHeight}" stroke="#000" stroke-width="1.5" />`;
 
     if (isLabeled) {
-      ticksHTML += `<text x="${xPos}" y="${rulerHeight - 42}" font-family="Outfit, sans-serif" font-weight="bold" font-size="18" text-anchor="middle">${val}</text>`;
+      ticksHTML += `<text x="${xPos}" y="${rulerHeight - 42}" font-family="Outfit, sans-serif" font-weight="500" font-size="18" text-anchor="middle">${val}</text>`;
     }
   }
 
@@ -188,7 +188,7 @@ export function renderInchRuler({ lengthInches = 6, objectLength = 4, objectOffs
       <rect x="${marginX}" y="5" width="${lengthInches * pxPerInch}" height="${rulerHeight}" fill="#fef08a" stroke="#ca8a04" stroke-width="3" rx="4" />
       
       <!-- Ruler label -->
-      <text x="${marginX + 15}" y="${rulerHeight - 12}" font-family="Outfit, sans-serif" font-weight="900" font-size="13" fill="#ca8a04">INCHES</text>
+      <text x="${marginX + 15}" y="${rulerHeight - 12}" font-family="Outfit, sans-serif" font-weight="600" font-size="13" fill="#ca8a04">INCHES</text>
       
       <!-- Ticks and numbers -->
       ${ticksHTML}
@@ -227,7 +227,7 @@ export function renderCentimeterRuler({ lengthCm = 15, objectLength = 10, object
     ticksHTML += `<line x1="${xPos}" y1="${rulerHeight}" x2="${xPos}" y2="${rulerHeight - tickHeight}" stroke="#000" stroke-width="1.2" />`;
 
     if (isLabeled) {
-      ticksHTML += `<text x="${xPos}" y="${rulerHeight - 38}" font-family="Outfit, sans-serif" font-weight="bold" font-size="16" text-anchor="middle">${valCm}</text>`;
+      ticksHTML += `<text x="${xPos}" y="${rulerHeight - 38}" font-family="Outfit, sans-serif" font-weight="500" font-size="16" text-anchor="middle">${valCm}</text>`;
     }
   }
 
@@ -248,7 +248,7 @@ export function renderCentimeterRuler({ lengthCm = 15, objectLength = 10, object
       <rect x="${marginX}" y="5" width="${lengthCm * pxPerCm}" height="${rulerHeight}" fill="#e2e8f0" stroke="#475569" stroke-width="3" rx="4" />
       
       <!-- Ruler label -->
-      <text x="${marginX + 15}" y="${rulerHeight - 10}" font-family="Outfit, sans-serif" font-weight="900" font-size="13" fill="#475569">CENTIMETERS</text>
+      <text x="${marginX + 15}" y="${rulerHeight - 10}" font-family="Outfit, sans-serif" font-weight="600" font-size="13" fill="#475569">CENTIMETERS</text>
       
       <!-- Ticks and numbers -->
       ${ticksHTML}
@@ -288,7 +288,7 @@ export function renderThermometer({ temperature = 72, scaleSymbol = 'F', minTemp
     // Draw main label tick and line
     ticksHTML += `
       <line x1="${width / 2 + tubeWidth / 2}" y1="${yPos}" x2="${width / 2 + tubeWidth / 2 + 15}" y2="${yPos}" stroke="#000" stroke-width="2" />
-      <text x="${width / 2 + tubeWidth / 2 + 22}" y="${yPos + 5}" font-family="Outfit, sans-serif" font-weight="bold" font-size="14" text-anchor="start">${t}°</text>
+      <text x="${width / 2 + tubeWidth / 2 + 22}" y="${yPos + 5}" font-family="Outfit, sans-serif" font-weight="500" font-size="14" text-anchor="start">${t}°</text>
     `;
 
     // Sub-ticks
@@ -308,7 +308,7 @@ export function renderThermometer({ temperature = 72, scaleSymbol = 'F', minTemp
   return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="background:#fff; border:2px solid #e2e8f0; border-radius:8px; display:block; margin:0 auto;">
       <!-- Title -->
-      <text x="${width / 2}" y="24" font-family="Outfit, sans-serif" font-weight="bold" font-size="18" text-anchor="middle">${scaleSymbol === 'F' ? 'Fahrenheit (°F)' : 'Celsius (°C)'}</text>
+      <text x="${width / 2}" y="24" font-family="Outfit, sans-serif" font-weight="600" font-size="18" text-anchor="middle">${scaleSymbol === 'F' ? 'Fahrenheit (°F)' : 'Celsius (°C)'}</text>
       
       <!-- Outer Tube Contour -->
       <rect x="${width / 2 - tubeWidth / 2 - 4}" y="${stemTop - 4}" width="${tubeWidth + 8}" height="${stemHeight + 8}" rx="${tubeWidth / 2}" fill="#f1f5f9" stroke="#000" stroke-width="2" />
@@ -343,17 +343,62 @@ export function renderMeasuringCup({ capacity = 1000, level = 600, unit = 'ml', 
   const liquidY = height - marginY - fillRatio * vesselHeight;
 
   let ticksHTML = '';
-  const intervals = 5;
-  const step = capacity / intervals;
-  for (let i = 0; i <= intervals; i++) {
-    const val = step * i;
-    const ratio = val / capacity;
-    const yPos = height - marginY - ratio * vesselHeight;
+  
+  // Dynamic scale graduation based on capacity
+  let majorStep = 200;
+  let mediumStep = 100;
+  let minorStep = 20;
 
-    ticksHTML += `
-      <line x1="${width - marginX}" y1="${yPos}" x2="${width - marginX - 15}" y2="${yPos}" stroke="#000" stroke-width="2" />
-      <text x="${width - marginX + 8}" y="${yPos + 5}" font-family="Outfit, sans-serif" font-weight="bold" font-size="14" text-anchor="start">${val} ${unit}</text>
-    `;
+  if (unit === 'cups' || capacity <= 10) {
+    majorStep = 1;
+    mediumStep = 0.5;
+    minorStep = 0.25;
+  } else if (capacity <= 250) {
+    majorStep = 50;
+    mediumStep = 25;
+    minorStep = 5;
+  } else if (capacity <= 500) {
+    majorStep = 50;
+    mediumStep = 25;
+    minorStep = 5;
+  } else {
+    // 1000 ml
+    majorStep = 200;
+    mediumStep = 100;
+    minorStep = 20;
+  }
+
+  for (let v = 0; v <= capacity; v += minorStep) {
+    const roundedV = Number(v.toFixed(2));
+    const ratio = roundedV / capacity;
+    const yPos = height - marginY - ratio * vesselHeight;
+    const t = (height - marginY - yPos) / vesselHeight;
+
+    // Calculate sloped right wall coordinate if vessel is 'cup'
+    const xWallRight = (vessel === 'cup')
+      ? (width - marginX - 20) + t * 20
+      : (width - marginX);
+
+    const isMajor = Math.abs((roundedV / majorStep) - Math.round(roundedV / majorStep)) < 0.01;
+    const isMedium = Math.abs((roundedV / mediumStep) - Math.round(roundedV / mediumStep)) < 0.01;
+
+    if (isMajor) {
+      // Major tick (labeled)
+      ticksHTML += `
+        <line x1="${xWallRight.toFixed(1)}" y1="${yPos.toFixed(1)}" x2="${(xWallRight - 15).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="#000" stroke-width="1.8" />
+        <text x="${(xWallRight + 8).toFixed(1)}" y="${(yPos + 5).toFixed(1)}" font-family="Outfit, sans-serif" font-weight="600" font-size="13" fill="#000" text-anchor="start">${roundedV} ${unit}</text>
+      `;
+    } else if (isMedium) {
+      // Medium tick (unlabeled)
+      ticksHTML += `
+        <line x1="${xWallRight.toFixed(1)}" y1="${yPos.toFixed(1)}" x2="${(xWallRight - 10).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="#1e293b" stroke-width="1.2" />
+      `;
+    } else {
+      // Minor tick (unlabeled)
+      ticksHTML += `
+        <line x1="${xWallRight.toFixed(1)}" y1="${yPos.toFixed(1)}" x2="${(xWallRight - 5).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="#475569" stroke-width="0.7" opacity="0.85" />
+      `;
+    }
   }
 
   // Draw cup structure
@@ -375,8 +420,8 @@ export function renderMeasuringCup({ capacity = 1000, level = 600, unit = 'ml', 
       <rect x="${marginX + 3}" y="${liquidY}" width="${vesselWidth - 6}" height="${height - marginY - liquidY}" fill="#60a5fa" />
       <!-- Cylinder body -->
       <rect x="${marginX}" y="${marginY}" width="${vesselWidth}" height="${vesselHeight}" fill="none" stroke="#000" stroke-width="3" rx="4" />
-      <!-- Base stand -->
-      <ellipse cx="${width / 2}" cy="${height - marginY}" rx="${vesselWidth * 0.7}" ry="12" fill="#334155" stroke="#000" stroke-width="2" />
+      <!-- Base stand (shifted down to prevent overlapping 0 ml tick and label) -->
+      <ellipse cx="${width / 2}" cy="${height - marginY + 8}" rx="${vesselWidth * 0.7}" ry="8" fill="#94a3b8" stroke="#1e293b" stroke-width="2.5" />
     `;
   }
 
@@ -434,7 +479,7 @@ export function renderBalanceScale({ leftWeight = 5, rightWeight = 8, leftLabel 
       <path d="M ${leftPanX - 30},${leftPanY} L ${leftPanX + 30},${leftPanY} Q ${leftPanX},${leftPanY + 12} ${leftPanX - 30},${leftPanY} Z" fill="#94a3b8" stroke="#000" stroke-width="2" />
       <!-- Left Object -->
       <rect x="${leftPanX - 18}" y="${leftPanY - 26}" width="36" height="25" fill="#f87171" stroke="#000" stroke-width="2" rx="2" />
-      <text x="${leftPanX}" y="${leftPanY - 9}" font-family="Outfit, sans-serif" font-weight="bold" font-size="12" fill="#fff" text-anchor="middle">${leftLabel}</text>
+      <text x="${leftPanX}" y="${leftPanY - 9}" font-family="Outfit, sans-serif" font-weight="600" font-size="12" fill="#fff" text-anchor="middle">${leftLabel}</text>
 
       <!-- Hanger lines right -->
       <line x1="${rightBeamX}" y1="${rightBeamY}" x2="${rightPanX - 25}" y2="${rightPanY}" stroke="#64748b" stroke-width="1.5" />
@@ -443,7 +488,7 @@ export function renderBalanceScale({ leftWeight = 5, rightWeight = 8, leftLabel 
       <path d="M ${rightPanX - 30},${rightPanY} L ${rightPanX + 30},${rightPanY} Q ${rightPanX},${rightPanY + 12} ${rightPanX - 30},${rightPanY} Z" fill="#94a3b8" stroke="#000" stroke-width="2" />
       <!-- Right Object -->
       <rect x="${rightPanX - 18}" y="${rightPanY - 26}" width="36" height="25" fill="#60a5fa" stroke="#000" stroke-width="2" rx="2" />
-      <text x="${rightPanX}" y="${rightPanY - 9}" font-family="Outfit, sans-serif" font-weight="bold" font-size="12" fill="#fff" text-anchor="middle">${rightLabel}</text>
+      <text x="${rightPanX}" y="${rightPanY - 9}" font-family="Outfit, sans-serif" font-weight="600" font-size="12" fill="#fff" text-anchor="middle">${rightLabel}</text>
 
       <!-- Central Balance Beam (Balanced at midX, beamY) -->
       <line x1="${leftBeamX}" y1="${leftBeamY}" x2="${rightBeamX}" y2="${rightBeamY}" stroke="#1e293b" stroke-width="6" stroke-linecap="round" />
@@ -487,7 +532,7 @@ export function renderSpringScale({ weight = 4.5, unit = 'lbs', maxWeight = 10 }
     // Label numbers
     const xText = cx + (r - 24) * Math.cos(markRad);
     const yText = cy + (r - 24) * Math.sin(markRad) + 5;
-    marksHTML += `<text x="${xText}" y="${yText}" font-family="Outfit, sans-serif" font-weight="bold" font-size="13" text-anchor="middle">${i}</text>`;
+    marksHTML += `<text x="${xText}" y="${yText}" font-family="Outfit, sans-serif" font-weight="500" font-size="13" text-anchor="middle">${i}</text>`;
   }
 
   return `
@@ -507,7 +552,7 @@ export function renderSpringScale({ weight = 4.5, unit = 'lbs', maxWeight = 10 }
       <circle cx="${cx}" cy="${cy}" r="6" fill="#334155" />
       
       <!-- Unit Label -->
-      <text x="${cx}" y="${cy + r/2}" font-family="Outfit, sans-serif" font-weight="bold" font-size="14" fill="#64748b" text-anchor="middle">${unit.toUpperCase()}</text>
+      <text x="${cx}" y="${cy + r/2}" font-family="Outfit, sans-serif" font-weight="600" font-size="14" fill="#64748b" text-anchor="middle">${unit.toUpperCase()}</text>
     </svg>
   `;
 }

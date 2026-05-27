@@ -28,6 +28,36 @@ export const subtractionTemplates = {
     defaultConfig: {
       range: [2, 10]
     }
+  },
+  'subtraction.numbers.horizontal': {
+    id: 'subtraction.numbers.horizontal',
+    topic: 'subtraction',
+    engine: 'numbers',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      layout: 'horizontal',
+      range: [1, 9]
+    }
+  },
+  'subtraction.numbers.vertical': {
+    id: 'subtraction.numbers.vertical',
+    topic: 'subtraction',
+    engine: 'numbers',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      layout: 'vertical',
+      range: [10, 99],
+      regrouping: false
+    }
+  },
+  'subtraction.word.sentence': {
+    id: 'subtraction.word.sentence',
+    topic: 'subtraction',
+    engine: 'wordProblem',
+    questionType: 'fillInTheBlank',
+    defaultConfig: {
+      range: [1, 20]
+    }
   }
 };
 

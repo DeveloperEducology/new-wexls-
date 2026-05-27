@@ -2,7 +2,7 @@
  * Ruler Reading Engine (Inches and Centimeters)
  */
 
-import { renderInchRuler, renderCentimeterRuler } from '../shared/svgMeasurementLibrary.js';
+import { getSvgTool } from '@/lib/practice/svgTools';
 import { formatFraction } from '../shared/utils.js';
 
 export function generateRulerReadingQuestion(rng, config = {}) {
@@ -36,12 +36,13 @@ export function generateRulerReadingQuestion(rng, config = {}) {
       lengthCm = 15;
     }
 
-    const svg = renderCentimeterRuler({
-      lengthCm,
+    const svg = getSvgTool('centimeter_ruler', {
+      length: lengthCm,
       objectLength,
       objectOffset,
-      objectType
-    });
+      objectType,
+      showLabel: false
+    }).svg;
 
     const endPoint = objectOffset + objectLength;
     const ans = objectLength.toString();
@@ -89,13 +90,13 @@ export function generateRulerReadingQuestion(rng, config = {}) {
     const objectOffset = offsetTicks / precision;
     const lengthInches = 6;
 
-    const svg = renderInchRuler({
-      lengthInches,
+    const svg = getSvgTool('inch_ruler', {
+      length: lengthInches,
       objectLength,
       objectOffset,
-      ticksPerInch: precision * 2, // Tick density on ruler
-      objectType
-    });
+      objectType,
+      showLabel: false
+    }).svg;
 
     const endPoint = objectOffset + objectLength;
 
@@ -158,12 +159,12 @@ function generateCompareRulerQuestion(rng, isMetric) {
   const unitLabel = isMetric ? 'cm' : 'inches';
 
   const svgA = isMetric 
-    ? renderCentimeterRuler({ lengthCm: 15, objectLength: lenA, objectOffset: 0, objectType: typeA })
-    : renderInchRuler({ lengthInches: 6, objectLength: lenA, objectOffset: 0, ticksPerInch: 2, objectType: typeA });
+    ? getSvgTool('centimeter_ruler', { length: 15, objectLength: lenA, objectOffset: 0, objectType: typeA, showLabel: false }).svg
+    : getSvgTool('inch_ruler', { length: 6, objectLength: lenA, objectOffset: 0, objectType: typeA, showLabel: false }).svg;
 
   const svgB = isMetric 
-    ? renderCentimeterRuler({ lengthCm: 15, objectLength: lenB, objectOffset: 0, objectType: typeB })
-    : renderInchRuler({ lengthInches: 6, objectLength: lenB, objectOffset: 0, ticksPerInch: 2, objectType: typeB });
+    ? getSvgTool('centimeter_ruler', { length: 15, objectLength: lenB, objectOffset: 0, objectType: typeB, showLabel: false }).svg
+    : getSvgTool('inch_ruler', { length: 6, objectLength: lenB, objectOffset: 0, objectType: typeB, showLabel: false }).svg;
 
   return {
     type: 'fillInTheBlank',

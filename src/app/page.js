@@ -1,12 +1,18 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { additionSkillsByGrade } from '../lib/practice/generators/math/topics/addition/skills/index.js';
+import { subtractionSkillsByGrade } from '../lib/practice/generators/math/topics/subtraction/skills/index.js';
 import { multiplicationSkillsByGrade } from '../lib/practice/generators/math/topics/multiplication/skills/index.js';
+import { divisionSkillsByGrade } from '../lib/practice/generators/math/topics/division/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../lib/practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../lib/practice/generators/math/topics/shapes/skills/index.js';
 import { MEASUREMENT_CATALOG } from '../lib/practice/generators/math/topics/measurement/index.js';
 import { getCurriculumTree } from '../lib/curriculum/index.js';
+import { dataGraphsSkillsByGrade } from '../lib/practice/generators/math/topics/data-graphs/index.js';
+import { storyMathCatalog } from '../lib/practice/generators/math/topics/story-math/index.js';
+import { interactiveToolsCatalog } from '../lib/practice/generators/math/topics/interactive-tools/index.js';
+import { cubeToolsCatalog } from '../lib/practice/generators/math/topics/cube-tools/index.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +21,23 @@ const additionHomeGroups = Object.entries(additionSkillsByGrade).map(([grade, sk
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
 
-const gradeOrdinal = (grade) => `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`;
+const gradeOrdinal = (grade) => {
+  if (grade === 'remediation') return 'Remediation skills';
+  if (grade === 'prek') return 'Pre-K skills';
+  return `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`;
+};
+
+const subtractionHomeGroups = Object.entries(subtractionSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
 
 const multiplicationHomeGroups = Object.entries(multiplicationSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
+}));
+
+const divisionHomeGroups = Object.entries(divisionSkillsByGrade).map(([grade, skills]) => ({
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
@@ -26,6 +46,12 @@ const unitsMeasurementHomeGroups = Object.entries(unitsMeasurementSkillsByGrade)
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
+
+const dataGraphsHomeGroups = Object.entries(dataGraphsSkillsByGrade).map(([grade, skills]) => ({
+  title: gradeOrdinal(grade),
+  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId]),
+}));
+
 
 const solarSystemHomeGroups = [
   {
@@ -67,6 +93,42 @@ const measurementHomeGroups = Object.entries(measurementHomeGroupsMap).map(([gra
   };
 });
 
+const storyMathHomeGroups = Object.entries(
+  storyMathCatalog.reduce((groups, skill) => {
+    const key = skill.group || 'Story applets';
+    groups[key] ||= [];
+    groups[key].push(skill);
+    return groups;
+  }, {})
+).map(([group, skills]) => ({
+  title: group,
+  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId])
+}));
+
+const interactiveToolsHomeGroups = Object.entries(
+  interactiveToolsCatalog.reduce((groups, skill) => {
+    const key = skill.group || 'Interactive tools';
+    groups[key] ||= [];
+    groups[key].push(skill);
+    return groups;
+  }, {})
+).map(([group, skills]) => ({
+  title: group,
+  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId])
+}));
+
+const cubeToolsHomeGroups = Object.entries(
+  cubeToolsCatalog.reduce((groups, skill) => {
+    const key = skill.group || 'Cube tools';
+    groups[key] ||= [];
+    groups[key].push(skill);
+    return groups;
+  }, {})
+).map(([group, skills]) => ({
+  title: group,
+  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId])
+}));
+
 
 const TOPICS = [
   {
@@ -79,20 +141,22 @@ const TOPICS = [
     groups: additionHomeGroups,
   },
   {
+  id: 'data-graphs',
+  title: 'Data & Graphs',
+  color: '#2563eb',
+  subject: 'math',
+  topic: 'data-graphs',
+  includes: ['Picture graphs', 'Bar graphs', 'Counting data', 'Comparing data'],
+  groups: dataGraphsHomeGroups,
+},
+  {
     id: 'subtraction',
     title: 'Subtraction',
     color: '#ef6c35',
     subject: 'math',
     topic: 'subtraction',
-    includes: ['Remove cubes from a row', 'Subtraction facts up to 10', 'Model subtraction sentences'],
-    groups: [
-      {
-        title: 'First-grade skills',
-        skills: [
-          ['C.1', 'Subtract with cubes up to 10', 'subtraction-g1-c1-remove-cubes-to-10'],
-        ],
-      },
-    ],
+    includes: ['Remove cubes from a row', 'Subtraction facts', 'Mental subtraction', 'Word problems', 'Regrouping'],
+    groups: subtractionHomeGroups,
   },
 
   {
@@ -103,6 +167,16 @@ const TOPICS = [
     topic: 'multiplication',
     includes: ['Facts to 10', 'Vertical multiplication', 'Regrouping', 'Indian number system'],
     groups: multiplicationHomeGroups,
+  },
+
+  {
+    id: 'division',
+    title: 'Division',
+    color: '#7a56d6',
+    subject: 'math',
+    topic: 'division',
+    includes: ['Equal sharing', 'Basic division facts', 'Long division', 'Division remainders', '2-digit divisors'],
+    groups: divisionHomeGroups,
   },
 
   {
@@ -421,6 +495,50 @@ const TOPICS = [
     groups: measurementHomeGroups,
   },
   {
+    id: 'story-math',
+    title: 'Story Math Applets',
+    color: '#8A9A5B',
+    subject: 'math',
+    topic: 'story-math',
+    includes: [
+      'Guided story lessons',
+      'Sandbox manipulatives',
+      'Quiz games',
+      'Remediation flows',
+      'Teacher demo boards'
+    ],
+    groups: storyMathHomeGroups,
+  },
+  {
+    id: 'interactive-tools',
+    title: 'Interactive Tools',
+    color: '#16a34a',
+    subject: 'math',
+    topic: 'interactive-tools',
+    includes: [
+      'Fraction bar',
+      'Number line',
+      'Clock',
+      'Base-ten blocks',
+      'Measurement manipulatives'
+    ],
+    groups: interactiveToolsHomeGroups,
+  },
+  {
+    id: 'cube-tools',
+    title: 'Cube Tools',
+    color: '#2563eb',
+    subject: 'math',
+    topic: 'cube-tools',
+    includes: [
+      'Build numbers',
+      'Add cube groups',
+      'Take away cubes',
+      'Missing addends'
+    ],
+    groups: cubeToolsHomeGroups,
+  },
+  {
     id: 'lkg',
     title: 'Lower Kindergarten Math',
     color: '#0284c7',
@@ -586,9 +704,34 @@ const TOPICS = [
         title: 'Advanced block concepts',
         skills: [
           ['SOM.16', 'Place value: Tens and ones blocks', 'som-g1-place-value-blocks'],
+          ['SOM.20', 'Place value: Numbers up to 50', 'som-g1-place-value-50'],
+          ['SOM.21', 'Place value: Numbers up to 100', 'som-g2-place-value-100'],
+          ['SOM.22', 'Place value: Hundreds, tens, and ones', 'som-g2-place-value-hundreds'],
+          ['SOM.23', 'Place value: Thousands, hundreds, tens, and ones', 'som-g3-place-value-thousands'],
           ['SOM.17', 'Fractions: Equivalent strip parts', 'som-g1-fraction-strips'],
           ['SOM.18', 'Multiplication: Stacks array model', 'som-g1-multiplication-array'],
           ['SOM.19', 'Graphing: Built block charts', 'som-g1-graphing-bars'],
+        ],
+      },
+      {
+        title: 'New concepts',
+        skills: [
+          ['SOM.24', 'Ten frame: Numbers up to 5', 'som-g1-ten-frame-5'],
+          ['SOM.25', 'Ten frame: Numbers up to 10', 'som-g1-ten-frame-10'],
+          ['SOM.26', 'Ten frame: Double frame up to 20', 'som-g1-ten-frame-20'],
+          ['SOM.27', 'Number bonds: Up to 5', 'som-g1-number-bonds-5'],
+          ['SOM.28', 'Number bonds: Up to 10', 'som-g1-number-bonds-10'],
+          ['SOM.29', 'Number line: 0 to 10', 'som-g1-number-line-10'],
+          ['SOM.30', 'Number line: 0 to 20', 'som-g1-number-line-20'],
+          ['SOM.31', 'Number line: 0 to 100', 'som-g2-number-line-100'],
+          ['SOM.32', 'Area: Count squares (up to 4×4)', 'som-g2-area-grid-small'],
+          ['SOM.33', 'Area: Count squares (up to 6×6)', 'som-g2-area-grid-medium'],
+          ['SOM.37', 'Area: Click to fill the grid', 'som-g2-area-grid-click'],
+          ['SOM.34', 'Division: Share equally into groups', 'som-g2-division-sharing'],
+          ['SOM.35', 'Money: Count rupee coins', 'som-g1-money-coins'],
+          ['SOM.36', 'Odd and even numbers', 'som-g1-odd-even'],
+          // Inside TOPICS groups:
+['SOM.38', 'Custom Skill Title', 'som-g2-custom-skill'],
         ],
       },
     ],

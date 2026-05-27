@@ -41,6 +41,34 @@ export const grade2MultiplicationSkills = [
     }
   },
   {
+    id: 'multiplication-g2-n2-repeated-addition-cubes',
+    code: 'N.2',
+    grade: 2,
+    topic: 'multiplication',
+    competencyId: 'multiplication_repeated_addition_cubes',
+    title: 'Repeated addition with cubes',
+    templateId: 'multiplication.cubes.repeatedAddition',
+    config: {
+      groupsRange: [2, 4],
+      eachRange: [2, 5],
+      difficulty: 'easy'
+    }
+  },
+  {
+    id: 'multiplication-g2-n3-array-grid-cubes',
+    code: 'N.3',
+    grade: 2,
+    topic: 'multiplication',
+    competencyId: 'multiplication_arrays_cubes',
+    title: 'Multiplication arrays with cubes',
+    templateId: 'multiplication.cubes.arrays',
+    config: {
+      rowsRange: [2, 4],
+      colsRange: [2, 5],
+      difficulty: 'easy'
+    }
+  },
+  {
     id: 'multiplication-g2-n4-expression-equal-groups',
     code: 'N.4',
     grade: 2,
@@ -52,6 +80,18 @@ export const grade2MultiplicationSkills = [
       groupsRange: [2, 4],
       eachRange: [2, 5],
       difficulty: 'medium'
+    }
+  },
+  {
+    id: 'multiplication-g2-n5-skip-counting-number-line',
+    code: 'N.5',
+    grade: 2,
+    topic: 'multiplication',
+    competencyId: 'multiplication_skip_counting_number_line',
+    title: 'Skip counting on number line',
+    templateId: 'multiplication.numberLine.skipCount',
+    config: {
+      difficulty: 'easy'
     }
   },
   {
@@ -97,6 +137,20 @@ export const grade2MultiplicationSkills = [
       bottomDigits: 1,
       regrouping: true,
       difficulty: 'hard'
+    }
+  },
+  {
+    id: 'multiplication-g2-n6-repeated-addition-tower',
+    code: 'N.6',
+    grade: 2,
+    topic: 'multiplication',
+    competencyId: 'multiplication_repeated_addition_towers',
+    title: 'Repeated addition with snap-cube towers',
+    templateId: 'multiplication.cubes.repeatedAdditionTower',
+    config: {
+      groupsRange: [2, 4],
+      eachRange: [2, 5],
+      difficulty: 'easy'
     }
   }
 ];

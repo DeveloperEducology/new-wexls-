@@ -2,7 +2,8 @@
  * Comparative Size, Weight, and Capacity Engine
  */
 
-import { renderBalanceScale, renderMeasuringCup, drawRealWorldObject } from '../shared/svgMeasurementLibrary.js';
+import { getSvgTool } from '@/lib/practice/svgTools';
+import { drawRealWorldObject } from '../shared/svgMeasurementLibrary.js';
 
 export function generateCompareSizeQuestion(rng, config = {}) {
   const difficulty = config.difficulty || 'easy';
@@ -31,12 +32,13 @@ export function generateCompareSizeQuestion(rng, config = {}) {
     const labelA = 'Box A';
     const labelB = 'Box B';
 
-    const svg = renderBalanceScale({
+    const svg = getSvgTool('balance_scale', {
       leftWeight,
       rightWeight,
       leftLabel: labelA,
-      rightLabel: labelB
-    });
+      rightLabel: labelB,
+      showLabel: false
+    }).svg;
 
     const targetLabel = isHeavy ? (leftWeight > rightWeight ? labelA : labelB) : (leftWeight < rightWeight ? labelA : labelB);
     const otherLabel = targetLabel === labelA ? labelB : labelA;
@@ -67,8 +69,8 @@ export function generateCompareSizeQuestion(rng, config = {}) {
     const capA = rng.pick([500, 1000]);
     const capB = capA === 500 ? 1000 : 500;
     
-    const svgA = renderMeasuringCup({ capacity: capA, level: capA / 2, unit: 'ml', vessel: 'cup' });
-    const svgB = renderMeasuringCup({ capacity: capB, level: capB / 2, unit: 'ml', vessel: 'cup' });
+    const svgA = getSvgTool('measuring_cup', { capacity: capA, level: capA / 2, unit: 'ml', showLabel: false, showVolume: false }).svg;
+    const svgB = getSvgTool('measuring_cup', { capacity: capB, level: capB / 2, unit: 'ml', showLabel: false, showVolume: false }).svg;
 
     const target = holdsMore ? (capA > capB ? 'Cup A' : 'Cup B') : (capA < capB ? 'Cup A' : 'Cup B');
 
@@ -178,9 +180,11 @@ export function generateCompareSizeQuestion(rng, config = {}) {
 
   // Default: Width wide/narrow
   const isWide = rng.next() > 0.5;
-  const target = isWide ? 'Gate A' : 'Gate B';
-  const sizeA = isWide ? 90 : 35;
-  const sizeB = isWide ? 35 : 90;
+  const sizeA = rng.next() > 0.5 ? 90 : 35;
+  const sizeB = sizeA === 90 ? 35 : 90;
+  const target = isWide 
+    ? (sizeA > sizeB ? 'Gate A' : 'Gate B')
+    : (sizeA < sizeB ? 'Gate A' : 'Gate B');
 
   const svgA = `<svg width="160" height="80" style="background:#fff; border:1px solid #cbd5e1; border-radius:6px;">
     <!-- Wide gate posts -->

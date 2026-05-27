@@ -1,12 +1,12 @@
 import { createSeededRandom, randInt, uid } from './shared.js';
 
 const PALETTES = [
-  { fill: '#5cc4c0', stroke: '#269b98' },
-  { fill: '#60a5fa', stroke: '#2563eb' },
-  { fill: '#34d399', stroke: '#059669' },
-  { fill: '#f59e0b', stroke: '#d97706' },
-  { fill: '#fb7185', stroke: '#e11d48' },
-  { fill: '#c45add', stroke: '#a83ac4' },
+  { fill: '#ff8a3d', stroke: '#e06013' }, // Orange
+  { fill: '#5cc4c0', stroke: '#269b98' }, // Teal
+  { fill: '#60a5fa', stroke: '#2563eb' }, // Blue
+  { fill: '#34d399', stroke: '#059669' }, // Green
+  { fill: '#fb7185', stroke: '#e11d48' }, // Pink
+  { fill: '#c45add', stroke: '#a83ac4' }, // Purple
 ];
 
 const OBJECTS = [
@@ -31,17 +31,41 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
   
   const palette = PALETTES[randInt(0, PALETTES.length - 1, random)];
   const obj = OBJECTS[randInt(0, OBJECTS.length - 1, random)];
+  const isCube = template.config?.visual === 'cube' || template.config?.model === 'cubes';
   
-  const startWord = objectWord(startCount, obj);
-  const removeWord = objectWord(removeCount, obj);
+  const startWord = isCube ? (startCount === 1 ? 'cube' : 'cubes') : objectWord(startCount, obj);
+  const removeWord = isCube ? (removeCount === 1 ? 'cube' : 'cubes') : objectWord(removeCount, obj);
   
   const isWordProblem = template.config?.isWordProblem;
   let questionText;
   if (isWordProblem) {
-    questionText = `Nina has ${startCount} ${startWord}. She gives away ${removeCount} ${removeWord}. How many ${objectWord(remainingCount, obj)} does she have left?`;
+    questionText = isCube 
+      ? `Nina has ${startCount} cubes. She gives away ${removeCount} cubes. How many cubes does she have left?`
+      : `Nina has ${startCount} ${startWord}. She gives away ${removeCount} ${removeWord}. How many ${objectWord(remainingCount, obj)} does she have left?`;
   } else {
-    questionText = `Start with ${startCount} ${startWord}. Remove ${removeCount} ${removeWord}.`;
+    questionText = isCube
+      ? `Start with ${startCount} cubes. Remove ${removeCount} cubes.`
+      : `Start with ${startCount} ${startWord}. Remove ${removeCount} ${removeWord}.`;
   }
+
+  const items = isCube ? [
+    {
+      id: 'cube_unit',
+      content: 'cube',
+      visual: 'cube',
+      color: palette.fill,
+      stroke: palette.stroke,
+    }
+  ] : [
+    {
+      id: 'cube',
+      content: obj.singular,
+      visual: 'image',
+      imageUrl: obj.imageUrl,
+      color: palette.fill,
+      stroke: palette.stroke,
+    }
+  ];
 
   return {
     id: uid(),
@@ -60,7 +84,7 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
         categories: [
           {
             id: 'cube_train',
-            label: `Remove ${removeCount} ${removeWord}`,
+            label: isCube ? '' : `Remove ${removeCount} ${removeWord}`,
             prefilledCount: startCount,
             removeCount,
             remainingCount,
@@ -68,23 +92,19 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
             prefillStroke: palette.stroke,
           },
         ],
-        items: [
-          {
-            id: 'cube',
-            content: obj.singular,
-            visual: 'image',
-            imageUrl: obj.imageUrl,
-            color: palette.fill,
-            stroke: palette.stroke,
-          },
-        ],
+        items,
         answerKey: { cube_train: remainingCount },
         isVertical: true,
       },
       {
         type: 'text',
         content: `${startCount} - ${removeCount} = [[ans]]`,
-        isVertical: true,
+        style: {
+          marginTop: 24,
+          fontSize: 'clamp(20px, 5vw, 24px)',
+          fontWeight: 700,
+          color: '#0f172a'
+        }
       },
     ],
     answer: { cube_train: remainingCount, ans: String(remainingCount) },
@@ -92,7 +112,7 @@ export function generateRemoveCubesQuestion(template = {}, variables = {}) {
     solution: {
       sections: [
         { type: 'text', content: `Start with ${startCount} ${startWord}.` },
-        { type: 'text', content: `Remove ${removeCount} ${removeWord}.` },
+        { type: 'text', content: `Click exactly ${removeCount} ${removeWord} to cross them out.` },
         { type: 'text', content: `${startCount} - ${removeCount} = ${remainingCount}.` },
       ],
     },

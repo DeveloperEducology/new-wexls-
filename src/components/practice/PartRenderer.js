@@ -1,10 +1,48 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import CategorizationRenderer from './CategorizationRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
 import { speakText } from '@/lib/ttsClient';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
+import InteractiveToolWrapper from './InteractiveToolWrapper';
+
+export function SvgPart({ part, question, userAnswer, onAnswer, isAnswered, inGroup = false }) {
+  if (!part) return null;
+  const isDraggableTool = part.toolSvg && part.draggable === true;
+  if (isDraggableTool) {
+    return (
+      <InteractiveToolWrapper
+        toolId={part.toolSvg}
+        toolProps={part.toolProps}
+        userAnswer={userAnswer}
+        onAnswer={onAnswer}
+        isAnswered={isAnswered}
+      />
+    );
+  }
+  const svgContent = resolveToolSvg(part) || part.content || part.svg || '';
+  const widthMatch = svgContent.match(/<svg[^>]*\bwidth=["']?(\d+)/i);
+  const nativeWidth = widthMatch ? parseInt(widthMatch[1], 10) : null;
+  const style = part.style || {};
+  const resolvedMaxWidth = style.maxWidth || (nativeWidth && nativeWidth < 500 ? `${nativeWidth}px` : '100%');
+
+  return (
+    <div
+      className={styles.responsiveSvg}
+      style={{
+        width: inGroup ? 'auto' : '100%',
+        maxWidth: resolvedMaxWidth,
+        flex: inGroup ? '0 0 auto' : 'initial',
+        display: 'flex',
+        justifyContent: 'flex-start',
+        ...style,
+      }}
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+    />
+  );
+}
 
 function readAnswer(userAnswer, blankId) {
   if (typeof userAnswer === 'object' && userAnswer !== null) {
@@ -134,16 +172,34 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
 
 function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue }) {
   const content = part.content || part.text || '';
-  
+  const spokenRef = useRef(false);
+
+  const isPreK = useMemo(() => {
+    const topic = question?.metadata?.topic || question?.topic || '';
+    const grade = question?.metadata?.grade || question?.grade || '';
+    return topic === 'lkg' || topic === 'prek' || topic === 'ukg' || grade === 'lkg' || grade === 'prek' || grade === 'ukg';
+  }, [question]);
+
+  useEffect(() => {
+    if (isPreK && !isAnswered && content && !spokenRef.current) {
+      spokenRef.current = true;
+      const t = setTimeout(() => {
+        speakText(speakTextValue || content, question?.voice || 'Puck', question?.audioUrl);
+      }, 550);
+      return () => clearTimeout(t);
+    }
+  }, [isPreK, content, question, isAnswered, speakTextValue]);
+
   const textElement = (
     <div
       style={{
-        fontSize: responsivePx(part.style?.fontSize, 16, 22),
-        fontWeight: part.style?.fontWeight || 400,
+        fontSize: isPreK ? '22px' : responsivePx(part.style?.fontSize, 16, 22),
+        fontWeight: isPreK ? 950 : (part.style?.fontWeight || 400),
         color: part.style?.color || '#334155',
         lineHeight: 1.4,
         textAlign: 'left',
         width: '100%',
+        fontFamily: isPreK ? 'var(--font-outfit), sans-serif' : undefined,
         ...part.style,
       }}
     >
@@ -154,6 +210,39 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
       )}
     </div>
   );
+
+  if (isPreK) {
+    const subject = question?.metadata?.subject || question?.subject || '';
+    const mascotEmoji = subject === 'english' ? '🐻' : '🦉'; 
+    const speechText = speakTextValue || content;
+
+    return (
+      <div className={styles.preKMascotSection}>
+        <button
+          type="button"
+          onClick={() => speakText(speechText, question?.voice || 'Puck', question?.audioUrl)}
+          className={styles.preKMascotAvatar}
+          title="Click to listen"
+        >
+          <span style={{ fontSize: '48px', display: 'block', transform: 'scaleX(-1)' }}>{mascotEmoji}</span>
+          <div className={styles.preKMascotSpeechTag}>Tap me! 🔊</div>
+        </button>
+        
+        <div className={styles.preKMascotBubble}>
+          <div className={styles.preKMascotBubbleTail} />
+          <button
+            type="button"
+            onClick={() => speakText(speechText, question?.voice || 'Puck', question?.audioUrl)}
+            className={styles.preKSpeakerBtnLarge}
+            title="Read instruction out loud"
+          >
+            🔊
+          </button>
+          {textElement}
+        </div>
+      </div>
+    );
+  }
 
   if (showSpeaker) {
     return (
@@ -326,48 +415,7 @@ function drawInteractiveBalanceScaleSVG({ leftWeight, rightWeight, leftLabel = '
   `;
 }
 
-function SvgPart({ part, inGroup = false, userAnswer, question }) {
-  let content = '';
-  if (question?.metadata?.task === 'interactive_balance') {
-    const rightWeight = question.metadata.rightWeight ?? 10;
-    let enteredVal = 0;
-    if (userAnswer) {
-      if (typeof userAnswer === 'object') {
-        const val = userAnswer.ans ?? userAnswer.answer ?? userAnswer.value ?? '';
-        enteredVal = parseInt(val, 10);
-      } else {
-        enteredVal = parseInt(userAnswer, 10);
-      }
-    }
-    const leftWeight = isNaN(enteredVal) || enteredVal < 0 ? 0 : enteredVal;
-    content = drawInteractiveBalanceScaleSVG({
-      leftWeight,
-      rightWeight,
-      leftLabel: 'Box A',
-      rightLabel: 'Box B',
-      showStacked: true
-    });
-  } else {
-    content = part.dynamicContent && typeof part.dynamicContent === 'function'
-      ? part.dynamicContent(userAnswer)
-      : (typeof part.content === 'function' ? part.content(userAnswer) : part.content);
-  }
 
-  return (
-    <div
-      className={styles.responsiveSvg}
-      style={{
-        width: inGroup ? 'auto' : '100%',
-        maxWidth: '100%',
-        flex: inGroup ? '0 0 auto' : 'initial',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        ...(part.style || {}),
-      }}
-      dangerouslySetInnerHTML={{ __html: content }}
-    />
-  );
-}
 
 function ImagePart({ part, inGroup = false }) {
   return (
@@ -625,30 +673,286 @@ function NumberLinePart({ part }) {
   const marker = Number(part.marker ?? part.value ?? 4);
   const ticks = Array.from({ length: max - min + 1 }, (_, index) => min + index);
   const width = Number(part.width ?? 620);
-  const height = Number(part.height ?? 150);
+  const height = Number(part.height ?? 160);
   const startX = 56;
   const endX = width - 56;
-  const y = 78;
+  const y = 88;
   const markerX = startX + ((marker - min) / Math.max(max - min, 1)) * (endX - startX);
+
+  const jumpSize = Number(part.jumpSize || 0);
+  const numJumps = Number(part.numJumps || 0);
+  const isMultiplication = jumpSize > 0 && numJumps > 0;
 
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center', ...(part.style || {}) }}>
-      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: width }}>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: width, overflow: 'visible' }}>
+        <defs>
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes drawArc {
+              from { stroke-dashoffset: 400; }
+              to { stroke-dashoffset: 0; }
+            }
+          ` }} />
+          {isMultiplication && (
+            <marker
+              id="jump-arrow"
+              viewBox="0 0 10 10"
+              refX="6"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill={part.color || '#4f46e5'} />
+            </marker>
+          )}
+        </defs>
+        
         <line x1={startX} y1={y} x2={endX} y2={y} stroke="#0f172a" strokeWidth="4" strokeLinecap="round" />
         <path d={`M${endX - 12} ${y - 8} L${endX} ${y} L${endX - 12} ${y + 8}`} fill="none" stroke="#0f172a" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        
         {ticks.map((tick) => {
           const x = startX + ((tick - min) / Math.max(max - min, 1)) * (endX - startX);
+          const isLanding = isMultiplication && (tick % jumpSize === 0) && (tick <= numJumps * jumpSize);
+          const isMissing = part.missingTicks?.includes(tick);
+          const shouldShowLabel = !isMultiplication || isLanding || tick === min || tick === max;
+
+          if (!shouldShowLabel) {
+            return (
+              <line key={tick} x1={x} y1={y - 8} x2={x} y2={y + 8} stroke="#cbd5e1" strokeWidth="1.5" />
+            );
+          }
+
+          if (isMissing) {
+            return (
+              <g key={tick}>
+                <line x1={x} y1={y - 12} x2={x} y2={y + 12} stroke="#334155" strokeWidth="3" />
+                <circle cx={x} cy={y + 36} r="15" fill="#fef2f2" stroke="#ef4444" strokeWidth="2" />
+                <text x={x} y={y + 42} textAnchor="middle" fontSize="18" fontWeight="900" fill="#ef4444">?</text>
+              </g>
+            );
+          }
+
           return (
             <g key={tick}>
-              <line x1={x} y1={y - 12} x2={x} y2={y + 12} stroke="#334155" strokeWidth="3" />
-              <text x={x} y={y + 42} textAnchor="middle" fontSize="18" fontWeight="800" fill="#334155">{tick}</text>
+              <line x1={x} y1={y - 12} x2={x} y2={y + 12} stroke={isLanding ? (part.color || "#4f46e5") : "#334155"} strokeWidth={isLanding ? "3" : "2"} />
+              <text x={x} y={y + 42} textAnchor="middle" fontSize="18" fontWeight={isLanding ? "900" : "800"} fill={isLanding ? (part.color || "#4f46e5") : "#334155"}>{tick}</text>
             </g>
           );
         })}
-        <circle cx={markerX} cy={y} r="11" fill="#22c55e" stroke="#15803d" strokeWidth="4" />
-        {part.label ? (
-          <text x={markerX} y={y - 28} textAnchor="middle" fontSize="18" fontWeight="900" fill="#15803d">{part.label}</text>
-        ) : null}
+
+        {isMultiplication && (
+          <g>
+            {Array.from({ length: numJumps }).map((_, i) => {
+              const fromVal = i * jumpSize;
+              const toVal = (i + 1) * jumpSize;
+              const x1 = startX + ((fromVal - min) / Math.max(max - min, 1)) * (endX - startX);
+              const x2 = startX + ((toVal - min) / Math.max(max - min, 1)) * (endX - startX);
+              const h = Math.min(65, (x2 - x1) * 0.38);
+              const controlX = (x1 + x2) / 2;
+              const controlY = y - h * 2;
+              const pathD = `M ${x1} ${y} Q ${controlX} ${controlY} ${x2} ${y}`;
+
+              return (
+                <g key={i}>
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={part.color || '#4f46e5'}
+                    strokeWidth="3.5"
+                    markerEnd="url(#jump-arrow)"
+                    strokeDasharray="400"
+                    strokeDashoffset="400"
+                    style={{
+                      animation: 'drawArc 800ms ease-out forwards',
+                      animationDelay: `${i * 300}ms`
+                    }}
+                  />
+                  <text
+                    x={controlX}
+                    y={y - h - 10}
+                    textAnchor="middle"
+                    fontSize="15"
+                    fontWeight="900"
+                    fill={part.color || '#4f46e5'}
+                  >
+                    +{jumpSize}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
+
+        {!isMultiplication && (
+          <g>
+            <circle cx={markerX} cy={y} r="11" fill="#22c55e" stroke="#15803d" strokeWidth="4" />
+            {part.label ? (
+              <text x={markerX} y={y - 28} textAnchor="middle" fontSize="18" fontWeight="900" fill="#15803d">{part.label}</text>
+            ) : null}
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function BarModelPart({ part }) {
+  const bars = part.bars || [];
+  const mode = part.mode || 'single';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '600px', margin: '0 auto', padding: '10px 0', ...(part.style || {}) }}>
+      {bars.map((bar, barIdx) => {
+        const segCount = bar.segmentCount || 1;
+        const segVal = bar.segmentValue || '';
+        const hasBracket = Boolean(bar.bracketLabel);
+        
+        return (
+          <div key={barIdx} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px' }}>
+              {bar.label ? (
+                <div style={{ width: '100px', fontWeight: '800', color: '#475569', fontSize: '15px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                  {bar.label}
+                </div>
+              ) : null}
+              
+              <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+                {/* Segments Row */}
+                <div style={{ display: 'flex', width: '100%', height: '46px', border: `2.5px solid ${bar.stroke || '#0284c7'}`, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff', boxShadow: '0 4px 6px rgba(15, 23, 42, 0.04)' }}>
+                  {Array.from({ length: segCount }).map((_, segIdx) => {
+                    const isLast = segIdx === segCount - 1;
+                    const showLabel = bar.showSegmentLabels !== false || segIdx === 0;
+                    return (
+                      <div
+                        key={segIdx}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '100%',
+                          backgroundColor: bar.color || '#e0f2fe',
+                          borderRight: isLast ? 'none' : `2px solid ${bar.stroke || '#0284c7'}`,
+                          color: bar.textColor || '#0c4a6e',
+                          fontWeight: '900',
+                          fontSize: '18px',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        {showLabel ? segVal : ''}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Bracket Row */}
+                {hasBracket && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', marginTop: '6px', position: 'relative' }}>
+                    {/* SVG Linear Bracket with End Ticks */}
+                    <svg width="100%" height="28" style={{ overflow: 'visible' }}>
+                      <path
+                        d="M 2 4 L 2 12 L 2 8 L 100% 8 L 100% 12 L 100% 4"
+                        fill="none"
+                        stroke="#64748b"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </svg>
+                    {/* Bracket Label Badge */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '0px',
+                      backgroundColor: '#f1f5f9',
+                      border: '1.5px solid #cbd5e1',
+                      borderRadius: '20px',
+                      padding: '2px 14px',
+                      color: '#334155',
+                      fontWeight: '900',
+                      fontSize: '15px',
+                      boxShadow: '0 2px 4px rgba(15, 23, 42, 0.05)',
+                      transform: 'translateY(15%)'
+                    }}>
+                      {bar.bracketLabel}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FunctionMachinePart({ part }) {
+  const input = part.input ?? '5';
+  const operation = part.operation ?? '× 3';
+  const output = part.output ?? '15';
+
+  const isInputMissing = input === '?';
+  const isRuleMissing = operation.includes('?');
+  const isOutputMissing = output === '?';
+
+  return (
+    <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '12px auto', ...(part.style || {}) }}>
+      <svg width="100%" height="130" viewBox="0 0 540 130" style={{ maxWidth: '540px', overflow: 'visible' }}>
+        <defs>
+          <linearGradient id="machine-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#6d28d9" />
+          </linearGradient>
+          <linearGradient id="machine-grad-missing" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f43f5e" />
+            <stop offset="100%" stopColor="#be123c" />
+          </linearGradient>
+          <marker id="arrowhead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#cbd5e1" />
+          </marker>
+        </defs>
+
+        {/* Connection Arrows */}
+        <line x1="104" y1="65" x2="182" y2="65" stroke="#cbd5e1" strokeWidth="4" markerEnd="url(#arrowhead)" />
+        <line x1="358" y1="65" x2="436" y2="65" stroke="#cbd5e1" strokeWidth="4" markerEnd="url(#arrowhead)" />
+
+        {/* Input Node */}
+        <g>
+          <circle cx="68" cy="65" r="32" fill={isInputMissing ? "#fff5f5" : "#f0fdf4"} stroke={isInputMissing ? "#ef4444" : "#22c55e"} strokeWidth="3" strokeDasharray={isInputMissing ? "6 4" : "none"} />
+          <text x="68" y="72" textAnchor="middle" fontSize={isInputMissing ? "24" : "20"} fontWeight="900" fill={isInputMissing ? "#ef4444" : "#15803d"}>{input}</text>
+          <text x="68" y="24" textAnchor="middle" fontSize="13" fontWeight="800" fill="#64748b" letterSpacing="0.05em">INPUT</text>
+        </g>
+
+        {/* Machine Box */}
+        <g>
+          <rect
+            x="192"
+            y="25"
+            width="156"
+            height="80"
+            rx="16"
+            fill={isRuleMissing ? "url(#machine-grad-missing)" : "url(#machine-grad)"}
+            stroke={isRuleMissing ? "#9f1239" : "#4c1d95"}
+            strokeWidth="3.5"
+            filter="drop-shadow(0 10px 15px rgba(109, 40, 217, 0.12))"
+          />
+          {/* Mechanical details / Gear accents */}
+          <circle cx="216" cy="46" r="6" fill="#ffffff" opacity="0.25" />
+          <circle cx="324" cy="46" r="6" fill="#ffffff" opacity="0.25" />
+          <circle cx="216" cy="84" r="6" fill="#ffffff" opacity="0.25" />
+          <circle cx="324" cy="84" r="6" fill="#ffffff" opacity="0.25" />
+          
+          <text x="270" y="72" textAnchor="middle" fontSize="24" fontWeight="900" fill="#ffffff" letterSpacing="0.02em">{operation}</text>
+          <text x="270" y="16" textAnchor="middle" fontSize="13" fontWeight="800" fill="#7c3aed" letterSpacing="0.05em">MACHINE</text>
+        </g>
+
+        {/* Output Node */}
+        <g>
+          <circle cx="472" cy="65" r="32" fill={isOutputMissing ? "#fff5f5" : "#f0f9ff"} stroke={isOutputMissing ? "#ef4444" : "#0284c7"} strokeWidth="3" strokeDasharray={isOutputMissing ? "6 4" : "none"} />
+          <text x="472" y="72" textAnchor="middle" fontSize={isOutputMissing ? "24" : "20"} fontWeight="900" fill={isOutputMissing ? "#ef4444" : "#0369a1"}>{output}</text>
+          <text x="472" y="24" textAnchor="middle" fontSize="13" fontWeight="800" fill="#64748b" letterSpacing="0.05em">OUTPUT</text>
+        </g>
       </svg>
     </div>
   );
@@ -1264,12 +1568,12 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
   const layout = part.layout;
   const answerRow = layout?.rows?.find((row) => row.kind === 'answer');
   const inputRefs = useRef([]);
-  const isVerticalAdditionReplica = layout?.variant === 'verticalAdditionReplica';
+  const isVerticalAdditionReplica = layout?.variant === 'verticalAdditionReplica' || layout?.variant === 'verticalSubtractionReplica';
   const isVerticalArithmeticReplica = isVerticalAdditionReplica || layout?.variant === 'verticalMultiplicationReplica';
   const digitCount = Math.max(
     2,
     answerRow?.cells?.length || 0,
-    ...(layout?.rows || []).map((row) => String(row.text || '').replace(/[+×x]/gi, '').trim().length)
+    ...(layout?.rows || []).map((row) => String(row.text || '').replace(/[+×x−\-]/gi, '').trim().length)
   );
   const cellSize = isVerticalArithmeticReplica ? 32 : 44;
   const operatorWidth = isVerticalArithmeticReplica ? 28 : 0;
@@ -1386,8 +1690,8 @@ function ArithmeticLayoutPart({ part, userAnswer, onAnswer, isAnswered }) {
         }
         if (isVerticalArithmeticReplica) {
           const rawText = String(row.text || '');
-          const operator = rawText.trimStart().match(/^[+×x]/i)?.[0] || '';
-          const digits = rawText.replace(/^[\s+×x]+/i, '').trim().padStart(digitCount, ' ').split('');
+          const operator = rawText.trimStart().match(/^[+×x−\-]/i)?.[0] || '';
+          const digits = rawText.replace(/^[\s+×x−\-]+/i, '').trim().padStart(digitCount, ' ').split('');
 
           return (
             <div
@@ -2487,7 +2791,7 @@ function InteractiveDiceMeasurementPart({ part, userAnswer, onAnswer, isAnswered
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      style={{ width: '100%', maxWidth: '640px', margin: '16px auto', display: 'flex', flexDirection: 'column', gap: '16px', touchAction: 'none' }}
+      style={{ width: '100%', maxWidth: '640px', margin: '8px auto', display: 'flex', flexDirection: 'column', gap: '12px', touchAction: 'none' }}
     >
       {/* Main Workspace Card */}
       <div 
@@ -2723,7 +3027,18 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
   const secondLength = Number(part.secondLength ?? 0);
   const objectImage = part.objectImage || '';
   const objectName = part.objectName || '';
-  const isVertical = orientation === 'vertical' || layoutMode === 'compare_two_objects';
+  const layoutFamily = part.layoutFamily || 'measurement';
+  const patternGroupSize = Number(part.patternGroupSize ?? 2);
+  const patternRule = part.patternRule || 'ABAB';
+  const groupCount = Number(part.groupCount ?? 2);
+  const groupSize = Number(part.groupSize ?? 4);
+  const subCount = Number(part.subCount ?? 2);
+
+  const gridW = Number(part.gridW || part.firstLength || 3);
+  const gridH = Number(part.gridH || part.secondLength || 3);
+  const gridCellSize = Math.min(56, Math.floor(300 / Math.max(gridW, gridH)));
+
+  const isVertical = (orientation === 'vertical' || layoutMode === 'compare_two_objects') && orientation !== 'horizontal';
 
   // Server-side theme colors
   const unitColor = part.unitColor || '#ef4444';
@@ -2750,13 +3065,30 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
   });
   const [draggingId, setDraggingId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [removedIndices, setRemovedIndices] = useState([]);
+  const [filledCells, setFilledCells] = useState(new Set());
 
   const containerRef = useRef(null);
   const dragStartPos = useRef(null);
 
   // Dimension tracking for responsiveness
-  const [diceSize, setDiceSize] = useState(44);
-  const canvasHeight = isVertical ? 360 : 200;
+  const [diceSize, setDiceSize] = useState(56);
+  const canvasHeight = (() => {
+    if (isVertical) return 360;
+    if (layoutFamily === 'ten_frame') return 200;
+    if (layoutFamily === 'number_line') return 140;
+    if (layoutFamily === 'money') return 140;
+    if (layoutFamily === 'odd_even') return 160;
+    if (layoutFamily === 'division') return 200;
+    if (layoutFamily === 'number_bonds') return 240;
+    if (layoutFamily === 'area_grid') {
+      return gridH * gridCellSize + 140;
+    }
+    if (layoutFamily === 'place_value') return 240;
+    if (layoutFamily === 'equal_groups') return 300;
+    if (layoutFamily === 'graphs') return 300;
+    return 200;
+  })();
   const baselineY = isVertical ? 320 : 130; // Ground/baseline position
   const lineY = 50; // top coordinate for line in horizontal mode
   const slotY = lineY + 8; // top coordinate for slots in horizontal mode
@@ -2773,10 +3105,10 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
       if (containerRef.current) {
         const w = containerRef.current.clientWidth;
         if (isVertical) {
-          setDiceSize(44);
+          setDiceSize(56);
           const imageWidth = 120;
           const gap = 24;
-          const totalContentWidth = imageWidth + gap + 44;
+          const totalContentWidth = imageWidth + gap + 56;
           const contentStartX = Math.max(20, (w - totalContentWidth) / 2);
           setDimensions({
             width: w,
@@ -2787,9 +3119,9 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
         } else {
           const padding = 40;
           const maxAllowedWidth = w - padding;
-          let currentDiceSize = 44;
-          if (targetLength * 44 > maxAllowedWidth) {
-            currentDiceSize = Math.max(30, Math.floor(maxAllowedWidth / targetLength));
+          let currentDiceSize = 56;
+          if (targetLength * 56 > maxAllowedWidth) {
+            currentDiceSize = Math.max(34, Math.floor(maxAllowedWidth / targetLength));
           }
           setDiceSize(currentDiceSize);
           
@@ -2887,7 +3219,6 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
       });
       setPlacedDice(prev => prev.map(d => d.id === id ? { ...d, slotIndex: -1 } : d));
     }
-
 
     if (e && e.target && typeof e.target.setPointerCapture === 'function') {
       e.target.setPointerCapture(e.pointerId);
@@ -3112,7 +3443,7 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
 
     return Array.from({ length: count }).map((_, i) => {
       let x = isVert ? startX : startX + i * diceSize;
-      let y = isVert ? baselineY - (i + 1) * diceSize : slotY;
+      let y = isVert ? baselineY - (i + 1) * diceSize : (options.lineY ?? slotY);
 
       // Introduce Deliberate Errors for error-spotting mode
       if (errorType === 'gap' && !isVert) {
@@ -3174,110 +3505,1125 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
     return list;
   };
 
-  return (
-    <div 
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      style={{ width: '100%', maxWidth: '640px', margin: '16px auto', display: 'flex', flexDirection: 'column', gap: '16px', touchAction: 'none' }}
-    >
-      {/* Main Workspace Canvas */}
-      <div 
-        ref={containerRef}
-        style={{ 
-          width: '100%', 
-          height: `${canvasHeight}px`,
-          background: '#f0f9ff', 
-          border: '1px solid #e0f2fe', 
-          borderRadius: '20px', 
-          position: 'relative', 
-          overflow: 'hidden', 
-          boxShadow: '0 4px 12px rgba(186, 230, 253, 0.15)'
-        }}
-      >
-        {/* Reset Button (Only for drag mode) */}
-        {layoutMode === 'drag_to_measure' && (
-          <button
-            type="button"
-            disabled={isAnswered}
-            onClick={() => {
-              setPlacedDice(prev => prev.filter(d => d.isPrefilled));
-              playSnapTone(220);
-            }}
+  const renderHorizontalComparison = () => {
+    const topY = 35;
+    const bottomY = 95;
+    const startX = dimensions.lineStartX;
 
-            style={{
+    const firstWidth = firstLength * diceSize;
+    const secondWidth = secondLength * diceSize;
+
+    const shorterWidth = Math.min(firstWidth, secondWidth);
+    const longerWidth = Math.max(firstWidth, secondWidth);
+    const diffCubes = Math.abs(firstLength - secondLength);
+    const isTopLonger = firstLength > secondLength;
+
+    return (
+      <>
+        {/* Top Train Label & Train */}
+        <div style={{ position: 'absolute', left: `${startX - 100}px`, top: `${topY + 12}px`, width: '90px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold', color: '#ef4444' }}>
+          {part.firstName}
+        </div>
+        {renderPreplacedUnits(firstLength, {
+          errorType: 'none',
+          slotsStartX: startX,
+          isVertical: false,
+          lineY: topY,
+          primary: '#ef4444',
+          stroke: '#b91c1c'
+        })}
+
+        {/* Bottom Train Label & Train */}
+        <div style={{ position: 'absolute', left: `${startX - 100}px`, top: `${bottomY + 12}px`, width: '90px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold', color: '#3b82f6' }}>
+          {part.secondName}
+        </div>
+        {renderPreplacedUnits(secondLength, {
+          errorType: 'none',
+          slotsStartX: startX,
+          isVertical: false,
+          lineY: bottomY,
+          primary: '#3b82f6',
+          stroke: '#1d4ed8'
+        })}
+
+        {/* Difference Shaded Area and Alignment Lines */}
+        {diffCubes > 0 && (
+          <>
+            {/* Dashed line at end of shorter train */}
+            <div style={{
               position: 'absolute',
-              top: '12px',
-              right: '12px',
-              zIndex: 30,
-              background: 'rgba(255, 255, 255, 0.9)',
-              backdropFilter: 'blur(4px)',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              color: '#475569',
-              cursor: isAnswered ? 'default' : 'pointer',
+              left: `${startX + shorterWidth}px`,
+              top: `${topY}px`,
+              width: '2px',
+              height: `${bottomY - topY + diceSize}px`,
+              borderLeft: '2px dashed #94a3b8',
+              zIndex: 5
+            }} />
+            {/* Dashed line at end of longer train */}
+            <div style={{
+              position: 'absolute',
+              left: `${startX + longerWidth}px`,
+              top: `${topY}px`,
+              width: '2px',
+              height: `${bottomY - topY + diceSize}px`,
+              borderLeft: '2px dashed #94a3b8',
+              zIndex: 5
+            }} />
+            {/* Shaded difference overlay */}
+            <div style={{
+              position: 'absolute',
+              left: `${startX + shorterWidth}px`,
+              top: `${isTopLonger ? topY : bottomY}px`,
+              width: `${longerWidth - shorterWidth}px`,
+              height: `${diceSize}px`,
+              background: 'rgba(34, 197, 94, 0.15)',
+              border: '2px solid #22c55e',
+              borderRadius: '6px',
+              boxSizing: 'border-box',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s',
-              opacity: isAnswered ? 0.5 : 1
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-              <path d="M16 3h5v5"/>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-              <path d="M8 21H3v-5"/>
-            </svg>
-            <span>Reset</span>
-          </button>
+              justifyContent: 'center',
+              fontSize: '13px',
+              fontWeight: '900',
+              color: '#15803d',
+              zIndex: 6
+            }}>
+              +{diffCubes}
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
+
+  const renderCanvasContent = () => {
+
+    // ── TEN FRAME ──────────────────────────────────────────────────────────
+    if (layoutFamily === 'ten_frame') {
+      const frameMax = part.frameMax || 10;
+      const frameCount = part.frameCount || 1;
+      const count = part.firstLength || 0;
+      const renderFrame = (frameIndex) => {
+        const startDot = frameIndex * 10;
+        return (
+          <div key={frameIndex} style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gridTemplateRows: 'repeat(2, 1fr)',
+            gap: '6px',
+            padding: '10px',
+            background: '#fff',
+            border: '3px solid #334155',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}>
+            {Array.from({ length: 10 }).map((_, i) => {
+              const dotNum = startDot + i;
+              const filled = dotNum < count;
+              return (
+                <div key={i} style={{
+                  width: '44px', height: '44px',
+                  borderRadius: '50%',
+                  background: filled ? '#ef4444' : 'transparent',
+                  border: filled ? '3px solid #b91c1c' : '3px dashed #94a3b8',
+                  boxShadow: filled ? '0 2px 6px rgba(239,68,68,0.4)' : 'none',
+                  transition: 'all 0.2s ease'
+                }} />
+              );
+            })}
+          </div>
+        );
+      };
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', height: '100%', width: '100%', padding: '16px', boxSizing: 'border-box', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', justifyContent: 'center' }}>
+            {Array.from({ length: frameCount }).map((_, fi) => renderFrame(fi))}
+          </div>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '4px 16px', borderRadius: '20px' }}>
+            {count} / {frameMax}
+          </div>
+        </div>
+      );
+    }
+
+    // ── NUMBER BONDS ────────────────────────────────────────────────────────
+    if (layoutFamily === 'number_bonds') {
+      const whole = part.bondWhole || (part.firstLength + part.secondLength);
+      const partA = part.bondPartA;
+      const partB = part.bondPartB;
+      const missingA = partA === null || partA === undefined;
+      const shownPart = missingA ? partB : partA;
+      const circleStyle = (val, isMissing, color) => ({
+        width: '80px', height: '80px', borderRadius: '50%',
+        background: isMissing ? '#fff' : color,
+        border: isMissing ? '4px dashed #94a3b8' : `4px solid ${color}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: isMissing ? '28px' : '32px', fontWeight: '900',
+        color: isMissing ? '#94a3b8' : '#fff',
+        boxShadow: isMissing ? 'none' : '0 4px 12px rgba(0,0,0,0.15)',
+        animation: isMissing ? 'pulse-dash 2s infinite ease-in-out' : 'none'
+      });
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', padding: '16px', boxSizing: 'border-box' }}>
+          {/* Whole circle */}
+          <div style={circleStyle(whole, false, '#6366f1')}>{whole}</div>
+          {/* Connecting lines */}
+          <svg width="200" height="60" viewBox="0 0 200 60">
+            <line x1="100" y1="0" x2="50" y2="55" stroke="#64748b" strokeWidth="3" strokeDasharray="6,3" />
+            <line x1="100" y1="0" x2="150" y2="55" stroke="#64748b" strokeWidth="3" strokeDasharray="6,3" />
+          </svg>
+          {/* Parts row */}
+          <div style={{ display: 'flex', gap: '80px', alignItems: 'center' }}>
+            <div style={circleStyle(missingA ? '?' : partA, missingA, '#f59e0b')}>
+              {missingA ? '?' : partA}
+            </div>
+            <div style={circleStyle(!missingA ? '?' : partB, !missingA, '#22c55e')}>
+              {!missingA ? '?' : partB}
+            </div>
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>
+            {shownPart} + ? = {whole}
+          </div>
+        </div>
+      );
+    }
+
+    // ── NUMBER LINE ─────────────────────────────────────────────────────────
+    if (layoutFamily === 'number_line') {
+      const lineMax = part.lineMax || 10;
+      const lineStep = part.lineStep || 1;
+      const markerPos = part.markerPos || part.firstLength || 5;
+      const ticks = [];
+      for (let v = 0; v <= lineMax; v += lineStep) ticks.push(v);
+      const pct = (markerPos / lineMax) * 100;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', padding: '20px 32px', boxSizing: 'border-box', gap: '12px' }}>
+          <div style={{ position: 'relative', width: '100%', height: '80px' }}>
+            {/* Main line */}
+            <div style={{ position: 'absolute', top: '40px', left: '0', right: '0', height: '4px', background: '#334155', borderRadius: '2px' }} />
+            {/* Tick marks + labels */}
+            {ticks.map((v, i) => {
+              const left = `${(v / lineMax) * 100}%`;
+              return (
+                <div key={i} style={{ position: 'absolute', left, top: '28px', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '2px', height: '24px', background: '#334155' }} />
+                  <span style={{ fontSize: lineMax >= 100 ? '10px' : '12px', fontWeight: '700', color: '#334155' }}>{v}</span>
+                </div>
+              );
+            })}
+            {/* Marker */}
+            <div style={{ position: 'absolute', left: `${pct}%`, top: '0px', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
+              <div style={{ width: '0', height: '0', borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '16px solid #ef4444' }} />
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#ef4444', border: '3px solid #b91c1c', marginTop: '-2px', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' }} />
+            </div>
+          </div>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '4px 16px', borderRadius: '20px' }}>
+            0 — {lineMax}  •  step {lineStep}
+          </div>
+        </div>
+      );
+    }
+
+    // ── AREA GRID ───────────────────────────────────────────────────────────
+    if (layoutFamily === 'area_grid') {
+      const gridW = part.gridW || part.firstLength || 3;
+      const gridH = part.gridH || part.secondLength || 3;
+      const total = gridW * gridH;
+      const isInteractive = part.interactionMode === 'click';
+      const cellSize = Math.min(56, Math.floor(300 / Math.max(gridW, gridH)));
+      const colors = ['#fde68a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'];
+      const fillColor = colors[(gridW + gridH) % colors.length];
+      const emptyColor = '#f8fafc';
+      const filledCount = filledCells.size;
+      const allFilled = filledCount === total;
+
+      const toggleCell = (i) => {
+        if (isAnswered) return;
+        setFilledCells(prev => {
+          const next = new Set(prev);
+          if (next.has(i)) next.delete(i);
+          else next.add(i);
+          playSnapTone(next.has(i) ? 440 : 330);
+          return next;
+        });
+      };
+
+      const fillAll = () => {
+        if (isAnswered) return;
+        setFilledCells(new Set(Array.from({ length: total }, (_, i) => i)));
+      };
+
+      const clearAll = () => {
+        if (isAnswered) return;
+        setFilledCells(new Set());
+      };
+
+      if (isInteractive) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '12px', boxSizing: 'border-box' }}>
+            {/* Instruction badge */}
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#475569', background: '#e2e8f0', padding: '4px 14px', borderRadius: '20px' }}>
+              Click squares to fill them
+            </div>
+
+            {/* Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${gridW}, ${cellSize}px)`,
+              gridTemplateRows: `repeat(${gridH}, ${cellSize}px)`,
+              gap: '3px',
+              border: `3px solid ${allFilled ? '#22c55e' : '#334155'}`,
+              borderRadius: '8px',
+              overflow: 'hidden',
+              boxShadow: allFilled
+                ? '0 0 0 4px rgba(34,197,94,0.25), 0 4px 16px rgba(0,0,0,0.1)'
+                : '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
+              cursor: isAnswered ? 'default' : 'pointer',
+              userSelect: 'none',
+              flexShrink: 0
+            }}>
+              {Array.from({ length: total }).map((_, i) => {
+                const filled = filledCells.has(i);
+                return (
+                  <div
+                    key={i}
+                    onClick={() => toggleCell(i)}
+                    style={{
+                      width: cellSize,
+                      height: cellSize,
+                      background: filled ? fillColor : emptyColor,
+                      border: `1px solid ${filled ? 'rgba(0,0,0,0.12)' : '#cbd5e1'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'background 0.15s ease, transform 0.1s ease',
+                      transform: filled ? 'scale(0.94)' : 'scale(1)',
+                      cursor: isAnswered ? 'default' : 'pointer',
+                      position: 'relative'
+                    }}
+                  >
+                    {filled && (
+                      <div style={{
+                        width: cellSize * 0.35,
+                        height: cellSize * 0.35,
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.12)'
+                      }} />
+                    )}
+                    {!filled && (
+                      <div style={{
+                        width: cellSize * 0.5,
+                        height: cellSize * 0.5,
+                        borderRadius: '50%',
+                        border: '2px dashed #cbd5e1'
+                      }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Live counter + controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                fontSize: '14px',
+                fontWeight: '900',
+                color: allFilled ? '#16a34a' : '#334155',
+                background: allFilled ? '#dcfce7' : '#f1f5f9',
+                padding: '5px 18px',
+                borderRadius: '20px',
+                transition: 'all 0.3s ease',
+                border: allFilled ? '2px solid #86efac' : '2px solid transparent'
+              }}>
+                {filledCount} / {total} filled {allFilled ? '✓' : ''}
+              </div>
+              {!isAnswered && filledCount > 0 && (
+                <button
+                  onClick={clearAll}
+                  style={{
+                    fontSize: '11px', fontWeight: '700', color: '#64748b',
+                    background: '#f1f5f9', border: '1px solid #e2e8f0',
+                    borderRadius: '14px', padding: '4px 12px', cursor: 'pointer'
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+              {!isAnswered && filledCount < total && (
+                <button
+                  onClick={fillAll}
+                  style={{
+                    fontSize: '11px', fontWeight: '700', color: '#3b82f6',
+                    background: '#eff6ff', border: '1px solid #bfdbfe',
+                    borderRadius: '14px', padding: '4px 12px', cursor: 'pointer'
+                  }}
+                >
+                  Fill all
+                </button>
+              )}
+            </div>
+
+            {/* Dimension label */}
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#94a3b8' }}>
+              {gridW} columns × {gridH} rows
+            </div>
+          </div>
+        );
+      }
+
+      // ── STATIC mode (SOM.32 / SOM.33) ──────────────────────────────────
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '16px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridW}, ${cellSize}px)`, gridTemplateRows: `repeat(${gridH}, ${cellSize}px)`, gap: '2px', border: '3px solid #334155', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', flexShrink: 0 }}>
+            {Array.from({ length: total }).map((_, i) => (
+              <div key={i} style={{ width: cellSize, height: cellSize, background: fillColor, border: '1px solid rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: cellSize * 0.3, height: cellSize * 0.3, borderRadius: '50%', background: 'rgba(0,0,0,0.08)' }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '4px 16px', borderRadius: '20px' }}>
+            {gridW} × {gridH} = {total} squares
+          </div>
+        </div>
+      );
+    }
+
+
+    // ── DIVISION / SHARING ──────────────────────────────────────────────────
+    if (layoutFamily === 'division') {
+      const groups = part.groupCount || part.secondLength || 2;
+      const perGroup = part.groupSize || part.firstLength || 3;
+      const total = groups * perGroup;
+      const groupColors = ['#fde68a', '#bbf7d0', '#bfdbfe', '#fecaca'];
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', padding: '16px', boxSizing: 'border-box' }}>
+          <div style={{ fontSize: '13px', fontWeight: '800', color: '#475569', background: '#e2e8f0', padding: '5px 16px', borderRadius: '20px' }}>
+            {total} shared into {groups} equal groups
+          </div>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {Array.from({ length: groups }).map((_, g) => (
+              <div key={g} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(perGroup, 3)}, 1fr)`, gap: '4px', padding: '10px', background: groupColors[g % groupColors.length], borderRadius: '12px', border: '2px solid rgba(0,0,0,0.1)', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', minWidth: '60px' }}>
+                  {Array.from({ length: perGroup }).map((_, i) => (
+                    <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ef4444', border: '2px solid #b91c1c', boxShadow: '0 2px 4px rgba(239,68,68,0.3)' }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Group {g + 1}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: '13px', fontWeight: '800', color: '#334155' }}>
+            {total} ÷ {groups} = ?
+          </div>
+        </div>
+      );
+    }
+
+    // ── MONEY / COINS ───────────────────────────────────────────────────────
+    if (layoutFamily === 'money') {
+      const coins = part.coins || [1, 2, 5];
+      const total = coins.reduce((s, c) => s + c, 0);
+      const coinStyle = (val) => {
+        const meta = {
+          1: { bg: '#fbbf24', border: '#d97706', label: '₹1', size: 48 },
+          2: { bg: '#a3e635', border: '#65a30d', label: '₹2', size: 52 },
+          5: { bg: '#c084fc', border: '#9333ea', label: '₹5', size: 58 }
+        };
+        return meta[val] || meta[1];
+      };
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '16px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {coins.map((c, i) => {
+              const m = coinStyle(c);
+              return (
+                <div key={i} style={{
+                  width: m.size, height: m.size, borderRadius: '50%',
+                  background: `radial-gradient(circle at 35% 35%, ${m.bg}, ${m.border})`,
+                  border: `4px solid ${m.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', fontWeight: '900', color: '#1e293b',
+                  boxShadow: `0 4px 10px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3)`,
+                  textShadow: '0 1px 2px rgba(255,255,255,0.5)'
+                }}>
+                  {m.label}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+            {coins.map((c, i) => (
+              <span key={i} style={{ background: '#f1f5f9', padding: '2px 10px', borderRadius: '12px' }}>₹{c}</span>
+            ))}
+            <span style={{ fontWeight: '900', color: '#334155' }}>= ₹{total}</span>
+          </div>
+        </div>
+      );
+    }
+
+    // ── ODD / EVEN ──────────────────────────────────────────────────────────
+    if (layoutFamily === 'odd_even') {
+      const num = part.oddEvenCount || part.firstLength || 4;
+      const isEven = num % 2 === 0;
+      const pairs = Math.floor(num / 2);
+      const hasLeftover = num % 2 === 1;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', padding: '16px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', justifyContent: 'center', position: 'relative', paddingTop: '28px' }}>
+            {Array.from({ length: pairs }).map((_, p) => (
+              <div key={p} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', position: 'relative' }}>
+                {/* Pairing arch */}
+                <svg width="72" height="24" viewBox="0 0 72 24" style={{ position: 'absolute', top: '-24px' }}>
+                  <path d="M 4 24 Q 36 0 68 24" fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {[0, 1].map(ci => (
+                    <div key={ci} style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#6366f1', border: '2px solid #4f46e5', boxShadow: '0 2px 6px rgba(99,102,241,0.4)' }} />
+                  ))}
+                </div>
+              </div>
+            ))}
+            {hasLeftover && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '32px', height: '16px' }} /> {/* spacer */}
+                <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#ef4444', border: '2px solid #b91c1c', boxShadow: '0 2px 6px rgba(239,68,68,0.5)', animation: 'pulse-dash 1.5s infinite ease-in-out' }} />
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <span style={{ fontSize: '14px', fontWeight: '800', color: '#334155' }}>{num} cubes</span>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748b' }}>{pairs} pair{pairs !== 1 ? 's' : ''}{hasLeftover ? ' + 1 leftover' : ' — no leftover'}</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (layoutFamily === 'equal_groups') {
+      return (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '32px',
+          height: '100%',
+          width: '100%',
+          padding: '16px',
+          boxSizing: 'border-box'
+        }}>
+          {Array.from({ length: groupCount }).map((_, g) => (
+            <div
+              key={`group_${g}`}
+              style={{
+                background: '#ffffff',
+                border: '2px solid #cbd5e1',
+                borderRadius: '16px',
+                padding: '16px',
+                minWidth: '140px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.04)'
+              }}
+            >
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Group {g + 1}
+              </div>
+              {/* Stacked blocks inside the group */}
+              <div style={{ display: 'flex', flexDirection: 'column-reverse', gap: '2px' }}>
+                {Array.from({ length: groupSize }).map((_, i) => (
+                  <div key={i} style={{ width: `${diceSize}px`, height: `${diceSize}px` }}>
+                    {drawUnitSVG('cubes', g * groupSize + i, { primary: unitColor, stroke: strokeColor })}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#334155' }}>
+                {groupSize} cubes
+              </div>
+            </div>
+          ))}
+          
+          <div style={{
+            position: 'absolute',
+            bottom: '0',
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: '18px',
+            fontWeight: '800',
+            color: '#1e3a8a',
+            background: 'rgba(239, 246, 255, 0.95)',
+            backdropFilter: 'blur(4px)',
+            padding: '10px 16px',
+            borderTop: '1px solid #dbeafe',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '24px'
+          }}>
+            <span>{Array.from({ length: groupCount }).map(() => groupSize).join(' + ')} = {groupCount * groupSize}</span>
+            <span style={{ color: '#cbd5e1' }}>|</span>
+            <span>{groupCount} × {groupSize} = {groupCount * groupSize}</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (layoutFamily === 'graphs') {
+      const maxGraphValue = 8;
+      const topOffset = 40;
+      const bottomOffset = 240; // Adjusted for height constraints
+      const cellHeight = (bottomOffset - topOffset) / maxGraphValue;
+      const colWidth = Math.min(56, diceSize);
+
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          {/* Title Header */}
+          <div style={{ position: 'absolute', top: '10px', left: '0', right: '0', textAlign: 'center', fontSize: '12px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Favorite Fruits block graph
+          </div>
+
+          {/* Grid lines */}
+          {Array.from({ length: maxGraphValue + 1 }).map((_, val) => {
+            const y = bottomOffset - (val * (bottomOffset - topOffset)) / maxGraphValue;
+            return (
+              <div key={val} style={{ position: 'absolute', left: '60px', right: '40px', top: `${y}px`, height: '1px', background: val === 0 ? '#475569' : '#e2e8f0', zIndex: 2 }}>
+                <span style={{ position: 'absolute', left: '-25px', top: '-8px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', width: '20px', textAlign: 'right' }}>
+                  {val}
+                </span>
+              </div>
+            );
+          })}
+
+          {/* Apples Column */}
+          {(() => {
+            const xPercent = 38;
+            const length = firstLength;
+            return (
+              <div style={{ position: 'absolute', left: `${xPercent}%`, transform: 'translateX(-50%)', top: `${topOffset}px`, height: `${bottomOffset - topOffset}px`, width: `${colWidth}px`, zIndex: 3 }}>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', flexDirection: 'column-reverse' }}>
+                  {Array.from({ length }).map((_, i) => (
+                    <div key={i} style={{ width: `${colWidth}px`, height: `${cellHeight}px`, padding: '1px', boxSizing: 'border-box' }}>
+                      <svg width="100%" height="100%" viewBox="0 0 50 50" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.1))' }}>
+                        <rect x="2" y="2" width="46" height="46" rx="6" fill="#ef4444" stroke="#b91c1c" strokeWidth="2.5" />
+                        <rect x="6" y="6" width="38" height="38" rx="4" fill="none" stroke="white" strokeWidth="1.5" opacity="0.25" />
+                        <circle cx="25" cy="25" r="4" fill="#b91c1c" opacity="0.3" />
+                      </svg>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ position: 'absolute', top: `${bottomOffset - topOffset + 8}px`, left: '-40px', width: '124px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                  <span style={{ fontSize: '20px' }}>🍎</span>
+                  <span style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b' }}>{part.firstName}</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Bananas Column */}
+          {(() => {
+            const xPercent = 68;
+            const length = secondLength;
+            return (
+              <div style={{ position: 'absolute', left: `${xPercent}%`, transform: 'translateX(-50%)', top: `${topOffset}px`, height: `${bottomOffset - topOffset}px`, width: `${colWidth}px`, zIndex: 3 }}>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', flexDirection: 'column-reverse' }}>
+                  {Array.from({ length }).map((_, i) => (
+                    <div key={i} style={{ width: `${colWidth}px`, height: `${cellHeight}px`, padding: '1px', boxSizing: 'border-box' }}>
+                      <svg width="100%" height="100%" viewBox="0 0 50 50" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.1))' }}>
+                        <rect x="2" y="2" width="46" height="46" rx="6" fill="#eab308" stroke="#a16207" strokeWidth="2.5" />
+                        <rect x="6" y="6" width="38" height="38" rx="4" fill="none" stroke="white" strokeWidth="1.5" opacity="0.25" />
+                        <circle cx="25" cy="25" r="4" fill="#a16207" opacity="0.3" />
+                      </svg>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ position: 'absolute', top: `${bottomOffset - topOffset + 8}px`, left: '-40px', width: '124px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                  <span style={{ fontSize: '20px' }}>🍌</span>
+                  <span style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b' }}>{part.secondName}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      );
+    }
+
+    if (layoutFamily === 'place_value') {
+      const drawTensRod = () => (
+        <svg width="18" height="130" viewBox="0 0 50 250" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.12))' }}>
+          <rect x="5" y="5" width="40" height="240" rx="6" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="2.5" />
+          {Array.from({ length: 10 }).map((_, i) => (
+            <g key={i}>
+              {i > 0 && <line x1="5" y1={5 + i * 24} x2="45" y2={5 + i * 24} stroke="#1d4ed8" strokeWidth="2" />}
+              <rect x="9" y={8 + i * 24} width="32" height="18" rx="3" fill="none" stroke="white" strokeWidth="1.2" opacity="0.25" />
+            </g>
+          ))}
+        </svg>
+      );
+
+      const drawOnesCube = () => (
+        <svg width="24" height="24" viewBox="0 0 50 50" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.1))' }}>
+          <rect x="4" y="4" width="42" height="42" rx="6" fill="#22c55e" stroke="#15803d" strokeWidth="2.5" />
+          <rect x="8" y="8" width="34" height="34" rx="4" fill="none" stroke="white" strokeWidth="1.5" opacity="0.25" />
+          <circle cx="25" cy="25" r="4" fill="#15803d" opacity="0.3" />
+        </svg>
+      );
+
+      const drawHundredsFlat = () => (
+        <svg width="48" height="48" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.12))' }}>
+          <rect x="2" y="2" width="96" height="96" rx="4" fill="#ef4444" stroke="#b91c1c" strokeWidth="2" />
+          {Array.from({ length: 9 }).map((_, i) => {
+            const pos = 2 + (i + 1) * 9.6;
+            return (
+              <g key={i}>
+                <line x1={pos} y1="2" x2={pos} y2="98" stroke="#b91c1c" strokeWidth="1" />
+                <line x1="2" y1={pos} x2="98" y2={pos} stroke="#b91c1c" strokeWidth="1" />
+              </g>
+            );
+          })}
+        </svg>
+      );
+
+      const drawThousandsCube = () => (
+        <svg width="52" height="52" viewBox="0 0 120 120" style={{ filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.18))' }}>
+          <path d="M 60 10 L 105 32.5 L 60 55 L 15 32.5 Z" fill="#a855f7" stroke="#7e22ce" strokeWidth="1.5" />
+          <path d="M 15 32.5 L 60 55 L 60 110 L 15 87.5 Z" fill="#9333ea" stroke="#7e22ce" strokeWidth="1.5" />
+          <path d="M 60 55 L 105 32.5 L 105 87.5 L 60 110 Z" fill="#7e22ce" stroke="#6b21a8" strokeWidth="1.5" />
+        </svg>
+      );
+
+      const placeValueCols = [];
+      const tCount = Number(part.thousands ?? 0);
+      const hCount = Number(part.hundreds ?? 0);
+      const tenCount = Number(part.tens ?? 0);
+      const oCount = Number(part.ones ?? 0);
+
+      if (tCount > 0) {
+        placeValueCols.push({
+          label: 'THOUSANDS',
+          count: tCount,
+          color: '#f3e8ff',
+          textColor: '#6b21a8',
+          border: '#e9d5ff',
+          render: drawThousandsCube,
+          desc: `${tCount} ${tCount === 1 ? 'thousand' : 'thousands'} (${tCount * 1000} cubes)`,
+          width: '56px'
+        });
+      }
+      if (hCount > 0) {
+        placeValueCols.push({
+          label: 'HUNDREDS',
+          count: hCount,
+          color: '#fee2e2',
+          textColor: '#991b1b',
+          border: '#fca5a5',
+          render: drawHundredsFlat,
+          desc: `${hCount} ${hCount === 1 ? 'hundred' : 'hundreds'} (${hCount * 100} cubes)`,
+          width: '52px'
+        });
+      }
+      if (tenCount > 0) {
+        placeValueCols.push({
+          label: 'TENS',
+          count: tenCount,
+          color: '#eff6ff',
+          textColor: '#1e40af',
+          border: '#bfdbfe',
+          render: drawTensRod,
+          desc: `${tenCount} ${tenCount === 1 ? 'ten' : 'tens'} (${tenCount * 10} cubes)`,
+          width: '20px',
+          isRow: true
+        });
+      }
+      if (oCount > 0) {
+        placeValueCols.push({
+          label: 'ONES',
+          count: oCount,
+          color: '#f0fdf4',
+          textColor: '#166534',
+          border: '#bbf7d0',
+          render: drawOnesCube,
+          desc: `${oCount} ${oCount === 1 ? 'one' : 'ones'} (${oCount} cubes)`,
+          width: '28px'
+        });
+      }
+
+      if (placeValueCols.length === 0) {
+        const fbTens = 1;
+        const fbOnes = secondLength || 4;
+        placeValueCols.push({
+          label: 'TENS',
+          count: fbTens,
+          color: '#eff6ff',
+          textColor: '#1e40af',
+          border: '#bfdbfe',
+          render: drawTensRod,
+          desc: `${fbTens} ten (${fbTens * 10} cubes)`,
+          width: '20px',
+          isRow: true
+        });
+        placeValueCols.push({
+          label: 'ONES',
+          count: fbOnes,
+          color: '#f0fdf4',
+          textColor: '#166534',
+          border: '#bbf7d0',
+          render: drawOnesCube,
+          desc: `${fbOnes} ones (${fbOnes} cubes)`,
+          width: '28px'
+        });
+      }
+
+      return (
+        <div style={{
+          display: 'flex',
+          width: '100%',
+          height: '100%',
+          background: '#ffffff',
+          boxSizing: 'border-box'
+        }}>
+          {placeValueCols.map((col, index) => (
+            <div
+              key={index}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '12px',
+                borderRight: index < placeValueCols.length - 1 ? '2px dashed #cbd5e1' : 'none',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{
+                background: col.color,
+                color: col.textColor,
+                border: `1px solid ${col.border}`,
+                padding: '4px 14px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '10px'
+              }}>
+                {col.label}
+              </div>
+              <div style={col.isRow ? {
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: '3px',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                height: '260px',
+                width: '100%',
+                overflow: 'hidden',
+                padding: '0 4px',
+                boxSizing: 'border-box'
+              } : {
+                display: 'grid',
+                gridTemplateColumns: `repeat(auto-fit, ${col.width})`,
+                gap: '6px',
+                justifyContent: 'center',
+                alignContent: 'center',
+                alignItems: 'center',
+                height: '260px',
+                width: '100%',
+                overflow: 'hidden'
+              }}>
+                {Array.from({ length: col.count }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    {col.render()}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', marginTop: '6px', textAlign: 'center' }}>
+                {col.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (layoutFamily === 'subtraction') {
+      const toggleRemoved = (idx) => {
+        if (isAnswered) return;
+        setRemovedIndices(prev => {
+          const next = prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx];
+          playSnapTone(next.includes(idx) ? 300 : 400);
+          return next;
+        });
+      };
+
+      return (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '24px',
+          height: '100%',
+          width: '100%',
+          padding: '20px',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: '800', color: '#475569', background: '#e2e8f0', padding: '6px 16px', borderRadius: '20px' }}>
+            Click {part.subCount} cubes to take them away
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', alignItems: 'center' }}>
+            {Array.from({ length: targetLength }).map((_, i) => {
+              const isRemoved = removedIndices.includes(i);
+              return (
+                <div
+                  key={i}
+                  onClick={() => toggleRemoved(i)}
+                  style={{
+                    width: `${diceSize}px`,
+                    height: `${diceSize}px`,
+                    cursor: isAnswered ? 'default' : 'pointer',
+                    position: 'relative',
+                    opacity: isRemoved ? 0.25 : 1,
+                    transform: isRemoved ? 'scale(0.8)' : 'scale(1)',
+                    transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  }}
+                >
+                  {drawUnitSVG(unitObject, i, { primary: unitColor, stroke: strokeColor })}
+                  {isRemoved && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ef4444',
+                      fontWeight: '900',
+                      fontSize: '26px',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                      pointerEvents: 'none'
+                    }}>
+                      ✕
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{
+            fontSize: '20px',
+            fontWeight: '900',
+            color: '#1e3a8a',
+            background: '#eff6ff',
+            padding: '8px 24px',
+            borderRadius: '16px',
+            border: '1.5px solid #dbeafe',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.08)'
+          }}>
+            {targetLength} − {removedIndices.length} = {targetLength - removedIndices.length}
+          </div>
+        </div>
+      );
+    }
+
+    // Default Canvas Layout Branch (Measurement, Patterns, and standard Comparison layouts)
+    const allSlotsFilled = layoutFamily === 'patterns' && Array.from({ length: targetLength }).every((_, i) => 
+      placedDice.some(d => d.slotIndex === i)
+    );
+
+    return (
+      <>
+        {/* Scoped CSS animations */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes pulse-dash {
+            0% { border-color: #bae6fd; box-shadow: 0 0 0 0px rgba(186, 230, 253, 0.4); }
+            50% { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25); }
+            100% { border-color: #bae6fd; box-shadow: 0 0 0 0px rgba(186, 230, 253, 0.4); }
+          }
+          @keyframes success-glow {
+            0% { box-shadow: 0 0 4px #10b981; border-color: #10b981; }
+            50% { box-shadow: 0 0 16px #10b981; border-color: #34d399; }
+            100% { box-shadow: 0 0 4px #10b981; border-color: #10b981; }
+          }
+        `}} />
+
+        {/* Patterns specific headers and badge */}
+        {layoutFamily === 'patterns' && (
+          <>
+            <div style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              zIndex: 30,
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              borderRadius: '20px',
+              padding: '4px 12px',
+              fontSize: '11px',
+              fontWeight: '800',
+              color: '#ffffff',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)',
+              pointerEvents: 'none'
+            }}>
+              {patternRule} Pattern
+            </div>
+            {allSlotsFilled && (
+              <div style={{
+                position: 'absolute',
+                top: '12px',
+                right: '90px',
+                zIndex: 30,
+                background: '#ecfdf5',
+                border: '1.5px solid #10b981',
+                borderRadius: '20px',
+                padding: '4px 12px',
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#065f46',
+                animation: 'success-glow 1.5s infinite ease-in-out',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)',
+                pointerEvents: 'none'
+              }}>
+                Pattern Complete! 🎉
+              </div>
+            )}
+            {/* Pattern group backgrounds */}
+            {(() => {
+              const numGroups = Math.ceil(targetLength / patternGroupSize);
+              return Array.from({ length: numGroups }).map((_, g) => {
+                const startIdx = g * patternGroupSize;
+                const endIdx = Math.min(targetLength, (g + 1) * patternGroupSize);
+                const count = endIdx - startIdx;
+                const x = dimensions.lineStartX + startIdx * diceSize;
+                const width = count * diceSize;
+                return (
+                  <div
+                    key={`group_${g}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${x - 4}px`,
+                      top: `${slotY - 4}px`,
+                      width: `${width + 8}px`,
+                      height: `${diceSize + 8}px`,
+                      backgroundColor: g % 2 === 0 ? 'rgba(59, 130, 246, 0.03)' : 'rgba(16, 185, 129, 0.03)',
+                      border: '1.5px dashed rgba(148, 163, 184, 0.25)',
+                      borderRadius: '12px',
+                      zIndex: 1,
+                      pointerEvents: 'none'
+                    }}
+                  />
+                );
+              });
+            })()}
+          </>
         )}
 
         {/* COMPARISON LAYOUT MODE */}
         {layoutMode === 'compare_two_objects' ? (
-          <>
-            {/* Ground Line */}
-            <div style={{ position: 'absolute', left: '20px', right: '20px', top: `${baselineY}px`, height: '4px', background: '#94a3b8', borderRadius: '999px' }} />
+          layoutFamily === 'comparison' && orientation === 'horizontal' ? (
+            renderHorizontalComparison()
+          ) : (
+            <>
+              {/* Ground Line */}
+              <div style={{ position: 'absolute', left: '20px', right: '20px', top: `${baselineY}px`, height: '4px', background: '#94a3b8', borderRadius: '999px' }} />
 
-            {/* Left Column Object & Stack */}
-            <div style={{ position: 'absolute', left: `${dimensions.width / 4 - 60}px`, bottom: `${canvasHeight - baselineY}px`, width: '120px', height: `${firstLength * diceSize}px`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {part.firstImage && <img src={part.firstImage} alt={part.firstName} draggable={false} style={{ height: '100%', width: 'auto', objectFit: 'contain', objectPosition: 'bottom right', pointerEvents: 'none', userSelect: 'none' }} />}
-            </div>
-            {/* Left Column Stack */}
-            {renderPreplacedUnits(firstLength, {
-              errorType: 'none',
-              slotsStartX: dimensions.width / 4 + 40,
-              isVertical: true
-            })}
-            {/* Left Name Label */}
-            <div style={{ position: 'absolute', left: `${dimensions.width / 4 - 50}px`, top: `${baselineY + 10}px`, width: '100px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>
-              {part.firstName}
-            </div>
+              {/* Left Column Object & Stack */}
+              <div style={{ position: 'absolute', left: `${dimensions.width / 4 - 60}px`, bottom: `${canvasHeight - baselineY}px`, width: '120px', height: `${firstLength * diceSize}px`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {part.firstImage && <img src={part.firstImage} alt={part.firstName} draggable={false} style={{ height: '100%', width: 'auto', objectFit: 'contain', objectPosition: 'bottom right', pointerEvents: 'none', userSelect: 'none' }} />}
+              </div>
+              {/* Left Column Stack */}
+              {renderPreplacedUnits(firstLength, {
+                errorType: 'none',
+                slotsStartX: dimensions.width / 4 + 40,
+                isVertical: true
+              })}
+              {/* Left Name Label */}
+              <div style={{ position: 'absolute', left: `${dimensions.width / 4 - 50}px`, top: `${baselineY + 10}px`, width: '100px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>
+                {part.firstName}
+              </div>
 
-            {/* Right Column Object & Stack */}
-            <div style={{ position: 'absolute', left: `${(3 * dimensions.width) / 4 - 80}px`, bottom: `${canvasHeight - baselineY}px`, width: '120px', height: `${secondLength * diceSize}px`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {part.secondImage && <img src={part.secondImage} alt={part.secondName} draggable={false} style={{ height: '100%', width: 'auto', objectFit: 'contain', objectPosition: 'bottom right', pointerEvents: 'none', userSelect: 'none' }} />}
-            </div>
-            {/* Right Column Stack */}
-            {renderPreplacedUnits(secondLength, {
-              errorType: 'none',
-              slotsStartX: (3 * dimensions.width) / 4 + 20,
-              isVertical: true
-            })}
-            {/* Right Name Label */}
-            <div style={{ position: 'absolute', left: `${(3 * dimensions.width) / 4 - 70}px`, top: `${baselineY + 10}px`, width: '100px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>
-              {part.secondName}
-            </div>
-          </>
+              {/* Right Column Object & Stack */}
+              <div style={{ position: 'absolute', left: `${(3 * dimensions.width) / 4 - 80}px`, bottom: `${canvasHeight - baselineY}px`, width: '120px', height: `${secondLength * diceSize}px`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {part.secondImage && <img src={part.secondImage} alt={part.secondName} draggable={false} style={{ height: '100%', width: 'auto', objectFit: 'contain', objectPosition: 'bottom right', pointerEvents: 'none', userSelect: 'none' }} />}
+              </div>
+              {/* Right Column Stack */}
+              {renderPreplacedUnits(secondLength, {
+                errorType: 'none',
+                slotsStartX: (3 * dimensions.width) / 4 + 20,
+                isVertical: true
+              })}
+              {/* Right Name Label */}
+              <div style={{ position: 'absolute', left: `${(3 * dimensions.width) / 4 - 70}px`, top: `${baselineY + 10}px`, width: '100px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>
+                {part.secondName}
+              </div>
+
+              {/* Enhanced Comparison Guides */}
+              {layoutFamily === 'comparison' && (() => {
+                const tallerLength = Math.max(firstLength, secondLength);
+                const shorterLength = Math.min(firstLength, secondLength);
+                const diff = tallerLength - shorterLength;
+                const isLeftTaller = firstLength > secondLength;
+
+                const leftX = dimensions.width / 4 + 40;
+                const rightX = (3 * dimensions.width) / 4 + 20;
+
+                const yTaller = baselineY - tallerLength * diceSize;
+                const yShorter = baselineY - shorterLength * diceSize;
+
+                return diff > 0 ? (
+                  <>
+                    <div style={{
+                      position: 'absolute',
+                      left: `${Math.min(leftX, rightX) + diceSize}px`,
+                      width: `${Math.abs(rightX - leftX) - diceSize}px`,
+                      top: `${yShorter}px`,
+                      height: '2px',
+                      borderTop: '2px dashed #94a3b8',
+                      zIndex: 5
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      left: `${isLeftTaller ? leftX + diceSize : rightX + diceSize}px`,
+                      width: '60px',
+                      top: `${yTaller}px`,
+                      height: '2px',
+                      borderTop: '2px dashed #94a3b8',
+                      zIndex: 5
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      left: `${isLeftTaller ? leftX + diceSize + 10 : rightX - 70}px`,
+                      top: `${yTaller}px`,
+                      width: '50px',
+                      height: `${diff * diceSize}px`,
+                      background: 'rgba(34, 197, 94, 0.15)',
+                      border: '2px solid #22c55e',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      fontWeight: '900',
+                      color: '#15803d',
+                      zIndex: 6
+                    }}>
+                      +{diff}
+                    </div>
+                  </>
+                ) : null;
+              })()}
+            </>
+          )
         ) : isVertical ? (
           /* VERTICAL LAYOUT MODES */
           <>
             {/* Ground Line */}
-            <div style={{ position: 'absolute', left: '20px', right: '20px', top: `${baselineY}px`, height: '4px', background: '#94a3b8', borderRadius: '999px', pointerEvents: 'none' }} />
+            {(layoutFamily === 'measurement' || layoutFamily === 'comparison') && (
+              <div style={{ position: 'absolute', left: '20px', right: '20px', top: `${baselineY}px`, height: '4px', background: '#94a3b8', borderRadius: '999px', pointerEvents: 'none' }} />
+            )}
 
             {/* Object Image */}
             {objectImage && (
@@ -3352,25 +4698,26 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
                 </div>
               );
             })}
-
           </>
         ) : (
           /* HORIZONTAL LAYOUT MODES */
           <>
             {/* Target line (Guide Line) */}
-            <div style={{ 
-              position: 'absolute', 
-              left: `${dimensions.lineStartX}px`, 
-              top: `${lineY}px`, 
-              width: `${targetLength * diceSize}px`, 
-              height: '6px', 
-              background: '#64748b', 
-              borderRadius: '999px',
-              transition: 'left 0.3s, width 0.3s'
-            }}>
-              <div style={{ position: 'absolute', top: '-5px', left: 0, width: '6px', height: '16px', background: '#64748b', borderRadius: '999px' }} />
-              <div style={{ position: 'absolute', top: '-5px', right: 0, width: '6px', height: '16px', background: '#64748b', borderRadius: '999px' }} />
-            </div>
+            {layoutFamily === 'measurement' && (
+              <div style={{ 
+                position: 'absolute', 
+                left: `${dimensions.lineStartX}px`, 
+                top: `${lineY}px`, 
+                width: `${targetLength * diceSize}px`, 
+                height: '6px', 
+                background: '#64748b', 
+                borderRadius: '999px',
+                transition: 'left 0.3s, width 0.3s'
+              }}>
+                <div style={{ position: 'absolute', top: '-5px', left: 0, width: '6px', height: '16px', background: '#64748b', borderRadius: '999px' }} />
+                <div style={{ position: 'absolute', top: '-5px', right: 0, width: '6px', height: '16px', background: '#64748b', borderRadius: '999px' }} />
+              </div>
+            )}
 
             {/* Empty Snap Guides (Only for drag_to_measure) */}
             {layoutMode === 'drag_to_measure' && Array.from({ length: targetLength }).map((_, i) => {
@@ -3387,7 +4734,8 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
                     border: '2px dashed #bae6fd',
                     borderRadius: '8px',
                     background: isOccupied ? 'transparent' : 'rgba(224, 242, 254, 0.4)',
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    animation: layoutFamily === 'patterns' ? 'pulse-dash 2s infinite ease-in-out' : 'none'
                   }}
                 />
               );
@@ -3424,13 +4772,79 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
                 </div>
               );
             })}
-
           </>
         )}
+      </>
+    );
+  };
+
+  return (
+    <div 
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{ width: '100%', maxWidth: '640px', margin: '8px auto', display: 'flex', flexDirection: 'column', gap: '12px', touchAction: 'none' }}
+    >
+      {/* Main Workspace Canvas */}
+      <div 
+        ref={containerRef}
+        style={{ 
+          width: '100%', 
+          height: `${canvasHeight}px`,
+          background: '#f0f9ff', 
+          border: '1px solid #e0f2fe', 
+          borderRadius: '20px', 
+          position: 'relative', 
+          overflow: 'hidden', 
+          boxShadow: '0 4px 12px rgba(186, 230, 253, 0.15)'
+        }}
+      >
+        {/* Reset Button (Only for drag mode) */}
+        {layoutMode === 'drag_to_measure' && layoutFamily !== 'subtraction' && (
+          <button
+            type="button"
+            disabled={isAnswered}
+            onClick={() => {
+              setPlacedDice(prev => prev.filter(d => d.isPrefilled));
+              playSnapTone(220);
+            }}
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              zIndex: 30,
+              background: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: '#475569',
+              cursor: isAnswered ? 'default' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s',
+              opacity: isAnswered ? 0.5 : 1
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M16 3h5v5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M8 21H3v-5"/>
+            </svg>
+            <span>Reset</span>
+          </button>
+        )}
+
+        {renderCanvasContent()}
       </div>
 
-      {/* Interactive Tray (Only for drag_to_measure) */}
-      {layoutMode === 'drag_to_measure' && (
+      {/* Interactive Tray (Only for drag_to_measure layouts except subtraction) */}
+      {layoutMode === 'drag_to_measure' && layoutFamily !== 'subtraction' && (
         <div style={{ 
           width: '100%', 
           background: 'rgba(241, 245, 249, 0.85)', 
@@ -3485,7 +4899,6 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
                 </div>
               );
             })}
-
           </div>
         </div>
       )}
@@ -3532,6 +4945,8 @@ const PART_RENDERERS = {
   drag_drop: ToolCategorizationPart,
   interactive_protractor: InteractiveProtractorPart,
   number_line: NumberLinePart,
+  bar_model: BarModelPart,
+  function_machine: FunctionMachinePart,
   base_ten_blocks: BaseTenBlocksPart,
   clock: ClockPart,
   fraction_model: FractionModelPart,
@@ -3600,9 +5015,44 @@ function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }
 // Coordinates are percentage-based so the layout is fully responsive.
 function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
-  const selectedIndex = typeof userAnswer === 'object'
+  const isPreK = useMemo(() => {
+    const topic = question?.metadata?.topic || question?.topic || '';
+    const grade = question?.metadata?.grade || question?.grade || '';
+    return topic === 'lkg' || topic === 'prek' || topic === 'ukg' || grade === 'lkg' || grade === 'prek' || grade === 'ukg';
+  }, [question]);
+
+  const hasImages = useMemo(() => {
+    return (part?.hotspots || []).some(hs => {
+      const qHs = (question?.hotspots || question?.metadata?.hotspots || []).find(
+        qh => (qh.id && hs.id && qh.id === hs.id) ||
+              (qh.label && hs.label && qh.label.toLowerCase() === hs.label.toLowerCase())
+      ) || (question?.hotspots || question?.metadata?.hotspots)?.[hs.optionIndex];
+      return Boolean(hs.imageUrl || qHs?.imageUrl);
+    });
+  }, [part?.hotspots, question]);
+
+  const isMultiSelect = question?.interaction === 'hotspot_multi_select' || part?.multiSelect === true;
+  const showLabels = Boolean(question?.showHotspotLabels || part?.showHotspotLabels || question?.metadata?.showHotspotLabels);
+
+  const selectedIndex = typeof userAnswer === 'object' && !Array.isArray(userAnswer)
     ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
     : Number(userAnswer);
+
+  const selectedIndices = useMemo(() => {
+    if (!isMultiSelect) return [];
+    if (Array.isArray(userAnswer)) {
+      return userAnswer.map(Number);
+    }
+    if (userAnswer && typeof userAnswer === 'object') {
+      return Object.entries(userAnswer)
+        .filter(([_, val]) => Boolean(val))
+        .map(([key]) => Number(key));
+    }
+    if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
+      return [Number(userAnswer)];
+    }
+    return [];
+  }, [userAnswer, isMultiSelect]);
 
   const {
     backgroundSvg,
@@ -3614,41 +5064,188 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
 
   const handleClick = (optionIndex) => {
     if (isAnswered) return;
-    onAnswer(optionIndex);
-    if (question.options?.[optionIndex]) {
-      const option = question.options[optionIndex];
-      speakText(option.label || option.text || '', question.voice || 'Puck', option.audioUrl);
+    
+    if (isMultiSelect) {
+      const nextSelected = selectedIndices.includes(optionIndex)
+        ? selectedIndices.filter(idx => idx !== optionIndex)
+        : [...selectedIndices, optionIndex];
+      onAnswer(nextSelected);
+    } else {
+      onAnswer(optionIndex);
+      if (question.options?.[optionIndex]) {
+        const option = question.options[optionIndex];
+        speakText(option.label || option.text || '', question.voice || 'Puck', option.audioUrl);
+      }
     }
   };
 
   return (
-    <div
-      className={styles.hotspotCanvasWrapper}
-      style={{
-        aspectRatio: `${canvasWidth} / ${canvasHeight}`,
-        height: 'auto',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%' }}>
+      <div
+        className={`${styles.hotspotCanvasWrapper} ${isPreK ? styles.preKHotspotCanvasWrapper : ''} ${isPreK && hasImages ? styles.preKHotspotGrid : ''}`}
+        style={{
+          aspectRatio: `${canvasWidth} / ${canvasHeight}`,
+          height: 'auto',
+          width: '100%',
+        }}
+      >
       <div 
         className={styles.hotspotCanvasInner}
         data-hovered-index={hoveredIndex !== null ? hoveredIndex : undefined}
-        data-selected-index={Number.isFinite(selectedIndex) ? selectedIndex : undefined}
+        data-selected-index={!isMultiSelect && Number.isFinite(selectedIndex) ? selectedIndex : undefined}
       >
-        {/* Background: inline SVG or <img> */}
-        {backgroundSvg && (
-          <div
-            className={styles.hotspotBg}
-            dangerouslySetInnerHTML={{ __html: backgroundSvg }}
-          />
-        )}
-        {backgroundUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={backgroundUrl} alt="scene" className={styles.hotspotBg} />
-        )}
+        {/* Background: inline SVG and/or <img> */}
+        {(() => {
+          const resolvedBackgroundUrl = backgroundUrl || question?.backgroundImage || question?.backgroundUrl;
+          
+          const getOptionIds = (idx) => {
+            const opt = question.options?.[idx];
+            if (opt?.id) return [opt.id, `option${idx + 1}`];
+            return [`opt_${idx}`, `option${idx + 1}`];
+          };
+
+          const activeIndices = isMultiSelect ? selectedIndices : (Number.isFinite(selectedIndex) ? [selectedIndex] : []);
+          const activeIds = activeIndices.flatMap(idx => getOptionIds(idx));
+
+          const svgHighlightStyles = activeIds.length > 0 ? activeIds.map(id => `
+            #${id} {
+              fill: rgba(34, 197, 94, 0.4) !important;
+              stroke: #22c55e !important;
+              stroke-width: 2px !important;
+              transition: all 0.2s ease-in-out;
+            }
+          `).join('\\n') : '';
+
+          const handleSvgClick = (e) => {
+            if (isAnswered) return;
+            let target = e.target;
+            while (target && target !== e.currentTarget) {
+              if (target.id) {
+                const allOptions = question.options || hotspots;
+                const matchedIdx = allOptions.findIndex((opt, idx) => {
+                  const ids = getOptionIds(idx);
+                  return ids.includes(target.id);
+                });
+                if (matchedIdx !== -1) {
+                  handleClick(matchedIdx);
+                  return;
+                }
+              }
+              target = target.parentNode;
+            }
+          };
+
+          return (
+            <>
+              {backgroundSvg && (
+                <div
+                  className={styles.hotspotBg}
+                  style={{
+                    ...(resolvedBackgroundUrl ? { position: 'absolute', inset: 0, zIndex: 1 } : {}),
+                    cursor: isAnswered ? 'default' : 'pointer'
+                  }}
+                  onClick={handleSvgClick}
+                  dangerouslySetInnerHTML={{ 
+                    __html: (resolvedBackgroundUrl 
+                      ? backgroundSvg.replace(/fill="#f8fafc"/g, 'fill="none"') 
+                      : backgroundSvg)
+                      + (svgHighlightStyles ? `<style>${svgHighlightStyles}</style>` : '')
+                  }}
+                />
+              )}
+              {resolvedBackgroundUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img 
+                  src={resolvedBackgroundUrl} 
+                  alt="scene" 
+                  className={styles.hotspotBg} 
+                  style={backgroundSvg ? { position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' } : undefined} 
+                />
+              )}
+
+            </>
+          );
+        })()}
 
         {/* Transparent absolute-positioned hotspot buttons */}
         {hotspots.map((hs, i) => {
-          const isSelected = selectedIndex === hs.optionIndex;
+          const isSelected = isMultiSelect
+            ? selectedIndices.includes(hs.optionIndex)
+            : selectedIndex === hs.optionIndex;
+
+          const isHovered = hoveredIndex === hs.optionIndex;
+
+          // Lookup imageUrl from the question top-level hotspots or metadata hotspots
+          // matching by id or label
+          const qHs = (question?.hotspots || question?.metadata?.hotspots || []).find(
+            qh => (qh.id && hs.id && qh.id === hs.id) ||
+                  (qh.label && hs.label && qh.label.toLowerCase() === hs.label.toLowerCase())
+          ) || (question?.hotspots || question?.metadata?.hotspots)?.[hs.optionIndex];
+
+          const imageUrl = hs.imageUrl || qHs?.imageUrl;
+
+          const scale = imageUrl ? 1.0 : 1.35; // 100% size for image hotspots, 35% size increase for invisible hotspots
+          const origWidth = hs.width;
+          const origHeight = hs.height;
+          const newWidth = origWidth * scale;
+          const newHeight = origHeight * scale;
+
+          let newX = hs.x - (newWidth - origWidth) / 2;
+          let newY = hs.y - (newHeight - origHeight) / 2;
+
+          // Clamp new values to stay within the canvas boundaries
+          if (newX < 0) newX = 0;
+          if (newY < 0) newY = 0;
+          if (!imageUrl) {
+            if (newX + newWidth > canvasWidth) {
+              newX = Math.max(0, canvasWidth - newWidth);
+            }
+            if (newY + newHeight > canvasHeight) {
+              newY = Math.max(0, canvasHeight - newHeight);
+            }
+          } else {
+            // For image hotspots, they shrink-to-fit, so visual width is smaller than nominal width.
+            // Ensure they don't start outside the canvas area.
+            if (newX > canvasWidth) newX = Math.max(0, canvasWidth - 20);
+            if (newY > canvasHeight) newY = Math.max(0, canvasHeight - 20);
+          }
+
+          const rotation = isPreK ? (i % 2 === 0 ? '-1.5deg' : '1.5deg') : '0deg';
+
+          const dynamicStyles = isPreK ? (imageUrl ? {
+            border: isSelected 
+              ? '4px solid #22c55e' 
+              : (isHovered ? '4px solid #38bdf8' : '4px solid #ffffff'),
+            backgroundColor: '#ffffff',
+            boxShadow: isSelected 
+              ? '0 8px 0 #15803d, 0 12px 24px rgba(34, 197, 94, 0.2)' 
+              : (isHovered ? '0 10px 0 #0ea5e9, 0 12px 20px rgba(14, 165, 233, 0.15)' : '0 8px 0 #cbd5e1, 0 10px 16px rgba(0, 0, 0, 0.05)'),
+            transform: isSelected 
+              ? `scale(1.02) rotate(${rotation})` 
+              : (isHovered ? `scale(1.05) rotate(${rotation})` : `scale(1) rotate(${rotation})`),
+            transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+            zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
+          } : {
+            zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
+          }) : (imageUrl ? {
+            border: isSelected 
+              ? '3px solid #0284c7' 
+              : (isHovered ? '3px solid #38bdf8' : '3px solid transparent'),
+            backgroundColor: isSelected 
+              ? 'rgba(2, 132, 199, 0.06)' 
+              : (isHovered ? 'rgba(14, 165, 233, 0.03)' : 'transparent'),
+            boxShadow: isSelected 
+              ? '0 12px 24px -8px rgba(2, 132, 199, 0.4), 0 0 0 4px rgba(2, 132, 199, 0.25)' 
+              : (isHovered ? '0 8px 16px -6px rgba(14, 165, 233, 0.2)' : 'none'),
+            transform: isSelected 
+              ? 'scale(1.02)' 
+              : (isHovered ? 'scale(1.04)' : 'scale(1)'),
+            transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+            zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
+          } : {
+            zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
+          });
+
           return (
             <button
               key={i}
@@ -3662,16 +5259,76 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                 isSelected ? styles.hotspotZoneSelected : '',
               ].join(' ')}
               style={{
-                left:   `${(hs.x / canvasWidth)      * 100}%`,
-                top:    `${(hs.y / canvasHeight)     * 100}%`,
-                width:  `${(hs.width / canvasWidth)  * 100}%`,
-                height: `${(hs.height / canvasHeight) * 100}%`,
-                borderRadius: hs.borderRadius || (hs.isCircle || hs.shape === 'circle' ? '50%' : undefined),
+                left:   `${(newX / canvasWidth)      * 100}%`,
+                top:    `${(newY / canvasHeight)     * 100}%`,
+                width:  imageUrl ? 'auto' : `${(newWidth / canvasWidth)  * 100}%`,
+                maxWidth: imageUrl ? `${(newWidth / canvasWidth)  * 100}%` : undefined,
+                height: `${(newHeight / canvasHeight) * 100}%`,
+                borderRadius: hs.borderRadius || (hs.isCircle || hs.shape === 'circle' ? '50%' : (imageUrl ? '22px' : undefined)),
+                overflow: 'visible',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 0,
+                position: 'absolute',
+                ...dynamicStyles
               }}
-            />
+            >
+              {imageUrl && (
+                <img src={imageUrl} alt={hs.label || ''} style={{ height: '90%', width: 'auto', objectFit: 'contain', pointerEvents: 'none', zIndex: 1 }} />
+              )}
+              {isSelected && (
+                <div style={{
+                  position: 'absolute',
+                  top: hs.borderRadius === '50%' || hs.isCircle || hs.shape === 'circle' ? '12%' : (isPreK ? '-10px' : '8px'),
+                  right: hs.borderRadius === '50%' || hs.isCircle || hs.shape === 'circle' ? '12%' : (isPreK ? '-10px' : '8px'),
+                  width: isPreK ? '34px' : '24px',
+                  height: isPreK ? '34px' : '24px',
+                  borderRadius: '50%',
+                  backgroundColor: isPreK ? '#22c55e' : '#0284c7',
+                  border: isPreK ? '3px solid #ffffff' : '2px solid #ffffff',
+                  boxShadow: isPreK ? '0 6px 14px rgba(34, 197, 94, 0.4)' : '0 2px 6px rgba(0, 0, 0, 0.25)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 15,
+                  color: '#ffffff',
+                  fontSize: isPreK ? '16px' : '13px',
+                  fontWeight: '950',
+                  animation: `${styles.badgePop} 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+                  pointerEvents: 'none'
+                }}>
+                  ✓
+                </div>
+              )}
+              {showLabels && hs.label && (
+                <span style={{
+                  position: 'absolute',
+                  bottom: imageUrl ? '-24px' : '50%',
+                  left: '50%',
+                  transform: imageUrl ? 'translateX(-50%)' : 'translate(-50%, 50%)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '20px',
+                  padding: '2px 10px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  color: '#334155',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                  zIndex: 10
+                }}>
+                  {hs.label}
+                </span>
+              )}
+            </button>
           );
         })}
       </div>
+    </div>
     </div>
   );
 }

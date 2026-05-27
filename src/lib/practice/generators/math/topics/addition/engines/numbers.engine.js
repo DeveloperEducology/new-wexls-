@@ -5,12 +5,17 @@ function sum(numbers) {
 }
 
 function buildAddends({ range, addendCount, targetSum, fixedAddend, sameAddends, random }) {
+  const hasFixedAddend = fixedAddend !== null
+    && fixedAddend !== undefined
+    && fixedAddend !== ''
+    && Number.isFinite(Number(fixedAddend));
+
   if (addendCount === 2 && sameAddends) {
     const addend = randInt(range.min, range.max, random);
     return [addend, addend];
   }
 
-  if (addendCount === 2 && Number.isFinite(Number(fixedAddend))) {
+  if (addendCount === 2 && hasFixedAddend) {
     const fixed = Number(fixedAddend);
     const variable = randInt(range.min, range.max, random);
     return random() < 0.5 ? [fixed, variable] : [variable, fixed];
@@ -69,15 +74,40 @@ function buildVerticalAddends({ range, addendCount, regrouping, targetSum, fixed
 function verticalRangeForDifficulty(baseRange, difficulty, history = {}) {
   const normalizedDifficulty = String(difficulty || 'adaptive').toLowerCase();
 
-  if (normalizedDifficulty === 'easy') return normalizeRange([10, 99]);
-  if (normalizedDifficulty === 'medium') return normalizeRange([100, 999]);
-  if (normalizedDifficulty === 'hard') return normalizeRange([1000, 9999]);
+  // If the skill explicitly defines a range (min >= 100), honour it for explicit difficulty levels
+  const skillMin = baseRange?.min ?? 10;
+  const skillMax = baseRange?.max ?? 9999;
+  const hasSkillRange = skillMin >= 100; // skill author deliberately set a higher floor
 
+  if (normalizedDifficulty === 'easy') {
+    // Respect skill range floor — don't go below the skill's own min
+    return normalizeRange([skillMin, hasSkillRange ? skillMax : 99]);
+  }
+  if (normalizedDifficulty === 'medium') {
+    return normalizeRange([hasSkillRange ? skillMin : 100, hasSkillRange ? skillMax : 999]);
+  }
+  if (normalizedDifficulty === 'hard') {
+    return normalizeRange([hasSkillRange ? skillMin : 1000, hasSkillRange ? skillMax : 9999]);
+  }
+
+  // adaptive: driven by practiceLevel, but always bounded by the skill's range
   const level = Math.min(5, Math.max(1, Number(history.practiceLevel || 1)));
+
+  if (hasSkillRange) {
+    // Subdivide within the skill's own range for progressive difficulty
+    const span = skillMax - skillMin;
+    const step = Math.floor(span / 5);
+    const adaptiveMin = skillMin + step * (level - 1);
+    const adaptiveMax = level >= 5 ? skillMax : skillMin + step * level - 1;
+    return normalizeRange([adaptiveMin, Math.max(adaptiveMin + 1, adaptiveMax)]);
+  }
+
+  // Default hardcoded ranges for generic addition templates
   if (level >= 5) return normalizeRange([1000, 9999]);
   if (level >= 3) return normalizeRange([100, 999]);
-  return normalizeRange([10, 99]) || baseRange;
+  return normalizeRange([10, 99]);
 }
+
 
 function verticalRegroupingForDifficulty(defaultRegrouping, difficulty, history = {}) {
   const normalizedDifficulty = String(difficulty || 'adaptive').toLowerCase();

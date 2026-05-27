@@ -32,19 +32,25 @@ export async function GET(request) {
         // If we have base64 in cache, but no r2Url, upload to R2 and update cache
         if (cached.audioBase64) {
           if (isR2Configured()) {
+            console.log(`[TTS] Lazy uploading cached audio to R2: ${r2Key}`);
             try {
               const buffer = Buffer.from(cached.audioBase64, 'base64');
               const r2Url = await uploadAudioToR2(buffer, r2Key);
               if (r2Url) {
+                console.log(`[TTS] Lazy upload to R2 SUCCESS: ${r2Url}`);
                 await db.collection('tts_cache').updateOne(
                   { _id: cacheKey },
                   { $set: { r2Url } }
                 );
                 return NextResponse.redirect(r2Url);
+              } else {
+                console.log(`[TTS] Lazy upload to R2 returned null URL`);
               }
             } catch (uploadErr) {
-              console.warn('Lazy R2 upload failed in background:', uploadErr);
+              console.warn('[TTS] Lazy R2 upload failed in background:', uploadErr);
             }
+          } else {
+            console.log(`[TTS] Skipped lazy R2 upload: R2 is not configured`);
           }
           
           // Fallback to database streaming if R2 isn't configured/available
@@ -69,11 +75,19 @@ export async function GET(request) {
     let r2Url = null;
 
     if (isR2Configured()) {
+      console.log(`[TTS] Uploading new TTS audio to R2: ${r2Key}`);
       try {
         r2Url = await uploadAudioToR2(wavBuffer, r2Key);
+        if (r2Url) {
+          console.log(`[TTS] Upload to R2 SUCCESS: ${r2Url}`);
+        } else {
+          console.log(`[TTS] Upload to R2 returned null URL`);
+        }
       } catch (uploadError) {
-        console.error('R2 upload failed during TTS generation:', uploadError);
+        console.error('[TTS] R2 upload failed during TTS generation:', uploadError);
       }
+    } else {
+      console.log(`[TTS] Skipped R2 upload: R2 is not configured`);
     }
 
     // Save to MongoDB cache

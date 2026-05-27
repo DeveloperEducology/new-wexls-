@@ -14,11 +14,12 @@ export default function DropTarget({
   onTargetClick,
   style = {}
 }) {
-  const isMultiple = target.maxItems !== undefined ? target.maxItems > 1 : layoutMode === 'category_sort';
+  const isMultiple = target.maxItems !== undefined ? target.maxItems > 1 : (layoutMode === 'category_sort' || layoutMode === 'shelf_sort');
   const hasItems = placedItems.length > 0;
 
-  // Absolute positioning styles if coordinates are present
-  const isAbsolute = typeof target.x === 'number' || typeof target.y === 'number';
+  // Absolute positioning styles if coordinates are present and the layout mode supports it
+  const isAbsolute = (typeof target.x === 'number' || typeof target.y === 'number') &&
+                     ['diagram_labeling', 'flowchart', 'timeline', 'hotspot'].includes(layoutMode);
   const unit = target.unit || 'px';
 
   const positionStyles = isAbsolute ? {
@@ -103,7 +104,7 @@ export default function DropTarget({
             isAnswered={isAnswered}
             onPointerDown={onItemPointerDown}
             onPointerMove={onItemPointerMove}
-            onItemPointerUp={onItemPointerUp}
+            onPointerUp={onItemPointerUp}
             style={isMultiple ? {} : { width: '100%', height: '100%', maxWidth: 'none' }}
           />
         ))
@@ -111,7 +112,7 @@ export default function DropTarget({
         <span style={placeholderStyle}>
           {target.placeholder !== undefined
             ? target.placeholder
-            : (['diagram_labeling', 'matching', 'hotspot', 'flowchart', 'timeline', 'table_fill'].includes(layoutMode)
+            : (['diagram_labeling', 'matching', 'hotspot', 'flowchart', 'timeline', 'table_fill', 'shelf_sort'].includes(layoutMode)
               ? ''
               : (target.label || 'Drop here'))}
         </span>

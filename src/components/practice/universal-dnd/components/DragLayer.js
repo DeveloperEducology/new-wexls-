@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { UniversalDndContext } from '../UniversalDndRenderer';
+import { resolveToolSvg } from '@/lib/practice/svgTools';
 
 const isInlineSvg = (url) => {
   if (typeof url !== 'string') return false;
@@ -27,7 +28,7 @@ export default function DragLayer({
   dragState,
   items
 }) {
-  const { cardStyle, hideItemLabels } = useContext(UniversalDndContext) || {};
+  const { cardStyle, hideItemLabels, layoutMode } = useContext(UniversalDndContext) || {};
 
   if (!draggingItemId || !dragState || !dragState.isDragging) return null;
 
@@ -37,7 +38,7 @@ export default function DragLayer({
   const normalizeStyleToken = (value) => String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 
   const checkTransparent = (item, questionCardStyle) => {
-    if (!item.imageUrl && !item.svg) return false;
+    if (!item.imageUrl && !item.svg && !resolveToolSvg(item)) return false;
     const qStyle = normalizeStyleToken(questionCardStyle);
     const itemCardStyle = normalizeStyleToken(item.cardStyle || item.imageCardStyle || item.renderStyle || item.variant);
     const itemBorder = normalizeStyleToken(item.border || item.cardBorder);
@@ -67,22 +68,35 @@ export default function DragLayer({
 
   const isTransparentPng = checkTransparent(item, cardStyle);
   const shouldHideText = checkHideLabel(item, cardStyle, hideItemLabels);
+  const isOrdering = layoutMode === 'ordering';
 
-  const hasImage = !!item.imageUrl || !!item.svg;
+  const toolSvg = resolveToolSvg(item);
+  const hasImage = !!item.imageUrl || !!item.svg || !!toolSvg;
   const hasText = !shouldHideText && !!item.content && item.content.trim().length > 0;
+
+  const startX = dragState.startX || 0;
+  const startY = dragState.startY || 0;
+  const offsetX = dragState.offsetX || 0;
+  const offsetY = dragState.offsetY || 0;
+  const initialX = startX - offsetX;
+  const initialY = startY - offsetY;
+
+  const transformSuffix = isOrdering 
+    ? 'scale(1.02)' 
+    : (isTransparentPng ? 'scale(1.05)' : 'scale(1.05) rotate(2deg)');
 
   const layerStyle = {
     position: 'fixed',
-    left: `${dragState.currentX - (dragState.offsetX || 0)}px`,
-    top: `${dragState.currentY - (dragState.offsetY || 0)}px`,
+    left: '0px',
+    top: '0px',
     width: `${dragState.width || 120}px`,
     height: `${dragState.height || 44}px`,
     pointerEvents: 'none',
     zIndex: 9999,
     boxSizing: 'border-box',
-    transform: isTransparentPng ? 'scale(1.05)' : 'scale(1.05) rotate(2deg)',
+    transform: `translate3d(${initialX}px, ${initialY}px, 0) ${transformSuffix}`,
     transformOrigin: 'center center',
-    transition: 'transform 0.05s ease',
+    transition: 'none', // Snap locked to cursor, zero delay!
     opacity: 0.95
   };
 
@@ -94,9 +108,9 @@ export default function DragLayer({
     width: '100%',
     height: '100%',
     padding: isTransparentPng ? '0px' : (hasImage && !hasText ? '8px' : '12px 16px'),
-    backgroundColor: isTransparentPng ? 'transparent' : '#ffffff',
-    border: isTransparentPng ? '2px solid transparent' : '2px solid #3b82f6',
-    borderRadius: isTransparentPng ? '0px' : '12px',
+    backgroundColor: isOrdering ? '#3b7ddd' : (isTransparentPng ? 'transparent' : '#ffffff'),
+    border: isOrdering ? '1px solid #2f6fca' : (isTransparentPng ? '2px solid transparent' : '2px solid #3b82f6'),
+    borderRadius: isOrdering ? '5px' : (isTransparentPng ? '0px' : '12px'),
     boxShadow: isTransparentPng ? 'none' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     boxSizing: 'border-box',
   };
@@ -122,18 +136,18 @@ export default function DragLayer({
 
   const textStyle = {
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: '14px',
+    fontSize: isOrdering ? '20px' : '14px',
     fontWeight: '500',
-    color: '#0f172a',
+    color: isOrdering ? '#ffffff' : '#0f172a',
     textAlign: 'center',
     wordBreak: 'break-word',
     lineHeight: '1.4'
   };
 
-  const inlineSvg = item.svg ? cleanSvgContent(item.svg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
+  const inlineSvg = item.svg || toolSvg ? cleanSvgContent(item.svg || toolSvg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
 
   return (
-    <div style={layerStyle}>
+    <div id="universal-dnd-drag-layer" style={layerStyle}>
       <div style={cardStyleObj}>
         {hasImage && (
           <div style={imageContainerStyle}>

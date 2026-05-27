@@ -86,5 +86,83 @@ export const grade3MultiplicationSkills = [
       shape: 'penguin',
       difficulty: 'easy'
     }
+  },
+  {
+    id: 'multiplication-g3-n9-area-model-cubes',
+    code: 'N.9',
+    grade: 3,
+    topic: 'multiplication',
+    competencyId: 'multiplication_area_modeling_cubes',
+    title: 'Area modeling with cubes',
+    templateId: 'multiplication.cubes.areaModel',
+    config: {
+      rowsRange: [3, 6],
+      colsRange: [4, 8],
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'multiplication-g3-n10-distributive-property-cubes',
+    code: 'N.10',
+    grade: 3,
+    topic: 'multiplication',
+    competencyId: 'multiplication_distributive_property_cubes',
+    title: 'Distributive property with cubes',
+    templateId: 'multiplication.cubes.distributiveProperty',
+    config: {
+      rowsRange: [3, 5],
+      colsRange: [5, 9],
+      difficulty: 'hard'
+    }
+  },
+  {
+    id: 'multiplication-g3-n11-area-grid-rectangle-cubes',
+    code: 'N.11',
+    grade: 3,
+    topic: 'multiplication',
+    competencyId: 'multiplication_area_grid_rectangle_cubes',
+    title: 'Count squares in a rectangle grid',
+    templateId: 'multiplication.cubes.areaGridRectangle',
+    config: {
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'multiplication-g3-n12-fill-grid-cubes',
+    code: 'N.12',
+    grade: 3,
+    topic: 'multiplication',
+    competencyId: 'multiplication_fill_grid_cubes',
+    title: 'Fill a rectangle grid with cubes',
+    templateId: 'multiplication.cubes.areaGridRectangleFill',
+    config: {
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'multiplication-g3-n13-number-line-equations',
+    code: 'N.13',
+    grade: 3,
+    topic: 'multiplication',
+    competencyId: 'multiplication_number_line_equations',
+    title: 'Write multiplication equations shown on number line',
+    templateId: 'multiplication.numberLine.identify',
+    config: {
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'multiplication-g3-n14-dot-array-modeling',
+    code: 'N.14',
+    grade: 3,
+    topic: 'multiplication',
+    competencyId: 'multiplication_dot_array_modeling',
+    title: 'Multiplication dot arrays',
+    templateId: 'multiplication.cubes.dotArray',
+    config: {
+      rowsRange: [2, 5],
+      colsRange: [2, 6],
+      difficulty: 'medium'
+    }
   }
 ];

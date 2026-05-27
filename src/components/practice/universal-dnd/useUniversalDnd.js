@@ -6,41 +6,93 @@ export default function useUniversalDnd({
   onAnswer,
   isAnswered
 }) {
-  const [placements, setPlacements] = useState(() => {
-    if (userAnswer && typeof userAnswer === 'object') {
-      return { ...userAnswer };
+  // Keep track of normalized layout targets & items
+  const { items, targets, layoutMode, behavior, sourceTray } = question;
+
+  const buildInitialPlacements = (answer) => {
+    if (layoutMode === 'ordering') {
+      const targetIds = new Set(targets.map(target => target.id));
+      if (
+        answer
+        && typeof answer === 'object'
+        && items.every(item => targetIds.has(answer[item.id]))
+      ) {
+        return { ...answer };
+      }
+      return Object.fromEntries(
+        items.map((item, index) => [item.id, targets[index]?.id]).filter(([, targetId]) => targetId)
+      );
     }
+    if (answer && typeof answer === 'object') return { ...answer };
     return {};
+  };
+
+  const [placements, setPlacements] = useState(() => {
+    return buildInitialPlacements(userAnswer);
   });
 
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [draggingItemId, setDraggingItemId] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [activeTargetId, setActiveTargetId] = useState(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [previewPlacements, setPreviewPlacements] = useState(null);
 
-  const [dragState, setDragState] = useState({
+  const dragParamsRef = useRef({
     startX: 0,
     startY: 0,
     currentX: 0,
     currentY: 0,
-    isDragging: false
+    offsetX: 0,
+    offsetY: 0,
+    width: 0,
+    height: 0
   });
 
   const dragStartPos = useRef({ x: 0, y: 0 });
+  const pointerCaptureRef = useRef(null);
+  const pointerIdRef = useRef(null);
+  const lastQuestionIdRef = useRef(question.id);
+  const lastReportedAnswer = useRef('');
   const threshold = 6; // movement threshold in px to distinguish click vs drag
 
-  // Keep track of normalized layout targets & items
-  const { items, targets, layoutMode, behavior, sourceTray } = question;
+  const buildOrderingPlacements = useCallback((currentPlacements, itemId, targetId) => {
+    const orderedTargets = [...targets].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const targetIndex = orderedTargets.findIndex(target => target.id === targetId);
+    if (targetIndex < 0) return currentPlacements;
+
+    const placedItemIds = orderedTargets
+      .map(target => items.find(item => currentPlacements[item.id] === target.id)?.id)
+      .filter(Boolean);
+    const missingItemIds = items
+      .map(item => item.id)
+      .filter(id => !placedItemIds.includes(id));
+    const orderedItemIds = [...placedItemIds, ...missingItemIds].filter(id => id !== itemId);
+
+    orderedItemIds.splice(targetIndex, 0, itemId);
+
+    return orderedItemIds.slice(0, orderedTargets.length).reduce((next, id, index) => {
+      next[id] = orderedTargets[index].id;
+      return next;
+    }, {});
+  }, [items, targets]);
 
   // Sync with external userAnswer changes (e.g. reset or load new question)
   useEffect(() => {
-    if (userAnswer && typeof userAnswer === 'object') {
-      setPlacements({ ...userAnswer });
-    } else {
-      setPlacements({});
-    }
+    if (lastQuestionIdRef.current === question.id) return;
+    lastQuestionIdRef.current = question.id;
+
+    const nextPlacements = buildInitialPlacements(userAnswer);
+    setPlacements((current) => (
+      JSON.stringify(current) === JSON.stringify(nextPlacements) ? current : nextPlacements
+    ));
     setSelectedItemId(null);
     setDraggingItemId(null);
+    setIsDragging(false);
     setActiveTargetId(null);
+    setHasInteracted(false);
+    setPreviewPlacements(null);
+    lastReportedAnswer.current = '';
   }, [question.id, userAnswer]);
 
   // Derived state: check if all items are placed
@@ -53,13 +105,14 @@ export default function useUniversalDnd({
     if (target.maxItems !== undefined) {
       return target.maxItems > 1;
     }
-    return layoutMode === 'category_sort';
+    return layoutMode === 'category_sort' || layoutMode === 'shelf_sort';
   }, [layoutMode]);
 
   const targetAcceptsItem = useCallback((target, item) => {
+    if (behavior?.validateOn === 'submit' || behavior?.showCorrectnessImmediately === false) return true;
     if (!target.accepts || target.accepts.includes('*')) return true;
     return target.accepts.includes(item.id) || (item.category && target.accepts.includes(item.category));
-  }, []);
+  }, [behavior?.validateOn, behavior?.showCorrectnessImmediately]);
 
   const placeItem = useCallback((itemId, targetId) => {
     if (isAnswered) return;
@@ -68,45 +121,54 @@ export default function useUniversalDnd({
     const target = targets.find(t => t.id === targetId);
     if (!item || !target || !targetAcceptsItem(target, item)) return;
 
-    setPlacements(prev => {
-      const next = { ...prev };
+    let next = { ...placements };
+    const previousTargetId = next[itemId];
 
+    if (layoutMode === 'ordering') {
+      next = buildOrderingPlacements(placements, itemId, targetId);
+    } else if (!targetAcceptsMultiple(target)) {
       // If the target only accepts one item, return any currently placed item there back to the source tray
-      if (!targetAcceptsMultiple(target)) {
-        Object.keys(next).forEach(key => {
-          if (next[key] === targetId) {
+      Object.keys(next).forEach(key => {
+        if (next[key] === targetId) {
+          if (behavior?.reorderWithinTargets && previousTargetId) {
+            next[key] = previousTargetId;
+          } else {
             delete next[key];
           }
-        });
-      }
-
+        }
+      });
       next[itemId] = targetId;
+    } else {
+      next[itemId] = targetId;
+    }
 
-      // Report answer to parent framework
-      if (onAnswer) {
-        onAnswer(isComplete(next) ? next : null);
-      }
-      return next;
-    });
-
+    setPlacements(next);
     setSelectedItemId(null);
-  }, [items, targets, targetAcceptsItem, targetAcceptsMultiple, onAnswer, isComplete, isAnswered]);
+  }, [behavior?.reorderWithinTargets, buildOrderingPlacements, items, targets, placements, layoutMode, targetAcceptsItem, targetAcceptsMultiple, onAnswer, isComplete, isAnswered]);
 
   const returnItem = useCallback((itemId) => {
     if (isAnswered) return;
 
-    setPlacements(prev => {
-      const next = { ...prev };
-      delete next[itemId];
+    const next = { ...placements };
+    delete next[itemId];
+    setPlacements(next);
+    setSelectedItemId(null);
+  }, [placements, onAnswer, isComplete, isAnswered]);
 
-      if (onAnswer) {
-        onAnswer(isComplete(next) ? next : null);
-      }
-      return next;
+  useEffect(() => {
+    if (!onAnswer || isAnswered) return;
+
+    const answer = isComplete(placements) ? placements : null;
+    const serialized = JSON.stringify(answer);
+    if (serialized === lastReportedAnswer.current) return;
+
+    lastReportedAnswer.current = serialized;
+    const frameId = requestAnimationFrame(() => {
+      onAnswer(answer);
     });
 
-    setSelectedItemId(null);
-  }, [onAnswer, isComplete, isAnswered]);
+    return () => cancelAnimationFrame(frameId);
+  }, [placements, onAnswer, isComplete, isAnswered]);
 
   // Derived sourceSlots
   const sourceSlots = items.map(item => {
@@ -121,14 +183,14 @@ export default function useUniversalDnd({
   const handleItemSelect = useCallback((itemId) => {
     if (isAnswered) return;
 
-    if (placements[itemId]) {
+    if (placements[itemId] && layoutMode !== 'ordering') {
       // If already placed, click returns it
       returnItem(itemId);
     } else {
       // Toggle selection for click-to-place
       setSelectedItemId(prev => prev === itemId ? null : itemId);
     }
-  }, [placements, returnItem, isAnswered]);
+  }, [layoutMode, placements, returnItem, isAnswered]);
 
   const handleTargetClick = useCallback((targetId) => {
     if (isAnswered) return;
@@ -136,6 +198,7 @@ export default function useUniversalDnd({
     if (selectedItemId) {
       placeItem(selectedItemId, targetId);
     } else {
+      if (layoutMode === 'ordering') return;
       // If a user clicks an occupied single-item target, return the item in it
       const target = targets.find(t => t.id === targetId);
       if (target && !targetAcceptsMultiple(target)) {
@@ -145,7 +208,7 @@ export default function useUniversalDnd({
         }
       }
     }
-  }, [selectedItemId, placements, targets, targetAcceptsMultiple, placeItem, returnItem, isAnswered]);
+  }, [layoutMode, selectedItemId, placements, targets, targetAcceptsMultiple, placeItem, returnItem, isAnswered]);
 
   // Drag handlers
   const handlePointerDown = useCallback((e, itemId) => {
@@ -154,15 +217,12 @@ export default function useUniversalDnd({
     // Left click/pointer only
     if (e.button !== 0) return;
 
-    e.target.setPointerCapture(e.pointerId);
-    
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
     
     dragStartPos.current = { x: e.clientX, y: e.clientY };
-    setDraggingItemId(itemId);
-    setDragState({
+    dragParamsRef.current = {
       startX: e.clientX,
       startY: e.clientY,
       currentX: e.clientX,
@@ -170,9 +230,21 @@ export default function useUniversalDnd({
       offsetX,
       offsetY,
       width: rect.width,
-      height: rect.height,
-      isDragging: false
-    });
+      height: rect.height
+    };
+
+    setDraggingItemId(itemId);
+    setIsDragging(false);
+
+    if (e.currentTarget?.setPointerCapture) {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pointerCaptureRef.current = e.currentTarget;
+        pointerIdRef.current = e.pointerId;
+      } catch (err) {
+        console.warn('Pointer capture failed:', err);
+      }
+    }
   }, [isAnswered]);
 
   const handlePointerMove = useCallback((e) => {
@@ -182,15 +254,36 @@ export default function useUniversalDnd({
     const dy = e.clientY - dragStartPos.current.y;
     const dist = Math.hypot(dx, dy);
 
-    setDragState(prev => {
-      const isDraggingNow = prev.isDragging || dist > threshold;
-      return {
-        ...prev,
-        isDragging: isDraggingNow,
-        currentX: e.clientX,
-        currentY: e.clientY
-      };
-    });
+    const isDraggingNow = isDragging || dist > threshold;
+
+    dragParamsRef.current.currentX = e.clientX;
+    dragParamsRef.current.currentY = e.clientY;
+
+    if (isDraggingNow) {
+      if (!isDragging) {
+        setIsDragging(true);
+      }
+      
+      // Update the DOM element directly for butter-smooth dragging (bypassing React re-renders)
+      const dragEl = document.getElementById('universal-dnd-drag-layer');
+      if (dragEl) {
+        const x = e.clientX - dragParamsRef.current.offsetX;
+        const y = e.clientY - dragParamsRef.current.offsetY;
+        const isOrdering = layoutMode === 'ordering';
+
+        const item = items.find(i => i.id === draggingItemId);
+        const qStyle = String(question.cardStyle || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+        const itemCardStyle = String(item?.cardStyle || item?.imageCardStyle || item?.renderStyle || item?.variant || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+        const transparentStyles = new Set(['transparent_png', 'transparent', 'borderless', 'border_none', 'none', 'png_only']);
+        const isTransparentPng = transparentStyles.has(qStyle) || transparentStyles.has(itemCardStyle) || item?.transparent === true || item?.showCard === false || item?.borderless === true;
+
+        const transformSuffix = isOrdering 
+          ? 'scale(1.02)' 
+          : (isTransparentPng ? 'scale(1.05)' : 'scale(1.05) rotate(2deg)');
+        
+        dragEl.style.transform = `translate3d(${x}px, ${y}px, 0) ${transformSuffix}`;
+      }
+    }
 
     // Detect target elements using document.elementFromPoint
     const elements = document.elementsFromPoint ? document.elementsFromPoint(e.clientX, e.clientY) : [document.elementFromPoint(e.clientX, e.clientY)];
@@ -205,44 +298,87 @@ export default function useUniversalDnd({
       }
     }
 
-    if (foundTargetId) {
-      const target = targets.find(t => t.id === foundTargetId);
-      const item = items.find(i => i.id === draggingItemId);
-      if (target && item && targetAcceptsItem(target, item)) {
-        setActiveTargetId(foundTargetId);
+    if (!foundTargetId && layoutMode === 'ordering') {
+      const orderingTargets = Array.from(document.querySelectorAll('[data-ordering-target="true"]'));
+      let nearest = null;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      orderingTargets.forEach((targetEl) => {
+        const rect = targetEl.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const distance = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearest = targetEl;
+        }
+      });
+      if (nearest && nearestDistance < 140) {
+        foundTargetId = nearest.getAttribute('data-target-id');
+      }
+    }
+
+    // Only update state if activeTargetId actually changes to prevent render storms
+    if (foundTargetId !== activeTargetId) {
+      if (foundTargetId) {
+        const target = targets.find(t => t.id === foundTargetId);
+        const item = items.find(i => i.id === draggingItemId);
+        if (target && item && targetAcceptsItem(target, item)) {
+          setActiveTargetId(foundTargetId);
+          if (layoutMode === 'ordering') {
+            const nextPreview = buildOrderingPlacements(placements, draggingItemId, foundTargetId);
+            setPreviewPlacements((current) => (
+              JSON.stringify(current) === JSON.stringify(nextPreview) ? current : nextPreview
+            ));
+          }
+          setHasInteracted(true);
+        } else {
+          setActiveTargetId(null);
+          setPreviewPlacements(null);
+        }
       } else {
         setActiveTargetId(null);
+        setPreviewPlacements(null);
       }
-    } else {
-      setActiveTargetId(null);
     }
-  }, [draggingItemId, items, targets, targetAcceptsItem]);
+  }, [buildOrderingPlacements, layoutMode, draggingItemId, items, targets, placements, targetAcceptsItem, isDragging, activeTargetId, question.cardStyle]);
 
   const handlePointerUp = useCallback((e) => {
     if (draggingItemId === null) return;
 
-    e.target.releasePointerCapture(e.pointerId);
+    const capturedElement = pointerCaptureRef.current;
+    const capturedPointerId = pointerIdRef.current;
+    if (capturedElement?.releasePointerCapture && capturedPointerId !== null) {
+      try {
+        if (!capturedElement.hasPointerCapture || capturedElement.hasPointerCapture(capturedPointerId)) {
+          capturedElement.releasePointerCapture(capturedPointerId);
+        }
+      } catch {
+        // Pointer capture may already be released by the browser.
+      }
+    }
+    pointerCaptureRef.current = null;
+    pointerIdRef.current = null;
 
-    const isDragTriggered = dragState.isDragging;
+    const isDragTriggered = isDragging;
     const finalTargetId = activeTargetId;
+    const shouldKeepOrderingPreview = layoutMode === 'ordering' && isDragTriggered && Boolean(finalTargetId);
 
-    // Reset drag state first
+    // Reset drag states first
     setDraggingItemId(null);
+    setIsDragging(false);
     setActiveTargetId(null);
-    setDragState({
-      startX: 0,
-      startY: 0,
-      currentX: 0,
-      currentY: 0,
-      isDragging: false
-    });
+    if (!shouldKeepOrderingPreview) {
+      setPreviewPlacements(null);
+    }
 
     if (isDragTriggered) {
       if (finalTargetId) {
         placeItem(draggingItemId, finalTargetId);
-      } else {
-        // If dropped outside, check if it was placed and now dropped in source area (return item)
-        // Or if we just drop it back to return it
+        if (layoutMode === 'ordering') {
+          window.setTimeout(() => setPreviewPlacements(null), 220);
+        }
+        setHasInteracted(true);
+      } else if (layoutMode !== 'ordering') {
         const elements = document.elementsFromPoint ? document.elementsFromPoint(e.clientX, e.clientY) : [document.elementFromPoint(e.clientX, e.clientY)];
         let droppedInSource = false;
         for (const el of elements) {
@@ -259,7 +395,30 @@ export default function useUniversalDnd({
       // If it didn't move beyond threshold, treat it as a click
       handleItemSelect(draggingItemId);
     }
-  }, [draggingItemId, dragState.isDragging, activeTargetId, placeItem, placements, returnItem, handleItemSelect]);
+  }, [layoutMode, draggingItemId, isDragging, activeTargetId, placeItem, placements, returnItem, handleItemSelect]);
+
+  // Global window listeners during active dragging to capture fast pointer moves and off-boundary updates
+  useEffect(() => {
+    if (draggingItemId === null) return;
+
+    const onPointerMove = (e) => {
+      handlePointerMove(e);
+    };
+
+    const onPointerUp = (e) => {
+      handlePointerUp(e);
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [draggingItemId, handlePointerMove, handlePointerUp]);
 
   // Query helpers for layouts
   const getItemPlacement = useCallback((itemId) => placements[itemId] || null, [placements]);
@@ -273,10 +432,22 @@ export default function useUniversalDnd({
 
   return {
     placements,
+    previewPlacements,
     selectedItemId,
-    draggingItemId,
+    draggingItemId: isDragging ? draggingItemId : null,
     activeTargetId,
-    dragState,
+    hasInteracted,
+    dragState: {
+      isDragging,
+      startX: dragParamsRef.current.startX,
+      startY: dragParamsRef.current.startY,
+      currentX: dragParamsRef.current.currentX,
+      currentY: dragParamsRef.current.currentY,
+      offsetX: dragParamsRef.current.offsetX,
+      offsetY: dragParamsRef.current.offsetY,
+      width: dragParamsRef.current.width,
+      height: dragParamsRef.current.height
+    },
     sourceSlots,
     
     // Actions

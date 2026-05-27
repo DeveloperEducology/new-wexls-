@@ -20,3 +20,10 @@ export const randInt = (min, max, random) => Math.floor(random() * (max - min + 
 export function cubeWord(count) {
   return count === 1 ? 'cube' : 'cubes';
 }
+
+export function normalizeRange(range) {
+  if (Array.isArray(range)) {
+    return { min: range[0], max: range[1] };
+  }
+  return { min: range?.min ?? 1, max: range?.max ?? 10 };
+}

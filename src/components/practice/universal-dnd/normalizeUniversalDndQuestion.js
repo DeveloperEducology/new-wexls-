@@ -62,12 +62,31 @@ export default function normalizeUniversalDndQuestion(question) {
       };
     });
   }
+  const hasExplicitOrderingTargets = layoutMode === 'ordering'
+    && Array.isArray(question.targets)
+    && question.targets.length >= items.length
+    && question.targets.every(target => target.kind === 'order_slot' || target.order !== undefined);
+
+  if (layoutMode === 'ordering' && !hasExplicitOrderingTargets) {
+    targets = items.map((item, idx) => ({
+      id: `slot_${idx + 1}`,
+      label: String(idx + 1),
+      kind: 'order_slot',
+      accepts: [item.id],
+      order: idx + 1,
+      width: 96,
+      height: 58,
+      unit: 'px'
+    }));
+  }
 
   // Normalize behavior
   const behavior = {
     dragToDrop: true,
     clickToDrop: true,
     snapToTarget: true,
+    validateOn: 'submit',
+    reorderWithinTargets: layoutMode === 'ordering',
     multilinePlaceholder: false,
     ...question.behavior
   };

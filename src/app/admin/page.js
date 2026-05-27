@@ -335,9 +335,16 @@ export default function AdminConsolePage() {
     r2Configured: false,
     dbConnected: false,
     subjects: [],
-    topics: []
+    topics: [],
+    totalAttempts: 0,
+    correctAttempts: 0,
+    recentAttempts: [],
+    topicBreakdown: [],
+    frictionPoints: [],
+    students: []
   });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [selectedStudent, setSelectedStudent] = useState('all');
   
   // Bulk audio state
   const [bulkGenerating, setBulkGenerating] = useState(false);
@@ -419,11 +426,10 @@ export default function AdminConsolePage() {
 
   // Hotspot MCQ states
   const [hotspots, setHotspots] = useState([]);
+  const [isHotspotMultiSelect, setIsHotspotMultiSelect] = useState(false);
   const [selectedHotspotId, setSelectedHotspotId] = useState(null);
   const [backgroundSvg, setBackgroundSvg] = useState('');
-
-
-
+  const [showHotspotLabels, setShowHotspotLabels] = useState(false);
   // Preview Answer checking state
   const [previewAnswer, setPreviewAnswer] = useState(null);
   const [previewCheckResult, setPreviewCheckResult] = useState(null); // 'correct', 'incorrect', or null
@@ -923,7 +929,8 @@ export default function AdminConsolePage() {
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const res = await fetch('/api/admin/stats');
+      const studentParam = selectedStudent === 'all' ? '' : `?student=${encodeURIComponent(selectedStudent)}`;
+      const res = await fetch(`/api/admin/stats${studentParam}`);
       const data = await res.json();
       if (data.success) {
         setStats({
@@ -936,7 +943,13 @@ export default function AdminConsolePage() {
           r2Configured: data.r2Configured,
           dbConnected: data.dbConnected,
           subjects: data.subjects || [],
-          topics: data.topics || []
+          topics: data.topics || [],
+          totalAttempts: data.analytics?.totalAttempts || 0,
+          correctAttempts: data.analytics?.correctAttempts || 0,
+          recentAttempts: data.analytics?.recentAttempts || [],
+          topicBreakdown: data.topicBreakdown || [],
+          frictionPoints: data.frictionPoints || [],
+          students: data.students || []
         });
       } else {
         throw new Error(data.error || 'Failed to fetch stats');
@@ -1012,7 +1025,7 @@ export default function AdminConsolePage() {
   // Trigger loads on mount & state shifts
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [selectedStudent]);
 
   useEffect(() => {
     if (activeTab === 'library') {
@@ -1591,11 +1604,18 @@ export default function AdminConsolePage() {
     if (!canvasRef.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const boxRect = e.currentTarget.getBoundingClientRect();
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    const actualWidthPct = canvasRect.width > 0 ? (boxRect.width / canvasRect.width) * 100 : 15;
+    const actualHeightPct = canvasRect.height > 0 ? (boxRect.height / canvasRect.height) * 100 : 8;
+
     setDragging({
       id: hsId,
       type: 'hotspot_box',
       offsetX: e.clientX - boxRect.left,
-      offsetY: e.clientY - boxRect.top
+      offsetY: e.clientY - boxRect.top,
+      actualWidthPct,
+      actualHeightPct
     });
     setSelectedHotspotId(hsId);
   };
@@ -1606,9 +1626,8 @@ export default function AdminConsolePage() {
     if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
     
-    const activeHs = (hotspots || []).find(h => h.id === hsId);
-    const boxWidth = activeHs ? (activeHs.width || 15) : 15;
-    const boxHeight = activeHs ? (activeHs.height || 8) : 8;
+    const boxWidth = dragging.actualWidthPct !== undefined ? dragging.actualWidthPct : 15;
+    const boxHeight = dragging.actualHeightPct !== undefined ? dragging.actualHeightPct : 8;
 
     let xPx = e.clientX - dragging.offsetX - canvasRect.left;
     let yPx = e.clientY - dragging.offsetY - canvasRect.top;
@@ -1634,6 +1653,51 @@ export default function AdminConsolePage() {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch (err) {}
     setDragging(null);
+    setIsDirty(true);
+  };
+
+  const handleAutoGrid = (layoutType = 'grid') => {
+    if (!hotspots || hotspots.length === 0) return;
+    const count = hotspots.length;
+    
+    let cols = 1;
+    let rows = 1;
+    
+    if (layoutType === 'horizontal') {
+      cols = count;
+      rows = 1;
+    } else if (layoutType === 'vertical') {
+      cols = 1;
+      rows = count;
+    } else {
+      cols = Math.ceil(Math.sqrt(count));
+      rows = Math.ceil(count / cols);
+    }
+
+    const paddingX = 10;
+    const paddingY = 10;
+    const availableW = 100 - (paddingX * 2);
+    const availableH = 100 - (paddingY * 2);
+    const gapX = cols > 1 ? 5 : 0;
+    const gapY = rows > 1 ? 5 : 0;
+    
+    const itemW = (availableW - (gapX * (cols - 1))) / cols;
+    const itemH = (availableH - (gapY * (rows - 1))) / rows;
+    
+    const updated = hotspots.map((hs, i) => {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x = paddingX + col * (itemW + gapX);
+      const y = paddingY + row * (itemH + gapY);
+      return {
+        ...hs,
+        x: parseFloat(x.toFixed(2)),
+        y: parseFloat(y.toFixed(2)),
+        width: parseFloat(itemW.toFixed(2)),
+        height: parseFloat(itemH.toFixed(2))
+      };
+    });
+    syncHotspotsToOptions(updated);
     setIsDirty(true);
   };
 
@@ -1852,6 +1916,7 @@ export default function AdminConsolePage() {
     setSourceTray(null);
     setCardStyle('');
     setHideItemLabels(false);
+    setShowHotspotLabels(false);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -1970,10 +2035,18 @@ export default function AdminConsolePage() {
     const extractedHideItemLabels = Boolean(q.hideItemLabels || q.behavior?.hideItemLabels);
     setCardStyle(extractedCardStyle);
     setHideItemLabels(extractedHideItemLabels);
+    const extractedShowHotspotLabels = Boolean(
+      q.showHotspotLabels || 
+      q.behavior?.showHotspotLabels || 
+      q.metadata?.showHotspotLabels ||
+      q.parts?.find(p => p.type === 'hotspot_canvas')?.showHotspotLabels
+    );
+    setShowHotspotLabels(extractedShowHotspotLabels);
 
     // Reconstruct MCQ hotspot select variables
-    if (q.interaction === 'hotspot_select' || q.layoutMode === 'height_comparison' || q.layoutMode === 'mcq_hotspot') {
+    if (q.interaction === 'hotspot_select' || q.interaction === 'hotspot_multi_select' || q.layoutMode === 'height_comparison' || q.layoutMode === 'mcq_hotspot') {
       setType('mcq_hotspot');
+      setIsHotspotMultiSelect(q.interaction === 'hotspot_multi_select');
       const hotspotPart = q.parts?.find(p => p.type === 'hotspot_canvas');
       const canvasW = hotspotPart?.canvasWidth || 800;
       const canvasH = hotspotPart?.canvasHeight || 465;
@@ -2745,7 +2818,7 @@ export default function AdminConsolePage() {
 
     if (type === 'mcq_hotspot') {
       payload.type = 'mcq';
-      payload.interaction = 'hotspot_select';
+      payload.interaction = isHotspotMultiSelect ? 'hotspot_multi_select' : 'hotspot_select';
       
       const canvasW = canvas?.width || 800;
       const canvasH = canvas?.height || 465;
@@ -2757,7 +2830,9 @@ export default function AdminConsolePage() {
         width: Math.round((hs.width / 100) * canvasW),
         height: Math.round((hs.height / 100) * canvasH),
         label: hs.label,
-        isCircle: hs.isCircle
+        isCircle: hs.isCircle,
+        imageUrl: hs.imageUrl || undefined,
+        id: hs.id || undefined
       }));
       
       payload.options = hotspots.map((hs, idx) => ({
@@ -2778,7 +2853,8 @@ export default function AdminConsolePage() {
         type: 'hotspot_canvas',
         canvasWidth: canvasW,
         canvasHeight: canvasH,
-        hotspots: serializedHotspots
+        hotspots: serializedHotspots,
+        showHotspotLabels: showHotspotLabels
       };
       if (backgroundImage) hotspotPart.backgroundUrl = backgroundImage;
       if (backgroundSvg) hotspotPart.backgroundSvg = backgroundSvg;
@@ -2913,6 +2989,13 @@ export default function AdminConsolePage() {
         payload.behavior.hideItemLabels = hideItemLabels;
       }
     }
+    if (showHotspotLabels) {
+      payload.showHotspotLabels = showHotspotLabels;
+      payload.metadata.showHotspotLabels = showHotspotLabels;
+      if (payload.behavior) {
+        payload.behavior.showHotspotLabels = showHotspotLabels;
+      }
+    }
 
     return payload;
   };
@@ -3004,10 +3087,18 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: 'Validation Error: Either Background Image URL or Background SVG Code must be provided.' });
         return;
       }
-      const correctIndex = hotspots.findIndex(hs => hs.isCorrect);
-      if (correctIndex === -1) {
-        setAlert({ type: 'error', text: 'Validation Error: Please select one hotspot as the Correct Answer.' });
-        return;
+      if (isHotspotMultiSelect) {
+        const correctCount = hotspots.filter(hs => hs.isCorrect).length;
+        if (correctCount === 0) {
+          setAlert({ type: 'error', text: 'Validation Error: Please select at least one hotspot as the Correct Answer.' });
+          return;
+        }
+      } else {
+        const correctIndex = hotspots.findIndex(hs => hs.isCorrect);
+        if (correctIndex === -1) {
+          setAlert({ type: 'error', text: 'Validation Error: Please select one hotspot as the Correct Answer.' });
+          return;
+        }
       }
     } else if (type === 'categorizationv2' || type === 'categorization') {
       if (categories.length < 1) {
@@ -3242,7 +3333,9 @@ export default function AdminConsolePage() {
         width: Math.round((hs.width / 100) * canvasW),
         height: Math.round((hs.height / 100) * canvasH),
         label: hs.label,
-        isCircle: hs.isCircle
+        isCircle: hs.isCircle,
+        imageUrl: hs.imageUrl || undefined,
+        id: hs.id || undefined
       }));
 
       const mockPartsHotspot = [
@@ -3414,6 +3507,37 @@ export default function AdminConsolePage() {
             
             {/* Left Side: Stats and Charts */}
             <div className={styles.dashboardMain}>
+
+              {/* Student Analytics Filter */}
+              <div className={styles.borderedPanel} style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, padding: '12px 16px' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 900, color: 'var(--color-text)' }}>👤 Student Practice Insights</h4>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600 }}>Filter dashboard data and logs by active student profiles.</p>
+                </div>
+                <div>
+                  <select
+                    value={selectedStudent}
+                    onChange={(event) => setSelectedStudent(event.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: '1.5px solid var(--color-border)',
+                      background: '#ffffff',
+                      color: 'var(--color-text)',
+                      fontWeight: 800,
+                      fontSize: 12,
+                      minWidth: 180,
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <option value="all">👥 All Students (Aggregated)</option>
+                    {stats.students && stats.students.map((student) => (
+                      <option key={student} value={student}>👤 {student}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               
               {/* Primary Stats Group */}
               <div className={styles.metricsGroup}>
@@ -3538,6 +3662,229 @@ export default function AdminConsolePage() {
                     </div>
                   </div>
 
+                </div>
+              </div>
+
+              {/* Student Learning Insights & Analytics Charts */}
+              <div className={styles.borderedPanel} style={{ marginTop: '1.5rem' }}>
+                <div className={styles.panelHeader}>
+                  <h4 className={styles.panelTitle}>Student Learning Insights</h4>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', padding: '20px 16px' }}>
+                  {/* Donut Chart: Topic Distribution */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <h5 style={{ margin: 0, fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 800 }}>Topic Practice Distribution</h5>
+                    {loadingStats ? (
+                      <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 12, padding: '36px 0', textAlign: 'center' }}>Loading distribution...</div>
+                    ) : !stats.topicBreakdown || stats.topicBreakdown.length === 0 ? (
+                      <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 12, padding: '36px 0', textAlign: 'center' }}>No practice data recorded for this student.</div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                        <div style={{ position: 'relative', width: 110, height: 110, flexShrink: 0 }}>
+                          <svg width="110" height="110" viewBox="0 0 42 42">
+                            <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#f1f5f9" strokeWidth="4.5" />
+                            {(() => {
+                              const totalTopicAttempts = stats.topicBreakdown.reduce((sum, item) => sum + item.count, 0);
+                              const topicColors = {
+                                addition: '#ff951f',
+                                subtraction: '#ef6c35',
+                                multiplication: '#f59e0b',
+                                division: '#7a56d6',
+                                time: '#2fbfd0',
+                                fractions: '#8b5cf6',
+                                shapes: '#ec4899',
+                                'data-graphs': '#2563eb'
+                              };
+                              let cumulativePercent = 0;
+                              return stats.topicBreakdown.map((item, idx) => {
+                                const percent = totalTopicAttempts > 0 ? (item.count / totalTopicAttempts) * 100 : 0;
+                                const strokeDash = `${percent} 100`;
+                                const strokeOffset = 100 - cumulativePercent + 25; // start at 12 o'clock
+                                cumulativePercent += percent;
+                                const color = topicColors[item.topic.toLowerCase()] || `hsl(${idx * 75 % 360}, 70%, 55%)`;
+                                return (
+                                  <circle
+                                    key={item.topic}
+                                    cx="21"
+                                    cy="21"
+                                    r="15.9155"
+                                    fill="transparent"
+                                    stroke={color}
+                                    strokeWidth="4.5"
+                                    strokeDasharray={strokeDash}
+                                    strokeDashoffset={strokeOffset}
+                                  />
+                                );
+                              });
+                            })()}
+                          </svg>
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                            <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--color-text)', lineHeight: 1 }}>
+                              {stats.topicBreakdown.reduce((sum, item) => sum + item.count, 0)}
+                            </div>
+                            <div style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Attempts</div>
+                          </div>
+                        </div>
+
+                        {/* Legend list */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 120 }}>
+                          {stats.topicBreakdown.map((item, idx) => {
+                            const totalTopicAttempts = stats.topicBreakdown.reduce((sum, item) => sum + item.count, 0);
+                            const percent = totalTopicAttempts > 0 ? Math.round((item.count / totalTopicAttempts) * 100) : 0;
+                            const topicColors = {
+                              addition: '#ff951f',
+                              subtraction: '#ef6c35',
+                              multiplication: '#f59e0b',
+                              division: '#7a56d6',
+                              time: '#2fbfd0',
+                              fractions: '#8b5cf6',
+                              shapes: '#ec4899',
+                              'data-graphs': '#2563eb'
+                            };
+                            const color = topicColors[item.topic.toLowerCase()] || `hsl(${idx * 75 % 360}, 70%, 55%)`;
+                            return (
+                              <div key={item.topic} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+                                <span style={{ textTransform: 'capitalize', fontWeight: 700, color: 'var(--color-text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.topic}</span>
+                                <span style={{ color: 'var(--color-text-muted)', fontWeight: 'bold' }}>{percent}%</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Friction Points list */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <h5 style={{ margin: 0, fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 800 }}>Friction Points (Struggling Skills)</h5>
+                    {loadingStats ? (
+                      <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 12, padding: '36px 0', textAlign: 'center' }}>Loading friction points...</div>
+                    ) : !stats.frictionPoints || stats.frictionPoints.length === 0 ? (
+                      <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 12, padding: '36px 0', textAlign: 'center' }}>No struggling skills identified yet. Good job!</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {stats.frictionPoints.map((fp) => {
+                          const getAccuracyColor = (acc) => {
+                            if (acc < 50) return '#dc2626';
+                            if (acc < 80) return '#d97706';
+                            return '#16a34a';
+                          };
+                          return (
+                            <div key={fp.skillId} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 10px', borderRadius: 8, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                <span style={{ fontWeight: 'bold', color: 'var(--color-text)', wordBreak: 'break-all' }}>{fp.skillId}</span>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: 9, textTransform: 'uppercase', fontWeight: 800, marginLeft: 6, flexShrink: 0 }}>{fp.topic}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 99 }}>
+                                  <div style={{ width: `${fp.accuracy}%`, height: '100%', background: getAccuracyColor(fp.accuracy), borderRadius: 99 }} />
+                                </div>
+                                <span style={{ minWidth: 28, textAlign: 'right', fontWeight: 900, fontSize: 11, color: getAccuracyColor(fp.accuracy) }}>
+                                  {fp.accuracy}%
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                                <span>Attempts: {fp.total} ({fp.correct} correct)</span>
+                                <span>Avg time: {fp.avgTimeSpent ? `${fp.avgTimeSpent}s` : 'N/A'}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Student Practice Analytics Panel */}
+              <div className={styles.borderedPanel} style={{ marginTop: '1.5rem' }}>
+                <div className={styles.panelHeader}>
+                  <h4 className={styles.panelTitle}>Student Practice Attempts (Live)</h4>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 'bold' }}>
+                    Accuracy: {stats.totalAttempts > 0 ? Math.round((stats.correctAttempts / stats.totalAttempts) * 100) : 0}% ({stats.correctAttempts}/{stats.totalAttempts} correct)
+                  </div>
+                </div>
+                
+                <div style={{ padding: '12px', overflowX: 'auto' }}>
+                  {stats.recentAttempts.length === 0 ? (
+                    <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
+                      No student practice attempts recorded yet. Start practicing to see live logs!
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 500 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
+                          <th style={{ padding: '8px 4px' }}>Time</th>
+                          <th style={{ padding: '8px 4px' }}>Student</th>
+                          <th style={{ padding: '8px 4px' }}>Skill ID</th>
+                          <th style={{ padding: '8px 4px' }}>Topic</th>
+                          <th style={{ padding: '8px 4px' }}>Engine / Source</th>
+                          <th style={{ padding: '8px 4px' }}>Result</th>
+                          <th style={{ padding: '8px 4px' }}>Time Spent</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'center' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.recentAttempts.map((attempt) => {
+                          const dateText = new Date(attempt.loggedAt || attempt.createdAt).toLocaleTimeString();
+                          return (
+                            <tr key={attempt._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '8px 4px', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>{dateText}</td>
+                              <td style={{ padding: '8px 4px', fontWeight: '800', color: '#4f46e5' }}>{attempt.userId || 'Guest'}</td>
+                              <td style={{ padding: '8px 4px', fontWeight: '600', color: 'var(--color-text)' }}>{attempt.skillId}</td>
+                              <td style={{ padding: '8px 4px' }}>{attempt.topic}</td>
+                              <td style={{ padding: '8px 4px', fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)' }}>{attempt.engine || 'static (db)'}</td>
+                              <td style={{ padding: '8px 4px' }}>
+                                <span style={{
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                  fontSize: 10,
+                                  fontWeight: 'bold',
+                                  color: '#ffffff',
+                                  backgroundColor: attempt.isCorrect ? '#16a34a' : '#dc2626'
+                                }}>
+                                  {attempt.isCorrect ? 'CORRECT' : 'INCORRECT'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 4px', color: 'var(--color-text-muted)' }}>
+                                {attempt.timeSpentMs ? `${(attempt.timeSpentMs / 1000).toFixed(1)}s` : 'N/A'}
+                              </td>
+                              <td style={{ padding: '8px 4px', textAlign: 'center' }}>
+                                {(() => {
+                                  const attemptSeed = attempt.question?.seed || attempt.question?.metadata?.seed || attempt.seed || attempt.variables?.seed || attempt.question?.variables?.seed;
+                                  if (!attemptSeed) return <span style={{ color: '#9ca3af', fontSize: 11 }}>N/A</span>;
+                                  return (
+                                    <a
+                                      href={`/practice?subject=math&topic=${attempt.topic}&skill=${attempt.skillId}&seed=${attemptSeed}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        padding: '4px 8px',
+                                        borderRadius: 6,
+                                        fontSize: 11,
+                                        fontWeight: 'bold',
+                                        color: '#2563eb',
+                                        backgroundColor: '#eff6ff',
+                                        border: '1px solid #bfdbfe',
+                                        textDecoration: 'none',
+                                      }}
+                                      title="Open this exact question in a new tab to practice/test it again"
+                                    >
+                                      Test Again ↗
+                                    </a>
+                                  );
+                                })()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
 
@@ -4579,6 +4926,34 @@ export default function AdminConsolePage() {
 
                           {type === 'mcq_hotspot' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                              <div style={{ paddingBottom: 10, borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <label className={styles.label} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isHotspotMultiSelect} 
+                                    onChange={(e) => {
+                                      setIsHotspotMultiSelect(e.target.checked);
+                                      ignoreDirtyChange.current = false;
+                                      setIsDirty(true);
+                                    }} 
+                                    className={styles.checkbox}
+                                  />
+                                  <span>Multi-Select (allow multiple correct answers)</span>
+                                </label>
+                                <label className={styles.label} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={showHotspotLabels} 
+                                    onChange={(e) => {
+                                      setShowHotspotLabels(e.target.checked);
+                                      ignoreDirtyChange.current = false;
+                                      setIsDirty(true);
+                                    }} 
+                                    className={styles.checkbox}
+                                  />
+                                  <span>Show Hotspot Labels (display labels over hotspots in student view)</span>
+                                </label>
+                              </div>
                               {/* Background Options */}
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
                                 <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
@@ -4667,11 +5042,45 @@ export default function AdminConsolePage() {
 
                               {/* Interactive Canvas Editor for MCQ Hotspots */}
                               <div className={styles.formGroup}>
-                                <label className={styles.filterLabel}>
-                                  Interactive Hotspots Canvas
-                                </label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                  <label className={styles.filterLabel} style={{ marginBottom: 0 }}>
+                                    Interactive Hotspots Canvas
+                                  </label>
+                                  {(hotspots || []).length > 0 && (
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Arrange:</span>
+                                      <button 
+                                        type="button" 
+                                        className={styles.btnOutline}
+                                        onClick={() => handleAutoGrid('grid')}
+                                        style={{ padding: '4px 10px', fontSize: 11 }}
+                                        title="Arrange in a square/rectangular grid"
+                                      >
+                                        Grid
+                                      </button>
+                                      <button 
+                                        type="button" 
+                                        className={styles.btnOutline}
+                                        onClick={() => handleAutoGrid('horizontal')}
+                                        style={{ padding: '4px 10px', fontSize: 11 }}
+                                        title="Arrange side-by-side in one row"
+                                      >
+                                        Horizontal
+                                      </button>
+                                      <button 
+                                        type="button" 
+                                        className={styles.btnOutline}
+                                        onClick={() => handleAutoGrid('vertical')}
+                                        style={{ padding: '4px 10px', fontSize: 11 }}
+                                        title="Arrange stacked in one column"
+                                      >
+                                        Vertical
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                                 <span style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 8 }}>
-                                  Click on the canvas to add a new option hotspot. Drag boxes to position, and resize or rename using controls.
+                                  Click on the canvas to add a new option hotspot. Drag boxes to position, and resize or rename using controls. If you provide an Image URL for a hotspot, it will be rendered.
                                 </span>
                                 
                                 <div
@@ -4745,7 +5154,8 @@ export default function AdminConsolePage() {
                                           position: 'absolute',
                                           left: `${hs.x}%`,
                                           top: `${hs.y}%`,
-                                          width: `${hs.width}%`,
+                                          width: hs.imageUrl ? 'auto' : `${hs.width}%`,
+                                          maxWidth: hs.imageUrl ? `${hs.width}%` : undefined,
                                           height: `${hs.height}%`,
                                           border: isSelected ? '2.5px solid #0284c7' : '1.5px dashed #0284c7',
                                           backgroundColor: hs.isCorrect 
@@ -4765,12 +5175,40 @@ export default function AdminConsolePage() {
                                           textAlign: 'center',
                                           boxSizing: 'border-box',
                                           userSelect: 'none',
-                                          touchAction: 'none'
+                                          touchAction: 'none',
+                                          overflow: 'visible'
                                         }}
                                       >
-                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
-                                          {hs.isCorrect ? '✅ ' : ''}{hs.label || '(Empty Hotspot)'}
-                                        </div>
+                                        {hs.imageUrl ? (
+                                          <>
+                                            <img src={hs.imageUrl} alt={hs.label || ''} style={{ height: '100%', width: 'auto', objectFit: 'contain', pointerEvents: 'none', borderRadius: hs.isCircle ? '50%' : '8px', zIndex: 1 }} />
+                                            {showHotspotLabels && hs.label && (
+                                              <span style={{
+                                                position: 'absolute',
+                                                bottom: '-22px',
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '12px',
+                                                padding: '1px 6px',
+                                                fontSize: '9px',
+                                                fontWeight: '800',
+                                                color: '#334155',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                pointerEvents: 'none',
+                                                whiteSpace: 'nowrap',
+                                                zIndex: 10
+                                              }}>
+                                                {hs.label}
+                                              </span>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                                            {hs.isCorrect ? '✅ ' : ''}{hs.label || '(Empty Hotspot)'}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -4824,6 +5262,21 @@ export default function AdminConsolePage() {
                                             syncHotspotsToOptions(updated);
                                           }}
                                           placeholder="e.g. Earth"
+                                          style={{ marginTop: 4, fontSize: 12 }}
+                                        />
+                                      </div>
+                                      
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 11 }}>Image URL (Optional)</label>
+                                        <input
+                                          type="text"
+                                          className={styles.formInput}
+                                          value={activeHs.imageUrl || ''}
+                                          onChange={(e) => {
+                                            const updated = hotspots.map(h => h.id === activeHs.id ? { ...h, imageUrl: e.target.value } : h);
+                                            syncHotspotsToOptions(updated);
+                                          }}
+                                          placeholder="https://example.com/image.png"
                                           style={{ marginTop: 4, fontSize: 12 }}
                                         />
                                       </div>
@@ -4919,25 +5372,27 @@ export default function AdminConsolePage() {
                                     ignoreDirtyChange.current = false;
                                     setIsDirty(true);
                                     setLayoutMode(mode);
-                                    if (mode === 'diagram_labeling') {
+                                    if (mode === 'diagram_labeling' || mode === 'shelf_sort') {
                                       setInteraction('universal_dnd');
-                                      if (!targets || targets.length === 0) {
-                                        // Initialize targets from categories
-                                        const initialTargets = categories.map((cat, idx) => ({
-                                          id: cat.id,
-                                          label: cat.label,
-                                          x: Math.max(0, Math.min(85, 10 + (idx * 20))),
-                                          y: 40,
-                                          width: 15,
-                                          height: 8,
-                                          pointerX: Math.max(0, Math.min(100, 10 + (idx * 20) + 7.5)),
-                                          pointerY: 60,
-                                          unit: '%'
-                                        }));
-                                        setTargets(initialTargets);
-                                      }
-                                      if (!canvas) {
-                                        setCanvas({ width: 800, backgroundImage: backgroundImage });
+                                      if (mode === 'diagram_labeling') {
+                                        if (!targets || targets.length === 0) {
+                                          // Initialize targets from categories
+                                          const initialTargets = categories.map((cat, idx) => ({
+                                            id: cat.id,
+                                            label: cat.label,
+                                            x: Math.max(0, Math.min(85, 10 + (idx * 20))),
+                                            y: 40,
+                                            width: 15,
+                                            height: 8,
+                                            pointerX: Math.max(0, Math.min(100, 10 + (idx * 20) + 7.5)),
+                                            pointerY: 60,
+                                            unit: '%'
+                                          }));
+                                          setTargets(initialTargets);
+                                        }
+                                        if (!canvas) {
+                                          setCanvas({ width: 800, backgroundImage: backgroundImage });
+                                        }
                                       }
                                     } else {
                                       setInteraction('');
@@ -4947,6 +5402,7 @@ export default function AdminConsolePage() {
                                 >
                                   <option value="">Standard Grid</option>
                                   <option value="diagram_labeling">Diagram Labeling</option>
+                                  <option value="shelf_sort">Shelf Sorting</option>
                                 </select>
                               </div>
 
@@ -5489,8 +5945,8 @@ export default function AdminConsolePage() {
                                       <option value="transparent_png">Transparent PNG (No borders/background)</option>
                                     </select>
                                   </div>
-                                  <div className={styles.formGroup} style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
-                                    <label className={styles.checkboxLabel} style={{ marginBottom: 12 }}>
+                                  <div className={styles.formGroup} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-end', gap: 8 }}>
+                                    <label className={styles.checkboxLabel} style={{ marginBottom: 0 }}>
                                       <input
                                         type="checkbox"
                                         className={styles.checkboxInput}
@@ -5499,6 +5955,17 @@ export default function AdminConsolePage() {
                                       />
                                       Hide Text Labels (Images Only)
                                     </label>
+                                    {layoutMode === 'hotspot' && (
+                                      <label className={styles.checkboxLabel} style={{ marginBottom: 0 }}>
+                                        <input
+                                          type="checkbox"
+                                          className={styles.checkboxInput}
+                                          checked={showHotspotLabels}
+                                          onChange={(e) => setShowHotspotLabels(e.target.checked)}
+                                        />
+                                        Show Hotspot Labels
+                                      </label>
+                                    )}
                                   </div>
                                 </div>
                               </div>

@@ -21,6 +21,39 @@ import { operationsG5Engine } from './engines/operationsG5.engine.js';
  * and default parameters.
  */
 export const fractionsV2Registry = {
+  // Fractions Remediation Skills
+  'fractions-remedial-equal-parts': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'equal_parts',
+      shapeTypes: ['circle', 'rectangle', 'square']
+    }
+  },
+  'fractions-remedial-identify-half': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'identify_fraction',
+      shapeTypes: ['circle', 'rectangle', 'square'],
+      denominatorPool: [2]
+    }
+  },
+  'fractions-remedial-identify-quarter': {
+    engine: visualModelsEngine,
+    params: {
+      subType: 'identify_fraction',
+      shapeTypes: ['circle', 'rectangle', 'square'],
+      denominatorPool: [4]
+    }
+  },
+  'fractions-remedial-number-line-half': {
+    engine: numberLinesEngine,
+    params: {
+      subType: 'identify_point',
+      denominatorPool: [2],
+      min: 0,
+      max: 1
+    }
+  },
   // Visual Models
   'visual_models_identify': {
     engine: visualModelsEngine,

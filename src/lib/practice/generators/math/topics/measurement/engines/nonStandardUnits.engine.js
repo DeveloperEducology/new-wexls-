@@ -2,7 +2,7 @@
  * Non-standard Measurement Engine (Cubes, Paperclips, Pennies)
  */
 
-import { renderCubeTrain } from '../shared/svgMeasurementLibrary.js';
+import { getSvgTool } from '@/lib/practice/svgTools';
 
 export function generateNonStandardUnitsQuestion(rng, config = {}) {
   const difficulty = config.difficulty || 'easy';
@@ -17,12 +17,13 @@ export function generateNonStandardUnitsQuestion(rng, config = {}) {
   const objectLength = count; // Exact whole numbers for basic grades
   const objectType = rng.pick(['pencil', 'crayon', 'key']);
 
-  const svg = renderCubeTrain({
+  const svg = getSvgTool('cube_train', {
     cubesCount: count,
     orientation,
     objectLength,
-    objectType
-  });
+    objectType,
+    showLabel: false
+  }).svg;
 
   const propertyWord = orientation === 'vertical' ? 'tall' : 'long';
   const unitName = unit === 'cube' ? 'cubes' : 'paperclips';

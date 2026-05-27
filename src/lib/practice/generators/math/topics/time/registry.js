@@ -1,7 +1,16 @@
-
 import { generateSmartTimeQuestion } from './index.js';
 
 const registry = {
+  // Remediation
+  'time-remedial-days-of-week': {
+    params: { difficulty: 'easy', forcedTask: 'days_of_week' }
+  },
+  'time-remedial-am-pm': {
+    params: { difficulty: 'easy', forcedTask: 'am_pm' }
+  },
+  'time-remedial-read-hour': {
+    params: { difficulty: 'easy', forcedTask: 'read_clock' }
+  },
   // Class I
   'v1_days_of_week': {
     params: { difficulty: 'easy', forcedTask: 'days_of_week' }
@@ -94,6 +103,9 @@ export const timeGenerator = (config) => {
 };
 
 export const timeRegistry = {
+  'time-remedial-days-of-week': timeGenerator,
+  'time-remedial-am-pm': timeGenerator,
+  'time-remedial-read-hour': timeGenerator,
   'v1_days_of_week': timeGenerator,
   'v2_seasons': timeGenerator,
   'v3_calendar': timeGenerator,

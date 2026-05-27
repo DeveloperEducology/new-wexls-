@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import KaTeXRenderer from './KaTeXRenderer';
+import { speakText } from '../../lib/ttsClient';
+import styles from './FactoryLayout.module.css';
 
 function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
@@ -122,12 +125,129 @@ export default function PracticeFeedback({
   onNext,
   nextLabel = 'Next Challenge',
   loading = false,
+  isPreK = false,
 }) {
+  const spokenRef = useRef(false);
+
+  // Clean explanation text
+  const cleanExp = question?.explanation ? cleanText(question.explanation) : '';
+  
+  // Resolve correct label and image
+  let correctLabel = '';
+  let correctImageUrl = '';
+  if (question && question.correctAnswerIndex !== undefined) {
+    if (Array.isArray(question.hotspots) && question.hotspots[question.correctAnswerIndex]) {
+      const hs = question.hotspots[question.correctAnswerIndex];
+      correctLabel = hs.label || hs.name || '';
+      correctImageUrl = hs.imageUrl || '';
+    } else if (Array.isArray(question.options) && question.options[question.correctAnswerIndex]) {
+      const opt = question.options[question.correctAnswerIndex];
+      correctLabel = typeof opt === 'object' ? (opt.label || opt.text || '') : String(opt);
+    }
+  }
+
+  const cleanLabel = cleanText(correctLabel);
+
+  useEffect(() => {
+    if (isPreK && !isCorrect && question && !spokenRef.current) {
+      spokenRef.current = true;
+      const introText = cleanLabel 
+        ? `Almost! The correct answer is the ${cleanLabel}.` 
+        : `Almost! Let's see the correct answer.`;
+      const fullSpeech = `${introText} ${cleanExp}`;
+      const t = setTimeout(() => {
+        speakText(fullSpeech, 'Puck');
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [isPreK, isCorrect, question, cleanLabel, cleanExp]);
+
+  const handlePlaySpeech = () => {
+    const introText = cleanLabel 
+      ? `Almost! The correct answer is the ${cleanLabel}.` 
+      : `Almost! Let's see the correct answer.`;
+    const fullSpeech = `${introText} ${cleanExp}`;
+    speakText(fullSpeech, 'Puck');
+  };
+
   if (!question) return null;
 
   const solutionSections = Array.isArray(question?.solution?.sections)
     ? question.solution.sections
     : [];
+
+  if (isPreK) {
+    return (
+      <section className={styles.preKFeedbackContainer}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 32, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>💡</span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 19, fontWeight: 950, color: '#9a3412', fontFamily: 'var(--font-outfit), sans-serif' }}>
+                Let's look together!
+              </h3>
+              <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 800, color: '#c2410c' }}>
+                Almost there! You can do it! ✨
+              </p>
+            </div>
+          </div>
+          
+          <button
+            type="button"
+            onClick={handlePlaySpeech}
+            className={styles.preKSpeakerBtn}
+            title="Listen again"
+          >
+            🔊
+          </button>
+        </div>
+
+        {/* Visual Spotlight Choice Card */}
+        <div className={styles.preKSpotlightCard}>
+          <div className={styles.preKSpotlightCircle}>
+            {correctImageUrl ? (
+              <img src={correctImageUrl} alt={cleanLabel} style={{ width: 68, height: 68, objectFit: 'contain' }} />
+            ) : (
+              <span style={{ fontSize: 32, fontWeight: 950, color: '#16a34a' }}>✓</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Correct Answer
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 950, color: '#0f172a', fontFamily: 'var(--font-outfit), sans-serif' }}>
+              {cleanLabel || 'Right choice'}
+            </div>
+          </div>
+        </div>
+
+        {cleanExp && (
+          <div style={{
+            marginTop: 14,
+            padding: '14px',
+            background: '#ffffff',
+            borderRadius: 18,
+            border: '2px solid rgba(251, 146, 60, 0.15)',
+            color: '#334155',
+            fontSize: 14,
+            fontWeight: 700,
+            lineHeight: 1.55,
+          }}>
+            <InlineMarkdown text={cleanExp} />
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={loading}
+          className={styles.preKNextBtn}
+        >
+          {loading ? 'Loading...' : 'Try Next! 🌟'}
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section

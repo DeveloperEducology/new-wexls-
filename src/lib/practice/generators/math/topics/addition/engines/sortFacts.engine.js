@@ -16,7 +16,40 @@ function makeFactForSum(total, random) {
 
 export function generateSortFactsQuestion(template = {}, variables = {}) {
   const random = createSeededRandom(variables.seed || template.seed || Date.now());
-  const sums = shuffle(template.config?.sums || [14, 15, 16], random).slice(0, 3);
+  
+  const difficulty = String(template.config?.difficulty || 'adaptive').toLowerCase();
+  const history = template.config?.history || {};
+  const level = Math.min(5, Math.max(1, Number(history.practiceLevel || 1)));
+
+  // Determine difficulty level: easy, medium, hard
+  let effectiveDifficulty = difficulty;
+  if (difficulty === 'adaptive') {
+    if (level <= 2) {
+      effectiveDifficulty = 'easy';
+    } else if (level <= 4) {
+      effectiveDifficulty = 'medium';
+    } else {
+      effectiveDifficulty = 'hard';
+    }
+  }
+
+  let sums;
+  if (template.config?.sums && template.config.sums.length >= 3) {
+    // Respect explicitly configured sums if provided
+    sums = shuffle(template.config.sums, random).slice(0, 3).sort((a, b) => a - b);
+  } else {
+    // Generate adaptive sums based on difficulty level
+    let sumPool;
+    if (effectiveDifficulty === 'easy') {
+      sumPool = [5, 6, 7, 8, 9, 10];
+    } else if (effectiveDifficulty === 'medium') {
+      sumPool = [10, 11, 12, 13, 14, 15];
+    } else {
+      sumPool = [15, 16, 17, 18, 19, 20];
+    }
+    sums = shuffle(sumPool, random).slice(0, 3).sort((a, b) => a - b);
+  }
+
   const facts = shuffle(sums.map((target) => makeFactForSum(target, random)), random);
   const categories = sums.map((target) => ({
     id: `sum_${target}`,
