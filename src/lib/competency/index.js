@@ -1376,7 +1376,13 @@ export const competencyGraphs = {
       ],
       skillMap: {
         'lkg-english-beginning-sounds': 'lkg_english_basics',
-        'lkg-english-identify-category': 'lkg_english_basics'
+        'lkg-english-identify-category': 'lkg_english_basics',
+        'lkg-english-letter-recognition-uppercase': 'lkg_english_basics',
+        'lkg-english-letter-recognition-lowercase': 'lkg_english_basics',
+        'lkg-english-letter-recognition-case-match': 'lkg_english_basics',
+        'lkg-english-letter-recognition-phonics-sound': 'lkg_english_basics',
+        'lkg-english-letter-recognition-alphabetical-sequence': 'lkg_english_basics',
+        'lkg-english-letter-recognition-odd-one-out': 'lkg_english_basics'
       }
     }
   }
