@@ -175,9 +175,14 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
   const spokenRef = useRef(false);
 
   const isPreK = useMemo(() => {
-    const topic = question?.metadata?.topic || question?.topic || '';
-    const grade = question?.metadata?.grade || question?.grade || '';
-    return topic === 'lkg' || topic === 'prek' || topic === 'ukg' || grade === 'lkg' || grade === 'prek' || grade === 'ukg';
+    const topic = (question?.metadata?.topic || question?.topic || '').toLowerCase();
+    const grade = (question?.metadata?.grade || question?.grade || '').toLowerCase();
+    const skillId = (question?.metadata?.skillId || question?.skillId || '').toLowerCase();
+    return (
+      topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
+      grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
+      skillId.includes('lkg') || skillId.includes('prek') || skillId.includes('ukg')
+    );
   }, [question]);
 
   useEffect(() => {
@@ -5016,9 +5021,14 @@ function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }
 function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const isPreK = useMemo(() => {
-    const topic = question?.metadata?.topic || question?.topic || '';
-    const grade = question?.metadata?.grade || question?.grade || '';
-    return topic === 'lkg' || topic === 'prek' || topic === 'ukg' || grade === 'lkg' || grade === 'prek' || grade === 'ukg';
+    const topic = (question?.metadata?.topic || question?.topic || '').toLowerCase();
+    const grade = (question?.metadata?.grade || question?.grade || '').toLowerCase();
+    const skillId = (question?.metadata?.skillId || question?.skillId || '').toLowerCase();
+    return (
+      topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
+      grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
+      skillId.includes('lkg') || skillId.includes('prek') || skillId.includes('ukg')
+    );
   }, [question]);
 
   const hasImages = useMemo(() => {
@@ -5211,8 +5221,9 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
           }
 
           const rotation = isPreK ? (i % 2 === 0 ? '-1.5deg' : '1.5deg') : '0deg';
+          const isCard = Boolean(imageUrl || question?.layoutMode === 'mcq_hotspot');
 
-          const dynamicStyles = isPreK ? (imageUrl ? {
+          const dynamicStyles = isPreK ? (isCard ? {
             border: isSelected 
               ? '4px solid #22c55e' 
               : (isHovered ? '4px solid #38bdf8' : '4px solid #ffffff'),
@@ -5227,7 +5238,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
           } : {
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
-          }) : (imageUrl ? {
+          }) : (isCard ? {
             border: isSelected 
               ? '3px solid #0284c7' 
               : (isHovered ? '3px solid #38bdf8' : '3px solid transparent'),
@@ -5275,8 +5286,21 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                 ...dynamicStyles
               }}
             >
-              {imageUrl && (
+              {imageUrl ? (
                 <img src={imageUrl} alt={hs.label || ''} style={{ height: '90%', width: 'auto', objectFit: 'contain', pointerEvents: 'none', zIndex: 1 }} />
+              ) : (
+                hs.label && (
+                  <span style={{ 
+                    fontSize: isPreK ? '32px' : '18px', 
+                    fontWeight: '900', 
+                    color: isPreK ? '#4a044e' : '#334155',
+                    fontFamily: 'var(--font-outfit), sans-serif',
+                    userSelect: 'none',
+                    zIndex: 1
+                  }}>
+                    {hs.label}
+                  </span>
+                )
               )}
               {isSelected && (
                 <div style={{
