@@ -357,11 +357,11 @@ export async function GET(request) {
 
     if (subject === 'english' && ['grammar', 'lkg'].includes(targetTopic)) {
       const generator = targetTopic === 'lkg'
-        ? (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(resolvedTemplateId, config)
-        : (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(resolvedTemplateId, config);
+        ? (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(skill, config)
+        : (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(skill, config);
 
       if (!generator) {
-        throw new Error(`Could not resolve generator for ${resolvedTemplateId}`);
+        throw new Error(`Could not resolve generator for ${skill}`);
       }
       
       const questionData = generator.generate({ ...config.variables, difficulty: config.difficulty });
