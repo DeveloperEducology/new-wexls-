@@ -525,6 +525,197 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       };
     });
 
+  } else if (skillId === 'lkg-english-letter-recognition-in-word-spotting') {
+    const wordList = ["CAT", "DOG", "BABY", "FISH", "BIRD", "FROG", "LION", "DUCK", "BEAR", "COW", "PIG", "GOAT", "SHEEP", "HORSE"];
+    const wordIdx = Math.floor(r * wordList.length);
+    const word = wordList[wordIdx];
+    
+    // Choose a random letter from the word as the target
+    const targetCharIdx = Math.floor(r * word.length);
+    const targetLetter = word[targetCharIdx];
+    
+    questionText = `Find the letter **${targetLetter}** in the word **${word}**.`;
+    explanation = `**${targetLetter}** is part of the word **${word}**.`;
+    
+    backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fdf4ff" />
+          <stop offset="100%" stop-color="#fae8ff" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="465" fill="url(#bgGrad)" rx="28" />
+    </svg>`;
+
+    const N = word.length;
+    const colWidth = 110;
+    const colHeight = 100;
+    const gap = 20;
+    const totalWidth = N * colWidth + (N - 1) * gap;
+    const startX = (800 - totalWidth) / 2;
+    const yVal = 180;
+
+    optionsList = word.split('');
+    correctAnswerIndex = optionsList.indexOf(targetLetter);
+
+    hotspots = optionsList.map((letter, idx) => {
+      const x = startX + idx * (colWidth + gap);
+      return {
+        id: `hs_${letter}_${idx}`,
+        label: letter,
+        x: (x / 800) * 100,
+        y: (yVal / 465) * 100,
+        width: (colWidth / 800) * 100,
+        height: (colHeight / 465) * 100,
+        isCircle: false,
+        isCorrect: letter === targetLetter
+      };
+    });
+
+    partHotspots = optionsList.map((letter, idx) => {
+      const x = startX + idx * (colWidth + gap);
+      return {
+        optionIndex: idx,
+        x,
+        y: yVal,
+        width: colWidth,
+        height: colHeight,
+        label: letter,
+        isCircle: false,
+        id: `hs_${letter}_${idx}`
+      };
+    });
+
+  } else if (skillId === 'lkg-english-letter-recognition-next-letter') {
+    const startIdx = Math.floor(r * 25);
+    const letter = UPPER_ALPHABET[startIdx];
+    const nextLetter = UPPER_ALPHABET[startIdx + 1];
+    
+    const shuffled = shuffle(UPPER_ALPHABET, r);
+    const distractors = shuffled.filter(l => l !== letter && l !== nextLetter).slice(0, 3);
+    
+    optionsList = shuffle([nextLetter, ...distractors], r);
+    correctAnswerIndex = optionsList.indexOf(nextLetter);
+    
+    questionText = `What letter comes right after **${letter}**?`;
+    explanation = `**${nextLetter}** comes right after **${letter}** in the alphabet.`;
+    
+    backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fdf4ff" />
+          <stop offset="100%" stop-color="#fae8ff" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="465" fill="url(#bgGrad)" rx="28" />
+      
+      <!-- Prompt Letter Box -->
+      <rect x="230" y="80" width="120" height="110" rx="24" fill="#ffffff" stroke="#e9d5ff" stroke-width="4" />
+      <text x="290" y="155" font-size="56" font-weight="900" font-family="'Fredoka', sans-serif" text-anchor="middle" fill="#6b21a8">${letter}</text>
+      
+      <!-- Arrow -->
+      <text x="400" y="150" font-size="48" font-weight="900" font-family="'Fredoka', sans-serif" text-anchor="middle" fill="#c084fc">➔</text>
+      
+      <!-- Target question mark -->
+      <rect x="450" y="80" width="120" height="110" rx="24" fill="#ffffff" stroke="#c084fc" stroke-width="4" stroke-dasharray="8,6" />
+      <text x="510" y="155" font-size="56" font-weight="900" font-family="'Fredoka', sans-serif" text-anchor="middle" fill="#c084fc">?</text>
+    </svg>`;
+
+    hotspots = optionsList.map((l, idx) => {
+      const coords = ROW_COORDINATES[idx];
+      return {
+        id: `hs_${l}_${idx}`,
+        label: l,
+        x: coords.pctX,
+        y: coords.pctY,
+        width: coords.pctW,
+        height: coords.pctH,
+        isCircle: false,
+        isCorrect: idx === correctAnswerIndex
+      };
+    });
+
+    partHotspots = optionsList.map((l, idx) => {
+      const coords = ROW_COORDINATES[idx];
+      return {
+        optionIndex: idx,
+        x: coords.x,
+        y: coords.y,
+        width: coords.width,
+        height: coords.height,
+        label: l,
+        isCircle: false,
+        id: `hs_${l}_${idx}`
+      };
+    });
+
+  } else if (skillId === 'lkg-english-letter-recognition-image-to-letter') {
+    const allAssets = [
+      ...fruits.map(item => ({ ...item, category: 'fruit' })),
+      ...animals.map(item => ({ ...item, category: 'animal' })),
+      ...things.map(item => ({ ...item, category: 'thing' })),
+      ...vehicles.map(item => ({ ...item, category: 'vehicle' }))
+    ];
+    
+    const assetIdx = Math.floor(r * allAssets.length);
+    const asset = allAssets[assetIdx];
+    const letter = asset.firstLetter.toUpperCase();
+    
+    const shuffled = shuffle(UPPER_ALPHABET, r);
+    const distractors = shuffled.filter(l => l !== letter).slice(0, 2);
+    
+    optionsList = shuffle([letter, ...distractors], r);
+    correctAnswerIndex = optionsList.indexOf(letter);
+    
+    questionText = `Which letter does the word **${asset.singular}** start with?`;
+    explanation = `**${asset.singular.toUpperCase()}** starts with the letter **${letter}**.`;
+
+    backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fffbeb" />
+          <stop offset="100%" stop-color="#fef3c7" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="465" fill="url(#bgGrad)" rx="28" />
+      
+      <image href="${asset.imageUrl}" x="325" y="40" width="150" height="150" />
+    </svg>`;
+
+    const THREE_ROW_COORDINATES = [
+      { pctX: 20, pctY: 55, pctW: 16.25, pctH: 25, x: 160, y: 260, width: 130, height: 115 },
+      { pctX: 41.875, pctY: 55, pctW: 16.25, pctH: 25, x: 335, y: 260, width: 130, height: 115 },
+      { pctX: 63.75, pctY: 55, pctW: 16.25, pctH: 25, x: 510, y: 260, width: 130, height: 115 }
+    ];
+
+    hotspots = optionsList.map((l, idx) => {
+      const coords = THREE_ROW_COORDINATES[idx];
+      return {
+        id: `hs_${l}_${idx}`,
+        label: l,
+        x: coords.pctX,
+        y: coords.pctY,
+        width: coords.pctW,
+        height: coords.pctH,
+        isCircle: false,
+        isCorrect: idx === correctAnswerIndex
+      };
+    });
+
+    partHotspots = optionsList.map((l, idx) => {
+      const coords = THREE_ROW_COORDINATES[idx];
+      return {
+        optionIndex: idx,
+        x: coords.x,
+        y: coords.y,
+        width: coords.width,
+        height: coords.height,
+        label: l,
+        isCircle: false,
+        id: `hs_${l}_${idx}`
+      };
+    });
+
   } else {
     // Odd one out / Case mix
     const mixType = r > 0.5 ? 'case' : 'letter';

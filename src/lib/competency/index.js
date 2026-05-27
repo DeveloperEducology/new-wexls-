@@ -1382,7 +1382,10 @@ export const competencyGraphs = {
         'lkg-english-letter-recognition-case-match': 'lkg_english_basics',
         'lkg-english-letter-recognition-phonics-sound': 'lkg_english_basics',
         'lkg-english-letter-recognition-alphabetical-sequence': 'lkg_english_basics',
-        'lkg-english-letter-recognition-odd-one-out': 'lkg_english_basics'
+        'lkg-english-letter-recognition-odd-one-out': 'lkg_english_basics',
+        'lkg-english-letter-recognition-in-word-spotting': 'lkg_english_basics',
+        'lkg-english-letter-recognition-next-letter': 'lkg_english_basics',
+        'lkg-english-letter-recognition-image-to-letter': 'lkg_english_basics'
       }
     }
   }

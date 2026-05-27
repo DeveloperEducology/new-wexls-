@@ -67,6 +67,24 @@ export const lkgEnglishMicroSkillRegistry = {
     code: 'EL.8',
     title: 'Find the letter that is different (odd one out)',
     grade: 'LKG'
+  },
+  'lkg-english-letter-recognition-in-word-spotting': {
+    templateId: 'lkg.english.letter_recognition',
+    code: 'EL.9',
+    title: 'Find the letter in a word (in-word spotting)',
+    grade: 'LKG'
+  },
+  'lkg-english-letter-recognition-next-letter': {
+    templateId: 'lkg.english.letter_recognition',
+    code: 'EL.10',
+    title: 'What letter comes right after (next letter sequence)',
+    grade: 'LKG'
+  },
+  'lkg-english-letter-recognition-image-to-letter': {
+    templateId: 'lkg.english.letter_recognition',
+    code: 'EL.11',
+    title: 'Starting letter of the object (beginning sound: image-to-letter)',
+    grade: 'LKG'
   }
 };
 
