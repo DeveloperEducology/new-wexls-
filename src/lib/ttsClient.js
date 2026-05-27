@@ -175,7 +175,8 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
   const useClientTts = storedVal === 'true';
   const localVoiceOverride = typeof window !== 'undefined' && window.localStorage.getItem('localVoiceOverride');
   const activeVoice = (useClientTts && localVoiceOverride && localVoiceOverride !== 'none') ? localVoiceOverride : voice;
-  const isPiperVoice = activeVoice.startsWith('piper:') || activeVoice.startsWith('en_US-');
+  const normalizedVoice = normalizeVoiceId(activeVoice);
+  const isPiperVoice = normalizedVoice.startsWith('en_US-') || activeVoice.startsWith('piper:');
   
   if (typeof window !== 'undefined' && isClientTtsSupported() && useClientTts && isPiperVoice) {
     handleClientSideTts(plainText, text, activeVoice, cacheKey);
