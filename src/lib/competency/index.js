@@ -1372,6 +1372,24 @@ export const competencyGraphs = {
           title: 'Learn the basics of English beginning sounds and categories',
           prerequisites: [],
           remediation: [],
+        },
+        {
+          id: 'lkg_english_case_match',
+          title: 'Match lowercase and uppercase letters',
+          prerequisites: ['lkg_english_basics'],
+          remediation: ['lkg_english_basics'],
+        },
+        {
+          id: 'lkg_english_word_recognition',
+          title: 'Recognize sight words, word sounds, and find words in sentences',
+          prerequisites: ['lkg_english_basics'],
+          remediation: ['lkg_english_basics'],
+        },
+        {
+          id: 'lkg_english_rhyming',
+          title: 'Understand and identify rhyming words',
+          prerequisites: ['lkg_english_word_recognition'],
+          remediation: ['lkg_english_word_recognition'],
         }
       ],
       skillMap: {
@@ -1385,7 +1403,21 @@ export const competencyGraphs = {
         'lkg-english-letter-recognition-odd-one-out': 'lkg_english_basics',
         'lkg-english-letter-recognition-in-word-spotting': 'lkg_english_basics',
         'lkg-english-letter-recognition-next-letter': 'lkg_english_basics',
-        'lkg-english-letter-recognition-image-to-letter': 'lkg_english_basics'
+        'lkg-english-letter-recognition-image-to-letter': 'lkg_english_basics',
+        'lkg-english-letter-recognition-audio-to-letter': 'lkg_english_basics',
+        'lkg-english-case-match-lower-similar': 'lkg_english_case_match',
+        'lkg-english-case-match-lower-different': 'lkg_english_case_match',
+        'lkg-english-case-match-lower-distinct': 'lkg_english_case_match',
+        'lkg-english-case-find-all-lowercase': 'lkg_english_case_match',
+        'lkg-english-case-match-upper-similar': 'lkg_english_case_match',
+        'lkg-english-case-match-upper-different': 'lkg_english_case_match',
+        'lkg-english-case-match-upper-distinct': 'lkg_english_case_match',
+        'lkg-english-case-find-all-uppercase': 'lkg_english_case_match',
+        'lkg-english-word-recognition-choose-two-same-words': 'lkg_english_word_recognition',
+        'lkg-english-word-recognition-same-ending-sound': 'lkg_english_word_recognition',
+        'lkg-english-word-recognition-find-word-in-sentence': 'lkg_english_word_recognition',
+        'lkg-english-rhyming-same-ending-single': 'lkg_english_rhyming',
+        'lkg-english-rhyming-same-ending-double': 'lkg_english_rhyming',
       }
     }
   }

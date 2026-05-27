@@ -118,7 +118,7 @@ function generateBeginningSoundsQuestion(seed, r) {
     layoutMode: 'mcq_hotspot',
     questionText,
     audioUrl,
-    voice: 'Puck',
+    voice: 'Kore',
     generateAudio: 'all',
     explanation: `**${targetAsset.singular.toUpperCase()}** starts with the letter **${targetLetter.toUpperCase()}**.`,
     options: optionsList.map((opt, idx) => ({
@@ -224,7 +224,7 @@ function generateIdentifyCategoryQuestion(seed, r) {
     layoutMode: 'mcq_hotspot',
     questionText,
     audioUrl,
-    voice: 'Puck',
+    voice: 'Kore',
     generateAudio: 'all',
     explanation: `The **${correctItem.singular}** is a type of **${targetCategory.label}**.`,
     options: optionsList.map((opt, idx) => ({
@@ -247,6 +247,262 @@ function generateIdentifyCategoryQuestion(seed, r) {
         hotspots: partHotspots,
         backgroundSvg
       }
+    ]
+  };
+}
+
+// ─── Ruled letter card SVG helper ─────────────────────────────────────────────
+// Renders a letter with the classic writing-line rules (blue headline, pink
+// dashed midline, blue baseline) just like IXL / Handwriting-without-tears cards.
+function ruledLetterSvg(letter, w = 200, h = 140) {
+  const cx = w / 2;
+  const scale = h / 140;
+  const headY = 22 * scale;   // top blue rule
+  const midY  = 70 * scale;   // pink dashed midline
+  const baseY = 118 * scale;  // bottom blue rule
+  
+  // Detect if any character is uppercase or tall lowercase
+  const hasUppercase = /[A-Z]/.test(letter);
+  const hasTallLowercase = /[bdfhlkt]/.test(letter);
+  const isTall = hasUppercase || hasTallLowercase;
+  
+  // Font sizes: Arial cap-height is ~72%, x-height is ~52%
+  // Visual height needed for tall: 96px (96 / 0.72 = 133.3)
+  // Visual height needed for short: 48px (48 / 0.52 = 92.3)
+  let fontSize = (isTall ? 133 : 92) * scale;
+  
+  if (letter.length > 1) {
+    // scale font size down to fit within width (with 24px padding total)
+    // 0.55 is a conservative width-to-height ratio for Arial characters
+    fontSize = Math.min(fontSize, ((w - 24) / (letter.length * 0.55)) * scale);
+  }
+  
+  // Align text baseline to baseY
+  const textY = baseY;
+
+  return [
+    `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">`,
+    `  <rect width="${w}" height="${h}" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>`,
+    // headline
+    `  <line x1="12" y1="${headY}" x2="${w - 12}" y2="${headY}" stroke="#3b82f6" stroke-width="1.5"/>`,
+    // midline (dashed pink)
+    `  <line x1="12" y1="${midY}" x2="${w - 12}" y2="${midY}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4"/>`,
+    // baseline
+    `  <line x1="12" y1="${baseY}" x2="${w - 12}" y2="${baseY}" stroke="#3b82f6" stroke-width="1.5"/>`,
+    // the letter
+    `  <text x="${cx}" y="${textY}" font-size="${fontSize}" font-family="Arial, Helvetica, sans-serif" font-weight="bold" text-anchor="middle" dominant-baseline="alphabetic" fill="#111827">${letter}</text>`,
+    `</svg>`
+  ].join('\n');
+}
+
+// Group definitions for B.1/B.2/B.3/B.5
+const CASE_MATCH_GROUPS = {
+  similar:  'ckopsuvwxz'.split(''),  // B.1 – look similar upper/lower
+  tall:     'fijlmty'.split(''),     // B.2 – tall/distinctive lowercase
+  distinct: 'abdeghmnqr'.split(''), // B.3 – clearly different uppercase/lowercase
+};
+
+// 2-option hotspot coords (centred side by side)
+const TWO_OPTION_COORDS = [
+  { pctX: 20, pctY: 32, pctW: 22, pctH: 36, x: 160, y: 150, width: 176, height: 168 },
+  { pctX: 58, pctY: 32, pctW: 22, pctH: 36, x: 464, y: 150, width: 176, height: 168 },
+];
+
+function generateCaseMatchQuestion(skillId, seed, r, config = {}) {
+  const SKILLS_GROUP_B = {
+    'lkg-english-case-match-lower-similar':   { group: 'similar',  mode: 'upper-to-lower' },
+    'lkg-english-case-match-lower-different': { group: 'tall',     mode: 'upper-to-lower' },
+    'lkg-english-case-match-lower-distinct':  { group: 'distinct', mode: 'upper-to-lower' },
+    'lkg-english-case-find-all-lowercase':    { group: 'all',      mode: 'find-lowercase'  },
+    'lkg-english-case-match-upper-similar':   { group: 'similar',  mode: 'lower-to-upper' },
+    'lkg-english-case-match-upper-different': { group: 'tall',     mode: 'lower-to-upper' },
+    'lkg-english-case-match-upper-distinct':  { group: 'distinct', mode: 'lower-to-upper' },
+    'lkg-english-case-find-all-uppercase':    { group: 'all',      mode: 'find-uppercase'  },
+  };
+
+  const def = SKILLS_GROUP_B[skillId];
+  if (!def) return null;
+
+  const lowerAlpha = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  const upperAlpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+  // ── B.4: Find all lowercase letters ────────────────────────────────────────
+  if (def.mode === 'find-lowercase') {
+    // Read practiceLevel from config, default to 2
+    const practiceLevel = config.history?.practiceLevel ?? 2;
+    
+    let totalCards = 3;
+    let numLower = 2;
+    
+    if (practiceLevel === 1) {
+      totalCards = 3;
+      numLower = 1;
+    } else if (practiceLevel === 2) {
+      totalCards = 3;
+      numLower = 2;
+    } else if (practiceLevel === 3) {
+      totalCards = 4;
+      numLower = 2;
+    } else if (practiceLevel === 4) {
+      totalCards = 4;
+      numLower = 3;
+    } else if (practiceLevel === 5) {
+      totalCards = 5;
+      numLower = 3;
+    }
+    
+    const numUpper = totalCards - numLower;
+
+    const shuffledLower = [...lowerAlpha].sort(() => r - 0.5);
+    const shuffledUpper = [...upperAlpha].sort(() => r - 0.5);
+    const chosenLower = shuffledLower.slice(0, numLower);
+    const chosenUpper = shuffledUpper.slice(0, numUpper);
+    const allCards = [...chosenLower, ...chosenUpper].sort(() => r - 0.5);
+
+    const questionText = 'Find **all** the lowercase letters.';
+    const correctAnswerIndices = allCards.map((l, i) => chosenLower.includes(l) ? i : -1).filter(i => i >= 0);
+
+    return {
+      id: `english_lkg_case_match_${skillId}_${seed}`,
+      type: 'mcq',
+      interaction: 'multi_select',
+      multiSelect: true,
+      questionText,
+      audioUrl: letterAudios[questionText],
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `The lowercase letters are: **${chosenLower.join(', ')}**.`,
+      options: allCards.map((l, i) => ({
+        id: `opt_${i}`,
+        label: l,
+        content: ruledLetterSvg(l, 200, 140),
+        audioUrl: letterAudios[l]
+      })),
+      correctAnswerIndex: correctAnswerIndices[0] ?? 0,
+      correctAnswerIndices,
+      answer: correctAnswerIndices,
+      metadata: { chapterId: 'english-lkg-case-letters' },
+      parts: [
+        { type: 'text', content: questionText }
+      ]
+    };
+  }
+
+  // ── B.8: Find all uppercase letters ────────────────────────────────────────
+  if (def.mode === 'find-uppercase') {
+    // Read practiceLevel from config, default to 2
+    const practiceLevel = config.history?.practiceLevel ?? 2;
+    
+    let totalCards = 3;
+    let numUpper = 2;
+    
+    if (practiceLevel === 1) {
+      totalCards = 3;
+      numUpper = 1;
+    } else if (practiceLevel === 2) {
+      totalCards = 3;
+      numUpper = 2;
+    } else if (practiceLevel === 3) {
+      totalCards = 4;
+      numUpper = 2;
+    } else if (practiceLevel === 4) {
+      totalCards = 4;
+      numUpper = 3;
+    } else if (practiceLevel === 5) {
+      totalCards = 5;
+      numUpper = 3;
+    }
+    
+    const numLower = totalCards - numUpper;
+
+    const shuffledLower = [...lowerAlpha].sort(() => r - 0.5);
+    const shuffledUpper = [...upperAlpha].sort(() => r - 0.5);
+    const chosenLower = shuffledLower.slice(0, numLower);
+    const chosenUpper = shuffledUpper.slice(0, numUpper);
+    const allCards = [...chosenLower, ...chosenUpper].sort(() => r - 0.5);
+
+    const questionText = 'Find **all** the uppercase letters.';
+    const correctAnswerIndices = allCards.map((l, i) => chosenUpper.includes(l) ? i : -1).filter(i => i >= 0);
+
+    return {
+      id: `english_lkg_case_match_${skillId}_${seed}`,
+      type: 'mcq',
+      interaction: 'multi_select',
+      multiSelect: true,
+      questionText,
+      audioUrl: letterAudios[questionText],
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `The uppercase letters are: **${chosenUpper.join(', ')}**.`,
+      options: allCards.map((l, i) => ({
+        id: `opt_${i}`,
+        label: l,
+        content: ruledLetterSvg(l, 200, 140),
+        audioUrl: letterAudios[l]
+      })),
+      correctAnswerIndex: correctAnswerIndices[0] ?? 0,
+      correctAnswerIndices,
+      answer: correctAnswerIndices,
+      metadata: { chapterId: 'english-lkg-case-letters' },
+      parts: [
+        { type: 'text', content: questionText }
+      ]
+    };
+  }
+
+  // ── B.1/B.2/B.3/B.5: Choose matching case ──────────────────────────────────
+  const group = def.group === 'all'
+    ? lowerAlpha
+    : (CASE_MATCH_GROUPS[def.group] || lowerAlpha);
+
+  const targetIdx = Math.floor(r * group.length);
+  const targetLower = group[targetIdx];
+  const targetUpper = targetLower.toUpperCase();
+  const isUpperToLower = def.mode === 'upper-to-lower';
+
+  // Pick one distractor from same group
+  const others = group.filter(l => l !== targetLower);
+  const distractorLower = others[Math.floor(r * others.length)];
+  const distractorUpper = distractorLower.toUpperCase();
+
+  const shownLetter   = isUpperToLower ? targetUpper   : targetLower;
+  const correctAnswer = isUpperToLower ? targetLower   : targetUpper;
+  const wrongAnswer   = isUpperToLower ? distractorLower : distractorUpper;
+
+  const pair = Math.random() > 0.5 ? [correctAnswer, wrongAnswer] : [wrongAnswer, correctAnswer];
+  const correctAnswerIndex = pair.indexOf(correctAnswer);
+
+  const questionText = isUpperToLower
+    ? `Look at this uppercase letter. Which lowercase letter matches?`
+    : `Look at this lowercase letter. Which uppercase letter matches?`;
+
+  const shownLetterSvg = ruledLetterSvg(shownLetter, 220, 155);
+
+  return {
+    id: `english_lkg_case_match_${skillId}_${seed}`,
+    type: 'mcq',
+    interaction: 'choice',
+    questionText,
+    shownLetter,
+    shownLetterSvg,
+    audioUrl: letterAudios[questionText],
+    voice: 'Kore',
+    generateAudio: 'all',
+    explanation: isUpperToLower
+      ? `The lowercase form of **${shownLetter}** is **${correctAnswer}**.`
+      : `The uppercase form of **${shownLetter}** is **${correctAnswer}**.`,
+    options: pair.map((l, i) => ({
+      id: `opt_${i}`,
+      label: l,
+      content: ruledLetterSvg(l, 176, 140),
+      audioUrl: letterAudios[l]
+    })),
+    correctAnswerIndex,
+    answer: correctAnswerIndex,
+    metadata: { chapterId: 'english-lkg-case-letters' },
+    parts: [
+      { type: 'text', content: questionText },
+      { type: 'case_match_shown_letter', letter: shownLetter, svgContent: shownLetterSvg }
     ]
   };
 }
@@ -280,6 +536,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
   let partHotspots = [];
   let optionsList = [];
   let correctAnswerIndex = 0;
+  let soundUrl = undefined;
+  let soundText = undefined;
   
   if (
     skillId === 'lkg-english-letter-recognition-uppercase' ||
@@ -727,6 +985,59 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       };
     });
 
+  } else if (skillId === 'lkg-english-letter-recognition-audio-to-letter') {
+    const letterIdx = Math.floor(r * 26);
+    const letter = UPPER_ALPHABET[letterIdx];
+    
+    const shuffled = shuffle(UPPER_ALPHABET, r);
+    const distractors = shuffled.filter(l => l !== letter).slice(0, 3);
+    
+    optionsList = shuffle([letter, ...distractors], r);
+    correctAnswerIndex = optionsList.indexOf(letter);
+    
+    questionText = "Listen to the letter. Which letter do you hear?";
+    explanation = `The letter you heard is **${letter}**.`;
+    soundUrl = letterAudios[letter];
+    soundText = letter;
+
+    backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fdf4ff" />
+          <stop offset="100%" stop-color="#fae8ff" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="465" fill="url(#bgGrad)" rx="28" />
+    </svg>`;
+
+    hotspots = optionsList.map((l, idx) => {
+      const coords = CENTER_ROW_COORDINATES[idx];
+      return {
+        id: `hs_${l}_${idx}`,
+        label: l,
+        x: coords.pctX,
+        y: coords.pctY,
+        width: coords.pctW,
+        height: coords.pctH,
+        isCircle: false,
+        isCorrect: idx === correctAnswerIndex
+      };
+    });
+
+    partHotspots = optionsList.map((l, idx) => {
+      const coords = CENTER_ROW_COORDINATES[idx];
+      return {
+        optionIndex: idx,
+        x: coords.x,
+        y: coords.y,
+        width: coords.width,
+        height: coords.height,
+        label: l,
+        isCircle: false,
+        id: `hs_${l}_${idx}`
+      };
+    });
+
   } else {
     // Odd one out / Case mix
     const mixType = r > 0.5 ? 'case' : 'letter';
@@ -819,9 +1130,11 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     layoutMode: 'mcq_hotspot',
     questionText,
     audioUrl,
-    voice: 'Puck',
+    voice: 'Kore',
     generateAudio: 'all',
     explanation,
+    soundUrl,
+    soundText,
     options: optionsList.map((opt, idx) => {
       const label = typeof opt === 'object' ? (opt.label || opt.singular || opt.name) : opt;
       return { 
@@ -849,6 +1162,357 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
   };
 }
 
+const WORD_POOL = [
+  'cat', 'dog', 'pig', 'hen', 'sun', 'bug', 'net', 'pin', 'fox', 'hat',
+  'cup', 'pen', 'run', 'six', 'bus', 'bat', 'rat', 'box', 'cot', 'pot',
+  'fan', 'van', 'wet', 'map', 'tag', 'dig', 'fin', 'hop', 'jet',
+  'log', 'mud', 'nut', 'sub', 'tub', 'wig', 'zip'
+];
+
+const ENDING_FAMILIES = {
+  'at': ['cat', 'hat', 'rat', 'bat', 'pat', 'mat', 'sat'],
+  'an': ['fan', 'van', 'pan', 'man', 'can', 'ran', 'tan'],
+  'ig': ['pig', 'dig', 'wig', 'fig', 'big', 'jig'],
+  'og': ['dog', 'log', 'jog', 'fog', 'hog'],
+  'en': ['hen', 'pen', 'ten', 'men', 'den'],
+  'ug': ['bug', 'rug', 'mug', 'jug', 'tug', 'hug'],
+  'in': ['pin', 'fin', 'bin', 'tin', 'win'],
+  'ot': ['pot', 'cot', 'hot', 'dot', 'not', 'lot'],
+  'un': ['sun', 'run', 'bun', 'fun', 'gun']
+};
+
+const SENTENCES_POOL = [
+  { sentence: "Get the hen!", target: "hen" },
+  { sentence: "The cat is fat.", target: "cat" },
+  { sentence: "Look at the pig.", target: "pig" },
+  { sentence: "He is on the rug.", target: "rug" },
+  { sentence: "A red fox ran.", target: "fox" },
+  { sentence: "The sun is hot.", target: "sun" },
+  { sentence: "Ten men got in.", target: "men" },
+  { sentence: "She has a pet.", target: "pet" },
+  { sentence: "The cup is red.", target: "cup" },
+  { sentence: "A bug in the mud.", target: "bug" },
+  { sentence: "The dog ran far.", target: "dog" },
+  { sentence: "Mom has a big map.", target: "map" },
+  { sentence: "Put it in the bin.", target: "bin" },
+  { sentence: "The van is wet.", target: "van" },
+  { sentence: "He fed the hen.", target: "hen" },
+  { sentence: "The fan is on.", target: "fan" },
+  { sentence: "A fat rat ran.", target: "rat" },
+  { sentence: "Sit on the cot.", target: "cot" },
+  { sentence: "The pot is hot.", target: "pot" },
+  { sentence: "We can play tag.", target: "tag" },
+  { sentence: "Ducks can fly.", target: "ducks" }
+];
+
+const WORD_IMAGES = {
+  'hen': 'https://cdn-icons-png.flaticon.com/512/263/263073.png',
+  'cat': 'https://cdn-icons-png.flaticon.com/512/1998/1998592.png',
+  'pig': 'https://cdn-icons-png.flaticon.com/512/2264/2264627.png',
+  'rug': 'https://cdn-icons-png.flaticon.com/512/2250/2250005.png',
+  'fox': 'https://cdn-icons-png.flaticon.com/512/1998/1998631.png',
+  'sun': 'https://cdn-icons-png.flaticon.com/512/4814/4814268.png',
+  'men': 'https://cdn-icons-png.flaticon.com/512/4140/4140037.png',
+  'pet': 'https://cdn-icons-png.flaticon.com/512/616/616408.png',
+  'cup': 'https://cdn-icons-png.flaticon.com/512/3081/3081079.png',
+  'bug': 'https://cdn-icons-png.flaticon.com/512/2822/2822368.png',
+  'dog': 'https://cdn-icons-png.flaticon.com/512/1998/1998621.png',
+  'map': 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
+  'bin': 'https://cdn-icons-png.flaticon.com/512/1165/1165674.png',
+  'van': 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
+  'fan': 'https://cdn-icons-png.flaticon.com/512/911/911367.png',
+  'rat': 'https://cdn-icons-png.flaticon.com/512/2234/2234724.png',
+  'cot': 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
+  'pot': 'https://cdn-icons-png.flaticon.com/512/2143/2143150.png',
+  'tag': 'https://cdn-icons-png.flaticon.com/512/552/552807.png',
+  'ducks': 'https://cdn-icons-png.flaticon.com/512/2926/2926214.png',
+  'duck': 'https://cdn-icons-png.flaticon.com/512/2926/2926214.png',
+  'fly': 'https://cdn-icons-png.flaticon.com/512/3409/3409949.png',
+  'pen': 'https://cdn-icons-png.flaticon.com/512/1250/1250615.png',
+  'pin': 'https://cdn-icons-png.flaticon.com/512/4856/4856754.png',
+  'hat': 'https://cdn-icons-png.flaticon.com/512/1995/1995400.png'
+};
+
+function generateWordRecognitionQuestion(skillId, seed, r, config = {}) {
+  if (skillId === 'lkg-english-word-recognition-choose-two-same-words') {
+    const targetWord = WORD_POOL[Math.floor(r * WORD_POOL.length)];
+    const otherWords = WORD_POOL.filter(w => w !== targetWord);
+    const distractor = otherWords[Math.floor(r * otherWords.length)];
+
+    const optionsList = [
+      { label: targetWord, isCorrect: true },
+      { label: targetWord, isCorrect: true },
+      { label: distractor, isCorrect: false }
+    ];
+
+    const shuffledOptions = shuffle(optionsList, r);
+    const correctIndices = shuffledOptions
+      .map((opt, idx) => (opt.isCorrect ? idx : null))
+      .filter(idx => idx !== null);
+
+    const questionText = 'Pick the two words that are the same.';
+
+    return {
+      id: `english_lkg_word_rec_same_words_${seed}`,
+      type: 'mcq',
+      interaction: 'multi_select',
+      multiSelect: true,
+      questionText,
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `The two words that are the same are **${targetWord}** and **${targetWord}**.`,
+      options: shuffledOptions.map((opt, idx) => ({
+        id: `opt_${idx}`,
+        label: opt.label,
+        content: ruledLetterSvg(opt.label, 200, 140),
+        isCorrect: opt.isCorrect
+      })),
+      correctAnswerIndex: correctIndices[0],
+      correctAnswerIndices: correctIndices,
+      answer: correctIndices,
+      parts: [
+        { type: 'text', content: questionText }
+      ]
+    };
+  }
+
+  if (skillId === 'lkg-english-word-recognition-same-ending-sound') {
+    const families = Object.keys(ENDING_FAMILIES);
+    const family = families[Math.floor(r * families.length)];
+    const familyWords = ENDING_FAMILIES[family];
+
+    // Pick 2 distinct words from the family
+    const shuffledFamilyWords = shuffle(familyWords, r);
+    const target1 = shuffledFamilyWords[0];
+    const target2 = shuffledFamilyWords[1];
+
+    // Pick a distractor from other families that doesn't match the ending
+    const allDistractorWords = [];
+    Object.entries(ENDING_FAMILIES).forEach(([f, words]) => {
+      if (f !== family) {
+        words.forEach(w => {
+          if (!w.endsWith(family)) {
+            allDistractorWords.push(w);
+          }
+        });
+      }
+    });
+    const distractor = allDistractorWords[Math.floor(r * allDistractorWords.length)];
+
+    const optionsList = [
+      { label: target1, isCorrect: true },
+      { label: target2, isCorrect: true },
+      { label: distractor, isCorrect: false }
+    ];
+
+    const shuffledOptions = shuffle(optionsList, r);
+    const correctIndices = shuffledOptions
+      .map((opt, idx) => (opt.isCorrect ? idx : null))
+      .filter(idx => idx !== null);
+
+    const questionText = 'Listen to the sound. Which two words have that sound?';
+
+    return {
+      id: `english_lkg_word_rec_ending_sound_${seed}`,
+      type: 'mcq',
+      interaction: 'multi_select',
+      multiSelect: true,
+      questionText,
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `**${target1}** and **${target2}** both end with the sound **/ ${family} /**.`,
+      soundText: family,
+      soundUrl: null, // dynamic TTS
+      options: shuffledOptions.map((opt, idx) => ({
+        id: `opt_${idx}`,
+        label: opt.label,
+        content: ruledLetterSvg(opt.label, 200, 140),
+        isCorrect: opt.isCorrect
+      })),
+      correctAnswerIndex: correctIndices[0],
+      correctAnswerIndices: correctIndices,
+      answer: correctIndices,
+      parts: [
+        { type: 'text', content: questionText }
+      ]
+    };
+  }
+
+  if (skillId === 'lkg-english-word-recognition-find-word-in-sentence') {
+    const item = SENTENCES_POOL[Math.floor(r * SENTENCES_POOL.length)];
+    const sentence = item.sentence;
+    const target = item.target;
+
+    // Split sentence into words and clean them for the cards
+    const rawWords = sentence.split(/\s+/);
+    const cleanedWords = rawWords.map(w => w.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, ''));
+
+    // Find the correct index
+    const correctAnswerIndex = cleanedWords.findIndex(
+      w => w.toLowerCase() === target.toLowerCase()
+    );
+
+    // Image for the target word
+    const targetImg = WORD_IMAGES[target.toLowerCase()] || 'https://cdn-icons-png.flaticon.com/512/2926/2926214.png';
+
+    const questionText = `Listen to the sentence. Then, find the word ${target} in the sentence.`;
+    const speechText = `Listen to the sentence. Then, find the word ${target} in the sentence. ${sentence}`;
+
+    return {
+      id: `english_lkg_word_rec_find_word_${seed}`,
+      type: 'mcq',
+      interaction: 'choice',
+      questionText,
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `**${target}** is in the sentence: **${sentence}**.`,
+      options: cleanedWords.map((word, idx) => ({
+        id: `opt_${idx}`,
+        label: word,
+        content: ruledLetterSvg(word, 200, 140),
+        isCorrect: idx === correctAnswerIndex
+      })),
+      correctAnswerIndex,
+      answer: correctAnswerIndex,
+      parts: [
+        {
+          type: 'text',
+          content: `Listen to the sentence. Then, find the word [img:${targetImg}] in the sentence.[speak:${sentence}]`
+        }
+      ],
+      speakTextValue: speechText
+    };
+  }
+
+  return null;
+}
+
+function generateRhymingQuestion(skillId, seed, r) {
+  const extendedEndingFamilies = {
+    ...ENDING_FAMILIES,
+    'et': ['pet', 'net', 'wet', 'jet', 'bet', 'get', 'let'],
+    'ill': ['fill', 'hill', 'bill', 'mill', 'pill', 'will'],
+    'op': ['pop', 'hop', 'mop', 'top', 'cop']
+  };
+
+  const families = Object.keys(extendedEndingFamilies);
+  const family = families[Math.floor(r * families.length)];
+  const familyWords = extendedEndingFamilies[family];
+
+  // Pick target words from the family
+  const shuffledFamilyWords = shuffle(familyWords, r);
+
+  if (skillId === 'lkg-english-rhyming-same-ending-single') {
+    const target = shuffledFamilyWords[0];
+
+    // Pick 1 distractor from other families
+    const allDistractorWords = [];
+    Object.entries(extendedEndingFamilies).forEach(([f, words]) => {
+      if (f !== family) {
+        words.forEach(w => {
+          if (!w.endsWith(family)) {
+            allDistractorWords.push(w);
+          }
+        });
+      }
+    });
+    const distractor = allDistractorWords[Math.floor(r * allDistractorWords.length)];
+
+    const optionsList = [
+      { label: target, isCorrect: true },
+      { label: distractor, isCorrect: false }
+    ];
+
+    const shuffledOptions = shuffle(optionsList, r);
+    const correctAnswerIndex = shuffledOptions.findIndex(opt => opt.isCorrect);
+
+    const questionText = 'Listen to the sound. Which word has that sound?';
+
+    return {
+      id: `english_lkg_rhyming_single_${seed}`,
+      type: 'mcq',
+      interaction: 'choice',
+      questionText,
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `**${target}** ends with the sound **/ ${family} /**.`,
+      soundText: family,
+      soundUrl: null, // dynamic TTS
+      options: shuffledOptions.map((opt, idx) => ({
+        id: `opt_${idx}`,
+        label: opt.label,
+        content: ruledLetterSvg(opt.label, 200, 140),
+        isCorrect: opt.isCorrect
+      })),
+      correctAnswerIndex,
+      answer: correctAnswerIndex,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'play_sound_card' }
+      ]
+    };
+  }
+
+  if (skillId === 'lkg-english-rhyming-same-ending-double') {
+    const target1 = shuffledFamilyWords[0];
+    const target2 = shuffledFamilyWords[1];
+
+    // Pick 1 distractor from other families
+    const allDistractorWords = [];
+    Object.entries(extendedEndingFamilies).forEach(([f, words]) => {
+      if (f !== family) {
+        words.forEach(w => {
+          if (!w.endsWith(family)) {
+            allDistractorWords.push(w);
+          }
+        });
+      }
+    });
+    const distractor = allDistractorWords[Math.floor(r * allDistractorWords.length)];
+
+    const optionsList = [
+      { label: target1, isCorrect: true },
+      { label: target2, isCorrect: true },
+      { label: distractor, isCorrect: false }
+    ];
+
+    const shuffledOptions = shuffle(optionsList, r);
+    const correctIndices = shuffledOptions
+      .map((opt, idx) => (opt.isCorrect ? idx : null))
+      .filter(idx => idx !== null);
+
+    const questionText = 'Listen to the sound. Which two words have that sound?';
+
+    return {
+      id: `english_lkg_rhyming_double_${seed}`,
+      type: 'mcq',
+      interaction: 'multi_select',
+      multiSelect: true,
+      questionText,
+      voice: 'Kore',
+      generateAudio: 'all',
+      explanation: `**${target1}** and **${target2}** both end with the sound **/ ${family} /**.`,
+      soundText: family,
+      soundUrl: null, // dynamic TTS
+      options: shuffledOptions.map((opt, idx) => ({
+        id: `opt_${idx}`,
+        label: opt.label,
+        content: ruledLetterSvg(opt.label, 200, 140),
+        isCorrect: opt.isCorrect
+      })),
+      correctAnswerIndex: correctIndices[0],
+      correctAnswerIndices: correctIndices,
+      answer: correctIndices,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'play_sound_card' }
+      ]
+    };
+  }
+
+  return null;
+}
+
 export function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
@@ -872,6 +1536,12 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateIdentifyCategoryQuestion(seed, r);
       } else if (template.engine === 'letter_recognition') {
         question = generateLetterRecognitionQuestion(skillId, seed, r);
+      } else if (template.engine === 'case_match') {
+        question = generateCaseMatchQuestion(skillId, seed, r, config);
+      } else if (template.engine === 'word_recognition') {
+        question = generateWordRecognitionQuestion(skillId, seed, r, config);
+      } else if (template.engine === 'rhyming') {
+        question = generateRhymingQuestion(skillId, seed, r);
       }
 
       if (question) {

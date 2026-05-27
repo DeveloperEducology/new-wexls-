@@ -816,7 +816,7 @@ function includesFromTopic(topicNode, groups) {
 
 function dbTopicFromNode(node, index) {
   const groups = buildGroupsFromDbTopic(node);
-  const id = normalizeTopicId(node.topicId || node.id);
+  const id = normalizeTopicId(node.id);
 
   return {
     id,

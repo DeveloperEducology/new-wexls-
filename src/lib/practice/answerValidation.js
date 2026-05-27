@@ -164,7 +164,7 @@ export function isAnswerCorrect(question, userAnswer) {
         .filter((idx) => idx !== null);
 
       if (correctIndices.length === 0) {
-        const expected = question.correctAnswerIndex ?? question.answer ?? question.correctAnswer;
+        const expected = question.correctAnswerIndices ?? question.answer ?? question.correctAnswerIndex ?? question.correctAnswer;
         if (Array.isArray(expected)) {
           correctIndices = expected.map(Number);
         } else if (expected && typeof expected === 'object') {

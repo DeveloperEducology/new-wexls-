@@ -8,6 +8,14 @@ import { speakText } from '@/lib/ttsClient';
 import { resolveToolSvg } from '@/lib/practice/svgTools';
 import InteractiveToolWrapper from './InteractiveToolWrapper';
 
+const getSafeString = (val) => {
+  if (!val) return '';
+  if (typeof val === 'object' && val !== null) {
+    return String(val.id || val.name || val.slug || val.title || '');
+  }
+  return String(val);
+};
+
 export function SvgPart({ part, question, userAnswer, onAnswer, isAnswered, inGroup = false }) {
   if (!part) return null;
   const isDraggableTool = part.toolSvg && part.draggable === true;
@@ -71,9 +79,28 @@ function cleanText(value) {
 }
 
 function InlineMarkdown({ text }) {
-  return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
+  return String(text || '').split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
     const match = piece.match(/^\*\*([^*]+)\*\*$/);
     if (match) return <strong key={index}>{match[1]}</strong>;
+    
+    const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
+    if (imgMatch) {
+      return (
+        <img
+          key={index}
+          src={imgMatch[1]}
+          alt="target word"
+          style={{
+            display: 'inline-block',
+            height: '1.6em',
+            verticalAlign: 'middle',
+            margin: '0 6px',
+            borderRadius: '4px',
+            objectFit: 'contain'
+          }}
+        />
+      );
+    }
     
     const subSegments = piece.split(/(\$[^\$]+\$)/g);
     return (
@@ -170,14 +197,23 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
   );
 }
 
+function cleanSpeechText(value) {
+  return String(value || '')
+    .replace(/\[img:[^\]]+\]/g, '')
+    .replace(/\[speak:([^\]]+)\]/g, ' $1')
+    .replace(/\*\*/g, '')
+    .replace(/^#{1,4}\s*/gm, '')
+    .trim();
+}
+
 function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue }) {
   const content = part.content || part.text || '';
   const spokenRef = useRef(false);
 
   const isPreK = useMemo(() => {
-    const topic = (question?.metadata?.topic || question?.topic || '').toLowerCase();
-    const grade = (question?.metadata?.grade || question?.grade || '').toLowerCase();
-    const skillId = (question?.metadata?.skillId || question?.skillId || '').toLowerCase();
+    const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
+    const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+    const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
     return (
       topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
       grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
@@ -185,15 +221,43 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
     );
   }, [question]);
 
+  const cleanSpokenText = useMemo(() => {
+    return cleanSpeechText(speakTextValue || content);
+  }, [speakTextValue, content]);
+
   useEffect(() => {
     if (isPreK && !isAnswered && content && !spokenRef.current) {
       spokenRef.current = true;
+      const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
+      const isAudioToLetterSkill = skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
+                                   skillId === 'lkg-english-word-recognition-same-ending-sound' ||
+                                   skillId === 'lkg-english-rhyming-same-ending-single' ||
+                                   skillId === 'lkg-english-rhyming-same-ending-double';
+      // Play instruction first
       const t = setTimeout(() => {
-        speakText(speakTextValue || content, question?.voice || 'Puck', question?.audioUrl);
+        speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl);
+        // For audio-to-letter, ending-sound, and rhyming: also auto-play the sound after instruction (~2.5s delay)
+        if (isAudioToLetterSkill && (question?.soundUrl || question?.soundText)) {
+          const t2 = setTimeout(() => {
+            speakText(question.soundText || '', question.voice || 'Kore', question.soundUrl);
+          }, 2500);
+          return () => clearTimeout(t2);
+        }
       }, 550);
       return () => clearTimeout(t);
     }
-  }, [isPreK, content, question, isAnswered, speakTextValue]);
+  }, [isPreK, content, question, isAnswered, cleanSpokenText]);
+
+  const renderSegment = (text) => {
+    if (isMarkdownTable(text)) {
+      return <MarkdownTable text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />;
+    }
+    return <TextWithBlanks text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />;
+  };
+
+  const pieces = useMemo(() => {
+    return content.split(/(\[speak:[^\]]+\])/g);
+  }, [content]);
 
   const textElement = (
     <div
@@ -208,24 +272,61 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
         ...part.style,
       }}
     >
-      {isMarkdownTable(content) ? (
-        <MarkdownTable text={content} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />
-      ) : (
-        <TextWithBlanks text={content} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />
-      )}
+      {pieces.map((piece, i) => {
+        const speakMatch = piece.match(/^\[speak:([^\]]+)\]$/);
+        if (speakMatch) {
+          const sentenceText = speakMatch[1];
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => speakText(sentenceText, question?.voice || 'Kore')}
+                style={{
+                  background: '#e0f2fe',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#0284c7',
+                  boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+                  transition: 'transform 0.2s ease, background 0.2s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                title="Read sentence out loud"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+              </button>
+              <span style={{ fontSize: '26px', fontWeight: '950', fontFamily: 'Arial, sans-serif', color: '#1e293b' }}>
+                {sentenceText}
+              </span>
+            </div>
+          );
+        }
+        return <span key={i}>{renderSegment(piece)}</span>;
+      })}
     </div>
   );
 
   if (isPreK) {
     const subject = question?.metadata?.subject || question?.subject || '';
     const mascotEmoji = subject === 'english' ? '🐻' : '🦉'; 
-    const speechText = speakTextValue || content;
+    const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
+    const isAudioToLetter = skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
+                            skillId === 'lkg-english-word-recognition-same-ending-sound';
 
     return (
       <div className={styles.preKMascotSection}>
         <button
           type="button"
-          onClick={() => speakText(speechText, question?.voice || 'Puck', question?.audioUrl)}
+          onClick={() => speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl)}
           className={styles.preKMascotAvatar}
           title="Click to listen"
         >
@@ -237,13 +338,37 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
           <div className={styles.preKMascotBubbleTail} />
           <button
             type="button"
-            onClick={() => speakText(speechText, question?.voice || 'Puck', question?.audioUrl)}
+            onClick={() => speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl)}
             className={styles.preKSpeakerBtnLarge}
             title="Read instruction out loud"
           >
             🔊
           </button>
-          {textElement}
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            {textElement}
+            {isAudioToLetter && (question?.soundUrl || question?.soundText) && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '14px 0 4px 0', gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#7e22ce', letterSpacing: '0.04em', fontFamily: 'var(--font-outfit), sans-serif', opacity: 0.75 }}>
+                  {skillId === 'lkg-english-word-recognition-same-ending-sound' ? 'Tap to hear the sound!' : 'Tap to hear the letter!'}
+                </div>
+                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className={styles.playSoundPulseRing} />
+                  <button
+                    type="button"
+                    id="play-letter-sound-btn"
+                    onClick={() => speakText(question.soundText || '', question.voice || 'Kore', question.soundUrl)}
+                    className={styles.preKPlaySoundBtn}
+                    aria-label="Play letter sound"
+                  >
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                    <span>Play Sound</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -254,7 +379,7 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
         <button
           type="button"
-          onClick={() => speakText(speakTextValue || content, question?.voice || 'Puck', question?.audioUrl)}
+          onClick={() => speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl)}
           style={{
             background: '#e0f2fe',
             border: 'none',
@@ -4911,8 +5036,66 @@ function NonStandardObjectMeasurementPart({ part, userAnswer, onAnswer, isAnswer
   );
 }
 
+function PlaySoundCard({ question }) {
+  const soundText = question?.soundText || '';
+  const soundUrl = question?.soundUrl || null;
+  const voice = question?.voice || 'Kore';
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '12px 0' }}>
+      <button
+        type="button"
+        onClick={() => speakText(soundText, voice, soundUrl)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          outline: 'none',
+          transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        title="Play sound"
+        aria-label="Play sound"
+      >
+        <svg viewBox="0 0 160 160" width="160" height="160" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+          {/* Lime green card background */}
+          <rect width="160" height="160" rx="20" fill="#a3e635" stroke="#84cc16" strokeWidth="2" />
+          
+          {/* White play circle */}
+          <circle cx="98" cy="80" r="32" fill="#ffffff" />
+          
+          {/* Blue play triangle */}
+          <polygon points="94,68 94,92 112,80" fill="#0ea5e9" />
+          
+          {/* Cupped-ear mascot on the left */}
+          <g transform="translate(15, 30)">
+            {/* Hair (brown) */}
+            <path d="M 15 10 C 10 10, 5 20, 5 35 C 5 50, 10 70, 15 80 C 17 80, 20 70, 18 60 C 18 50, 23 45, 23 35 C 23 20, 20 10, 15 10 Z" fill="#78350f" />
+            
+            {/* Face/Neck/Ear base (flesh-toned) */}
+            <path d="M 23 35 C 23 30, 29 30, 29 40 C 29 48, 24 50, 23 48" fill="#fed7aa" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round" />
+            {/* Inner ear detail */}
+            <path d="M 25 38 C 25 36, 27 36, 27 40 C 27 43, 26 44, 25 44" fill="none" stroke="#fdba74" strokeWidth="1" />
+            
+            {/* Hand cupped behind the ear */}
+            {/* Arm/Wrist */}
+            <path d="M 12 90 L 25 70 C 27 65, 30 65, 33 70 L 33 90" fill="#fed7aa" />
+            {/* Hand palm & fingers */}
+            <path d="M 28 72 C 32 60, 32 50, 32 46 C 32 44, 34 44, 34 46 C 34 50, 35 60, 32 72 Z" fill="#fed7aa" stroke="#fdba74" strokeWidth="1" />
+            <path d="M 33 65 C 36 55, 37 48, 37 45 C 37 43, 39 43, 39 45 C 39 49, 38 57, 35 68 Z" fill="#fed7aa" stroke="#fdba74" strokeWidth="1" />
+            <path d="M 36 68 C 40 58, 41 51, 41 48 C 41 46, 43 46, 43 48 C 43 52, 42 59, 38 71 Z" fill="#fed7aa" stroke="#fdba74" strokeWidth="1" />
+          </g>
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
   text: TextPart,
+  play_sound_card: PlaySoundCard,
   svg: SvgPart,
   image: ImagePart,
   input: InputPart,
@@ -4962,6 +5145,7 @@ const PART_RENDERERS = {
   side_by_side_display: SideBySideDisplayPart,
   interactive_svg: InteractiveSvgPart,
   hotspot_canvas: HotspotCanvasPart,
+  case_match_shown_letter: CaseMatchShownLetterPart,
 };
 
 function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }) {
@@ -5018,12 +5202,39 @@ function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }
 // ─── Option B: Hotspot Canvas Overlay ─────────────────────────────────────────
 // Background SVG/image with absolutely-positioned transparent click zones.
 // Coordinates are percentage-based so the layout is fully responsive.
+// ─── Case-match: show the "source" ruled letter card ─────────────────────────
+function CaseMatchShownLetterPart({ part }) {
+  const svg = part?.svgContent || '';
+  const letter = part?.letter || '';
+  if (!svg && !letter) return null;
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      margin: '12px 0 4px 0',
+    }}>
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: 14,
+          border: '2px solid #e2e8f0',
+          boxShadow: '0 4px 16px rgba(59,130,246,0.10)',
+          padding: '4px 8px',
+          display: 'inline-block',
+          lineHeight: 0,
+        }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </div>
+  );
+}
+
 function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const isPreK = useMemo(() => {
-    const topic = (question?.metadata?.topic || question?.topic || '').toLowerCase();
-    const grade = (question?.metadata?.grade || question?.grade || '').toLowerCase();
-    const skillId = (question?.metadata?.skillId || question?.skillId || '').toLowerCase();
+    const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
+    const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+    const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
     return (
       topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
       grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
@@ -5037,7 +5248,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
         qh => (qh.id && hs.id && qh.id === hs.id) ||
               (qh.label && hs.label && qh.label.toLowerCase() === hs.label.toLowerCase())
       ) || (question?.hotspots || question?.metadata?.hotspots)?.[hs.optionIndex];
-      return Boolean(hs.imageUrl || qHs?.imageUrl);
+      return Boolean(hs.imageUrl || qHs?.imageUrl || hs.svgContent || qHs?.svgContent);
     });
   }, [part?.hotspots, question]);
 
@@ -5288,6 +5499,11 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
             >
               {imageUrl ? (
                 <img src={imageUrl} alt={hs.label || ''} style={{ height: '90%', width: 'auto', objectFit: 'contain', pointerEvents: 'none', zIndex: 1 }} />
+              ) : hs.svgContent ? (
+                <div
+                  style={{ width: '90%', height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 1 }}
+                  dangerouslySetInnerHTML={{ __html: hs.svgContent }}
+                />
               ) : (
                 hs.label && (
                   <span style={{ 

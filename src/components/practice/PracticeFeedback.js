@@ -135,14 +135,35 @@ export default function PracticeFeedback({
   // Resolve correct label and image
   let correctLabel = '';
   let correctImageUrl = '';
-  if (question && question.correctAnswerIndex !== undefined) {
-    if (Array.isArray(question.hotspots) && question.hotspots[question.correctAnswerIndex]) {
-      const hs = question.hotspots[question.correctAnswerIndex];
-      correctLabel = hs.label || hs.name || '';
-      correctImageUrl = hs.imageUrl || '';
-    } else if (Array.isArray(question.options) && question.options[question.correctAnswerIndex]) {
-      const opt = question.options[question.correctAnswerIndex];
-      correctLabel = typeof opt === 'object' ? (opt.label || opt.text || '') : String(opt);
+  const isMultiSelect = question?.interaction === 'multi_select' || question?.multiSelect === true;
+
+  if (question) {
+    let indices = [];
+    if (isMultiSelect && Array.isArray(question.correctAnswerIndices)) {
+      indices = question.correctAnswerIndices;
+    } else if (isMultiSelect && Array.isArray(question.answer)) {
+      indices = question.answer;
+    } else if (question.correctAnswerIndex !== undefined) {
+      indices = [question.correctAnswerIndex];
+    }
+
+    if (indices.length > 0) {
+      const labels = [];
+      indices.forEach((idx) => {
+        if (Array.isArray(question.options) && question.options[idx]) {
+          const opt = question.options[idx];
+          const lbl = typeof opt === 'object' ? (opt.label || opt.text || '') : String(opt);
+          if (lbl) labels.push(lbl);
+        }
+      });
+      correctLabel = labels.join(', ');
+      
+      if (indices.length === 1) {
+        if (Array.isArray(question.hotspots) && question.hotspots[indices[0]]) {
+          const hs = question.hotspots[indices[0]];
+          correctImageUrl = hs.imageUrl || '';
+        }
+      }
     }
   }
 

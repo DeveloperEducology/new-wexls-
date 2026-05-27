@@ -734,6 +734,37 @@
     cursor: default;
 }
 
+/* Pre-K Option Buttons (Chunky 3D sticker-style cards) */
+.preKOptionButton {
+    min-height: 120px;
+    padding: 16px 20px;
+    border-radius: 22px !important;
+    border: 4px solid #ffffff !important;
+    background: #ffffff !important;
+    color: #1e293b;
+    cursor: pointer;
+    box-shadow: 0 8px 0 #cbd5e1, 0 10px 16px rgba(0, 0, 0, 0.05) !important;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-weight: 900;
+}
+
+.preKOptionButton:hover:not(:disabled) {
+    border-color: #38bdf8 !important;
+    transform: scale(1.05);
+    box-shadow: 0 10px 0 #0ea5e9, 0 12px 20px rgba(14, 165, 233, 0.15) !important;
+}
+
+.preKOptionButtonActive {
+    border-color: #22c55e !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 0 #15803d, 0 12px 24px rgba(34, 197, 94, 0.2) !important;
+}
+
+
 /* Interactive SVG Hotspots styling */
 .interactiveSvgContainer {
     width: 100%;
@@ -1504,6 +1535,56 @@
 @keyframes preKMascotCheer {
     0% { transform: scale(1) rotate(-8deg); }
     100% { transform: scale(1.15) rotate(8deg); }
+}
+
+.preKPlaySoundBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0;
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    color: #ffffff;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    font-size: 17px;
+    font-weight: 900;
+    font-family: 'Fredoka', 'Outfit', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #5b21b6, 0 10px 24px rgba(124, 58, 237, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    width: fit-content;
+    letter-spacing: 0.02em;
+    position: relative;
+    z-index: 1;
+}
+
+.preKPlaySoundBtn:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #9333ea 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 0 #4c1d95, 0 14px 28px rgba(124, 58, 237, 0.4);
+}
+
+.preKPlaySoundBtn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #5b21b6;
+}
+
+.playSoundPulseRing {
+    position: absolute;
+    inset: -10px;
+    border-radius: 999px;
+    border: 3px solid rgba(167, 139, 250, 0.5);
+    animation: playSoundPulse 1.8s ease-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes playSoundPulse {
+    0% { transform: scale(0.9); opacity: 0.9; }
+    70% { transform: scale(1.15); opacity: 0; }
+    100% { transform: scale(1.15); opacity: 0; }
 }
 
 

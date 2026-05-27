@@ -53,9 +53,29 @@ function responsivePx(value, minPx, fallbackMaxPx) {
 }
 
 function InlineMarkdown({ text }) {
-  return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
+  return String(text || '').split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
     const match = piece.match(/^\*\*([^*]+)\*\*$/);
     if (match) return <strong key={index}>{match[1]}</strong>;
+    
+    const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
+    if (imgMatch) {
+      return (
+        <img
+          key={index}
+          src={imgMatch[1]}
+          alt="target word"
+          style={{
+            display: 'inline-block',
+            height: '1.6em',
+            verticalAlign: 'middle',
+            margin: '0 6px',
+            borderRadius: '4px',
+            objectFit: 'contain'
+          }}
+        />
+      );
+    }
+    
     return <span key={index}>{piece.replace(/^#{1,4}\s*/, '')}</span>;
   });
 }
@@ -267,6 +287,24 @@ export default function MCQRenderer({
   onAnswer,
   isAnswered,
 }) {
+  const isPreK = useMemo(() => {
+    const getSafeString = (val) => {
+      if (!val) return '';
+      if (typeof val === 'object' && val !== null) {
+        return String(val.id || val.name || val.slug || val.title || '');
+      }
+      return String(val);
+    };
+    const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
+    const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+    const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
+    return (
+      topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
+      grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
+      skillId.includes('lkg') || skillId.includes('prek') || skillId.includes('ukg')
+    );
+  }, [question]);
+
   const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
 
   const selectedIndices = useMemo(() => {
@@ -429,161 +467,267 @@ export default function MCQRenderer({
           })}
         </div>
       ) : (
-        <div className={gridClassName} style={gridStyle} data-option-layout={optionLayout.mode}>
-          {(question.options || []).map((option, index) => {
-            const selected = isMultiSelect
-              ? selectedIndices.includes(index)
-              : Number.isFinite(selectedIndex) && selectedIndex === index;
-            const content = getOptionContent(option);
-            const isSvgOption = hasSvgContent(option);
-            const isImageOption = isImageUrl(content);
- 
-             return (
-              <button
-                key={option?.id || index}
-                type="button"
-                disabled={isAnswered}
-                onClick={() => {
-                  if (isMultiSelect) {
-                    const nextSelected = selectedIndices.includes(index)
-                      ? selectedIndices.filter((i) => i !== index)
-                      : [...selectedIndices, index].sort((a, b) => a - b);
-                    onAnswer(nextSelected);
-                  } else {
-                    onAnswer(index);
-                  }
-                  if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
-                    speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
-                  }
-                }}
-                className={`${styles.optionButton} ${selected ? styles.optionButtonActive : ''}`}
-                style={{
-                  position: 'relative',
-                  minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
-                  cursor: isAnswered ? 'default' : 'pointer',
-                  ...(optionLayout.mode === 'compact' ? { borderRadius: 4, minHeight: 44 } : {}),
-                }}
-              >
-                {(question.metaConfig?.readOptions || question.metaConfig?.readable) ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
+        <div
+          style={isPreK ? {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            maxWidth: '720px',
+            margin: '20px auto',
+            width: '100%',
+          } : undefined}
+        >
+          {isPreK && (
+            <button
+              type="button"
+              onClick={() => {
+                const texts = (question.options || []).map((opt, idx) => getOptionLabel(opt, idx));
+                speakText(texts.join('. '), question.voice || 'Kore');
+              }}
+              style={{
+                background: '#e0f2fe',
+                border: 'none',
+                borderRadius: '50%',
+                width: '42px',
+                height: '42px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#0284c7',
+                boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+                transition: 'transform 0.2s ease, background 0.2s ease',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+              title="Read all options out loud"
+              aria-label="Read all options out loud"
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+            </button>
+          )}
+          <div
+            className={isPreK ? `${styles.optionsGrid} ${styles.optionsGridVisual}` : gridClassName}
+            style={isPreK ? {
+              display: 'grid',
+              gridTemplateColumns: question.options?.length === 2 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
+              gap: 'clamp(14px, 3vw, 24px)',
+              width: '100%',
+              margin: 0,
+            } : gridStyle}
+            data-option-layout={optionLayout.mode}
+          >
+            {(question.options || []).map((option, index) => {
+              const selected = isMultiSelect
+                ? selectedIndices.includes(index)
+                : Number.isFinite(selectedIndex) && selectedIndex === index;
+              const content = getOptionContent(option);
+              const isSvgOption = hasSvgContent(option);
+              const isImageOption = isImageUrl(content);
+   
+               return (
+                <button
+                  key={option?.id || index}
+                  type="button"
+                  disabled={isAnswered}
+                  onClick={() => {
+                    if (isMultiSelect) {
+                      const nextSelected = selectedIndices.includes(index)
+                        ? selectedIndices.filter((i) => i !== index)
+                        : [...selectedIndices, index].sort((a, b) => a - b);
+                      onAnswer(nextSelected);
+                    } else {
+                      onAnswer(index);
+                    }
+                    if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                       speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
+                    }
+                  }}
+                  className={`${isPreK ? styles.preKOptionButton : styles.optionButton} ${selected ? (isPreK ? styles.preKOptionButtonActive : styles.optionButtonActive) : ''}`}
+                  style={{
+                    position: 'relative',
+                    minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
+                    cursor: isAnswered ? 'default' : 'pointer',
+                    ...(optionLayout.mode === 'compact' ? { borderRadius: 4, minHeight: 44 } : {}),
+                    ...(isPreK ? {
+                      transform: selected
+                        ? `scale(1.02) rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`
+                        : `rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`,
+                      transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+                      zIndex: selected ? 30 : 10,
+                      ...(isMultiSelect ? { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' } : {})
+                    } : {})
+                  }}
+                >
+                  {isPreK && isMultiSelect && (
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      border: '3px solid #38bdf8',
+                      backgroundColor: selected ? '#38bdf8' : '#ffffff',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: '12px',
+                      color: '#ffffff',
+                      fontSize: '16px',
+                      fontWeight: '950',
+                      flexShrink: 0,
+                      boxShadow: selected ? '0 4px 10px rgba(56, 189, 248, 0.3)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}>
+                      {selected ? '✓' : ''}
+                    </div>
+                  )}
+                  {(question.metaConfig?.readOptions || question.metaConfig?.readable) ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
                         e.stopPropagation();
                         speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '6px',
-                      right: '6px',
-                      background: '#f0f9ff',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '26px',
-                      height: '26px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      color: '#0369a1',
-                      boxShadow: '0 2px 4px rgba(2, 132, 199, 0.1)',
-                      transition: 'transform 0.2s ease, background 0.2s ease',
-                      zIndex: 10,
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#f0f9ff'; }}
-                    title="Read option out loud"
-                  >
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                    </svg>
-                  </span>
-                ) : null}
-                {content && isSvgString(content) ? (
-                  <div
-                    className={styles.optionMedia}
-                    aria-hidden="true"
-                    style={{
-                      width: optionLayout.mediaWidth || '100%',
-                      maxWidth: optionLayout.mediaMaxWidth || 360,
-                      minHeight: optionLayout.mediaMinHeight || 0,
-                      marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    dangerouslySetInnerHTML={{ __html: content }}
-                  />
-                ) : null}
-                {content && isImageOption ? (
-                  <div
-                    className={styles.optionMedia}
-                    aria-hidden="true"
-                    style={{
-                      width: option.width || optionLayout.mediaWidth || '100%',
-                      maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 360),
-                      minHeight: option.height || optionLayout.mediaMinHeight || 0,
-                      marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                      <img
-                        src={content}
-                        alt=""
-                        style={{
-                          width: option.width || '100%',
-                          maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 260),
-                          height: option.height || 'auto',
-                          maxHeight: option.height ? undefined : 220,
-                          objectFit: 'contain',
-                          borderRadius: 14,
-                        }}
-                      />
-                  </div>
-                ) : null}
-                {option && option.emoji && !isSvgOption && !isImageOption ? (
-                  <div
-                    aria-hidden="true"
-                    style={{
-                      width: option.width || '100%',
-                      height: option.height || 'auto',
-                      fontSize: option.fontSize || '64px',
-                      marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      userSelect: 'none',
-                    }}
-                  >
-                    {option.emoji}
-                  </div>
-                ) : null}
-                {!isSvgOption && !isImageOption && !(option && option.emoji) ? (
-                  <div style={{ fontSize: 'clamp(14px, 3.8vw, 17px)', fontWeight: 'inherit', lineHeight: 1.35 }}>
-                    {option?.type === 'latex' ? (
-                      <KaTeXRenderer math={getOptionLabel(option, index)} />
-                    ) : (
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '6px',
+                        right: '6px',
+                        background: '#f0f9ff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '26px',
+                        height: '26px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#0369a1',
+                        boxShadow: '0 2px 4px rgba(2, 132, 199, 0.1)',
+                        transition: 'transform 0.2s ease, background 0.2s ease',
+                        zIndex: 10,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#f0f9ff'; }}
+                      title="Read option out loud"
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                      </svg>
+                    </span>
+                  ) : null}
+                  {content && isSvgString(content) ? (
+                    <div
+                      className={styles.optionMedia}
+                      aria-hidden="true"
+                      style={{
+                        width: optionLayout.mediaWidth || '100%',
+                        maxWidth: optionLayout.mediaMaxWidth || 360,
+                        minHeight: optionLayout.mediaMinHeight || 0,
+                        marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      dangerouslySetInnerHTML={{ __html: content }}
+                    />
+                  ) : null}
+                  {content && isImageOption ? (
+                    <div
+                      className={styles.optionMedia}
+                      aria-hidden="true"
+                      style={{
+                        width: option.width || optionLayout.mediaWidth || '100%',
+                        maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 360),
+                        minHeight: option.height || optionLayout.mediaMinHeight || 0,
+                        marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                        <img
+                          src={content}
+                          alt=""
+                          style={{
+                            width: option.width || '100%',
+                            maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 260),
+                            height: option.height || 'auto',
+                            maxHeight: option.height ? undefined : 220,
+                            objectFit: 'contain',
+                            borderRadius: 14,
+                          }}
+                        />
+                    </div>
+                  ) : null}
+                  {option && option.emoji && !isSvgOption && !isImageOption ? (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: option.width || '100%',
+                        height: option.height || 'auto',
+                        fontSize: option.fontSize || '64px',
+                        marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {option.emoji}
+                    </div>
+                  ) : null}
+                  {!isSvgOption && !isImageOption && !(option && option.emoji) ? (
+                    <div style={{ fontSize: 'clamp(14px, 3.8vw, 17px)', fontWeight: 'inherit', lineHeight: 1.35 }}>
+                      {option?.type === 'latex' ? (
+                        <KaTeXRenderer math={getOptionLabel(option, index)} />
+                      ) : (
+                        <InlineMarkdown text={getOptionLabel(option, index)} />
+                      )}
+                    </div>
+                  ) : null}
+                  {(isImageOption || (option && option.emoji)) && getOptionLabel(option, index) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
+                    <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 500, lineHeight: 1.25, color: '#334155' }}>
                       <InlineMarkdown text={getOptionLabel(option, index)} />
-                    )}
-                  </div>
-                ) : null}
-                {(isImageOption || (option && option.emoji)) && getOptionLabel(option, index) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
-                  <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 500, lineHeight: 1.25, color: '#334155' }}>
-                    <InlineMarkdown text={getOptionLabel(option, index)} />
-                  </div>
-                ) : null}
-              </button>
-            );
-          })}
+                    </div>
+                  ) : null}
+                  {selected && isPreK && !isMultiSelect && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      right: '-10px',
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '50%',
+                      backgroundColor: '#22c55e',
+                      border: '3px solid #ffffff',
+                      boxShadow: '0 6px 14px rgba(34, 197, 94, 0.4)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      zIndex: 15,
+                      color: '#ffffff',
+                      fontSize: '16px',
+                      fontWeight: '950',
+                      animation: `${styles.badgePop} 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+                      pointerEvents: 'none'
+                    }}>
+                      ✓
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </section>

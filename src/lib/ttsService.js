@@ -81,6 +81,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
 
   if (provider === 'piper') {
     const piperUrlStr = process.env.PIPER_TTS_URL || 'http://localhost:5000/api/tts';
+    let piperVoice = targetVoice;
     try {
       const voiceMapping = {
         Puck: 'en_US-ryan-medium',
@@ -88,7 +89,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
         Kore: 'en_US-amy-medium',
         Fenrir: 'en_US-lessac-medium',
       };
-      const piperVoice = voiceMapping[targetVoice] || targetVoice;
+      piperVoice = voiceMapping[targetVoice] || targetVoice;
       
       const url = new URL(piperUrlStr);
       url.searchParams.append('text', cleanText);
@@ -118,7 +119,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
       'en_US-amy-medium': 'Kore',
       'en_US-lessac-medium': 'Fenrir'
     };
-    targetVoice = PIPER_TO_GEMINI_FALLBACK[targetVoice] || 'Puck';
+    targetVoice = PIPER_TO_GEMINI_FALLBACK[piperVoice] || targetVoice;
     console.log(`[TTS] Falling back to provider: GEMINI (voice: ${targetVoice})`);
   }
 

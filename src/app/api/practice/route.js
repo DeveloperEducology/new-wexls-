@@ -367,7 +367,7 @@ export async function GET(request) {
       const questionData = generator.generate({ ...config.variables, difficulty: config.difficulty });
       const question = normalizeGenericTopicQuestion(
         questionData,
-        { topic: targetTopic, skill: resolvedTemplateId, seed, engine: generator.template.engine, subject }
+        { topic: targetTopic, skill, seed, engine: generator.template.engine, subject }
       );
       
       return NextResponse.json(withCompetency({
@@ -660,6 +660,8 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     questionText: question.questionText || question.text || '',
     audioUrl: question.audioUrl,
     voice: question.voice,
+    soundUrl: question.soundUrl,
+    soundText: question.soundText,
     metaConfig: question.metaConfig,
     parts: normalizedParts,
     options: Array.isArray(question.options) ? question.options : [],
@@ -679,6 +681,10 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     poolPosition: question.poolPosition,
     answer: normalizedAnswer,
     correctAnswerIndex: normalizeIndex(question.correctAnswerIndex) ?? normalizeIndex(question.correct_answer_index),
+    correctAnswerIndices: question.correctAnswerIndices,
+    multiSelect: question.multiSelect,
+    shownLetter: question.shownLetter,
+    shownLetterSvg: question.shownLetterSvg,
     solution: normalizeSolution(question.solution || question.explanation),
     metadata: {
       ...(question.metadata || {}),
