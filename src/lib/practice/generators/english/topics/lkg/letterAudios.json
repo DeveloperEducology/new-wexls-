@@ -574,5 +574,10 @@
   "Listen to the sentence. Then, find the word pot in the sentence.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/138a030be1cb69522eb493f1fba6e11be2deee9ad6d2956a31fd8adabb529141.wav",
   "Listen to the sentence. Then, find the word pot in the sentence. The pot is hot.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/046d9732840afd57e90a4bd0bf9314961ff6612fe94ff69a5bacb3ce6a1e803e.wav",
   "Listen to the sentence. Then, find the word tag in the sentence.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/b5c3a28e6f4237315ec76e0b4b5c97c5ad9946200e77684d856a3842e8f6638e.wav",
-  "Listen to the sentence. Then, find the word tag in the sentence. We can play tag.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/a496da3d77bef1e9e52272cc9c43f531bb6952834019794e9760ba5e4dd3e77c.wav"
+  "Listen to the sentence. Then, find the word tag in the sentence. We can play tag.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/a496da3d77bef1e9e52272cc9c43f531bb6952834019794e9760ba5e4dd3e77c.wav",
+  "Listen to the sentence: **Ducks can fly.**\n\nThen, find the word **ducks** in the sentence.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/bb7c51a2212766d09b2f3175e101758cc1ebcc8b48ba32bf9946bc0fc8b443ec.wav",
+  "Listen to the sentence. Then, find the word ducks in the sentence.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/ed7bcd2ba78bf3340964296b8d3c32bf3a00e89e1df3820be3ef37f40d316add.wav",
+  "Listen to the sentence. Then, find the word ducks in the sentence. Ducks can fly.": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/bf4287f962f9558d8f83022910040023438c6b951160b9b2ea5921981c055905.wav",
+  "Ducks": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/7688da86c118718943df09fad7b22e7aa8720c21ed1bcc338f1622b9b858268d.wav",
+  "fly": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/7422ce7fc31993d6be946834dec12da42c48baa8f112205b4ec96998259fdb1f.wav"
 }
