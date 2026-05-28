@@ -6902,6 +6902,17 @@ Explanation: 5 plus 7 is equal to 12.`}
             setUrlPreviews(entries);
           }
 
+          function removeUrlFromInput(targetUrl) {
+            const lines = urlInput.split(/[\n,]+/);
+            const filtered = lines.filter(line => line.trim() !== targetUrl.trim());
+            setUrlInput(filtered.join('\n'));
+          }
+
+          function removeUrlPreview(id) {
+            setUrlPreviews(prev => prev.filter(e => e.id !== id));
+          }
+
+
           async function importSelectedUrls() {
             const toImport = urlPreviews.filter(e => e.selected && (e.status === 'preview' || e.status === 'error'));
             if (!toImport.length) return;
@@ -7116,7 +7127,7 @@ Explanation: 5 plus 7 is equal to 12.`}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
                   {/* Input + controls row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 20, alignItems: 'start' }}>
 
                     {/* Left: textarea + actions */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -7267,8 +7278,8 @@ Explanation: 5 plus 7 is equal to 12.`}
                       )}
                       {parseUrls(urlInput).map((src, i) => (
                         <div key={i} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '6px 8px',
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '8px 10px',
                           background: 'var(--bg-primary)',
                           border: '1px solid #e2e8f0',
                           borderRadius: 6,
@@ -7276,22 +7287,40 @@ Explanation: 5 plus 7 is equal to 12.`}
                           <img
                             src={src}
                             alt=""
-                            style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 4, flexShrink: 0 }}
+                            style={{ width: 90, height: 90, objectFit: 'contain', borderRadius: 4, flexShrink: 0, background: '#f8fafc', border: '1px solid #f1f5f9' }}
                             onError={e => { e.target.style.opacity = '0.2'; }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 10, fontFamily: 'ui-monospace, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
+                            <div style={{ fontSize: 10, fontFamily: 'ui-monospace, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)', marginBottom: 4 }}>
                               {src.split('/').pop()}
                             </div>
                             <div style={{ fontSize: 9, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {src}
                             </div>
                           </div>
-                          <button
-                            onClick={() => copyToClipboard(src)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#94a3b8', flexShrink: 0 }}
-                            title="Copy source URL"
-                          >📋</button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                            <button
+                              onClick={() => copyToClipboard(src)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#94a3b8', padding: 2 }}
+                              title="Copy source URL"
+                            >📋</button>
+                            <button
+                              onClick={() => removeUrlFromInput(src)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                color: '#ef4444',
+                                fontWeight: 'bold',
+                                padding: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              title="Remove URL"
+                            >✕</button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -7305,7 +7334,7 @@ Explanation: 5 plus 7 is equal to 12.`}
                       </div>
                       <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
                         gap: 12,
                       }}>
                         {urlPreviews.map(entry => {
@@ -7357,12 +7386,34 @@ Explanation: 5 plus 7 is equal to 12.`}
                                 {entry.selected ? '✓' : ''}
                               </div>
 
+                              {/* Remove button */}
+                              <button
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  removeUrlPreview(entry.id);
+                                }}
+                                style={{
+                                  position: 'absolute', top: 6, left: 6,
+                                  width: 18, height: 18,
+                                  borderRadius: '50%',
+                                  background: 'rgba(254, 226, 226, 0.9)',
+                                  border: '1px solid #fee2e2',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: 10, color: '#ef4444', fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  zIndex: 3,
+                                }}
+                                title="Remove from queue"
+                              >
+                                ✕
+                              </button>
+
                               {/* Image */}
-                              <div style={{ background: '#f8fafc', padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+                              <div style={{ background: '#f8fafc', padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 140 }}>
                                 <img
                                   src={entry.src}
                                   alt=""
-                                  style={{ maxWidth: '100%', maxHeight: 80, objectFit: 'contain' }}
+                                  style={{ maxWidth: '100%', maxHeight: 140, objectFit: 'contain' }}
                                   onError={e => { e.target.style.opacity = '0.2'; }}
                                 />
                               </div>
