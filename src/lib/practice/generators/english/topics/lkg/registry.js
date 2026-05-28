@@ -249,6 +249,22 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-basics',
     chapterTitle: 'Letter Recognition & Phonics'
+  },
+  'lkg-english-letter-lines-slanting': {
+    templateId: 'lkg.english.letter_lines',
+    code: 'EL.D5',
+    title: 'Identify slanting lines in letters',
+    grade: 'LKG',
+    chapterId: 'english-lkg-basics',
+    chapterTitle: 'Letter Recognition & Phonics'
+  },
+  'lkg-english-letter-lines-curved': {
+    templateId: 'lkg.english.letter_lines',
+    code: 'EL.D6',
+    title: 'Identify curved lines in letters',
+    grade: 'LKG',
+    chapterId: 'english-lkg-basics',
+    chapterTitle: 'Letter Recognition & Phonics'
   }
 };
 

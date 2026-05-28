@@ -1677,104 +1677,321 @@ function generateColorIdentificationQuestion(seed, r) {
   };
 }
 
+function getThickLinePath(x1, y1, x2, y2, id, thickness = 30, fill = '#4f46e5') {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len === 0) return '';
+  
+  const ux = -dy / len;
+  const uy = dx / len;
+  
+  const r = thickness / 2;
+  
+  const ax = x1 + ux * r;
+  const ay = y1 + uy * r;
+  const bx = x1 - ux * r;
+  const by = y1 - uy * r;
+  const cx = x2 - ux * r;
+  const cy = y2 - uy * r;
+  const dx2 = x2 + ux * r;
+  const dy2 = y2 + uy * r;
+  
+  const idAttr = id ? `id="${id}"` : '';
+  const cursorAttr = id ? 'cursor="pointer"' : '';
+  
+  return `<path ${idAttr} d="M ${ax.toFixed(1)} ${ay.toFixed(1)} L ${dx2.toFixed(1)} ${dy2.toFixed(1)} A ${r} ${r} 0 0 1 ${cx.toFixed(1)} ${cy.toFixed(1)} L ${bx.toFixed(1)} ${by.toFixed(1)} A ${r} ${r} 0 0 1 ${ax.toFixed(1)} ${ay.toFixed(1)} Z" fill="${fill}" ${cursorAttr} />`;
+}
+
+function getThickArcPath(cx, cy, radius, startAngleDeg, endAngleDeg, id, thickness = 30, fill = '#4f46e5') {
+  const a1 = (startAngleDeg * Math.PI) / 180;
+  const a2 = (endAngleDeg * Math.PI) / 180;
+  
+  const R = radius + thickness / 2;
+  const r_in = radius - thickness / 2;
+  const capR = thickness / 2;
+  
+  const x_os = cx + R * Math.cos(a1);
+  const y_os = cy + R * Math.sin(a1);
+  const x_oe = cx + R * Math.cos(a2);
+  const y_oe = cy + R * Math.sin(a2);
+  
+  const x_ie = cx + r_in * Math.cos(a2);
+  const y_ie = cy + r_in * Math.sin(a2);
+  const x_is = cx + r_in * Math.cos(a1);
+  const y_is = cy + r_in * Math.sin(a1);
+  
+  const largeArc = Math.abs(endAngleDeg - startAngleDeg) > 180 ? 1 : 0;
+  
+  const idAttr = id ? `id="${id}"` : '';
+  const cursorAttr = id ? 'cursor="pointer"' : '';
+  
+  return `<path ${idAttr} d="M ${x_os.toFixed(1)} ${y_os.toFixed(1)} A ${R.toFixed(1)} ${R.toFixed(1)} 0 ${largeArc} 1 ${x_oe.toFixed(1)} ${y_oe.toFixed(1)} A ${capR} ${capR} 0 0 1 ${x_ie.toFixed(1)} ${y_ie.toFixed(1)} A ${r_in.toFixed(1)} ${r_in.toFixed(1)} 0 ${largeArc} 0 ${x_is.toFixed(1)} ${y_is.toFixed(1)} A ${capR} ${capR} 0 0 1 ${x_os.toFixed(1)} ${y_os.toFixed(1)} Z" fill="${fill}" ${cursorAttr} />`;
+}
+
+function getStrokeBoundingBox(stroke, thickness = 30) {
+  const pad = thickness / 2;
+  if (stroke.shape === 'line') {
+    const minX = Math.min(stroke.x1, stroke.x2) - pad;
+    const maxX = Math.max(stroke.x1, stroke.x2) + pad;
+    const minY = Math.min(stroke.y1, stroke.y2) - pad;
+    const maxY = Math.max(stroke.y1, stroke.y2) + pad;
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  } else if (stroke.shape === 'arc') {
+    const pointsX = [];
+    const pointsY = [];
+    const aStart = (stroke.startAngle * Math.PI) / 180;
+    const aEnd = (stroke.endAngle * Math.PI) / 180;
+    const steps = 8;
+    for (let i = 0; i <= steps; i++) {
+      const angle = aStart + (aEnd - aStart) * (i / steps);
+      const r_out = stroke.radius + pad;
+      const r_in = stroke.radius - pad;
+      pointsX.push(stroke.cx + r_out * Math.cos(angle));
+      pointsY.push(stroke.cy + r_out * Math.sin(angle));
+      pointsX.push(stroke.cx + r_in * Math.cos(angle));
+      pointsY.push(stroke.cy + r_in * Math.sin(angle));
+    }
+    const minX = Math.min(...pointsX);
+    const maxX = Math.max(...pointsX);
+    const minY = Math.min(...pointsY);
+    const maxY = Math.max(...pointsY);
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  }
+  return { x: 0, y: 0, w: 100, h: 100 };
+}
+
 const LETTER_LINES_CONFIG = {
-  E: {
-    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="112.5" width="130" height="30" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="217.5" width="100" height="30" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="322.5" width="130" height="30" rx="15" fill="#e2e8f0" />`,
+  A: {
     strokes: [
-      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'standing line' },
-      { id: 'opt_1', x: 335, y: 112.5, width: 130, height: 30, type: 'sleeping', name: 'top sleeping line' },
-      { id: 'opt_2', x: 335, y: 217.5, width: 100, height: 30, type: 'sleeping', name: 'middle sleeping line' },
-      { id: 'opt_3', x: 335, y: 322.5, width: 130, height: 30, type: 'sleeping', name: 'bottom sleeping line' }
+      { id: 'opt_0', shape: 'line', x1: 400, y1: 112.5, x2: 320, y2: 352.5, type: 'slanting', name: 'left slanting line' },
+      { id: 'opt_1', shape: 'line', x1: 400, y1: 112.5, x2: 480, y2: 352.5, type: 'slanting', name: 'right slanting line' },
+      { id: 'opt_2', shape: 'line', x1: 345, y1: 252.5, x2: 455, y2: 252.5, type: 'sleeping', name: 'middle sleeping line' }
+    ]
+  },
+  B: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'arc', cx: 320, cy: 172.5, radius: 60, startAngle: -90, endAngle: 90, type: 'curved', name: 'top curved loop' },
+      { id: 'opt_2', shape: 'arc', cx: 320, cy: 292.5, radius: 60, startAngle: -90, endAngle: 90, type: 'curved', name: 'bottom curved loop' }
+    ]
+  },
+  C: {
+    strokes: [
+      { id: 'opt_0', shape: 'arc', cx: 400, cy: 232.5, radius: 100, startAngle: 45, endAngle: 315, type: 'curved', name: 'curved line' }
+    ]
+  },
+  D: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'arc', cx: 320, cy: 232.5, radius: 120, startAngle: -90, endAngle: 90, type: 'curved', name: 'curved loop' }
+    ]
+  },
+  E: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'line', x1: 320, y1: 112.5, x2: 460, y2: 112.5, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 232.5, x2: 420, y2: 232.5, type: 'sleeping', name: 'middle sleeping line' },
+      { id: 'opt_3', shape: 'line', x1: 320, y1: 352.5, x2: 460, y2: 352.5, type: 'sleeping', name: 'bottom sleeping line' }
     ]
   },
   F: {
-    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="112.5" width="130" height="30" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="217.5" width="100" height="30" rx="15" fill="#e2e8f0" />`,
     strokes: [
-      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'standing line' },
-      { id: 'opt_1', x: 335, y: 112.5, width: 130, height: 30, type: 'sleeping', name: 'top sleeping line' },
-      { id: 'opt_2', x: 335, y: 217.5, width: 100, height: 30, type: 'sleeping', name: 'middle sleeping line' }
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'line', x1: 320, y1: 112.5, x2: 460, y2: 112.5, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 232.5, x2: 420, y2: 232.5, type: 'sleeping', name: 'middle sleeping line' }
+    ]
+  },
+  G: {
+    strokes: [
+      { id: 'opt_0', shape: 'arc', cx: 400, cy: 232.5, radius: 100, startAngle: 45, endAngle: 360, type: 'curved', name: 'curved line' },
+      { id: 'opt_1', shape: 'line', x1: 400, y1: 232.5, x2: 480, y2: 232.5, type: 'sleeping', name: 'middle sleeping line' },
+      { id: 'opt_2', shape: 'line', x1: 480, y1: 232.5, x2: 480, y2: 292.5, type: 'standing', name: 'small standing line' }
     ]
   },
   H: {
-    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
-      <rect x="465" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="217.5" width="130" height="30" rx="15" fill="#e2e8f0" />`,
     strokes: [
-      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'left standing line' },
-      { id: 'opt_1', x: 465, y: 112.5, width: 30, height: 240, type: 'standing', name: 'right standing line' },
-      { id: 'opt_2', x: 335, y: 217.5, width: 130, height: 30, type: 'sleeping', name: 'middle sleeping line' }
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'left standing line' },
+      { id: 'opt_1', shape: 'line', x1: 480, y1: 112.5, x2: 480, y2: 352.5, type: 'standing', name: 'right standing line' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 232.5, x2: 480, y2: 232.5, type: 'sleeping', name: 'middle sleeping line' }
     ]
   },
   I: {
-    backgroundLetters: `<rect x="315" y="112.5" width="170" height="30" rx="15" fill="#e2e8f0" />
-      <rect x="385" y="142.5" width="30" height="180" rx="15" fill="#e2e8f0" />
-      <rect x="315" y="322.5" width="170" height="30" rx="15" fill="#e2e8f0" />`,
     strokes: [
-      { id: 'opt_0', x: 315, y: 112.5, width: 170, height: 30, type: 'sleeping', name: 'top sleeping line' },
-      { id: 'opt_1', x: 385, y: 142.5, width: 30, height: 180, type: 'standing', name: 'standing line' },
-      { id: 'opt_2', x: 315, y: 322.5, width: 170, height: 30, type: 'sleeping', name: 'bottom sleeping line' }
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 480, y2: 112.5, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_1', shape: 'line', x1: 400, y1: 112.5, x2: 400, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 352.5, x2: 480, y2: 352.5, type: 'sleeping', name: 'bottom sleeping line' }
+    ]
+  },
+  J: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 440, y1: 112.5, x2: 440, y2: 292.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'arc', cx: 380, cy: 292.5, radius: 60, startAngle: 0, endAngle: 180, type: 'curved', name: 'bottom curved hook' }
+    ]
+  },
+  K: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'line', x1: 320, y1: 232.5, x2: 460, y2: 112.5, type: 'slanting', name: 'upper slanting line' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 232.5, x2: 460, y2: 352.5, type: 'slanting', name: 'lower slanting line' }
     ]
   },
   L: {
-    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
-      <rect x="335" y="322.5" width="130" height="30" rx="15" fill="#e2e8f0" />`,
     strokes: [
-      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'standing line' },
-      { id: 'opt_1', x: 335, y: 322.5, width: 130, height: 30, type: 'sleeping', name: 'bottom sleeping line' }
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'line', x1: 320, y1: 352.5, x2: 460, y2: 352.5, type: 'sleeping', name: 'bottom sleeping line' }
+    ]
+  },
+  M: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'left standing line' },
+      { id: 'opt_1', shape: 'line', x1: 320, y1: 112.5, x2: 400, y2: 272.5, type: 'slanting', name: 'left slanting line' },
+      { id: 'opt_2', shape: 'line', x1: 480, y1: 112.5, x2: 400, y2: 272.5, type: 'slanting', name: 'right slanting line' },
+      { id: 'opt_3', shape: 'line', x1: 480, y1: 112.5, x2: 480, y2: 352.5, type: 'standing', name: 'right standing line' }
+    ]
+  },
+  N: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'left standing line' },
+      { id: 'opt_1', shape: 'line', x1: 320, y1: 112.5, x2: 480, y2: 352.5, type: 'slanting', name: 'diagonal slanting line' },
+      { id: 'opt_2', shape: 'line', x1: 480, y1: 112.5, x2: 480, y2: 352.5, type: 'standing', name: 'right standing line' }
+    ]
+  },
+  O: {
+    strokes: [
+      { id: 'opt_0', shape: 'arc', cx: 400, cy: 232.5, radius: 100, startAngle: 90, endAngle: 270, type: 'curved', name: 'left curved half' },
+      { id: 'opt_1', shape: 'arc', cx: 400, cy: 232.5, radius: 100, startAngle: -90, endAngle: 90, type: 'curved', name: 'right curved half' }
+    ]
+  },
+  P: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'arc', cx: 320, cy: 172.5, radius: 60, startAngle: -90, endAngle: 90, type: 'curved', name: 'curved loop' }
+    ]
+  },
+  R: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 352.5, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', shape: 'arc', cx: 320, cy: 172.5, radius: 60, startAngle: -90, endAngle: 90, type: 'curved', name: 'curved loop' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 232.5, x2: 460, y2: 352.5, type: 'slanting', name: 'lower slanting line' }
+    ]
+  },
+  S: {
+    strokes: [
+      { id: 'opt_0', shape: 'arc', cx: 400, cy: 172.5, radius: 60, startAngle: 90, endAngle: 360, type: 'curved', name: 'top curved half' },
+      { id: 'opt_1', shape: 'arc', cx: 400, cy: 292.5, radius: 60, startAngle: -180, endAngle: 90, type: 'curved', name: 'bottom curved half' }
     ]
   },
   T: {
-    backgroundLetters: `<rect x="305" y="112.5" width="190" height="30" rx="15" fill="#e2e8f0" />
-      <rect x="385" y="142.5" width="30" height="210" rx="15" fill="#e2e8f0" />`,
     strokes: [
-      { id: 'opt_0', x: 305, y: 112.5, width: 190, height: 30, type: 'sleeping', name: 'top sleeping line' },
-      { id: 'opt_1', x: 385, y: 142.5, width: 30, height: 210, type: 'standing', name: 'standing line' }
+      { id: 'opt_0', shape: 'line', x1: 300, y1: 112.5, x2: 500, y2: 112.5, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_1', shape: 'line', x1: 400, y1: 112.5, x2: 400, y2: 352.5, type: 'standing', name: 'standing line' }
+    ]
+  },
+  U: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 320, y2: 272.5, type: 'standing', name: 'left standing line' },
+      { id: 'opt_1', shape: 'line', x1: 480, y1: 112.5, x2: 480, y2: 272.5, type: 'standing', name: 'right standing line' },
+      { id: 'opt_2', shape: 'arc', cx: 400, cy: 272.5, radius: 80, startAngle: 0, endAngle: 180, type: 'curved', name: 'bottom curve' }
+    ]
+  },
+  V: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 400, y2: 352.5, type: 'slanting', name: 'left slanting line' },
+      { id: 'opt_1', shape: 'line', x1: 480, y1: 112.5, x2: 400, y2: 352.5, type: 'slanting', name: 'right slanting line' }
+    ]
+  },
+  W: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 300, y1: 112.5, x2: 350, y2: 352.5, type: 'slanting', name: 'outer left slanting' },
+      { id: 'opt_1', shape: 'line', x1: 400, y1: 232.5, x2: 350, y2: 352.5, type: 'slanting', name: 'inner left slanting' },
+      { id: 'opt_2', shape: 'line', x1: 400, y1: 232.5, x2: 450, y2: 352.5, type: 'slanting', name: 'inner right slanting' },
+      { id: 'opt_3', shape: 'line', x1: 500, y1: 112.5, x2: 450, y2: 352.5, type: 'slanting', name: 'outer right slanting' }
+    ]
+  },
+  X: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 480, y2: 352.5, type: 'slanting', name: 'diagonal slanting line' },
+      { id: 'opt_1', shape: 'line', x1: 480, y1: 112.5, x2: 320, y2: 352.5, type: 'slanting', name: 'diagonal slanting line' }
+    ]
+  },
+  Y: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 400, y2: 232.5, type: 'slanting', name: 'left upper slanting line' },
+      { id: 'opt_1', shape: 'line', x1: 480, y1: 112.5, x2: 400, y2: 232.5, type: 'slanting', name: 'right upper slanting line' },
+      { id: 'opt_2', shape: 'line', x1: 400, y1: 232.5, x2: 400, y2: 352.5, type: 'standing', name: 'bottom standing line' }
+    ]
+  },
+  Z: {
+    strokes: [
+      { id: 'opt_0', shape: 'line', x1: 320, y1: 112.5, x2: 480, y2: 112.5, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_1', shape: 'line', x1: 480, y1: 112.5, x2: 320, y2: 352.5, type: 'slanting', name: 'diagonal slanting line' },
+      { id: 'opt_2', shape: 'line', x1: 320, y1: 352.5, x2: 480, y2: 352.5, type: 'sleeping', name: 'bottom sleeping line' }
     ]
   }
 };
 
 function generateLetterLinesQuestion(skillId, seed, r) {
-  const letters = Object.keys(LETTER_LINES_CONFIG);
+  const targetType = skillId.endsWith('-standing') ? 'standing' : 
+                     skillId.endsWith('-sleeping') ? 'sleeping' :
+                     skillId.endsWith('-slanting') ? 'slanting' : 'curved';
+
+  // Filter letters that have at least one stroke of targetType
+  const letters = Object.keys(LETTER_LINES_CONFIG).filter(l => 
+    LETTER_LINES_CONFIG[l].strokes.some(s => s.type === targetType)
+  );
+
   const letter = letters[Math.floor(r * letters.length)];
   const cfg = LETTER_LINES_CONFIG[letter];
 
-  const targetType = skillId === 'lkg-english-letter-lines-standing' ? 'standing' : 'sleeping';
-  
   const options = cfg.strokes.map((stroke, idx) => ({
     id: stroke.id,
     label: stroke.name,
     isCorrect: stroke.type === targetType
   }));
 
-  const hotspots = cfg.strokes.map((stroke, idx) => ({
-    id: `hs_${stroke.id}`,
-    label: stroke.name,
-    x: (stroke.x / 800) * 100,
-    y: (stroke.y / 465) * 100,
-    width: (stroke.width / 800) * 100,
-    height: (stroke.height / 465) * 100,
-    isCircle: false,
-    isCorrect: stroke.type === targetType,
-    optionIndex: idx
-  }));
+  const hotspots = cfg.strokes.map((stroke, idx) => {
+    const bbox = getStrokeBoundingBox(stroke, 30);
+    return {
+      id: `hs_${stroke.id}`,
+      label: stroke.name,
+      x: (bbox.x / 800) * 100,
+      y: (bbox.y / 465) * 100,
+      width: (bbox.w / 800) * 100,
+      height: (bbox.h / 465) * 100,
+      isCircle: false,
+      isCorrect: stroke.type === targetType,
+      optionIndex: idx
+    };
+  });
 
-  const partHotspots = cfg.strokes.map((stroke, idx) => ({
-    optionIndex: idx,
-    x: stroke.x,
-    y: stroke.y,
-    width: stroke.width,
-    height: stroke.height,
-    label: stroke.name,
-    isCircle: false,
-    id: `hs_${stroke.id}`
-  }));
+  const partHotspots = cfg.strokes.map((stroke, idx) => {
+    const bbox = getStrokeBoundingBox(stroke, 30);
+    return {
+      optionIndex: idx,
+      x: bbox.x,
+      y: bbox.y,
+      width: bbox.w,
+      height: bbox.h,
+      label: stroke.name,
+      isCircle: false,
+      id: `hs_${stroke.id}`
+    };
+  });
 
-  const lineTypeName = targetType === 'standing' ? 'standing' : 'sleeping';
+  let lineTypeName = 'standing';
+  let lineDesc = 'go straight up and down (vertical).';
+  if (targetType === 'sleeping') {
+    lineTypeName = 'sleeping';
+    lineDesc = 'go straight across (horizontal).';
+  } else if (targetType === 'slanting') {
+    lineTypeName = 'slanting';
+    lineDesc = 'go at a slant (diagonal / or \\).';
+  } else if (targetType === 'curved') {
+    lineTypeName = 'curved';
+    lineDesc = 'are round or curved (◡).';
+  }
+
   const questionText = `Click on all the **${lineTypeName} lines** in the letter **${letter}**.`;
 
   const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg" style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:24px;">
@@ -1796,12 +2013,23 @@ function generateLetterLinesQuestion(skillId, seed, r) {
     <text x="50" y="117.5" font-family="'Outfit', sans-serif" font-size="12" fill="#ef4444" text-anchor="end">top line</text>
     <text x="50" y="357.5" font-family="'Outfit', sans-serif" font-size="12" fill="#ef4444" text-anchor="end">base line</text>
     
-    <!-- Background Letter Template (Light grey representation of the entire letter) -->
-    ${cfg.backgroundLetters}
+    <!-- Background Letter Template (Light grey outline) -->
+    ${cfg.strokes.map(stroke => {
+      if (stroke.shape === 'line') {
+        return getThickLinePath(stroke.x1, stroke.y1, stroke.x2, stroke.y2, '', 30, '#e2e8f0');
+      } else {
+        return getThickArcPath(stroke.cx, stroke.cy, stroke.radius, stroke.startAngle, stroke.endAngle, '', 30, '#e2e8f0');
+      }
+    }).join('\n')}
     
     <!-- Interactive Stroke Shapes -->
-    ${cfg.strokes.map(stroke => {
-      return `<rect id="${stroke.id}" x="${stroke.x}" y="${stroke.y}" width="${stroke.width}" height="${stroke.height}" rx="15" fill="#4f46e5" cursor="pointer" />`;
+    ${cfg.strokes.map((stroke, sidx) => {
+      const id = `opt_${sidx}`;
+      if (stroke.shape === 'line') {
+        return getThickLinePath(stroke.x1, stroke.y1, stroke.x2, stroke.y2, id, 30, '#4f46e5');
+      } else {
+        return getThickArcPath(stroke.cx, stroke.cy, stroke.radius, stroke.startAngle, stroke.endAngle, id, 30, '#4f46e5');
+      }
     }).join('\n')}
   </svg>`;
 
@@ -1809,8 +2037,7 @@ function generateLetterLinesQuestion(skillId, seed, r) {
 
   const explanation = `The letter **${letter}** has **${correctCount}** ${lineTypeName} line${correctCount > 1 ? 's' : ''}.
   
-- **Standing lines** go straight up and down (vertical).
-- **Sleeping lines** go straight across (horizontal).
+- **${lineTypeName.charAt(0).toUpperCase() + lineTypeName.slice(1)} lines** ${lineDesc}
 
 Look at the highlighted green lines to see the correct ${lineTypeName} line${correctCount > 1 ? 's' : ''}!`;
 

@@ -1420,6 +1420,8 @@ export const competencyGraphs = {
         'lkg-english-rhyming-same-ending-double': 'lkg_english_rhyming',
         'lkg-english-letter-lines-standing': 'lkg_english_basics',
         'lkg-english-letter-lines-sleeping': 'lkg_english_basics',
+        'lkg-english-letter-lines-slanting': 'lkg_english_basics',
+        'lkg-english-letter-lines-curved': 'lkg_english_basics',
       }
     }
   }
