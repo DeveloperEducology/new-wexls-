@@ -295,6 +295,49 @@ function ruledLetterSvg(letter, w = 200, h = 140) {
   ].join('\n');
 }
 
+// Generates styled, premium vector letters for Pre-K MCQ choices
+function getStyledLetterSvg(letter, styleIndex) {
+  const normalizedIndex = styleIndex % 3;
+
+  if (normalizedIndex === 0) {
+    // Red 3D bubble/glossy letter style
+    return `<svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="red3dGrad_${letter}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ef4444" />
+          <stop offset="100%" stop-color="#991b1b" />
+        </linearGradient>
+        <filter id="shadow3d_${letter}" x="-20%" y="-20%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="5" stdDeviation="1.5" flood-color="#7f1d1d" flood-opacity="0.6"/>
+        </filter>
+      </defs>
+      <text x="50" y="72" font-size="70" font-family="'Outfit', 'Fredoka', 'Arial Rounded MT Bold', sans-serif" font-weight="900" text-anchor="middle" fill="url(#red3dGrad_${letter})" filter="url(#shadow3d_${letter})">${letter}</text>
+      <text x="50" y="72" font-size="70" font-family="'Outfit', 'Fredoka', 'Arial Rounded MT Bold', sans-serif" font-weight="900" text-anchor="middle" fill="none" stroke="#fecaca" stroke-width="1.8" stroke-dasharray="10 5" opacity="0.6">${letter}</text>
+    </svg>`;
+  } else if (normalizedIndex === 1) {
+    // Sunset gradient style
+    return `<svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sunsetGrad_${letter}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#a855f7" />
+          <stop offset="50%" stop-color="#ec4899" />
+          <stop offset="100%" stop-color="#f59e0b" />
+        </linearGradient>
+        <filter id="softGlow_${letter}" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="2" dy="4" stdDeviation="2.5" flood-color="#db2777" flood-opacity="0.4"/>
+        </filter>
+      </defs>
+      <text x="50" y="74" font-size="70" font-family="'Outfit', 'Fredoka', 'Arial Rounded MT Bold', sans-serif" font-weight="900" text-anchor="middle" fill="url(#sunsetGrad_${letter})" filter="url(#softGlow_${letter})">${letter}</text>
+    </svg>`;
+  } else {
+    // Neo-Brutalism Outline style
+    return `<svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+      <text x="53" y="73" font-size="70" font-family="'Outfit', 'Fredoka', 'Arial Rounded MT Bold', sans-serif" font-weight="900" text-anchor="middle" fill="#0f172a">${letter}</text>
+      <text x="50" y="70" font-size="70" font-family="'Outfit', 'Fredoka', 'Arial Rounded MT Bold', sans-serif" font-weight="900" text-anchor="middle" fill="#38bdf8" stroke="#0f172a" stroke-width="4.5" stroke-linejoin="round">${letter}</text>
+    </svg>`;
+  }
+}
+
 // Group definitions for B.1/B.2/B.3/B.5
 const CASE_MATCH_GROUPS = {
   similar:  'ckopsuvwxz'.split(''),  // B.1 – look similar upper/lower
@@ -936,7 +979,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     optionsList = shuffle([letter, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(letter);
     
-    questionText = `Which letter does the word **${asset.singular}** start with?`;
+    questionText = `identify the Starting letter ${asset.singular.charAt(0).toUpperCase() + asset.singular.slice(1)}?`;
     explanation = `**${asset.singular.toUpperCase()}** starts with the letter **${letter}**.`;
 
     backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
@@ -967,7 +1010,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
         width: coords.pctW,
         height: coords.pctH,
         isCircle: false,
-        isCorrect: idx === correctAnswerIndex
+        isCorrect: idx === correctAnswerIndex,
+        svgContent: getStyledLetterSvg(l, idx)
       };
     });
 
@@ -981,7 +1025,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
         height: coords.height,
         label: l,
         isCircle: false,
-        id: `hs_${l}_${idx}`
+        id: `hs_${l}_${idx}`,
+        svgContent: getStyledLetterSvg(l, idx)
       };
     });
 
