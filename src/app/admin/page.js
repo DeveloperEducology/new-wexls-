@@ -489,6 +489,12 @@ export default function AdminConsolePage() {
 
   const [activeUploadPreview, setActiveUploadPreview] = useState(null);
 
+  // ── Image Cropper State ──────────────────────────────────────────────────────
+  const [cropTarget, setCropTarget] = useState(null); // { id, file, previewUrl }
+  const [cropBox, setCropBox] = useState({ x: 10, y: 10, w: 80, h: 80 });
+  const [dragStart, setDragStart] = useState(null);
+  const containerRef = useRef(null);
+
   // ── URL Import State ────────────────────────────────────────────────────────
   const [urlInput, setUrlInput] = useState('');
   const [urlPreviews, setUrlPreviews] = useState([]);   // [{id,src,selected,status,r2Url,error,sizeBytes}]
@@ -7128,6 +7134,126 @@ Explanation: 5 plus 7 is equal to 12.`}
             setImgFiles([]);
           }
 
+          function startCropper(entry) {
+            setCropTarget(entry);
+            setCropBox({ x: 10, y: 10, w: 80, h: 80 });
+          }
+
+          function handleDragStart(e, mode) {
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            setDragStart({
+              clientX,
+              clientY,
+              x: cropBox.x,
+              y: cropBox.y,
+              w: cropBox.w,
+              h: cropBox.h,
+              mode
+            });
+          }
+
+          function handleDragMove(e) {
+            if (!dragStart || !containerRef.current) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const rect = containerRef.current.getBoundingClientRect();
+            const dxPct = ((clientX - dragStart.clientX) / rect.width) * 100;
+            const dyPct = ((clientY - dragStart.clientY) / rect.height) * 100;
+            
+            let nextX = dragStart.x;
+            let nextY = dragStart.y;
+            let nextW = dragStart.w;
+            let nextH = dragStart.h;
+            
+            if (dragStart.mode === 'move') {
+              nextX = Math.max(0, Math.min(100 - dragStart.w, dragStart.x + dxPct));
+              nextY = Math.max(0, Math.min(100 - dragStart.h, dragStart.y + dyPct));
+            } else if (dragStart.mode === 'se') {
+              nextW = Math.max(10, Math.min(100 - dragStart.x, dragStart.w + dxPct));
+              nextH = Math.max(10, Math.min(100 - dragStart.y, dragStart.h + dyPct));
+            } else if (dragStart.mode === 'sw') {
+              const limitX = dragStart.x + dragStart.w;
+              nextX = Math.max(0, Math.min(limitX - 10, dragStart.x + dxPct));
+              nextW = limitX - nextX;
+              nextH = Math.max(10, Math.min(100 - dragStart.y, dragStart.h + dyPct));
+            } else if (dragStart.mode === 'ne') {
+              const limitY = dragStart.y + dragStart.h;
+              nextW = Math.max(10, Math.min(100 - dragStart.x, dragStart.w + dxPct));
+              nextY = Math.max(0, Math.min(limitY - 10, dragStart.y + dyPct));
+              nextH = limitY - nextY;
+            } else if (dragStart.mode === 'nw') {
+              const limitX = dragStart.x + dragStart.w;
+              const limitY = dragStart.y + dragStart.h;
+              nextX = Math.max(0, Math.min(limitX - 10, dragStart.x + dxPct));
+              nextW = limitX - nextX;
+              nextY = Math.max(0, Math.min(limitY - 10, dragStart.y + dyPct));
+              nextH = limitY - nextY;
+            }
+            
+            setCropBox({ x: nextX, y: nextY, w: nextW, h: nextH });
+          }
+
+          function handleDragEnd() {
+            setDragStart(null);
+          }
+
+          function applyCrop() {
+            if (!cropTarget) return;
+            const img = new Image();
+            img.src = cropTarget.previewUrl;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              
+              const cropX = (cropBox.x / 100) * img.naturalWidth;
+              const cropY = (cropBox.y / 100) * img.naturalHeight;
+              const cropW = (cropBox.w / 100) * img.naturalWidth;
+              const cropH = (cropBox.h / 100) * img.naturalHeight;
+              
+              canvas.width = cropW;
+              canvas.height = cropH;
+              
+              ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+              
+              canvas.toBlob((blob) => {
+                if (!blob) return;
+                const croppedFile = new File([blob], cropTarget.file.name, {
+                  type: cropTarget.file.type || 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                
+                const croppedUrl = URL.createObjectURL(croppedFile);
+                
+                if (cropTarget.previewUrl && cropTarget.previewUrl.startsWith('blob:')) {
+                  URL.revokeObjectURL(cropTarget.previewUrl);
+                }
+                
+                setImgFiles(prev => prev.map(item => {
+                  if (item.id === cropTarget.id) {
+                    return {
+                      ...item,
+                      file: croppedFile,
+                      previewUrl: croppedUrl,
+                      origKB: Math.round(croppedFile.size / 1024),
+                      status: 'pending',
+                      outBlob: null,
+                      outKB: null,
+                      url: null,
+                      error: null
+                    };
+                  }
+                  return item;
+                }));
+                
+                setCropTarget(null);
+              }, cropTarget.file.type || 'image/jpeg');
+            };
+          }
+
           async function deleteSelectedImages() {
             if (!selectedGalleryKeys.length) return;
             const confirmMsg = `Are you sure you want to permanently delete ${selectedGalleryKeys.length} selected image(s) from Cloudflare R2? This action cannot be undone.`;
@@ -8436,6 +8562,180 @@ Explanation: 5 plus 7 is equal to 12.`}
             </div>
           );
         })()}
+
+      {/* ── Crop Modal ── */}
+      {cropTarget && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: 24,
+        }}
+        onClick={() => setCropTarget(null)}
+        >
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 16,
+            width: 'min(700px, 100%)',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            overflow: 'hidden',
+          }}
+          onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--color-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>✂️ Crop Image</h3>
+              <button
+                onClick={() => setCropTarget(null)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 18, color: 'var(--color-text-muted)',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{
+              padding: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16,
+              overflowY: 'auto',
+              flex: 1,
+            }}>
+              <div
+                ref={containerRef}
+                style={{
+                  position: 'relative',
+                  maxHeight: 400,
+                  maxWidth: '100%',
+                  background: '#0f172a',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  userSelect: 'none',
+                  display: 'inline-block',
+                }}
+                onMouseMove={handleDragMove}
+                onTouchMove={handleDragMove}
+                onMouseUp={handleDragEnd}
+                onTouchEnd={handleDragEnd}
+                onMouseLeave={handleDragEnd}
+              >
+                {/* Background Image */}
+                <img
+                  src={cropTarget.previewUrl}
+                  alt=""
+                  style={{
+                    maxHeight: 400,
+                    maxWidth: '100%',
+                    display: 'block',
+                    pointerEvents: 'none',
+                    opacity: 0.6,
+                  }}
+                />
+
+                {/* Crop Box Overlay */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: `${cropBox.y}%`,
+                    left: `${cropBox.x}%`,
+                    width: `${cropBox.w}%`,
+                    height: `${cropBox.h}%`,
+                    border: '2px dashed #3b82f6',
+                    boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.45)', // dim the rest
+                    cursor: 'move',
+                  }}
+                  onMouseDown={(e) => handleDragStart(e, 'move')}
+                  onTouchStart={(e) => handleDragStart(e, 'move')}
+                >
+                  {/* Corner Handles */}
+                  {/* NW */}
+                  <div
+                    style={{
+                      position: 'absolute', top: -5, left: -5, width: 10, height: 10,
+                      background: '#3b82f6', border: '1px solid white', cursor: 'nwse-resize'
+                    }}
+                    onMouseDown={(e) => handleDragStart(e, 'nw')}
+                    onTouchStart={(e) => handleDragStart(e, 'nw')}
+                  />
+                  {/* NE */}
+                  <div
+                    style={{
+                      position: 'absolute', top: -5, right: -5, width: 10, height: 10,
+                      background: '#3b82f6', border: '1px solid white', cursor: 'nesw-resize'
+                    }}
+                    onMouseDown={(e) => handleDragStart(e, 'ne')}
+                    onTouchStart={(e) => handleDragStart(e, 'ne')}
+                  />
+                  {/* SE */}
+                  <div
+                    style={{
+                      position: 'absolute', bottom: -5, right: -5, width: 10, height: 10,
+                      background: '#3b82f6', border: '1px solid white', cursor: 'nwse-resize'
+                    }}
+                    onMouseDown={(e) => handleDragStart(e, 'se')}
+                    onTouchStart={(e) => handleDragStart(e, 'se')}
+                  />
+                  {/* SW */}
+                  <div
+                    style={{
+                      position: 'absolute', bottom: -5, left: -5, width: 10, height: 10,
+                      background: '#3b82f6', border: '1px solid white', cursor: 'nesw-resize'
+                    }}
+                    onMouseDown={(e) => handleDragStart(e, 'sw')}
+                    onTouchStart={(e) => handleDragStart(e, 'sw')}
+                  />
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>
+                Drag the crop box to reposition. Drag the blue corner handles to resize.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 20px',
+              borderTop: '1px solid var(--color-border)',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 12,
+            }}>
+              <button
+                className={styles.btnOutline}
+                onClick={() => setCropTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.btnSolid}
+                style={{ background: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+                onClick={applyCrop}
+              >
+                ✂️ Apply Crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </main>
     </div>
