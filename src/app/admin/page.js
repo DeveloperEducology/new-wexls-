@@ -522,7 +522,12 @@ export default function AdminConsolePage() {
   const [selectedSearchImages, setSelectedSearchImages] = useState([]);
   const [importingSearchStatus, setImportingSearchStatus] = useState('');
   const [previewSearchImageUrl, setPreviewSearchImageUrl] = useState(null);
-
+  const [importedSearchUrls, setImportedSearchUrls] = useState({});
+  const [autoLinkOnImport, setAutoLinkOnImport] = useState(true);
+  const [gallerySearch, setGallerySearch] = useState('');
+  const [searchFolder, setSearchFolder] = useState('images/lkg/things');
+  const [searchFolderPreset, setSearchFolderPreset] = useState('images/lkg/things');
+  const [searchFolderCustom, setSearchFolderCustom] = useState('');
 
   const handleWebImageSearch = async (queryStr) => {
     const q = queryStr || searchQuery;
@@ -576,7 +581,7 @@ export default function AdminConsolePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             url: imageUrl,
-            folder: 'images/lkg/things',
+            folder: searchFolder || 'images/lkg/things',
             customName: searchWordTarget,
           }),
         });
@@ -591,19 +596,22 @@ export default function AdminConsolePage() {
       
       logActivity(`Imported ${successCount} images for "${searchWordTarget}" to R2`, 'success');
       
-      setImportingSearchStatus('Linking...');
-      const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overwriteExisting: true }),
-      });
-      const linkData = await linkRes.json();
-      if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link newly imported assets');
+      if (autoLinkOnImport) {
+        setImportingSearchStatus('Linking...');
+        const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ overwriteExisting: true }),
+        });
+        const linkData = await linkRes.json();
+        if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link newly imported assets');
+        
+        setAutoLinkResult(linkData);
+        setSelectedWords(prev => prev.filter(w => w !== searchWordTarget));
+        logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
+      }
       
-      setAutoLinkResult(linkData);
-      setSelectedWords(prev => prev.filter(w => w !== searchWordTarget));
       setSearchModalOpen(false);
-      logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
       alert(`Import complete!\nSuccessfully imported: ${successCount}\nFailed: ${failedCount}`);
     } catch (err) {
       alert(`Import failed: ${err.message}`);
@@ -624,7 +632,7 @@ export default function AdminConsolePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: imageUrl,
-          folder: 'images/lkg/things',
+          folder: searchFolder || 'images/lkg/things',
           customName: searchWordTarget,
         }),
       });
@@ -633,20 +641,22 @@ export default function AdminConsolePage() {
       
       logActivity(`Successfully imported clipart for "${searchWordTarget}" to R2`, 'success');
       
-      // 2. Trigger auto-linker with overwrite enabled to map the newly created image asset
-      const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overwriteExisting: true }),
-      });
-      const linkData = await linkRes.json();
-      if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link newly imported asset');
-      
-      // Update the local results state dynamically if it was open
-      setAutoLinkResult(linkData);
-      setSelectedWords(prev => prev.filter(w => w !== searchWordTarget));
+      if (autoLinkOnImport) {
+        // 2. Trigger auto-linker with overwrite enabled to map the newly created image asset
+        const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ overwriteExisting: true }),
+        });
+        const linkData = await linkRes.json();
+        if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link newly imported asset');
+        
+        // Update the local results state dynamically if it was open
+        setAutoLinkResult(linkData);
+        setSelectedWords(prev => prev.filter(w => w !== searchWordTarget));
+        logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
+      }
       setSearchModalOpen(false);
-      logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
     } catch (err) {
       alert(`Import failed: ${err.message}`);
     } finally {
@@ -9165,6 +9175,74 @@ Explanation: 5 plus 7 is equal to 12.`}
                     </div>
                   </div>
 
+                  {/* Manual Search & Link Section */}
+                  <div className={styles.borderedPanel} style={{ padding: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 20 }}>🔍</span>
+                      <h3 className={styles.panelTitle} style={{ margin: 0 }}>Manual Web Search & Import</h3>
+                    </div>
+                    <p style={{ margin: '0 0 20px 0', fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                      Type any English vocabulary word (even if it's not in the missing list) to search the web for clean cliparts, import them directly to R2 storage, and automatically update <code>vocabulary.json</code>.
+                    </p>
+                    <div style={{ display: 'flex', gap: 12, maxWidth: 500 }}>
+                      <input
+                        type="text"
+                        placeholder="Enter word to search (e.g. monkey, kite)..."
+                        id="manualSearchWordInput"
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          border: '1.5px solid var(--color-border)',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          outline: 'none',
+                          background: 'var(--bg-secondary)',
+                          color: 'var(--color-text-main)',
+                          transition: 'border-color 0.2s',
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = e.currentTarget.value.trim().toLowerCase();
+                            if (val) {
+                              setSearchWordTarget(val);
+                              setSearchQuery(val);
+                              setSearchModalOpen(true);
+                              handleWebImageSearch(val);
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        className={styles.btnSolid}
+                        style={{
+                          background: 'var(--color-primary)',
+                          borderColor: 'var(--color-primary)',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          padding: '10px 20px',
+                          fontSize: 13,
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                        onClick={() => {
+                          const input = document.getElementById('manualSearchWordInput');
+                          const val = input ? input.value.trim().toLowerCase() : '';
+                          if (val) {
+                            setSearchWordTarget(val);
+                            setSearchQuery(val);
+                            setSearchModalOpen(true);
+                            handleWebImageSearch(val);
+                          } else {
+                            alert('Please enter a vocabulary word to search.');
+                          }
+                        }}
+                      >
+                        Search Clipart
+                      </button>
+                    </div>
+                  </div>
+
                   {autoLinkError && (
                     <div style={{
                       padding: 16,
@@ -9645,10 +9723,6 @@ Explanation: 5 plus 7 is equal to 12.`}
 
                                 {/* Image Container */}
                                 <div 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPreviewSearchImageUrl(item);
-                                  }}
                                   style={{
                                     width: '100%',
                                     aspectRatio: '1',
@@ -9659,7 +9733,6 @@ Explanation: 5 plus 7 is equal to 12.`}
                                     justifyContent: 'center',
                                     position: 'relative',
                                     borderBottom: '1px solid var(--color-border)',
-                                    cursor: 'zoom-in',
                                   }}
                                 >
                                   <img

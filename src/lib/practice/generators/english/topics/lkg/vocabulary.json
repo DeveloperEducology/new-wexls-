@@ -318,7 +318,7 @@
     "six": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779983908146-six.png",
     "bus": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984324739-bus.png",
     "bat": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984418831-bat.png",
-    "box": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984501623-box.png",
+    "box": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984495333-box.png",
     "dig": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984500858-dig.png",
     "plant": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984508336-hop.jpg",
     "boy": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984500858-dig.png",
@@ -352,7 +352,17 @@
     "wet": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
     "rain": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
     "sad": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
-    "cap": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png"
+    "cap": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png",
+    "leg": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779985801042-leg.png",
+    "peg": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779985894769-peg.png",
+    "keg": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779985970128-keg.png",
+    "bell": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986123110-bell.png",
+    "well": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986190954-well.png",
+    "vet": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986385133-vet.png",
+    "kick": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986553109-kick.png",
+    "lick": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986661181-lick.png",
+    "pick": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986808729-pick.png",
+    "lip": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986900798-lip.png"
   },
   "endingFamilies": {
     "at": [
