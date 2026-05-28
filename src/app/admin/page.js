@@ -519,6 +519,8 @@ export default function AdminConsolePage() {
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkImportProgress, setBulkImportProgress] = useState('');
   const [selectedWords, setSelectedWords] = useState([]);
+  const [selectedSearchImages, setSelectedSearchImages] = useState([]);
+  const [importingSearchStatus, setImportingSearchStatus] = useState('');
 
 
   const handleWebImageSearch = async (queryStr) => {
@@ -527,6 +529,7 @@ export default function AdminConsolePage() {
     setSearchLoading(true);
     setSearchError('');
     setSearchResults([]);
+    setSelectedSearchImages([]);
     try {
       const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(q.trim())}`);
       const data = await res.json();
@@ -536,6 +539,77 @@ export default function AdminConsolePage() {
       setSearchError(err.message);
     } finally {
       setSearchLoading(false);
+    }
+  };
+
+  const toggleSearchImageSelection = (imageUrl) => {
+    setSelectedSearchImages(prev =>
+      prev.includes(imageUrl) ? prev.filter(url => url !== imageUrl) : [...prev, imageUrl]
+    );
+  };
+
+  const handleSelectAllSearchImages = () => {
+    setSelectedSearchImages(searchResults.map(item => item.image));
+  };
+
+  const handleClearSearchImages = () => {
+    setSelectedSearchImages([]);
+  };
+
+  const importSelectedSearchImages = async () => {
+    if (!searchWordTarget || selectedSearchImages.length === 0) return;
+    setSearchLoading(true);
+    setSearchError('');
+    setImportingSearchStatus(`Importing ${selectedSearchImages.length} images...`);
+    
+    let successCount = 0;
+    let failedCount = 0;
+    
+    try {
+      for (let i = 0; i < selectedSearchImages.length; i++) {
+        const imageUrl = selectedSearchImages[i];
+        setImportingSearchStatus(`Uploading image ${i + 1}/${selectedSearchImages.length}...`);
+        
+        const res = await fetch('/api/admin/fetch-url-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: imageUrl,
+            folder: 'images/lkg/things',
+            customName: searchWordTarget,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          successCount++;
+        } else {
+          failedCount++;
+          console.error(`Failed to import search image ${imageUrl}:`, data.error);
+        }
+      }
+      
+      logActivity(`Imported ${successCount} images for "${searchWordTarget}" to R2`, 'success');
+      
+      setImportingSearchStatus('Linking...');
+      const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overwriteExisting: true }),
+      });
+      const linkData = await linkRes.json();
+      if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link newly imported assets');
+      
+      setAutoLinkResult(linkData);
+      setSelectedWords(prev => prev.filter(w => w !== searchWordTarget));
+      setSearchModalOpen(false);
+      logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
+      alert(`Import complete!\nSuccessfully imported: ${successCount}\nFailed: ${failedCount}`);
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    } finally {
+      setSearchLoading(false);
+      setImportingSearchStatus('');
+      setSelectedSearchImages([]);
     }
   };
 
@@ -9312,46 +9386,105 @@ Explanation: 5 plus 7 is equal to 12.`}
                     {/* Search Input Area */}
                     <div style={{
                       padding: '16px 24px',
-                      borderBottom: '1px solid var(--color-border)',
+                      borderBottom: '1.5px solid var(--color-border)',
                       display: 'flex',
+                      flexDirection: 'column',
                       gap: 12,
                       background: 'var(--bg-primary)',
                     }}>
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search query (e.g. net, butterfly net, etc.)"
-                        style={{
-                          flex: 1,
-                          padding: '10px 14px',
-                          border: '1.5px solid var(--color-border)',
-                          borderRadius: 8,
-                          fontSize: 13,
-                          outline: 'none',
-                          background: 'var(--bg-secondary)',
-                          color: 'var(--color-text-main)'
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleWebImageSearch();
-                        }}
-                      />
-                      <button
-                        onClick={() => handleWebImageSearch()}
-                        disabled={searchLoading}
-                        className={styles.btnSolid}
-                        style={{
-                          background: 'var(--color-primary)',
-                          borderColor: 'var(--color-primary)',
-                          color: 'white',
-                          padding: '0 20px',
-                          fontSize: 13,
-                          fontWeight: 'bold',
-                          borderRadius: 8,
-                        }}
-                      >
-                        {searchLoading ? 'Searching...' : 'Search'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search query (e.g. net, butterfly net, etc.)"
+                          style={{
+                            flex: 1,
+                            padding: '10px 14px',
+                            border: '1.5px solid var(--color-border)',
+                            borderRadius: 8,
+                            fontSize: 13,
+                            outline: 'none',
+                            background: 'var(--bg-secondary)',
+                            color: 'var(--color-text-main)'
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleWebImageSearch();
+                          }}
+                        />
+                        <button
+                          onClick={() => handleWebImageSearch()}
+                          disabled={searchLoading || !!importingSearchStatus}
+                          className={styles.btnSolid}
+                          style={{
+                            background: 'var(--color-primary)',
+                            borderColor: 'var(--color-primary)',
+                            color: 'white',
+                            padding: '0 20px',
+                            fontSize: 13,
+                            fontWeight: 'bold',
+                            borderRadius: 8,
+                          }}
+                        >
+                          {searchLoading ? 'Searching...' : 'Search'}
+                        </button>
+                      </div>
+
+                      {/* Action buttons inside the search query card/bar */}
+                      {searchResults.length > 0 && !searchLoading && !importingSearchStatus && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 12,
+                          paddingTop: 8,
+                          borderTop: '1px solid var(--color-border)',
+                        }}>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={handleSelectAllSearchImages}
+                              className={styles.btnOutline}
+                              style={{ padding: '6px 12px', fontSize: 11, borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}
+                            >
+                              ☑ Select All
+                            </button>
+                            <button
+                              onClick={handleClearSearchImages}
+                              className={styles.btnOutline}
+                              style={{ padding: '6px 12px', fontSize: 11, borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}
+                            >
+                              ☒ Clear Selection
+                            </button>
+                          </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                              {selectedSearchImages.length} of {searchResults.length} selected
+                            </span>
+                            <button
+                              onClick={importSelectedSearchImages}
+                              disabled={selectedSearchImages.length === 0}
+                              className={styles.btnSolid}
+                              style={{
+                                background: selectedSearchImages.length > 0 ? 'var(--color-success)' : '#e2e8f0',
+                                borderColor: selectedSearchImages.length > 0 ? 'var(--color-success)' : '#e2e8f0',
+                                color: selectedSearchImages.length > 0 ? 'white' : '#94a3b8',
+                                cursor: selectedSearchImages.length > 0 ? 'pointer' : 'not-allowed',
+                                padding: '6px 14px',
+                                fontSize: 11,
+                                fontWeight: 'bold',
+                                borderRadius: 6,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              ⚡ Import Selected ({selectedSearchImages.length})
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Results Container */}
@@ -9361,7 +9494,21 @@ Explanation: 5 plus 7 is equal to 12.`}
                       padding: 24,
                       background: 'var(--bg-primary)',
                     }}>
-                      {searchLoading && (
+                      {importingSearchStatus && (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '60px 0',
+                          gap: 16
+                        }}>
+                          <span className={styles.spinner} style={{ width: 40, height: 40, border: '3px solid rgba(139, 92, 246, 0.1)', borderTopColor: 'var(--color-primary)' }}></span>
+                          <div style={{ fontSize: 13, color: 'var(--color-primary)', fontWeight: 'bold' }}>{importingSearchStatus}</div>
+                        </div>
+                      )}
+
+                      {!importingSearchStatus && searchLoading && (
                         <div style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -9375,7 +9522,7 @@ Explanation: 5 plus 7 is equal to 12.`}
                         </div>
                       )}
 
-                      {searchError && (
+                      {!importingSearchStatus && searchError && (
                         <div style={{
                           padding: 16,
                           background: '#fef2f2',
@@ -9389,7 +9536,7 @@ Explanation: 5 plus 7 is equal to 12.`}
                         </div>
                       )}
 
-                      {!searchLoading && !searchError && searchResults.length === 0 && (
+                      {!importingSearchStatus && !searchLoading && !searchError && searchResults.length === 0 && (
                         <div style={{
                           textAlign: 'center',
                           padding: '60px 0',
@@ -9400,31 +9547,34 @@ Explanation: 5 plus 7 is equal to 12.`}
                         </div>
                       )}
 
-                      {!searchLoading && !searchError && searchResults.length > 0 && (
+                      {!importingSearchStatus && !searchLoading && !searchError && searchResults.length > 0 && (
                         <div style={{
                           display: 'grid',
                           gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                           gap: 20
                         }}>
                           {searchResults.map((item, index) => {
+                            const isSelected = selectedSearchImages.includes(item.image);
                             const isThisImporting = importingSearchUrl === item.image;
                             return (
                               <div
                                 key={index}
                                 style={{
                                   position: 'relative',
-                                  border: '1px solid var(--color-border)',
+                                  border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                                   borderRadius: 12,
                                   overflow: 'hidden',
                                   background: 'var(--bg-secondary)',
-                                  cursor: importingSearchUrl ? 'not-allowed' : 'pointer',
+                                  cursor: (importingSearchUrl || importingSearchStatus) ? 'not-allowed' : 'pointer',
                                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                                 }}
                                 onClick={() => {
-                                  if (!importingSearchUrl) importSearchImage(item.image);
+                                  if (!importingSearchUrl && !importingSearchStatus) {
+                                    toggleSearchImageSelection(item.image);
+                                  }
                                 }}
                                 onMouseEnter={(e) => {
-                                  if (!importingSearchUrl) {
+                                  if (!importingSearchUrl && !importingSearchStatus) {
                                     e.currentTarget.style.transform = 'translateY(-2px)';
                                     e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.05)';
                                   }
@@ -9434,6 +9584,28 @@ Explanation: 5 plus 7 is equal to 12.`}
                                   e.currentTarget.style.boxShadow = 'none';
                                 }}
                               >
+                                {/* Checkbox Overlay */}
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 8,
+                                  left: 8,
+                                  zIndex: 5,
+                                  background: isSelected ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.9)',
+                                  border: isSelected ? 'none' : '1.5px solid #cbd5e1',
+                                  borderRadius: 4,
+                                  width: 20,
+                                  height: 20,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: 12,
+                                  fontWeight: 'bold',
+                                  pointerEvents: 'none',
+                                }}>
+                                  {isSelected && '✓'}
+                                </div>
+
                                 {/* Image Container */}
                                 <div style={{
                                   width: '100%',
