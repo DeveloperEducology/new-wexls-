@@ -3,7 +3,7 @@ import { lkgEnglishTemplateRegistry, lkgEnglishMicroSkillRegistry } from './regi
 import letterAudios from './letterAudios.json' with { type: 'json' };
 import vocabulary from './vocabulary.json' with { type: 'json' };
 
-const { wordPool: WORD_POOL, endingFamilies: ENDING_FAMILIES, sentencesPool: SENTENCES_POOL, wordImages: WORD_IMAGES } = vocabulary;
+const { wordPool: WORD_POOL, endingFamilies: ENDING_FAMILIES, sentencesPool: SENTENCES_POOL, wordImages: WORD_IMAGES, spottingWordPool: SPOTTING_WORD_POOL } = vocabulary;
 
 
 function seededRandom(seed) {
@@ -842,9 +842,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
   } else if (skillId === 'lkg-english-letter-recognition-in-word-spotting') {
-    const wordList = ["CAT", "DOG", "BABY", "FISH", "BIRD", "FROG", "LION", "DUCK", "BEAR", "COW", "PIG", "GOAT", "SHEEP", "HORSE"];
-    const wordIdx = Math.floor(r * wordList.length);
-    const word = wordList[wordIdx];
+    const wordIdx = Math.floor(r * SPOTTING_WORD_POOL.length);
+    const word = SPOTTING_WORD_POOL[wordIdx];
     
     // Choose a random letter from the word as the target
     const targetCharIdx = Math.floor(r * word.length);

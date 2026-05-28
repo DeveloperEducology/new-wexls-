@@ -65,5 +65,6 @@
     "pen": "https://cdn-icons-png.flaticon.com/512/1250/1250615.png",
     "pin": "https://cdn-icons-png.flaticon.com/512/4856/4856754.png",
     "hat": "https://cdn-icons-png.flaticon.com/512/1995/1995400.png"
-  }
+  },
+  "spottingWordPool": ["CAT", "DOG", "BABY", "FISH", "BIRD", "FROG", "LION", "DUCK", "BEAR", "COW", "PIG", "GOAT", "SHEEP", "HORSE"]
 }
