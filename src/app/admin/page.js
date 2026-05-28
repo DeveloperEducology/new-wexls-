@@ -475,6 +475,16 @@ export default function AdminConsolePage() {
   const ignoreDirtyChange = useRef(false);
   const canvasRef = useRef(null);
 
+  // ── Image Upload State ──────────────────────────────────────────────────────
+  const [imgFiles, setImgFiles] = useState([]);           // array of { id, file, status, url, origKB, outKB, error }
+  const [imgMaxWidth, setImgMaxWidth] = useState(1200);   // px
+  const [imgQuality, setImgQuality] = useState(85);       // 1–100
+  const [imgFormat, setImgFormat] = useState('image/webp'); // output mime
+  const [imgFolder, setImgFolder] = useState('images');   // R2 folder prefix
+  const [imgUploading, setImgUploading] = useState(false);
+  const [imgDragOver, setImgDragOver] = useState(false);
+  const imgFileInputRef = useRef(null);
+
   // Curriculum Builder State (prefixed with curr to avoid collisions)
   const [currTree, setCurrTree] = useState([]);
   const [currSelected, setCurrSelected] = useState(null);
@@ -3495,6 +3505,12 @@ export default function AdminConsolePage() {
           onClick={() => handleTabChange('curriculum')}
         >
           CURRICULUM BUILDER
+        </button>
+        <button 
+          className={`${styles.tabButton} ${activeTab === 'images' ? styles.tabButtonActive : ''}`}
+          onClick={() => handleTabChange('images')}
+        >
+          🖼 IMAGE ASSETS
         </button>
       </nav>
 
@@ -6849,6 +6865,448 @@ Explanation: 5 plus 7 is equal to 12.`}
             </section>
           </div>
         )}
+
+        {/* ─── IMAGE ASSETS TAB ─────────────────────────────────────────────── */}
+        {activeTab === 'images' && (() => {
+          // ── helpers (defined inside render so they close over state) ──────
+          const FMT_EXT = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
+
+          /** Client-side resize + compress a File → Blob */
+          function compressImage(file, maxWidth, quality, outputMime) {
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onerror = reject;
+              reader.onload = (e) => {
+                const img = new Image();
+                img.onerror = reject;
+                img.onload = () => {
+                  let w = img.naturalWidth;
+                  let h = img.naturalHeight;
+                  if (w > maxWidth) {
+                    h = Math.round((h * maxWidth) / w);
+                    w = maxWidth;
+                  }
+                  const canvas = document.createElement('canvas');
+                  canvas.width = w;
+                  canvas.height = h;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, w, h);
+                  canvas.toBlob(
+                    (blob) => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')),
+                    outputMime,
+                    quality / 100
+                  );
+                };
+                img.src = e.target.result;
+              };
+              reader.readAsDataURL(file);
+            });
+          }
+
+          /** Add picked files into state */
+          function addFiles(fileList) {
+            const newEntries = Array.from(fileList)
+              .filter(f => f.type.startsWith('image/'))
+              .map(f => ({
+                id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                file: f,
+                status: 'pending',   // pending | compressing | uploading | done | error
+                url: null,
+                origKB: Math.round(f.size / 1024),
+                outKB: null,
+                previewUrl: URL.createObjectURL(f),
+                error: null,
+              }));
+            setImgFiles(prev => [...prev, ...newEntries]);
+          }
+
+          /** Upload all pending files */
+          async function uploadAll() {
+            const pending = imgFiles.filter(e => e.status === 'pending' || e.status === 'error');
+            if (!pending.length) return;
+            setImgUploading(true);
+
+            for (const entry of pending) {
+              // 1. mark compressing
+              setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'compressing' } : e));
+
+              let blob;
+              try {
+                blob = await compressImage(entry.file, imgMaxWidth, imgQuality, imgFormat);
+              } catch (err) {
+                setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: 'Compress failed: ' + err.message } : e));
+                continue;
+              }
+
+              const outKB = Math.round(blob.size / 1024);
+              setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, outKB, status: 'uploading' } : e));
+
+              // 2. send to API
+              try {
+                const ext = FMT_EXT[imgFormat] || 'webp';
+                const safeName = entry.file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-');
+                const uploadFile = new File([blob], `${safeName}.${ext}`, { type: imgFormat });
+
+                const fd = new FormData();
+                fd.append('file', uploadFile);
+                fd.append('folder', imgFolder || 'images');
+
+                const res = await fetch('/api/admin/upload-image', { method: 'POST', body: fd });
+                const data = await res.json();
+
+                if (!res.ok || data.errors?.length) {
+                  throw new Error(data.errors?.[0]?.error || data.error || 'Upload failed');
+                }
+
+                const url = data.results?.[0]?.url;
+                setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'done', url, outKB } : e));
+              } catch (err) {
+                setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: err.message } : e));
+              }
+            }
+            setImgUploading(false);
+          }
+
+          function removeEntry(id) {
+            setImgFiles(prev => prev.filter(e => e.id !== id));
+          }
+
+          function clearAll() {
+            setImgFiles([]);
+          }
+
+          async function copyToClipboard(text) {
+            try { await navigator.clipboard.writeText(text); } catch {}
+          }
+
+          const pendingCount = imgFiles.filter(e => e.status === 'pending' || e.status === 'error').length;
+          const doneCount = imgFiles.filter(e => e.status === 'done').length;
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+              {/* ── Settings strip ── */}
+              <div className={styles.borderedPanel}>
+                <div className={styles.panelHeader}>
+                  <h3 className={styles.panelTitle}>Upload Settings</h3>
+                  {doneCount > 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-success)' }}>
+                      ✓ {doneCount} uploaded
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, alignItems: 'end' }}>
+                  {/* Max width */}
+                  <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>Max Width (px)</label>
+                    <select className={styles.formSelect} value={imgMaxWidth} onChange={e => setImgMaxWidth(Number(e.target.value))}>
+                      <option value={400}>400 px — thumbnail</option>
+                      <option value={800}>800 px — card</option>
+                      <option value={1200}>1200 px — standard</option>
+                      <option value={1920}>1920 px — full HD</option>
+                      <option value={99999}>Original — no resize</option>
+                    </select>
+                  </div>
+
+                  {/* Quality */}
+                  <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>Quality — {imgQuality}%</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-muted)' }}>50</span>
+                      <input
+                        type="range" min={50} max={100} step={5}
+                        value={imgQuality}
+                        onChange={e => setImgQuality(Number(e.target.value))}
+                        style={{ flex: 1, accentColor: 'var(--color-primary)' }}
+                      />
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-muted)' }}>100</span>
+                    </div>
+                  </div>
+
+                  {/* Output format */}
+                  <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>Output Format</label>
+                    <select className={styles.formSelect} value={imgFormat} onChange={e => setImgFormat(e.target.value)}>
+                      <option value="image/webp">WebP (best compression)</option>
+                      <option value="image/jpeg">JPEG (compatible)</option>
+                      <option value="image/png">PNG (lossless)</option>
+                    </select>
+                  </div>
+
+                  {/* R2 folder */}
+                  <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>R2 Folder Prefix</label>
+                    <input
+                      type="text"
+                      className={styles.formInput}
+                      placeholder="images"
+                      value={imgFolder}
+                      onChange={e => setImgFolder(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Drop zone ── */}
+              <div
+                onClick={() => imgFileInputRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setImgDragOver(true); }}
+                onDragLeave={() => setImgDragOver(false)}
+                onDrop={e => {
+                  e.preventDefault();
+                  setImgDragOver(false);
+                  addFiles(e.dataTransfer.files);
+                }}
+                style={{
+                  border: `2.5px dashed ${imgDragOver ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  borderRadius: 8,
+                  background: imgDragOver ? '#eff6ff' : 'var(--bg-secondary)',
+                  padding: '48px 32px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  userSelect: 'none',
+                }}
+              >
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🖼️</div>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
+                  {imgDragOver ? 'Drop images here!' : 'Drag & drop images here, or click to browse'}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                  JPEG · PNG · WebP · GIF · AVIF &nbsp;|&nbsp; Max 10 MB per file &nbsp;|&nbsp; Unlimited files
+                </div>
+                <input
+                  ref={imgFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
+                />
+              </div>
+
+              {/* ── Action row ── */}
+              {imgFiles.length > 0 && (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    className={styles.btnSolid}
+                    onClick={uploadAll}
+                    disabled={imgUploading || pendingCount === 0}
+                  >
+                    {imgUploading
+                      ? `⏳ Uploading…`
+                      : `⬆ Upload ${pendingCount > 0 ? pendingCount : 'All'} Image${pendingCount !== 1 ? 's' : ''}`
+                    }
+                  </button>
+                  <button className={styles.btnOutline} onClick={clearAll} disabled={imgUploading}>
+                    🗑 Clear All
+                  </button>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
+                    {imgFiles.length} file{imgFiles.length !== 1 ? 's' : ''} queued
+                    &nbsp;·&nbsp; {doneCount} done
+                    {pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
+                  </span>
+                </div>
+              )}
+
+              {/* ── File cards ── */}
+              {imgFiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {imgFiles.map(entry => {
+                    const statusColor = {
+                      pending: 'var(--color-text-muted)',
+                      compressing: '#d97706',
+                      uploading: 'var(--color-primary)',
+                      done: 'var(--color-success)',
+                      error: 'var(--color-danger)',
+                    }[entry.status] || 'var(--color-text-muted)';
+
+                    const statusLabel = {
+                      pending: 'PENDING',
+                      compressing: 'COMPRESSING…',
+                      uploading: 'UPLOADING…',
+                      done: 'DONE ✓',
+                      error: 'ERROR',
+                    }[entry.status];
+
+                    const isActive = entry.status === 'compressing' || entry.status === 'uploading';
+
+                    return (
+                      <div
+                        key={entry.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '80px 1fr auto',
+                          gap: 16,
+                          alignItems: 'center',
+                          background: 'var(--bg-primary)',
+                          border: `1.5px solid ${entry.status === 'error' ? 'var(--color-danger)' : entry.status === 'done' ? '#86efac' : 'var(--color-border)'}`,
+                          borderRadius: 6,
+                          padding: '12px 16px',
+                          opacity: entry.status === 'done' ? 0.9 : 1,
+                        }}
+                      >
+                        {/* Thumbnail */}
+                        <img
+                          src={entry.previewUrl}
+                          alt=""
+                          style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #e2e8f0' }}
+                        />
+
+                        {/* Info */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}>
+                              {entry.file.name}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 900, color: statusColor, textTransform: 'uppercase', flexShrink: 0 }}>
+                              {statusLabel}
+                            </span>
+                          </div>
+
+                          {/* Size info */}
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', display: 'flex', gap: 12 }}>
+                            <span>Original: {entry.origKB} KB</span>
+                            {entry.outKB != null && (
+                              <>
+                                <span>→</span>
+                                <span style={{ color: entry.outKB < entry.origKB ? 'var(--color-success)' : 'var(--color-warning)' }}>
+                                  Output: {entry.outKB} KB
+                                  {entry.origKB > 0 && ` (${Math.round((1 - entry.outKB / entry.origKB) * 100)}% saved)`}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Progress bar while active */}
+                          {isActive && (
+                            <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{
+                                height: '100%',
+                                width: entry.status === 'uploading' ? '70%' : '30%',
+                                background: 'var(--color-primary)',
+                                borderRadius: 2,
+                                animation: 'pulse 1.2s ease-in-out infinite',
+                              }} />
+                            </div>
+                          )}
+
+                          {/* URL output */}
+                          {entry.status === 'done' && entry.url && (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <code style={{
+                                fontSize: 11, fontFamily: 'ui-monospace, monospace',
+                                background: '#f1f5f9', border: '1px solid #e2e8f0',
+                                borderRadius: 3, padding: '2px 6px',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                maxWidth: 340, display: 'inline-block',
+                              }}>
+                                {entry.url}
+                              </code>
+                              <button
+                                className={styles.btnOutline}
+                                style={{ padding: '2px 8px', fontSize: 11 }}
+                                onClick={() => copyToClipboard(entry.url)}
+                                title="Copy URL"
+                              >
+                                📋 Copy URL
+                              </button>
+                              <a
+                                href={entry.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-primary)' }}
+                              >
+                                ↗ Open
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Error */}
+                          {entry.status === 'error' && (
+                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-danger)' }}>
+                              ⚠ {entry.error}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Remove button */}
+                        <button
+                          onClick={() => removeEntry(entry.id)}
+                          disabled={isActive}
+                          style={{
+                            background: 'none', border: 'none', cursor: isActive ? 'not-allowed' : 'pointer',
+                            fontSize: 18, color: '#94a3b8', padding: 4, lineHeight: 1,
+                            alignSelf: 'flex-start',
+                          }}
+                          title="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── Done gallery ── */}
+              {doneCount > 0 && (
+                <div className={styles.borderedPanel}>
+                  <div className={styles.panelHeader}>
+                    <h3 className={styles.panelTitle}>Uploaded ({doneCount})</h3>
+                    <button
+                      className={styles.btnOutline}
+                      style={{ padding: '4px 10px', fontSize: 11 }}
+                      onClick={() => {
+                        const urls = imgFiles.filter(e => e.done || e.status === 'done').map(e => e.url).filter(Boolean).join('\n');
+                        copyToClipboard(urls);
+                      }}
+                    >
+                      📋 Copy All URLs
+                    </button>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                    gap: 12,
+                  }}>
+                    {imgFiles.filter(e => e.status === 'done' && e.url).map(entry => (
+                      <div
+                        key={entry.id}
+                        style={{
+                          display: 'flex', flexDirection: 'column', gap: 6,
+                          border: '1px solid #e2e8f0', borderRadius: 6,
+                          overflow: 'hidden', background: '#f8fafc',
+                          cursor: 'pointer',
+                        }}
+                        title={entry.url}
+                        onClick={() => copyToClipboard(entry.url)}
+                      >
+                        <img
+                          src={entry.previewUrl}
+                          alt=""
+                          style={{ width: '100%', height: 100, objectFit: 'cover' }}
+                        />
+                        <div style={{ padding: '4px 8px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry.file.name}
+                          </div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-success)' }}>
+                            {entry.origKB} KB → {entry.outKB} KB
+                          </div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-primary)', textAlign: 'right' }}>
+                            📋 click to copy
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })()}
 
       </main>
     </div>
