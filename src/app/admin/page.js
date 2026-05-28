@@ -518,6 +518,8 @@ export default function AdminConsolePage() {
   const [importingSearchUrl, setImportingSearchUrl] = useState('');
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkImportProgress, setBulkImportProgress] = useState('');
+  const [selectedWords, setSelectedWords] = useState([]);
+
 
   const handleWebImageSearch = async (queryStr) => {
     const q = queryStr || searchQuery;
@@ -567,6 +569,7 @@ export default function AdminConsolePage() {
       
       // Update the local results state dynamically if it was open
       setAutoLinkResult(linkData);
+      setSelectedWords(prev => prev.filter(w => w !== searchWordTarget));
       setSearchModalOpen(false);
       logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
     } catch (err) {
@@ -576,10 +579,30 @@ export default function AdminConsolePage() {
     }
   };
 
+  const handleSelectAllWords = () => {
+    if (autoLinkResult && autoLinkResult.missingWords) {
+      setSelectedWords([...autoLinkResult.missingWords]);
+    }
+  };
+
+  const handleDeselectAllWords = () => {
+    setSelectedWords([]);
+  };
+
+  const toggleWordSelection = (word) => {
+    setSelectedWords(prev =>
+      prev.includes(word) ? prev.filter(w => w !== word) : [...prev, word]
+    );
+  };
+
   const handleBulkImportMissing = async () => {
     if (!autoLinkResult || !autoLinkResult.missingWords || autoLinkResult.missingWords.length === 0) return;
-    const words = [...autoLinkResult.missingWords];
-    const confirm = window.confirm(`This will automatically search and import the first clipart match for all ${words.length} missing words. Do you want to proceed?`);
+    if (selectedWords.length === 0) {
+      alert("Please select one or more words to import by checking their checkboxes.");
+      return;
+    }
+    const words = [...selectedWords];
+    const confirm = window.confirm(`This will automatically search and import the first clipart match for the ${words.length} selected words. Do you want to proceed?`);
     if (!confirm) return;
 
     setBulkImporting(true);
@@ -643,9 +666,10 @@ export default function AdminConsolePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ overwriteExisting: true }),
       });
-      const linkData = await linkRes.json();
-      if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link');
-      setAutoLinkResult(linkData);
+      const linkResData = await linkRes.json();
+      if (!linkRes.ok) throw new Error(linkResData.error || 'Failed to auto-link');
+      setAutoLinkResult(linkResData);
+      setSelectedWords([]); // Reset selected words upon successful import
       alert(`Bulk Auto-Import complete!\nSuccessfully imported: ${importedCount}\nFailed/skipped: ${failedCount}`);
     } catch (err) {
       alert(`Bulk Auto-Import completed but final auto-link failed: ${err.message}`);
@@ -668,6 +692,9 @@ export default function AdminConsolePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to auto-link');
       setAutoLinkResult(data);
+      if (data && data.missingWords) {
+        setSelectedWords([...data.missingWords]);
+      }
       logActivity(`Executed auto-linker: linked ${data.linkedCount} terms`, 'success');
     } catch (err) {
       setAutoLinkError(err.message);
