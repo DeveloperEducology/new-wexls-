@@ -476,11 +476,13 @@ export default function AdminConsolePage() {
   const canvasRef = useRef(null);
 
   // ── Image Upload State ──────────────────────────────────────────────────────
-  const [imgFiles, setImgFiles] = useState([]);           // array of { id, file, status, url, origKB, outKB, error }
-  const [imgMaxWidth, setImgMaxWidth] = useState(1200);   // px
-  const [imgQuality, setImgQuality] = useState(85);       // 1–100
-  const [imgFormat, setImgFormat] = useState('image/webp'); // output mime
-  const [imgFolder, setImgFolder] = useState('images');   // R2 folder prefix
+  const [imgFiles, setImgFiles] = useState([]);
+  const [imgMaxWidth, setImgMaxWidth] = useState(1200);
+  const [imgQuality, setImgQuality] = useState(85);
+  const [imgFormat, setImgFormat] = useState('image/webp');
+  const [imgFolder, setImgFolder] = useState('images');
+  const [imgFolderPreset, setImgFolderPreset] = useState('images'); // selected preset key
+  const [imgFolderCustom, setImgFolderCustom] = useState('');       // used when preset === '__custom__'
   const [imgUploading, setImgUploading] = useState(false);
   const [imgDragOver, setImgDragOver] = useState(false);
   const imgFileInputRef = useRef(null);
@@ -7034,15 +7036,66 @@ Explanation: 5 plus 7 is equal to 12.`}
                   </div>
 
                   {/* R2 folder */}
-                  <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>R2 Folder Prefix</label>
-                    <input
-                      type="text"
-                      className={styles.formInput}
-                      placeholder="images"
-                      value={imgFolder}
-                      onChange={e => setImgFolder(e.target.value)}
-                    />
+                  <div className={styles.filterGroup} style={{ gridColumn: 'span 1' }}>
+                    <label className={styles.filterLabel}>R2 Destination Folder</label>
+                    {/* Preset picker */}
+                    <select
+                      className={styles.formSelect}
+                      value={imgFolderPreset}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setImgFolderPreset(v);
+                        if (v !== '__custom__') setImgFolder(v);
+                      }}
+                    >
+                      <optgroup label="── General ──────────────────">
+                        <option value="images">📁 images</option>
+                        <option value="images/uploads">📁 images/uploads</option>
+                      </optgroup>
+                      <optgroup label="── LKG / English ─────────────">
+                        <option value="images/lkg">🔤 images/lkg</option>
+                        <option value="images/lkg/animals">🐾 images/lkg/animals</option>
+                        <option value="images/lkg/fruits">🍎 images/lkg/fruits</option>
+                        <option value="images/lkg/vehicles">🚗 images/lkg/vehicles</option>
+                        <option value="images/lkg/things">🧸 images/lkg/things</option>
+                        <option value="images/lkg/letters">🔡 images/lkg/letters</option>
+                      </optgroup>
+                      <optgroup label="── Math ──────────────────────">
+                        <option value="images/math">🔢 images/math</option>
+                        <option value="images/math/shapes">📐 images/math/shapes</option>
+                        <option value="images/math/diagrams">📊 images/math/diagrams</option>
+                      </optgroup>
+                      <optgroup label="── Questions / Content ────────">
+                        <option value="images/questions">❓ images/questions</option>
+                        <option value="images/icons">🔷 images/icons</option>
+                        <option value="images/backgrounds">🖼 images/backgrounds</option>
+                        <option value="images/thumbnails">🖼 images/thumbnails</option>
+                      </optgroup>
+                      <optgroup label="── Custom ────────────────────">
+                        <option value="__custom__">✏️ Custom path…</option>
+                      </optgroup>
+                    </select>
+
+                    {/* Custom path input — revealed when custom is chosen */}
+                    {imgFolderPreset === '__custom__' && (
+                      <input
+                        type="text"
+                        className={styles.formInput}
+                        placeholder="e.g. images/science/grade3"
+                        value={imgFolderCustom}
+                        style={{ marginTop: 6 }}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setImgFolderCustom(v);
+                          setImgFolder(v || 'images');
+                        }}
+                      />
+                    )}
+
+                    {/* Live preview of the final R2 key prefix */}
+                    <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', marginTop: 4, fontFamily: 'ui-monospace, monospace' }}>
+                      R2: <span style={{ color: 'var(--color-primary)' }}>{imgFolder || 'images'}/</span>timestamp-name.ext
+                    </div>
                   </div>
                 </div>
               </div>
