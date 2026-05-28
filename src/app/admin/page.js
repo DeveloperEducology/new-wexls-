@@ -499,8 +499,37 @@ export default function AdminConsolePage() {
   const [urlInput, setUrlInput] = useState('');
   const [urlPreviews, setUrlPreviews] = useState([]);   // [{id,src,selected,status,r2Url,error,sizeBytes}]
   const [urlImporting, setUrlImporting] = useState(false);
-  const [imgSubTab, setImgSubTab] = useState('upload'); // 'upload' | 'urls' | 'gallery'
+  const [imgSubTab, setImgSubTab] = useState('upload'); // 'upload' | 'urls' | 'gallery' | 'autolink'
   const [urlBaseName, setUrlBaseName] = useState('');
+
+  // ── Auto-Link Vocabulary State ──────────────────────────────────────────────
+  const [autoLinking, setAutoLinking] = useState(false);
+  const [autoLinkResult, setAutoLinkResult] = useState(null);
+  const [autoLinkError, setAutoLinkError] = useState('');
+  const [overwriteExistingLinks, setOverwriteExistingLinks] = useState(false);
+
+  const handleAutoLinkVocabulary = async () => {
+    setAutoLinking(true);
+    setAutoLinkError('');
+    setAutoLinkResult(null);
+    try {
+      const res = await fetch('/api/admin/auto-link-vocabulary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overwriteExisting: overwriteExistingLinks }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to auto-link');
+      setAutoLinkResult(data);
+      logActivity(`Executed auto-linker: linked ${data.linkedCount} terms`, 'success');
+    } catch (err) {
+      setAutoLinkError(err.message);
+      logActivity(`Auto-linker error: ${err.message}`, 'error');
+    } finally {
+      setAutoLinking(false);
+    }
+  };
+
 
   // ── R2 Gallery State ────────────────────────────────────────────────────────
   const [galleryImages, setGalleryImages] = useState([]);
@@ -7379,7 +7408,7 @@ Explanation: 5 plus 7 is equal to 12.`}
 
               {/* ── Sub-tab switcher ── */}
               <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border)' }}>
-                {[['upload', '📁 Upload Files'], ['urls', '🔗 Import from URLs'], ['gallery', '🖼 R2 Gallery']].map(([key, label]) => (
+                {[['upload', '📁 Upload Files'], ['urls', '🔗 Import from URLs'], ['gallery', '🖼 R2 Gallery'], ['autolink', '🔗 Auto-Link Vocabulary']].map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => setImgSubTab(key)}
