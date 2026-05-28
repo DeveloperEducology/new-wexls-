@@ -491,7 +491,34 @@ export default function AdminConsolePage() {
   const [urlInput, setUrlInput] = useState('');
   const [urlPreviews, setUrlPreviews] = useState([]);   // [{id,src,selected,status,r2Url,error,sizeBytes}]
   const [urlImporting, setUrlImporting] = useState(false);
-  const [imgSubTab, setImgSubTab] = useState('upload'); // 'upload' | 'urls'
+  const [imgSubTab, setImgSubTab] = useState('upload'); // 'upload' | 'urls' | 'gallery'
+
+  // ── R2 Gallery State ────────────────────────────────────────────────────────
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState('');
+  const [galleryPrefix, setGalleryPrefix] = useState('images'); // default to images folder
+
+  const fetchGalleryImages = useCallback(async () => {
+    setGalleryLoading(true);
+    setGalleryError('');
+    try {
+      const res = await fetch(`/api/admin/list-images?prefix=${encodeURIComponent(galleryPrefix)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to list images');
+      setGalleryImages(data.images || []);
+    } catch (err) {
+      setGalleryError(err.message);
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, [galleryPrefix]);
+
+  useEffect(() => {
+    if (activeTab === 'images' && imgSubTab === 'gallery') {
+      fetchGalleryImages();
+    }
+  }, [activeTab, imgSubTab, fetchGalleryImages]);
 
   // Curriculum Builder State (prefixed with curr to avoid collisions)
   const [currTree, setCurrTree] = useState([]);
@@ -7097,7 +7124,7 @@ Explanation: 5 plus 7 is equal to 12.`}
 
               {/* ── Sub-tab switcher ── */}
               <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border)' }}>
-                {[['upload', '📁 Upload Files'], ['urls', '🔗 Import from URLs']].map(([key, label]) => (
+                {[['upload', '📁 Upload Files'], ['urls', '🔗 Import from URLs'], ['gallery', '🖼 R2 Gallery']].map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => setImgSubTab(key)}
@@ -7446,6 +7473,206 @@ Explanation: 5 plus 7 is equal to 12.`}
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+              {/* ════════════════════════════════════════════════════════════ */}
+              {/* ── R2 GALLERY MODE ────────────────────────────────────────── */}
+              {/* ════════════════════════════════════════════════════════════ */}
+              {imgSubTab === 'gallery' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  
+                  {/* Controls header */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'end',
+                    justifyContent: 'space-between',
+                    gap: 20,
+                    flexWrap: 'wrap',
+                    padding: 16,
+                    background: 'var(--bg-secondary)',
+                    borderRadius: 8,
+                    border: '1.5px solid var(--color-border)',
+                  }}>
+                    {/* Prefix/Folder select filter */}
+                    <div className={styles.filterGroup} style={{ flex: 1, minWidth: 260, margin: 0 }}>
+                      <label className={styles.filterLabel}>Filter by Folder Prefix</label>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <select
+                          className={styles.formSelect}
+                          value={galleryPrefix}
+                          onChange={e => setGalleryPrefix(e.target.value)}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">📂 [All Bucket Root]</option>
+                          <option value="images">📁 images</option>
+                          <option value="images/uploads">📁 images/uploads</option>
+                          <option value="images/lkg">🔤 images/lkg</option>
+                          <option value="images/lkg/animals">🐾 images/lkg/animals</option>
+                          <option value="images/lkg/fruits">🍎 images/lkg/fruits</option>
+                          <option value="images/lkg/vehicles">🚗 images/lkg/vehicles</option>
+                          <option value="images/lkg/things">🧸 images/lkg/things</option>
+                          <option value="images/lkg/letters">🔡 images/lkg/letters</option>
+                          <option value="images/math">🔢 images/math</option>
+                          <option value="images/math/shapes">📐 images/math/shapes</option>
+                          <option value="images/math/diagrams">📊 images/math/diagrams</option>
+                          <option value="images/questions">❓ images/questions</option>
+                          <option value="images/icons">🔷 images/icons</option>
+                          <option value="images/backgrounds">🖼 images/backgrounds</option>
+                          <option value="images/thumbnails">🖼 images/thumbnails</option>
+                        </select>
+                        <button
+                          className={styles.btnSolid}
+                          onClick={fetchGalleryImages}
+                          disabled={galleryLoading}
+                        >
+                          🔄 Refresh
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', display: 'flex', gap: 16, height: '38px', alignItems: 'center' }}>
+                      <span>Images found: <strong>{galleryImages.length}</strong></span>
+                    </div>
+                  </div>
+
+                  {galleryLoading && (
+                    <div style={{ textAlign: 'center', padding: '64px 32px', color: 'var(--color-text-muted)', fontSize: 16 }}>
+                      <div className={styles.spinner} style={{ margin: '0 auto 16px auto' }}></div>
+                      Loading stored R2 images…
+                    </div>
+                  )}
+
+                  {galleryError && (
+                    <div style={{
+                      padding: 16,
+                      background: '#fef2f2',
+                      border: '1.5px solid #fee2e2',
+                      color: 'var(--color-danger)',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                    }}>
+                      ⚠ {galleryError}
+                    </div>
+                  )}
+
+                  {!galleryLoading && !galleryError && galleryImages.length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '64px 32px',
+                      background: 'var(--bg-secondary)',
+                      borderRadius: 8,
+                      border: '1.5px dashed var(--color-border)',
+                      color: 'var(--color-text-muted)',
+                    }}>
+                      No images found in prefix folder: <strong>{galleryPrefix || '[Root]'}</strong>
+                    </div>
+                  )}
+
+                  {!galleryLoading && !galleryError && galleryImages.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                      gap: 16,
+                    }}>
+                      {galleryImages.map(img => (
+                        <div
+                          key={img.key}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            border: '1.5px solid var(--color-border)',
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            background: 'var(--bg-primary)',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {/* Image preview frame */}
+                          <div style={{
+                            background: '#f8fafc',
+                            padding: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: 160,
+                            position: 'relative',
+                            borderBottom: '1px solid #f1f5f9',
+                          }}>
+                            <img
+                              src={img.url}
+                              alt=""
+                              style={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain' }}
+                              loading="lazy"
+                              onError={e => { e.target.style.opacity = '0.2'; }}
+                            />
+                            {/* Format label overlay */}
+                            <span style={{
+                              position: 'absolute',
+                              bottom: 8,
+                              right: 8,
+                              fontSize: 9,
+                              fontWeight: 900,
+                              background: 'rgba(15, 23, 42, 0.8)',
+                              color: 'white',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              textTransform: 'uppercase',
+                            }}>
+                              {img.key.split('.').pop()}
+                            </span>
+                          </div>
+
+                          {/* Info panel */}
+                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, flex: 1, justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              {/* Filename */}
+                              <div
+                                style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-main)', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: 28, lineHeight: 1.3 }}
+                                title={img.key.split('/').pop()}
+                              >
+                                {img.key.split('/').pop()}
+                              </div>
+                              {/* Path key */}
+                              <div
+                                style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                title={img.key}
+                              >
+                                key: {img.key}
+                              </div>
+                              {/* Metadata stats */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 700, marginTop: 4 }}>
+                                <span>Size: {Math.round(img.size / 1024 * 10) / 10} KB</span>
+                                <span>{new Date(img.lastModified).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+
+                            {/* Action Row */}
+                            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                              <button
+                                className={styles.btnOutline}
+                                style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                                onClick={() => copyToClipboard(img.url)}
+                              >
+                                📋 Copy URL
+                              </button>
+                              <a
+                                href={img.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={styles.btnOutline}
+                                style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: 'var(--color-text-main)', background: 'var(--bg-secondary)' }}
+                              >
+                                🔍 Full Size
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
