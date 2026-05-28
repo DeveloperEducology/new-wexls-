@@ -162,17 +162,17 @@ export const animals = [
     name: "monkey",
     singular: "monkey",
     plural: "monkeys",
-get imageUrl() {
-const urls = [
-"https://cdn-icons-png.flaticon.com/128/8418/8418337.png",
-"https://cdn-icons-png.flaticon.com/128/3195/3195966.png",
-"https://cdn-icons-png.flaticon.com/128/11879/11879988.png",
-"https://cdn-icons-png.flaticon.com/128/1660/1660696.png",
-"https://cdn-icons-png.flaticon.com/128/6236/6236379.png",
-"https://cdn-icons-png.flaticon.com/128/3819/3819238.png"
-
-]
-},
+    get imageUrl() {
+      const urls = [
+        "https://cdn-icons-png.flaticon.com/128/8418/8418337.png",
+        "https://cdn-icons-png.flaticon.com/128/3195/3195966.png",
+        "https://cdn-icons-png.flaticon.com/128/11879/11879988.png",
+        "https://cdn-icons-png.flaticon.com/128/1660/1660696.png",
+        "https://cdn-icons-png.flaticon.com/128/6236/6236379.png",
+        "https://cdn-icons-png.flaticon.com/128/3819/3819238.png"
+      ];
+      return urls[Math.floor(Math.random() * urls.length)];
+    },
     firstLetter: "m",
     color: "brown",
   },
@@ -369,10 +369,10 @@ export const vehicles = [
     plural: "boats",
     get imageUrl() {
       const urls = [
-        "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/sports/1779960928150-ball3.png",
-        "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/sports/1779960933294-ball5.png",
-        "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/sports/1779960942849-ball14.png",
-        "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/sports/1779960952379-ball16.png",
+        "https://cdn-icons-png.flaticon.com/512/995/995260.png",
+        "https://cdn-icons-png.flaticon.com/128/2910/2910793.png",
+        "https://cdn-icons-png.flaticon.com/128/3130/3130310.png",
+        "https://cdn-icons-png.flaticon.com/128/4181/4181181.png"
       ];
       return urls[Math.floor(Math.random() * urls.length)];
     },
