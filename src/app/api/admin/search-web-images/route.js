@@ -65,17 +65,32 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Query parameter q is required.' }, { status: 400 });
     }
 
+    const type = searchParams.get('type') || 'clipart';
     const cleanQuery = query.trim();
     
-    // We execute three queries in parallel to get a solid mix:
-    // 1. Flat icon / flaticon query
-    // 2. Vecteezy query
-    // 3. Generic clipart query
-    const queries = [
-      `${cleanQuery} flat icon flaticon`,
-      `${cleanQuery} vecteezy`,
-      cleanQuery.toLowerCase().includes('clipart') ? cleanQuery : `${cleanQuery} clipart png`
-    ];
+    let queries = [];
+    if (type === 'photo') {
+      // Photo query patterns for transparent background images/real items
+      queries = [
+        `${cleanQuery} transparent png`,
+        `${cleanQuery} photo transparent background`,
+        `${cleanQuery} stock photo png`
+      ];
+    } else if (type === 'any') {
+      // Unfiltered / exact query patterns
+      queries = [
+        `${cleanQuery} png`,
+        `${cleanQuery} transparent`,
+        cleanQuery
+      ];
+    } else {
+      // Default: Clipart
+      queries = [
+        `${cleanQuery} flat icon flaticon`,
+        `${cleanQuery} vecteezy`,
+        cleanQuery.toLowerCase().includes('clipart') ? cleanQuery : `${cleanQuery} clipart png`
+      ];
+    }
 
     const resultsArray = await Promise.all(queries.map(q => fetchDDG(q)));
 

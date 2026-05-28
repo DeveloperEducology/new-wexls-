@@ -528,6 +528,7 @@ export default function AdminConsolePage() {
   const [searchFolder, setSearchFolder] = useState('images/lkg/things');
   const [searchFolderPreset, setSearchFolderPreset] = useState('images/lkg/things');
   const [searchFolderCustom, setSearchFolderCustom] = useState('');
+  const [searchType, setSearchType] = useState('clipart');
 
   const handleWebImageSearch = async (queryStr) => {
     const q = queryStr || searchQuery;
@@ -537,7 +538,7 @@ export default function AdminConsolePage() {
     setSearchResults([]);
     setSelectedSearchImages([]);
     try {
-      const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(q.trim())}`);
+      const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(q.trim())}&type=${encodeURIComponent(searchType)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch search results');
       setSearchResults(data.results || []);
