@@ -8864,6 +8864,167 @@ Explanation: 5 plus 7 is equal to 12.`}
                 </>
               )} {/* end imgSubTab === 'upload' */}
 
+              {/* ── AUTO-LINK VOCABULARY MODE ── */}
+              {imgSubTab === 'autolink' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div className={styles.borderedPanel} style={{ padding: 24 }}>
+                    <div className={styles.panelHeader} style={{ marginBottom: 12 }}>
+                      <h3 className={styles.panelTitle}>🔗 Auto-Link Vocabulary Images</h3>
+                    </div>
+                    <p style={{ margin: '0 0 20px 0', fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                      This utility scans your English LKG vocabulary lists (from sight words, spotting pools, sentences, and rhyming families) inside <code>vocabulary.json</code> and queries the database catalog for matching drawings or icons. Any matches found will automatically have their R2 hosted URLs linked into the config file.
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 500 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' }}>
+                        <input
+                          type="checkbox"
+                          checked={overwriteExistingLinks}
+                          onChange={(e) => setOverwriteExistingLinks(e.target.checked)}
+                          style={{ width: 18, height: 18, accentColor: 'var(--color-primary)' }}
+                        />
+                        Overwrite existing image URL mappings
+                      </label>
+
+                      <button
+                        className={styles.btnSolid}
+                        style={{
+                          background: 'var(--color-primary)',
+                          borderColor: 'var(--color-primary)',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          padding: '12px 24px',
+                          fontSize: 14,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          alignSelf: 'flex-start'
+                        }}
+                        onClick={handleAutoLinkVocabulary}
+                        disabled={autoLinking}
+                      >
+                        {autoLinking ? (
+                          <>
+                            <span className={styles.spinner} style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', display: 'inline-block' }}></span>
+                            Auto-Linking Vocabulary...
+                          </>
+                        ) : (
+                          '🔗 Run Auto-Linker'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {autoLinkError && (
+                    <div style={{
+                      padding: 16,
+                      background: '#fef2f2',
+                      border: '1.5px solid #fee2e2',
+                      color: 'var(--color-danger)',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      fontSize: 13
+                    }}>
+                      ⚠ Error: {autoLinkError}
+                    </div>
+                  )}
+
+                  {autoLinkResult && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                      {/* Summary Stats */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: 16
+                      }}>
+                        <div className={styles.borderedPanel} style={{ padding: 20, textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Linked in this Run</div>
+                          <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--color-success)', marginTop: 8 }}>{autoLinkResult.linkedCount}</div>
+                        </div>
+                        <div className={styles.borderedPanel} style={{ padding: 20, textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Missing Images</div>
+                          <div style={{ fontSize: 32, fontWeight: 900, color: autoLinkResult.missingWords.length > 0 ? 'var(--color-warning)' : 'var(--color-success)', marginTop: 8 }}>
+                            {autoLinkResult.missingWords.length}
+                          </div>
+                        </div>
+                        <div className={styles.borderedPanel} style={{ padding: 20, textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Total Vocabulary Words</div>
+                          <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--color-text-main)', marginTop: 8 }}>{autoLinkResult.totalVocabularyWords}</div>
+                        </div>
+                      </div>
+
+                      {/* Linked Words Grid */}
+                      {autoLinkResult.linkedWords.length > 0 && (
+                        <div className={styles.borderedPanel} style={{ padding: 20 }}>
+                          <div className={styles.panelHeader} style={{ marginBottom: 16 }}>
+                            <h3 className={styles.panelTitle} style={{ fontSize: 14 }}>✓ Newly Linked Illustrations ({autoLinkResult.linkedWords.length})</h3>
+                          </div>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                            gap: 12
+                          }}>
+                            {autoLinkResult.linkedWords.map(item => (
+                              <div key={item.word} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                padding: 10,
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: 8
+                              }}>
+                                <img
+                                  src={item.url}
+                                  alt=""
+                                  style={{ width: 40, height: 40, objectFit: 'contain', background: 'white', borderRadius: 4, border: '1px solid #e2e8f0' }}
+                                />
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontWeight: 'bold', fontSize: 13, textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.word}</div>
+                                  <div style={{ fontSize: 9, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.url}>{item.url}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Missing Words Section */}
+                      {autoLinkResult.missingWords.length > 0 && (
+                        <div className={styles.borderedPanel} style={{ padding: 20 }}>
+                          <div className={styles.panelHeader} style={{ marginBottom: 12 }}>
+                            <h3 className={styles.panelTitle} style={{ fontSize: 14, color: 'var(--color-warning)' }}>⚠ Missing Image Assets ({autoLinkResult.missingWords.length})</h3>
+                          </div>
+                          <p style={{ margin: '0 0 16px 0', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                            The following vocabulary terms currently do not have matching drawings/icons in the image assets database. Please upload icons with matching names or tags to link them.
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {autoLinkResult.missingWords.map(word => (
+                              <span
+                                key={word}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 'bold',
+                                  background: '#fef3c7',
+                                  color: '#d97706',
+                                  padding: '4px 10px',
+                                  borderRadius: 6,
+                                  textTransform: 'lowercase',
+                                  border: '1px solid #fde68a'
+                                }}
+                              >
+                                {word}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* ── Crop Modal ── */}
               {cropTarget && (
                 <div style={{
