@@ -1418,6 +1418,8 @@ export const competencyGraphs = {
         'lkg-english-word-recognition-find-word-in-sentence': 'lkg_english_word_recognition',
         'lkg-english-rhyming-same-ending-single': 'lkg_english_rhyming',
         'lkg-english-rhyming-same-ending-double': 'lkg_english_rhyming',
+        'lkg-english-letter-lines-standing': 'lkg_english_basics',
+        'lkg-english-letter-lines-sleeping': 'lkg_english_basics',
       }
     }
   }

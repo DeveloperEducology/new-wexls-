@@ -1677,6 +1677,180 @@ function generateColorIdentificationQuestion(seed, r) {
   };
 }
 
+const LETTER_LINES_CONFIG = {
+  E: {
+    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="112.5" width="130" height="30" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="217.5" width="100" height="30" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="322.5" width="130" height="30" rx="15" fill="#e2e8f0" />`,
+    strokes: [
+      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', x: 335, y: 112.5, width: 130, height: 30, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_2', x: 335, y: 217.5, width: 100, height: 30, type: 'sleeping', name: 'middle sleeping line' },
+      { id: 'opt_3', x: 335, y: 322.5, width: 130, height: 30, type: 'sleeping', name: 'bottom sleeping line' }
+    ]
+  },
+  F: {
+    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="112.5" width="130" height="30" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="217.5" width="100" height="30" rx="15" fill="#e2e8f0" />`,
+    strokes: [
+      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', x: 335, y: 112.5, width: 130, height: 30, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_2', x: 335, y: 217.5, width: 100, height: 30, type: 'sleeping', name: 'middle sleeping line' }
+    ]
+  },
+  H: {
+    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
+      <rect x="465" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="217.5" width="130" height="30" rx="15" fill="#e2e8f0" />`,
+    strokes: [
+      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'left standing line' },
+      { id: 'opt_1', x: 465, y: 112.5, width: 30, height: 240, type: 'standing', name: 'right standing line' },
+      { id: 'opt_2', x: 335, y: 217.5, width: 130, height: 30, type: 'sleeping', name: 'middle sleeping line' }
+    ]
+  },
+  I: {
+    backgroundLetters: `<rect x="315" y="112.5" width="170" height="30" rx="15" fill="#e2e8f0" />
+      <rect x="385" y="142.5" width="30" height="180" rx="15" fill="#e2e8f0" />
+      <rect x="315" y="322.5" width="170" height="30" rx="15" fill="#e2e8f0" />`,
+    strokes: [
+      { id: 'opt_0', x: 315, y: 112.5, width: 170, height: 30, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_1', x: 385, y: 142.5, width: 30, height: 180, type: 'standing', name: 'standing line' },
+      { id: 'opt_2', x: 315, y: 322.5, width: 170, height: 30, type: 'sleeping', name: 'bottom sleeping line' }
+    ]
+  },
+  L: {
+    backgroundLetters: `<rect x="305" y="112.5" width="30" height="240" rx="15" fill="#e2e8f0" />
+      <rect x="335" y="322.5" width="130" height="30" rx="15" fill="#e2e8f0" />`,
+    strokes: [
+      { id: 'opt_0', x: 305, y: 112.5, width: 30, height: 240, type: 'standing', name: 'standing line' },
+      { id: 'opt_1', x: 335, y: 322.5, width: 130, height: 30, type: 'sleeping', name: 'bottom sleeping line' }
+    ]
+  },
+  T: {
+    backgroundLetters: `<rect x="305" y="112.5" width="190" height="30" rx="15" fill="#e2e8f0" />
+      <rect x="385" y="142.5" width="30" height="210" rx="15" fill="#e2e8f0" />`,
+    strokes: [
+      { id: 'opt_0', x: 305, y: 112.5, width: 190, height: 30, type: 'sleeping', name: 'top sleeping line' },
+      { id: 'opt_1', x: 385, y: 142.5, width: 30, height: 210, type: 'standing', name: 'standing line' }
+    ]
+  }
+};
+
+function generateLetterLinesQuestion(skillId, seed, r) {
+  const letters = Object.keys(LETTER_LINES_CONFIG);
+  const letter = letters[Math.floor(r * letters.length)];
+  const cfg = LETTER_LINES_CONFIG[letter];
+
+  const targetType = skillId === 'lkg-english-letter-lines-standing' ? 'standing' : 'sleeping';
+  
+  const options = cfg.strokes.map((stroke, idx) => ({
+    id: stroke.id,
+    label: stroke.name,
+    isCorrect: stroke.type === targetType
+  }));
+
+  const hotspots = cfg.strokes.map((stroke, idx) => ({
+    id: `hs_${stroke.id}`,
+    label: stroke.name,
+    x: (stroke.x / 800) * 100,
+    y: (stroke.y / 465) * 100,
+    width: (stroke.width / 800) * 100,
+    height: (stroke.height / 465) * 100,
+    isCircle: false,
+    isCorrect: stroke.type === targetType,
+    optionIndex: idx
+  }));
+
+  const partHotspots = cfg.strokes.map((stroke, idx) => ({
+    optionIndex: idx,
+    x: stroke.x,
+    y: stroke.y,
+    width: stroke.width,
+    height: stroke.height,
+    label: stroke.name,
+    isCircle: false,
+    id: `hs_${stroke.id}`
+  }));
+
+  const lineTypeName = targetType === 'standing' ? 'standing' : 'sleeping';
+  const questionText = `Click on all the **${lineTypeName} lines** in the letter **${letter}**.`;
+
+  const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg" style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:24px;">
+    <defs>
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#faf5ff" />
+        <stop offset="100%" stop-color="#eff6ff" />
+      </linearGradient>
+    </defs>
+    <rect width="800" height="465" fill="url(#bgGrad)" rx="24" />
+
+    <!-- Guidelines -->
+    <line x1="60" y1="112.5" x2="740" y2="112.5" stroke="#fecaca" stroke-width="2" />
+    <line x1="60" y1="192.5" x2="740" y2="192.5" stroke="#93c5fd" stroke-dasharray="6,4" stroke-width="1.5" />
+    <line x1="60" y1="272.5" x2="740" y2="272.5" stroke="#93c5fd" stroke-dasharray="6,4" stroke-width="1.5" />
+    <line x1="60" y1="352.5" x2="740" y2="352.5" stroke="#fecaca" stroke-width="2" />
+    
+    <!-- Guidelines labels -->
+    <text x="50" y="117.5" font-family="'Outfit', sans-serif" font-size="12" fill="#ef4444" text-anchor="end">top line</text>
+    <text x="50" y="357.5" font-family="'Outfit', sans-serif" font-size="12" fill="#ef4444" text-anchor="end">base line</text>
+    
+    <!-- Background Letter Template (Light grey representation of the entire letter) -->
+    ${cfg.backgroundLetters}
+    
+    <!-- Interactive Stroke Shapes -->
+    ${cfg.strokes.map(stroke => {
+      return `<rect id="${stroke.id}" x="${stroke.x}" y="${stroke.y}" width="${stroke.width}" height="${stroke.height}" rx="15" fill="#4f46e5" cursor="pointer" />`;
+    }).join('\n')}
+  </svg>`;
+
+  const correctCount = cfg.strokes.filter(s => s.type === targetType).length;
+
+  const explanation = `The letter **${letter}** has **${correctCount}** ${lineTypeName} line${correctCount > 1 ? 's' : ''}.
+  
+- **Standing lines** go straight up and down (vertical).
+- **Sleeping lines** go straight across (horizontal).
+
+Look at the highlighted green lines to see the correct ${lineTypeName} line${correctCount > 1 ? 's' : ''}!`;
+
+  const audioUrl = letterAudios[questionText] || undefined;
+
+  const correctIndices = cfg.strokes
+    .map((s, idx) => (s.type === targetType ? idx : null))
+    .filter(idx => idx !== null);
+
+  return {
+    id: `english_lkg_letter_lines_${skillId}_${seed}`,
+    type: 'mcq',
+    interaction: 'hotspot_multi_select',
+    layoutMode: 'mcq_hotspot',
+    questionText,
+    audioUrl,
+    voice: 'Kore',
+    generateAudio: 'all',
+    explanation,
+    options,
+    correctAnswerIndex: correctIndices[0] ?? 0,
+    correctAnswerIndices: correctIndices,
+    answer: correctIndices,
+    hotspots,
+    parts: [
+      {
+        type: 'text',
+        content: questionText
+      },
+      {
+        type: 'hotspot_canvas',
+        canvasWidth: 800,
+        canvasHeight: 465,
+        hotspots: partHotspots,
+        backgroundSvg
+      }
+    ]
+  };
+}
+
 export function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
@@ -1708,6 +1882,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateRhymingQuestion(skillId, seed, r);
       } else if (template.engine === 'color_identification') {
         question = generateColorIdentificationQuestion(seed, r);
+      } else if (template.engine === 'letter_lines') {
+        question = generateLetterLinesQuestion(skillId, seed, r);
       }
 
       if (question) {

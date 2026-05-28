@@ -40,6 +40,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'color_identification',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.letter_lines': {
+    title: 'Standing and Sleeping Lines',
+    engine: 'letter_lines',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -227,6 +233,22 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-rhyming',
     chapterTitle: 'Rhyming'
+  },
+  'lkg-english-letter-lines-standing': {
+    templateId: 'lkg.english.letter_lines',
+    code: 'EL.D3',
+    title: 'Identify standing lines in letters',
+    grade: 'LKG',
+    chapterId: 'english-lkg-basics',
+    chapterTitle: 'Letter Recognition & Phonics'
+  },
+  'lkg-english-letter-lines-sleeping': {
+    templateId: 'lkg.english.letter_lines',
+    code: 'EL.D4',
+    title: 'Identify sleeping lines in letters',
+    grade: 'LKG',
+    chapterId: 'english-lkg-basics',
+    chapterTitle: 'Letter Recognition & Phonics'
   }
 };
 
