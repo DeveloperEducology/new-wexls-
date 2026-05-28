@@ -508,6 +508,153 @@ export default function AdminConsolePage() {
   const [autoLinkError, setAutoLinkError] = useState('');
   const [overwriteExistingLinks, setOverwriteExistingLinks] = useState(false);
 
+  // ── Web Clipart Search Modal State ───────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchWordTarget, setSearchWordTarget] = useState('');
+  const [importingSearchUrl, setImportingSearchUrl] = useState('');
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkImportProgress, setBulkImportProgress] = useState('');
+
+  const handleWebImageSearch = async (queryStr) => {
+    const q = queryStr || searchQuery;
+    if (!q || !q.trim()) return;
+    setSearchLoading(true);
+    setSearchError('');
+    setSearchResults([]);
+    try {
+      const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(q.trim())}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch search results');
+      setSearchResults(data.results || []);
+    } catch (err) {
+      setSearchError(err.message);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const importSearchImage = async (imageUrl) => {
+    if (!searchWordTarget) return;
+    setImportingSearchUrl(imageUrl);
+    try {
+      // 1. Fetch and upload image to R2, generating dimensions and tags via Gemini
+      const res = await fetch('/api/admin/fetch-url-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: imageUrl,
+          folder: 'images/lkg/things',
+          customName: searchWordTarget,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to import image');
+      
+      logActivity(`Successfully imported clipart for "${searchWordTarget}" to R2`, 'success');
+      
+      // 2. Trigger auto-linker with overwrite enabled to map the newly created image asset
+      const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overwriteExisting: true }),
+      });
+      const linkData = await linkRes.json();
+      if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link newly imported asset');
+      
+      // Update the local results state dynamically if it was open
+      setAutoLinkResult(linkData);
+      setSearchModalOpen(false);
+      logActivity(`Auto-linked "${searchWordTarget}" to the new image URL`, 'success');
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    } finally {
+      setImportingSearchUrl('');
+    }
+  };
+
+  const handleBulkImportMissing = async () => {
+    if (!autoLinkResult || !autoLinkResult.missingWords || autoLinkResult.missingWords.length === 0) return;
+    const words = [...autoLinkResult.missingWords];
+    const confirm = window.confirm(`This will automatically search and import the first clipart match for all ${words.length} missing words. Do you want to proceed?`);
+    if (!confirm) return;
+
+    setBulkImporting(true);
+    setBulkImportProgress(`Starting...`);
+
+    let importedCount = 0;
+    let failedCount = 0;
+
+    // Process in batches of 3 for speed and to avoid hitting DDG rate limits
+    const CONCURRENCY = 3;
+    
+    // Helper function to process a single word
+    const processWord = async (word) => {
+      try {
+        setBulkImportProgress(`Searching "${word}"...`);
+        // 1. Search for clipart
+        const searchRes = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(word)}`);
+        const searchData = await searchRes.json();
+        if (!searchRes.ok || !searchData.results || searchData.results.length === 0) {
+          throw new Error('No clipart results found');
+        }
+        
+        const firstMatchUrl = searchData.results[0].image;
+        setBulkImportProgress(`Importing "${word}"...`);
+        
+        // 2. Fetch and upload to R2
+        const importRes = await fetch('/api/admin/fetch-url-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: firstMatchUrl,
+            folder: 'images/lkg/things',
+            customName: word,
+          }),
+        });
+        const importData = await importRes.json();
+        if (!importRes.ok) throw new Error(importData.error || 'Failed to upload');
+        
+        importedCount++;
+        logActivity(`Bulk Auto-Import: successfully imported "${word}"`, 'success');
+      } catch (err) {
+        failedCount++;
+        logActivity(`Bulk Auto-Import failed for "${word}": ${err.message}`, 'warning');
+      }
+    };
+
+    // Run parallel queue
+    for (let i = 0; i < words.length; i += CONCURRENCY) {
+      const batch = words.slice(i, i + CONCURRENCY);
+      const batchNum = Math.floor(i / CONCURRENCY) + 1;
+      const totalBatches = Math.ceil(words.length / CONCURRENCY);
+      setBulkImportProgress(`Batch ${batchNum}/${totalBatches}...`);
+      await Promise.all(batch.map(word => processWord(word)));
+    }
+
+    setBulkImportProgress('Linking...');
+    // 3. Final linking step (call auto-link once to update configuration file)
+    try {
+      const linkRes = await fetch('/api/admin/auto-link-vocabulary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overwriteExisting: true }),
+      });
+      const linkData = await linkRes.json();
+      if (!linkRes.ok) throw new Error(linkData.error || 'Failed to auto-link');
+      setAutoLinkResult(linkData);
+      alert(`Bulk Auto-Import complete!\nSuccessfully imported: ${importedCount}\nFailed/skipped: ${failedCount}`);
+    } catch (err) {
+      alert(`Bulk Auto-Import completed but final auto-link failed: ${err.message}`);
+    } finally {
+      setBulkImporting(false);
+      setBulkImportProgress('');
+    }
+  };
+
   const handleAutoLinkVocabulary = async () => {
     setAutoLinking(true);
     setAutoLinkError('');
@@ -8993,35 +9140,374 @@ Explanation: 5 plus 7 is equal to 12.`}
                       {/* Missing Words Section */}
                       {autoLinkResult.missingWords.length > 0 && (
                         <div className={styles.borderedPanel} style={{ padding: 20 }}>
-                          <div className={styles.panelHeader} style={{ marginBottom: 12 }}>
-                            <h3 className={styles.panelTitle} style={{ fontSize: 14, color: 'var(--color-warning)' }}>⚠ Missing Image Assets ({autoLinkResult.missingWords.length})</h3>
+                          <div className={styles.panelHeader} style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                            <h3 className={styles.panelTitle} style={{ fontSize: 14, color: 'var(--color-warning)', margin: 0 }}>⚠ Missing Image Assets ({autoLinkResult.missingWords.length})</h3>
+                            <button
+                              className={styles.btnSolid}
+                              style={{
+                                background: '#fef3c7',
+                                borderColor: '#fde68a',
+                                color: '#d97706',
+                                fontWeight: 'bold',
+                                padding: '8px 16px',
+                                fontSize: 12,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                cursor: 'pointer',
+                              }}
+                              onClick={handleBulkImportMissing}
+                              disabled={bulkImporting}
+                            >
+                              {bulkImporting ? (
+                                <>
+                                  <span className={styles.spinner} style={{ width: 12, height: 12, border: '2px solid rgba(217,119,6,0.2)', borderTopColor: '#d97706', display: 'inline-block' }}></span>
+                                  <span>{bulkImportProgress || 'Importing...'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>⚡ Bulk Auto-Import Clipart</span>
+                                </>
+                              )}
+                            </button>
                           </div>
                           <p style={{ margin: '0 0 16px 0', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                            The following vocabulary terms currently do not have matching drawings/icons in the image assets database. Please upload icons with matching names or tags to link them.
+                            The following vocabulary terms currently do not have matching drawings/icons in the image assets database. Click on any word to search the web for free cliparts and auto-link them.
                           </p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                             {autoLinkResult.missingWords.map(word => (
-                              <span
+                              <div
                                 key={word}
                                 style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
                                   fontSize: 11,
                                   fontWeight: 'bold',
                                   background: '#fef3c7',
                                   color: '#d97706',
-                                  padding: '4px 10px',
+                                  padding: '4px 8px 4px 10px',
                                   borderRadius: 6,
                                   textTransform: 'lowercase',
-                                  border: '1px solid #fde68a'
+                                  border: '1px solid #fde68a',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
                                 }}
+                                onClick={() => {
+                                  setSearchWordTarget(word);
+                                  setSearchQuery(word);
+                                  setSearchModalOpen(true);
+                                  handleWebImageSearch(word);
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#fde68a';
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = '#fef3c7';
+                                  e.currentTarget.style.transform = 'none';
+                                }}
+                                title={`Click to search web images for "${word}"`}
                               >
-                                {word}
-                              </span>
+                                <span>{word}</span>
+                                <span style={{ fontSize: 10 }}>🔍</span>
+                              </div>
                             ))}
                           </div>
                         </div>
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ── Web Clipart Search Modal ── */}
+              {searchModalOpen && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 9999,
+                  padding: 24,
+                }}
+                onClick={() => setSearchModalOpen(false)}
+                >
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 16,
+                    width: 'min(900px, 100%)',
+                    maxHeight: '85vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04)',
+                    overflow: 'hidden',
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  >
+                    {/* Header */}
+                    <div style={{
+                      padding: '18px 24px',
+                      borderBottom: '1px solid var(--color-border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'var(--bg-secondary)',
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--color-text-main)' }}>
+                          🔍 Search Web Clipart for "{searchWordTarget}"
+                        </h3>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                          Find transparent educational PNG cliparts to auto-link
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setSearchModalOpen(false)}
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          color: 'var(--color-text-muted)',
+                          fontSize: 20,
+                          cursor: 'pointer',
+                          padding: 4,
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Search Input Area */}
+                    <div style={{
+                      padding: '16px 24px',
+                      borderBottom: '1px solid var(--color-border)',
+                      display: 'flex',
+                      gap: 12,
+                      background: 'var(--bg-primary)',
+                    }}>
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search query (e.g. net, butterfly net, etc.)"
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          border: '1.5px solid var(--color-border)',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          outline: 'none',
+                          background: 'var(--bg-secondary)',
+                          color: 'var(--color-text-main)'
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleWebImageSearch();
+                        }}
+                      />
+                      <button
+                        onClick={() => handleWebImageSearch()}
+                        disabled={searchLoading}
+                        className={styles.btnSolid}
+                        style={{
+                          background: 'var(--color-primary)',
+                          borderColor: 'var(--color-primary)',
+                          color: 'white',
+                          padding: '0 20px',
+                          fontSize: 13,
+                          fontWeight: 'bold',
+                          borderRadius: 8,
+                        }}
+                      >
+                        {searchLoading ? 'Searching...' : 'Search'}
+                      </button>
+                    </div>
+
+                    {/* Results Container */}
+                    <div style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      padding: 24,
+                      background: 'var(--bg-primary)',
+                    }}>
+                      {searchLoading && (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '60px 0',
+                          gap: 16
+                        }}>
+                          <span className={styles.spinner} style={{ width: 40, height: 40, border: '3px solid rgba(139, 92, 246, 0.1)', borderTopColor: 'var(--color-primary)' }}></span>
+                          <div style={{ fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 'bold' }}>Searching DuckDuckGo for clipart...</div>
+                        </div>
+                      )}
+
+                      {searchError && (
+                        <div style={{
+                          padding: 16,
+                          background: '#fef2f2',
+                          border: '1.5px solid #fee2e2',
+                          color: 'var(--color-danger)',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 'bold'
+                        }}>
+                          ⚠ Error fetching search results: {searchError}
+                        </div>
+                      )}
+
+                      {!searchLoading && !searchError && searchResults.length === 0 && (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '60px 0',
+                          color: 'var(--color-text-muted)',
+                          fontSize: 13
+                        }}>
+                          No cliparts found. Try refining your query above (e.g. search "butterfly net" instead of "net").
+                        </div>
+                      )}
+
+                      {!searchLoading && !searchError && searchResults.length > 0 && (
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                          gap: 20
+                        }}>
+                          {searchResults.map((item, index) => {
+                            const isThisImporting = importingSearchUrl === item.image;
+                            return (
+                              <div
+                                key={index}
+                                style={{
+                                  position: 'relative',
+                                  border: '1px solid var(--color-border)',
+                                  borderRadius: 12,
+                                  overflow: 'hidden',
+                                  background: 'var(--bg-secondary)',
+                                  cursor: importingSearchUrl ? 'not-allowed' : 'pointer',
+                                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                }}
+                                onClick={() => {
+                                  if (!importingSearchUrl) importSearchImage(item.image);
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!importingSearchUrl) {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.05)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'none';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
+                              >
+                                {/* Image Container */}
+                                <div style={{
+                                  width: '100%',
+                                  aspectRatio: '1',
+                                  padding: 12,
+                                  background: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  position: 'relative',
+                                  borderBottom: '1px solid var(--color-border)',
+                                }}>
+                                  <img
+                                    src={item.image}
+                                    alt=""
+                                    style={{
+                                      maxWidth: '100%',
+                                      maxHeight: '100%',
+                                      objectFit: 'contain',
+                                    }}
+                                    onError={(e) => {
+                                      e.target.src = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%2724%27 height%3D%2724%27 viewBox%3D%270 0 24 24%27 fill%3D%27none%27 stroke%3D%27%23cbd5e1%27 stroke-width%3D%272%27 stroke-linecap%3D%27round%27 stroke-linejoin%3D%27round%27%3E%3Crect x%3D%273%27 y%3D%273%27 width%3D%2718%27 height%3D%2718%27 rx%3D%272%27 ry%3D%272%27%2F%3E%3Ccircle cx%3D%278.5%27 cy%3D%278.5%27 r%3D%271.5%27%2F%3E%3Cpolyline points%3D%2721 15 16 10 5 21%27%2F%3E%3C%2Fsvg%3E'; // SVG fallback
+                                    }}
+                                  />
+
+                                  {/* Importing Overlay */}
+                                  {isThisImporting && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: 0, left: 0, right: 0, bottom: 0,
+                                      background: 'rgba(255,255,255,0.85)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: 8,
+                                      zIndex: 10
+                                    }}>
+                                      <span className={styles.spinner} style={{ width: 24, height: 24, border: '2.5px solid rgba(139,92,246,0.1)', borderTopColor: 'var(--color-primary)' }}></span>
+                                      <span style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--color-primary)' }}>Importing...</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Metadata & Action */}
+                                <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: 'bold',
+                                      color: 'var(--color-text-main)',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    title={item.title}
+                                  >
+                                    {item.title || 'Clipart Image'}
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 9, color: 'var(--color-text-muted)' }}>
+                                    <span>{item.width} x {item.height}</span>
+                                    <a
+                                      href={item.source}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={e => e.stopPropagation()}
+                                      style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+                                    >
+                                      source
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{
+                      padding: '16px 24px',
+                      borderTop: '1px solid var(--color-border)',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      background: 'var(--bg-secondary)',
+                    }}>
+                      <button
+                        onClick={() => setSearchModalOpen(false)}
+                        className={styles.btnOutline}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: 13,
+                          fontWeight: 'bold',
+                          borderRadius: 8,
+                        }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
