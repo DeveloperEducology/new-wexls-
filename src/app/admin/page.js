@@ -7164,6 +7164,8 @@ Explanation: 5 plus 7 is equal to 12.`}
             }
 
             const map = {};
+            const assetsList = [];
+
             targets.forEach(img => {
               const filename = img.key.split('/').pop();
               const baseWithPrefix = filename.replace(/\.[^.]+$/, '');
@@ -7174,11 +7176,51 @@ Explanation: 5 plus 7 is equal to 12.`}
                 map[objectName] = [];
               }
               map[objectName].push(img.url);
+
+              // Auto-detect color from path or filename
+              const lowerKey = img.key.toLowerCase();
+              let detectedColor = 'none';
+              const colors = ['red', 'green', 'yellow', 'blue', 'brown', 'orange', 'purple', 'grey', 'white'];
+              
+              // 1. Check directories or hyphens first for precise matching
+              for (const col of colors) {
+                if (lowerKey.includes(`/${col}/`) || lowerKey.includes(`-${col}`) || lowerKey.includes(`${col}-`)) {
+                  detectedColor = col;
+                  break;
+                }
+              }
+              
+              // 2. Fallback check for general substring matching
+              if (detectedColor === 'none') {
+                for (const col of colors) {
+                  if (lowerKey.includes(col)) {
+                    detectedColor = col;
+                    break;
+                  }
+                }
+              }
+
+              const singular = objectName;
+              const plural = objectName.endsWith('y') ? `${objectName.slice(0, -1)}ies` : `${objectName}s`;
+              const firstLetter = objectName.charAt(0);
+
+              assetsList.push({
+                name: objectName,
+                singular,
+                plural,
+                imageUrl: img.url,
+                firstLetter,
+                color: detectedColor !== 'none' ? detectedColor : undefined
+              });
             });
 
-            const formatted = JSON.stringify(map, null, 2);
-            navigator.clipboard.writeText(formatted).then(() => {
-              setAlert({ type: 'success', text: `Success! Categorized ${Object.keys(map).length} object(s) with ${targets.length} total image URLs and copied to clipboard as JS object!` });
+            const formattedMap = JSON.stringify(map, null, 2);
+            const formattedAssets = JSON.stringify(assetsList, null, 2);
+            
+            const clipboardPayload = `// === GROUPED URL MAP ===\n${formattedMap}\n\n// === READY-TO-PASTE assets.js ARRAY ===\n${formattedAssets}`;
+
+            navigator.clipboard.writeText(clipboardPayload).then(() => {
+              setAlert({ type: 'success', text: `Success! Categorized ${Object.keys(map).length} object(s) with ${targets.length} total image URLs and copied to clipboard as JS object and ready-to-paste assets array!` });
             }).catch(() => {
               setAlert({ type: 'error', text: "Failed to write to clipboard. Please copy manually." });
             });
