@@ -265,6 +265,14 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-basics',
     chapterTitle: 'Letter Recognition & Phonics'
+  },
+  'lkg-english-letter-lines-combination': {
+    templateId: 'lkg.english.letter_lines',
+    code: 'EL.D7',
+    title: 'Identify lines in combination letters',
+    grade: 'LKG',
+    chapterId: 'english-lkg-basics',
+    chapterTitle: 'Letter Recognition & Phonics'
   }
 };
 

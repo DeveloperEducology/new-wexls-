@@ -96,6 +96,23 @@ async function run() {
         order: 16,
         createdAt: now,
         updatedAt: now
+      },
+      {
+        id: "english-lkg-basics-lkg-english-letter-lines-combination",
+        type: "skill",
+        subjectId: "english",
+        topicId: "lkg",
+        chapterId: "english-lkg-basics",
+        parentId: "english-lkg-basics",
+        title: "Identify lines in combination letters",
+        skillId: "lkg-english-letter-lines-combination",
+        templateId: "lkg.english.letter_lines",
+        engine: "lkg",
+        questionType: "mcq",
+        status: "active",
+        order: 17,
+        createdAt: now,
+        updatedAt: now
       }
     ];
 

@@ -1875,17 +1875,39 @@ const LETTER_LINES_CONFIG = {
 };
 
 function generateLetterLinesQuestion(skillId, seed, r) {
-  const targetType = skillId.endsWith('-standing') ? 'standing' : 
-                     skillId.endsWith('-sleeping') ? 'sleeping' :
-                     skillId.endsWith('-slanting') ? 'slanting' : 'curved';
+  let targetType;
+  let letter;
+  let cfg;
 
-  // Filter letters that have at least one stroke of targetType
-  const letters = Object.keys(LETTER_LINES_CONFIG).filter(l => 
-    LETTER_LINES_CONFIG[l].strokes.some(s => s.type === targetType)
-  );
+  if (skillId.endsWith('-combination')) {
+    // Combination letters must have both curved strokes and straight (standing/sleeping/slanting) strokes
+    const combinationLetters = Object.keys(LETTER_LINES_CONFIG).filter(l => {
+      const strokes = LETTER_LINES_CONFIG[l].strokes;
+      const hasCurved = strokes.some(s => s.type === 'curved');
+      const hasStraight = strokes.some(s => s.type === 'standing' || s.type === 'sleeping' || s.type === 'slanting');
+      return hasCurved && hasStraight;
+    });
 
-  const letter = letters[Math.floor(r * letters.length)];
-  const cfg = LETTER_LINES_CONFIG[letter];
+    letter = combinationLetters[Math.floor(r * combinationLetters.length)];
+    cfg = LETTER_LINES_CONFIG[letter];
+
+    // Get the available stroke types in this specific combination letter
+    const strokeTypes = [...new Set(cfg.strokes.map(s => s.type))];
+    const r2 = seededRandom(seed + 1);
+    targetType = strokeTypes[Math.floor(r2 * strokeTypes.length)];
+  } else {
+    targetType = skillId.endsWith('-standing') ? 'standing' : 
+                 skillId.endsWith('-sleeping') ? 'sleeping' :
+                 skillId.endsWith('-slanting') ? 'slanting' : 'curved';
+
+    // Filter letters that have at least one stroke of targetType
+    const letters = Object.keys(LETTER_LINES_CONFIG).filter(l => 
+      LETTER_LINES_CONFIG[l].strokes.some(s => s.type === targetType)
+    );
+
+    letter = letters[Math.floor(r * letters.length)];
+    cfg = LETTER_LINES_CONFIG[letter];
+  }
 
   const options = cfg.strokes.map((stroke, idx) => ({
     id: stroke.id,
