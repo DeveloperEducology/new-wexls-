@@ -5505,7 +5505,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                   dangerouslySetInnerHTML={{ __html: hs.svgContent }}
                 />
               ) : (
-                hs.label && (
+                hs.label && !part.hideHotspotText && !question.hideHotspotText && (
                   <span style={{ 
                     fontSize: isPreK ? '32px' : '18px', 
                     fontWeight: '900', 
