@@ -521,6 +521,7 @@ export default function AdminConsolePage() {
   const [selectedWords, setSelectedWords] = useState([]);
   const [selectedSearchImages, setSelectedSearchImages] = useState([]);
   const [importingSearchStatus, setImportingSearchStatus] = useState('');
+  const [previewSearchImageUrl, setPreviewSearchImageUrl] = useState(null);
 
 
   const handleWebImageSearch = async (queryStr) => {
@@ -9606,18 +9607,61 @@ Explanation: 5 plus 7 is equal to 12.`}
                                   {isSelected && '✓'}
                                 </div>
 
+                                {/* Preview Button Overlay */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewSearchImageUrl(item);
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    top: 8,
+                                    right: 8,
+                                    zIndex: 5,
+                                    background: 'rgba(255, 255, 255, 0.9)',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: 6,
+                                    width: 28,
+                                    height: 28,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    fontSize: 12,
+                                    transition: 'all 0.2s',
+                                  }}
+                                  title="Preview large image"
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = '#ffffff';
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                                    e.currentTarget.style.transform = 'none';
+                                  }}
+                                >
+                                  🔍
+                                </button>
+
                                 {/* Image Container */}
-                                <div style={{
-                                  width: '100%',
-                                  aspectRatio: '1',
-                                  padding: 12,
-                                  background: 'white',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  position: 'relative',
-                                  borderBottom: '1px solid var(--color-border)',
-                                }}>
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewSearchImageUrl(item);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    aspectRatio: '1',
+                                    padding: 12,
+                                    background: 'white',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    position: 'relative',
+                                    borderBottom: '1px solid var(--color-border)',
+                                    cursor: 'zoom-in',
+                                  }}
+                                >
                                   <img
                                     src={item.image}
                                     alt=""
@@ -9705,6 +9749,113 @@ Explanation: 5 plus 7 is equal to 12.`}
                       >
                         Close
                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Web Clipart Preview Overlay ── */}
+              {previewSearchImageUrl && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10000,
+                  padding: 24,
+                }}
+                onClick={() => setPreviewSearchImageUrl(null)}
+                >
+                  <div style={{
+                    position: 'relative',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--color-border)',
+                    padding: 20,
+                    borderRadius: 16,
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                    width: 'min(550px, 95vw)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 16
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  >
+                    {/* Close button */}
+                    <button
+                      onClick={() => setPreviewSearchImageUrl(null)}
+                      style={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        border: 'none',
+                        background: 'rgba(15, 23, 42, 0.1)',
+                        color: 'var(--color-text-main)',
+                        borderRadius: '50%',
+                        width: 32,
+                        height: 32,
+                        fontSize: 16,
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        zIndex: 10
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(15, 23, 42, 0.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(15, 23, 42, 0.1)'}
+                    >
+                      ✕
+                    </button>
+
+                    {/* Large Image */}
+                    <div style={{
+                      width: '100%',
+                      height: 'min(450px, 55vh)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'white',
+                      borderRadius: 8,
+                      overflow: 'hidden',
+                      border: '1px solid var(--color-border)',
+                      padding: 8
+                    }}>
+                      <img
+                        src={previewSearchImageUrl.image}
+                        alt={previewSearchImageUrl.title}
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain'
+                        }}
+                        onError={(e) => {
+                          e.target.src = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%2724%27 height%3D%2724%27 viewBox%3D%270 0 24 24%27 fill%3D%27none%27 stroke%3D%27%23cbd5e1%27 stroke-width%3D%272%27 stroke-linecap%3D%27round%27 stroke-linejoin%3D%27round%27%3E%3Crect x%3D%273%27 y%3D%273%27 width%3D%2718%27 height%3D%2718%27 rx%3D%272%27 ry%3D%272%27%2F%3E%3Ccircle cx%3D%278.5%27 cy%3D%278.5%27 r%3D%271.5%27%2F%3E%3Cpolyline points%3D%2721 15 16 10 5 21%27%2F%3E%3C%2Fsvg%3E';
+                        }}
+                      />
+                    </div>
+
+                    {/* Image Details */}
+                    <div style={{ width: '100%', textAlig: 'center' }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: 13, fontWeight: 'bold', color: 'var(--color-text-main)', textAlign: 'center' }}>
+                        {previewSearchImageUrl.title || 'Clipart Preview'}
+                      </h4>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', justifyContent: 'center', gap: 16 }}>
+                        <span>Resolution: <strong>{previewSearchImageUrl.width} x {previewSearchImageUrl.height}</strong></span>
+                        <a
+                          href={previewSearchImageUrl.source}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--color-primary)', textDecoration: 'underline', fontWeight: 600 }}
+                        >
+                          source website
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
