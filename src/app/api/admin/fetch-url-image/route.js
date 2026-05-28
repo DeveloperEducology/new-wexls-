@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { uploadImageToR2, isR2Configured } from '@/lib/r2Service';
 import { getMongoDb } from '@/lib/db/mongo';
 import { getImageDimensions, generateIxlMetadata } from '@/lib/gemini';
+import sharp from 'sharp';
 
 const ALLOWED_CONTENT_TYPES = new Set([
   'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
@@ -73,13 +74,69 @@ export async function POST(request) {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  let buffer = Buffer.from(arrayBuffer);
 
   if (!isR2Configured()) {
     return NextResponse.json({ error: 'R2 is not configured.' }, { status: 503 });
   }
 
-  const ext = EXT_MAP[contentType] || 'png';
+  // Resize and compress non-SVG images to 500x500 px and < 50 KB
+  let processedContentType = contentType;
+  if (contentType !== 'image/svg+xml') {
+    try {
+      let sharpInstance = sharp(buffer).resize(500, 500, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      });
+
+      if (contentType === 'image/png') {
+        buffer = await sharpInstance
+          .png({ palette: true, compressionLevel: 9 })
+          .toBuffer();
+      } else if (contentType === 'image/webp') {
+        buffer = await sharpInstance
+          .webp({ quality: 80 })
+          .toBuffer();
+      } else if (contentType === 'image/jpeg' || contentType === 'image/jpg') {
+        buffer = await sharpInstance
+          .jpeg({ quality: 80 })
+          .toBuffer();
+      } else if (contentType === 'image/gif') {
+        // Convert GIF to transparent compressed PNG
+        buffer = await sharpInstance
+          .png({ palette: true, compressionLevel: 9 })
+          .toBuffer();
+        processedContentType = 'image/png';
+      } else {
+        // Default fallback to PNG
+        buffer = await sharpInstance
+          .png({ palette: true, compressionLevel: 9 })
+          .toBuffer();
+        processedContentType = 'image/png';
+      }
+
+      // If still larger than 50 KB, compress more aggressively
+      if (buffer.length > 50 * 1024) {
+        if (processedContentType === 'image/png') {
+          buffer = await sharp(buffer)
+            .png({ palette: true, quality: 60, compressionLevel: 9 })
+            .toBuffer();
+        } else if (processedContentType === 'image/webp') {
+          buffer = await sharp(buffer)
+            .webp({ quality: 60 })
+            .toBuffer();
+        } else if (processedContentType === 'image/jpeg' || processedContentType === 'image/jpg') {
+          buffer = await sharp(buffer)
+            .jpeg({ quality: 60 })
+            .toBuffer();
+        }
+      }
+    } catch (err) {
+      console.error('[fetch-url-image] Failed to resize/compress image:', err);
+    }
+  }
+
+  const ext = EXT_MAP[processedContentType] || 'png';
   let finalName;
 
   if (customName && typeof customName === 'string' && customName.trim()) {
@@ -104,19 +161,19 @@ export async function POST(request) {
   const timestamp = Date.now();
   const key = `${cleanFolder}/${timestamp}-${finalName}`;
 
-  const r2Url = await uploadImageToR2(buffer, key, contentType);
+  const r2Url = await uploadImageToR2(buffer, key, processedContentType);
 
   if (!r2Url) {
     return NextResponse.json({ error: 'Upload returned no URL.' }, { status: 500 });
   }
 
   // Generate dimensions and AI tags for IXL schema compatibility
-  let dimensions = { width: 512, height: 512 };
+  let dimensions = { width: 500, height: 500 };
   let aiTags = { singular: 'item', plural: 'items', article: 'an', category: 'general', tags: ['imported-asset'] };
 
   try {
     dimensions = getImageDimensions(buffer);
-    aiTags = await generateIxlMetadata(buffer, contentType);
+    aiTags = await generateIxlMetadata(buffer, processedContentType);
   } catch (err) {
     console.error('[fetch-url-image] Failed to detect dimensions / run AI tagging:', err);
   }
@@ -164,7 +221,7 @@ export async function POST(request) {
     r2Url,
     sourceUrl: url,
     key,
-    contentType,
+    contentType: processedContentType,
     sizeBytes: buffer.length,
     sizeMB: parseFloat((buffer.length / (1024 * 1024)).toFixed(2)),
     dimensions,

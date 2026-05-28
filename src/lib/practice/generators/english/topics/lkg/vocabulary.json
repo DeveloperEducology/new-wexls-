@@ -347,7 +347,12 @@
     "lag": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984567419-lag.png",
     "hair": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984536845-wig.png",
     "tree": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984516996-log.png",
-    "sleep": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984568906-bed.png"
+    "sleep": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984568906-bed.png",
+    "bed": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984568906-bed.png",
+    "wet": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
+    "rain": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
+    "sad": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
+    "cap": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png"
   },
   "endingFamilies": {
     "at": [
