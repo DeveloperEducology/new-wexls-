@@ -2053,6 +2053,7 @@ Look at the highlighted green lines to see the correct ${lineTypeName} line${cor
     interaction: 'hotspot_multi_select',
     layoutMode: 'mcq_hotspot',
     hideHotspotText: true,
+    invisibleHotspots: true,
     questionText,
     audioUrl,
     voice: 'Kore',
@@ -2074,7 +2075,8 @@ Look at the highlighted green lines to see the correct ${lineTypeName} line${cor
         canvasHeight: 465,
         hotspots: partHotspots,
         backgroundSvg,
-        hideHotspotText: true
+        hideHotspotText: true,
+        invisibleHotspots: true
       }
     ]
   };

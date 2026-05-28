@@ -5433,8 +5433,16 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
 
           const rotation = isPreK ? (i % 2 === 0 ? '-1.5deg' : '1.5deg') : '0deg';
           const isCard = Boolean(imageUrl || question?.layoutMode === 'mcq_hotspot');
+          const isInvisible = Boolean(part.invisibleHotspots || question?.invisibleHotspots);
 
-          const dynamicStyles = isPreK ? (isCard ? {
+          const dynamicStyles = isInvisible ? {
+            background: 'transparent',
+            border: 'none',
+            cursor: isAnswered ? 'default' : 'pointer',
+            outline: 'none',
+            boxShadow: 'none',
+            zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
+          } : (isPreK ? (isCard ? {
             border: isSelected 
               ? '4px solid #22c55e' 
               : (isHovered ? '4px solid #38bdf8' : '4px solid #ffffff'),
@@ -5466,7 +5474,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
           } : {
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
-          });
+          }));
 
           return (
             <button
@@ -5476,7 +5484,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
               onClick={() => handleClick(hs.optionIndex)}
               onMouseEnter={() => setHoveredIndex(hs.optionIndex)}
               onMouseLeave={() => setHoveredIndex(null)}
-              className={[
+              className={isInvisible ? '' : [
                 styles.hotspotZone,
                 isSelected ? styles.hotspotZoneSelected : '',
               ].join(' ')}
