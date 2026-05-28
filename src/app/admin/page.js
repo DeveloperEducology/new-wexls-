@@ -8421,22 +8421,41 @@ Explanation: 5 plus 7 is equal to 12.`}
                               )}
                             </div>
 
-                            {/* Remove button */}
-                            <button
-                              onClick={(ev) => {
-                                ev.stopPropagation();
-                                removeEntry(entry.id);
-                              }}
-                              disabled={isActive}
-                              style={{
-                                background: 'none', border: 'none', cursor: isActive ? 'not-allowed' : 'pointer',
-                                fontSize: 18, color: '#94a3b8', padding: 4, lineHeight: 1,
-                                alignSelf: 'flex-start',
-                              }}
-                              title="Remove"
-                            >
-                              ×
-                            </button>
+                            {/* Actions Column */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', alignSelf: 'flex-start' }} onClick={ev => ev.stopPropagation()}>
+                              {/* Remove button */}
+                              <button
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  removeEntry(entry.id);
+                                }}
+                                disabled={isActive}
+                                style={{
+                                  background: 'none', border: 'none', cursor: isActive ? 'not-allowed' : 'pointer',
+                                  fontSize: 18, color: '#94a3b8', padding: 4, lineHeight: 1,
+                                }}
+                                title="Remove"
+                              >
+                                ×
+                              </button>
+
+                              {/* Crop button (only allowed for pending/error images) */}
+                              {(entry.status === 'pending' || entry.status === 'error') && (
+                                <button
+                                  onClick={(ev) => {
+                                    ev.stopPropagation();
+                                    startCropper(entry);
+                                  }}
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    fontSize: 16, color: 'var(--color-primary)', padding: 4, lineHeight: 1,
+                                  }}
+                                  title="Crop image"
+                                >
+                                  ✂️
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
