@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadImageToR2, isR2Configured } from '@/lib/r2Service';
+import { getMongoDb } from '@/lib/db/mongo';
+import { getImageDimensions, generateIxlMetadata } from '@/lib/gemini';
 
 const ALLOWED_TYPES = new Set([
   'image/jpeg',
@@ -89,6 +91,55 @@ export async function POST(request) {
       if (!url) {
         errors.push({ file: originalName, error: 'Upload returned no URL.' });
         continue;
+      }
+
+      // Generate dimensions and AI tags for IXL schema compatibility
+      let dimensions = { width: 512, height: 512 };
+      let aiTags = { singular: 'item', plural: 'items', article: 'an', category: 'general', tags: ['uploaded-asset'] };
+
+      try {
+        dimensions = getImageDimensions(buffer);
+        aiTags = await generateIxlMetadata(buffer, mimeType);
+      } catch (err) {
+        console.error('[upload-image] Failed to detect dimensions / run AI tagging:', err);
+      }
+
+      // Sync image metadata with MongoDB database
+      try {
+        const db = await getMongoDb();
+        if (db) {
+          await db.collection('image_assets').updateOne(
+            { key: key },
+            {
+              $set: {
+                name: safeName,
+                url: url,
+                folder: folder,
+                dimensions: {
+                  width: dimensions.width,
+                  height: dimensions.height,
+                  aspectRatio: parseFloat((dimensions.width / dimensions.height).toFixed(3))
+                },
+                linguistics: {
+                  singular: aiTags.singular || 'item',
+                  plural: aiTags.plural || 'items',
+                  article: aiTags.article || 'an'
+                },
+                classification: {
+                  category: aiTags.category || 'general',
+                  tags: Array.isArray(aiTags.tags) ? aiTags.tags : ['uploaded-asset']
+                },
+                metadata: {
+                  createdAt: new Date(),
+                  sourceUrl: 'local-upload'
+                }
+              }
+            },
+            { upsert: true }
+          );
+        }
+      } catch (dbErr) {
+        console.error('[upload-image] MongoDB update failed:', dbErr);
       }
 
       results.push({

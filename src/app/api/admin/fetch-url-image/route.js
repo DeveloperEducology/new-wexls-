@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadImageToR2, isR2Configured } from '@/lib/r2Service';
+import { getMongoDb } from '@/lib/db/mongo';
+import { getImageDimensions, generateIxlMetadata } from '@/lib/gemini';
 
 const ALLOWED_CONTENT_TYPES = new Set([
   'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
@@ -108,6 +110,56 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Upload returned no URL.' }, { status: 500 });
   }
 
+  // Generate dimensions and AI tags for IXL schema compatibility
+  let dimensions = { width: 512, height: 512 };
+  let aiTags = { singular: 'item', plural: 'items', article: 'an', category: 'general', tags: ['imported-asset'] };
+
+  try {
+    dimensions = getImageDimensions(buffer);
+    aiTags = await generateIxlMetadata(buffer, contentType);
+  } catch (err) {
+    console.error('[fetch-url-image] Failed to detect dimensions / run AI tagging:', err);
+  }
+
+  // Sync image metadata with MongoDB database
+  try {
+    const db = await getMongoDb();
+    if (db) {
+      const cleanName = finalName.replace(/\.[^.]+$/, '');
+      await db.collection('image_assets').updateOne(
+        { key: key },
+        {
+          $set: {
+            name: cleanName,
+            url: r2Url,
+            folder: cleanFolder,
+            dimensions: {
+              width: dimensions.width,
+              height: dimensions.height,
+              aspectRatio: parseFloat((dimensions.width / dimensions.height).toFixed(3))
+            },
+            linguistics: {
+              singular: aiTags.singular || 'item',
+              plural: aiTags.plural || 'items',
+              article: aiTags.article || 'an'
+            },
+            classification: {
+              category: aiTags.category || 'general',
+              tags: Array.isArray(aiTags.tags) ? aiTags.tags : ['imported-asset']
+            },
+            metadata: {
+              createdAt: new Date(),
+              sourceUrl: url
+            }
+          }
+        },
+        { upsert: true }
+      );
+    }
+  } catch (dbErr) {
+    console.error('[fetch-url-image] MongoDB update failed:', dbErr);
+  }
+
   return NextResponse.json({
     r2Url,
     sourceUrl: url,
@@ -115,5 +167,15 @@ export async function POST(request) {
     contentType,
     sizeBytes: buffer.length,
     sizeMB: parseFloat((buffer.length / (1024 * 1024)).toFixed(2)),
+    dimensions,
+    linguistics: {
+      singular: aiTags.singular || 'item',
+      plural: aiTags.plural || 'items',
+      article: aiTags.article || 'an'
+    },
+    classification: {
+      category: aiTags.category || 'general',
+      tags: aiTags.tags || []
+    }
   });
 }

@@ -510,6 +510,21 @@ export default function AdminConsolePage() {
   const [selectedGalleryKeys, setSelectedGalleryKeys] = useState([]);
   const [galleryDeleting, setGalleryDeleting] = useState(false);
 
+  // Edit Metadata Modal State
+  const [editingMetadataImg, setEditingMetadataImg] = useState(null);
+  const [editForm, setEditForm] = useState({ singular: '', plural: '', article: '', category: '', tags: '' });
+
+  const startEditMetadata = (img) => {
+    setEditingMetadataImg(img);
+    setEditForm({
+      singular: img.linguistics?.singular || '',
+      plural: img.linguistics?.plural || '',
+      article: img.linguistics?.article || 'a',
+      category: img.classification?.category || '',
+      tags: Array.isArray(img.classification?.tags) ? img.classification.tags.join(', ') : '',
+    });
+  };
+
   const fetchGalleryImages = useCallback(async () => {
     setGalleryLoading(true);
     setGalleryError('');
@@ -8074,35 +8089,277 @@ Explanation: 5 plus 7 is equal to 12.`}
                                   <span>Size: {Math.round(img.size / 1024 * 10) / 10} KB</span>
                                   <span>{new Date(img.lastModified).toLocaleDateString()}</span>
                                 </div>
+
+                                {/* IXL Linguistic Schema Details */}
+                                <div style={{
+                                  marginTop: 8,
+                                  padding: '6px 8px',
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: 8,
+                                  fontSize: 10,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 4
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 800 }}>Linguistic:</span>
+                                    <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                                      {img.linguistics?.article} {img.linguistics?.singular} / {img.linguistics?.plural}
+                                    </span>
+                                  </div>
+                                  {img.dimensions && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
+                                      <span style={{ color: 'var(--color-text-muted)' }}>Dimensions:</span>
+                                      <span>{img.dimensions.width} × {img.dimensions.height} px</span>
+                                    </div>
+                                  )}
+                                  {img.classification?.category && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
+                                      <span style={{ color: 'var(--color-text-muted)' }}>Category:</span>
+                                      <span style={{ textTransform: 'capitalize' }}>{img.classification.category}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Tags Badges */}
+                                {img.classification?.tags && img.classification.tags.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                                    {img.classification.tags.slice(0, 3).map(tag => (
+                                      <span
+                                        key={tag}
+                                        style={{
+                                          fontSize: 8,
+                                          fontWeight: 800,
+                                          background: '#e0f2fe',
+                                          color: '#0369a1',
+                                          padding: '2px 6px',
+                                          borderRadius: 4,
+                                          textTransform: 'lowercase'
+                                        }}
+                                      >
+                                        #{tag}
+                                      </span>
+                                    ))}
+                                    {img.classification.tags.length > 3 && (
+                                      <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontWeight: 800 }}>
+                                        +{img.classification.tags.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
 
                               {/* Action Row */}
-                              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button
+                                    className={styles.btnOutline}
+                                    style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      copyToClipboard(img.url);
+                                    }}
+                                  >
+                                    📋 Copy URL
+                                  </button>
+                                  <a
+                                    href={img.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className={styles.btnOutline}
+                                    style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: 'var(--color-text-main)', background: 'var(--bg-secondary)', border: '1px solid var(--color-border)' }}
+                                    onClick={(ev) => ev.stopPropagation()}
+                                  >
+                                    🔍 Full Size
+                                  </a>
+                                </div>
                                 <button
                                   className={styles.btnOutline}
-                                  style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                                  style={{
+                                    width: '100%', fontSize: 10, padding: '6px 0', height: 30,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                    borderColor: 'var(--color-primary)', color: 'var(--color-primary)',
+                                    background: 'rgba(59, 130, 246, 0.04)'
+                                  }}
                                   onClick={(ev) => {
                                     ev.stopPropagation();
-                                    copyToClipboard(img.url);
+                                    startEditMetadata(img);
                                   }}
                                 >
-                                  📋 Copy URL
+                                  ✏️ Edit IXL Metadata
                                 </button>
-                                <a
-                                  href={img.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className={styles.btnOutline}
-                                  onClick={(ev) => ev.stopPropagation()}
-                                  style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: 'var(--color-text-main)', background: 'var(--bg-secondary)' }}
-                                >
-                                  🔍 Full Size
-                                </a>
                               </div>
                             </div>
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                  {/* ── Edit Metadata Modal ── */}
+                  {editingMetadataImg && (
+                    <div style={{
+                      position: 'fixed',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'rgba(15, 23, 42, 0.75)',
+                      backdropFilter: 'blur(4px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9999,
+                      padding: 24,
+                    }}
+                    onClick={() => setEditingMetadataImg(null)}
+                    >
+                      <div style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 16,
+                        width: 'min(500px, 100%)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04)',
+                        overflow: 'hidden',
+                      }}
+                      onClick={e => e.stopPropagation()}
+                      >
+                        {/* Header */}
+                        <div style={{
+                          padding: '16px 20px',
+                          borderBottom: '1px solid var(--color-border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}>
+                          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>🏷️ Edit Image Metadata</h3>
+                          <button
+                            onClick={() => setEditingMetadataImg(null)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              fontSize: 18, color: 'var(--color-text-muted)',
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4, color: 'var(--color-text-muted)' }}>Article</label>
+                              <input
+                                type="text"
+                                value={editForm.article}
+                                onChange={e => setEditForm(prev => ({ ...prev, article: e.target.value }))}
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--bg-primary)', color: 'var(--color-text-main)', fontSize: 13 }}
+                                placeholder="a / an"
+                              />
+                            </div>
+                            <div style={{ flex: 2 }}>
+                              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4, color: 'var(--color-text-muted)' }}>Singular</label>
+                              <input
+                                type="text"
+                                value={editForm.singular}
+                                onChange={e => setEditForm(prev => ({ ...prev, singular: e.target.value }))}
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--bg-primary)', color: 'var(--color-text-main)', fontSize: 13 }}
+                                placeholder="e.g. cat"
+                              />
+                            </div>
+                            <div style={{ flex: 2 }}>
+                              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4, color: 'var(--color-text-muted)' }}>Plural</label>
+                              <input
+                                type="text"
+                                value={editForm.plural}
+                                onChange={e => setEditForm(prev => ({ ...prev, plural: e.target.value }))}
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--bg-primary)', color: 'var(--color-text-main)', fontSize: 13 }}
+                                placeholder="e.g. cats"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4, color: 'var(--color-text-muted)' }}>Category</label>
+                            <input
+                              type="text"
+                              value={editForm.category}
+                              onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--bg-primary)', color: 'var(--color-text-main)', fontSize: 13 }}
+                              placeholder="e.g. animals"
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4, color: 'var(--color-text-muted)' }}>Tags (comma separated)</label>
+                            <input
+                              type="text"
+                              value={editForm.tags}
+                              onChange={e => setEditForm(prev => ({ ...prev, tags: e.target.value }))}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--bg-primary)', color: 'var(--color-text-main)', fontSize: 13 }}
+                              placeholder="e.g. orange, cartoon, counter"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{
+                          padding: '16px 20px',
+                          borderTop: '1px solid var(--color-border)',
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: 12,
+                        }}>
+                          <button
+                            className={styles.btnOutline}
+                            onClick={() => setEditingMetadataImg(null)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className={styles.btnSolid}
+                            style={{ background: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+                            onClick={async () => {
+                              try {
+                                const payload = {
+                                  key: editingMetadataImg.key,
+                                  linguistics: {
+                                    singular: editForm.singular,
+                                    plural: editForm.plural,
+                                    article: editForm.article,
+                                  },
+                                  classification: {
+                                    category: editForm.category,
+                                    tags: editForm.tags.split(',').map(t => t.trim()).filter(Boolean),
+                                  }
+                                };
+                                const response = await fetch('/api/admin/update-image-metadata', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify(payload),
+                                });
+                                if (!response.ok) throw new Error('Failed to update metadata');
+
+                                // Update gallery state inline
+                                setGalleryImages(prev => prev.map(img => {
+                                  if (img.key === editingMetadataImg.key) {
+                                    return {
+                                      ...img,
+                                      linguistics: payload.linguistics,
+                                      classification: payload.classification,
+                                    };
+                                  }
+                                  return img;
+                                }));
+                                setEditingMetadataImg(null);
+                              } catch (err) {
+                                alert(err.message);
+                              }
+                            }}
+                          >
+                            💾 Save Changes
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 
