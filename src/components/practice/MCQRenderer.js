@@ -513,7 +513,7 @@ export default function MCQRenderer({
             className={isPreK ? `${styles.optionsGrid} ${styles.optionsGridVisual}` : gridClassName}
             style={isPreK ? {
               display: 'grid',
-              gridTemplateColumns: question.options?.length === 2 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
+              gridTemplateColumns: (question.options?.length === 2 || question.options?.length === 4) ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
               gap: 'clamp(14px, 3vw, 24px)',
               width: '100%',
               margin: 0,
