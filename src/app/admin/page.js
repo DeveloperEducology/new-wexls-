@@ -481,11 +481,17 @@ export default function AdminConsolePage() {
   const [imgQuality, setImgQuality] = useState(85);
   const [imgFormat, setImgFormat] = useState('image/webp');
   const [imgFolder, setImgFolder] = useState('images');
-  const [imgFolderPreset, setImgFolderPreset] = useState('images'); // selected preset key
-  const [imgFolderCustom, setImgFolderCustom] = useState('');       // used when preset === '__custom__'
+  const [imgFolderPreset, setImgFolderPreset] = useState('images');
+  const [imgFolderCustom, setImgFolderCustom] = useState('');
   const [imgUploading, setImgUploading] = useState(false);
   const [imgDragOver, setImgDragOver] = useState(false);
   const imgFileInputRef = useRef(null);
+
+  // ── URL Import State ────────────────────────────────────────────────────────
+  const [urlInput, setUrlInput] = useState('');
+  const [urlPreviews, setUrlPreviews] = useState([]);   // [{id,src,selected,status,r2Url,error,sizeBytes}]
+  const [urlImporting, setUrlImporting] = useState(false);
+  const [imgSubTab, setImgSubTab] = useState('upload'); // 'upload' | 'urls'
 
   // Curriculum Builder State (prefixed with curr to avoid collisions)
   const [currTree, setCurrTree] = useState([]);
@@ -6873,6 +6879,65 @@ Explanation: 5 plus 7 is equal to 12.`}
           // ── helpers (defined inside render so they close over state) ──────
           const FMT_EXT = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
 
+          // ── URL import helpers ────────────────────────────────────────────
+          function parseUrls(raw) {
+            return raw
+              .split(/[\n,]+/)
+              .map(s => s.trim())
+              .filter(s => s.startsWith('http'));
+          }
+
+          function loadUrlPreviews() {
+            const urls = parseUrls(urlInput);
+            if (!urls.length) return;
+            const entries = urls.map(src => ({
+              id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+              src,
+              selected: true,
+              status: 'preview',  // preview | importing | done | error
+              r2Url: null,
+              error: null,
+              sizeBytes: null,
+            }));
+            setUrlPreviews(entries);
+          }
+
+          async function importSelectedUrls() {
+            const toImport = urlPreviews.filter(e => e.selected && (e.status === 'preview' || e.status === 'error'));
+            if (!toImport.length) return;
+            setUrlImporting(true);
+
+            for (const entry of toImport) {
+              setUrlPreviews(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'importing' } : e));
+              try {
+                const res = await fetch('/api/admin/fetch-url-image', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: entry.src, folder: imgFolder || 'images' }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Import failed');
+                setUrlPreviews(prev => prev.map(e =>
+                  e.id === entry.id
+                    ? { ...e, status: 'done', r2Url: data.r2Url, sizeBytes: data.sizeBytes }
+                    : e
+                ));
+              } catch (err) {
+                setUrlPreviews(prev => prev.map(e =>
+                  e.id === entry.id ? { ...e, status: 'error', error: err.message } : e
+                ));
+              }
+            }
+            setUrlImporting(false);
+          }
+
+          async function copyToClipboard(text) {
+            try { await navigator.clipboard.writeText(text); } catch {}
+          }
+
+          const urlSelectedCount = urlPreviews.filter(e => e.selected && (e.status === 'preview' || e.status === 'error')).length;
+          const urlDoneCount = urlPreviews.filter(e => e.status === 'done').length;
+
           /** Client-side resize + compress a File → Blob
            *  Returns null for SVG (can't meaningfully rasterize to smaller) */
           function compressImage(file, maxWidth, quality, outputMime) {
@@ -7018,6 +7083,329 @@ Explanation: 5 plus 7 is equal to 12.`}
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+              {/* ── Sub-tab switcher ── */}
+              <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border)' }}>
+                {[['upload', '📁 Upload Files'], ['urls', '🔗 Import from URLs']].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setImgSubTab(key)}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: 13, fontWeight: 800,
+                      background: imgSubTab === key ? 'var(--color-border)' : 'var(--bg-primary)',
+                      color: imgSubTab === key ? 'var(--bg-primary)' : 'var(--color-text-main)',
+                      border: '1.5px solid var(--color-border)',
+                      borderBottom: imgSubTab === key ? '2px solid var(--color-border)' : '2px solid transparent',
+                      borderRadius: '4px 4px 0 0',
+                      cursor: 'pointer',
+                      marginBottom: -2,
+                      textTransform: 'uppercase',
+                      transition: 'all 0.1s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* ════════════════════════════════════════════════════════════ */}
+              {/* ── URL IMPORT MODE ────────────────────────────────────────── */}
+              {/* ════════════════════════════════════════════════════════════ */}
+              {imgSubTab === 'urls' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                  {/* Input + controls row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+
+                    {/* Left: textarea + actions */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div className={styles.filterGroup}>
+                        <label className={styles.filterLabel}>Paste image URLs (one per line or comma-separated)</label>
+                        <textarea
+                          className={styles.formInput}
+                          rows={10}
+                          placeholder={`https://cdn-icons-png.flaticon.com/128/1343/1343799.png\nhttps://cdn-icons-png.flaticon.com/128/7256/7256138.png\n...`}
+                          value={urlInput}
+                          onChange={e => setUrlInput(e.target.value)}
+                          style={{ resize: 'vertical', fontFamily: 'ui-monospace, monospace', fontSize: 12, lineHeight: 1.6, height: 220 }}
+                        />
+                      </div>
+
+                      {/* Folder picker (shared state) */}
+                      <div className={styles.filterGroup}>
+                        <label className={styles.filterLabel}>R2 Destination Folder</label>
+                        <select
+                          className={styles.formSelect}
+                          value={imgFolderPreset}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setImgFolderPreset(v);
+                            if (v !== '__custom__') setImgFolder(v);
+                          }}
+                        >
+                          <optgroup label="── General ──────────────────">
+                            <option value="images">📁 images</option>
+                            <option value="images/uploads">📁 images/uploads</option>
+                          </optgroup>
+                          <optgroup label="── LKG / English ─────────────">
+                            <option value="images/lkg">🔤 images/lkg</option>
+                            <option value="images/lkg/animals">🐾 images/lkg/animals</option>
+                            <option value="images/lkg/fruits">🍎 images/lkg/fruits</option>
+                            <option value="images/lkg/vehicles">🚗 images/lkg/vehicles</option>
+                            <option value="images/lkg/things">🧸 images/lkg/things</option>
+                            <option value="images/lkg/letters">🔡 images/lkg/letters</option>
+                          </optgroup>
+                          <optgroup label="── Math ──────────────────────">
+                            <option value="images/math">🔢 images/math</option>
+                            <option value="images/math/shapes">📐 images/math/shapes</option>
+                            <option value="images/math/diagrams">📊 images/math/diagrams</option>
+                          </optgroup>
+                          <optgroup label="── Questions / Content ────────">
+                            <option value="images/questions">❓ images/questions</option>
+                            <option value="images/icons">🔷 images/icons</option>
+                            <option value="images/backgrounds">🖼 images/backgrounds</option>
+                            <option value="images/thumbnails">🖼 images/thumbnails</option>
+                          </optgroup>
+                          <optgroup label="── Custom ────────────────────">
+                            <option value="__custom__">✏️ Custom path…</option>
+                          </optgroup>
+                        </select>
+                        {imgFolderPreset === '__custom__' && (
+                          <input
+                            type="text" className={styles.formInput}
+                            placeholder="e.g. images/science/grade3"
+                            value={imgFolderCustom} style={{ marginTop: 6 }}
+                            onChange={e => { setImgFolderCustom(e.target.value); setImgFolder(e.target.value || 'images'); }}
+                          />
+                        )}
+                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', marginTop: 4, fontFamily: 'ui-monospace, monospace' }}>
+                          R2: <span style={{ color: 'var(--color-primary)' }}>{imgFolder || 'images'}/</span>timestamp-filename.ext
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button
+                          className={styles.btnSolid}
+                          onClick={loadUrlPreviews}
+                          disabled={!urlInput.trim()}
+                        >
+                          👁 Preview ({parseUrls(urlInput).length} URLs)
+                        </button>
+                        {urlPreviews.length > 0 && (
+                          <>
+                            <button
+                              className={styles.btnSolid}
+                              style={{ background: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+                              onClick={importSelectedUrls}
+                              disabled={urlImporting || urlSelectedCount === 0}
+                            >
+                              {urlImporting ? '⏳ Importing…' : `⬆ Re-host ${urlSelectedCount} to R2`}
+                            </button>
+                            <button
+                              className={styles.btnOutline}
+                              onClick={() => setUrlPreviews(prev => prev.map(e => ({ ...e, selected: true })))}
+                            >✓ All</button>
+                            <button
+                              className={styles.btnOutline}
+                              onClick={() => setUrlPreviews(prev => prev.map(e => ({ ...e, selected: false })))}
+                            >✗ None</button>
+                            <button
+                              className={styles.btnOutline}
+                              onClick={() => { setUrlPreviews([]); setUrlInput(''); }}
+                            >🗑 Clear</button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Stats row */}
+                      {urlPreviews.length > 0 && (
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', display: 'flex', gap: 16 }}>
+                          <span>Total: {urlPreviews.length}</span>
+                          <span style={{ color: 'var(--color-success)' }}>✓ Done: {urlDoneCount}</span>
+                          <span>Selected: {urlSelectedCount}</span>
+                          {urlPreviews.filter(e => e.status === 'error').length > 0 && (
+                            <span style={{ color: 'var(--color-danger)' }}>⚠ Errors: {urlPreviews.filter(e => e.status === 'error').length}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Copy all R2 URLs */}
+                      {urlDoneCount > 0 && (
+                        <button
+                          className={styles.btnOutline}
+                          style={{ width: 'fit-content' }}
+                          onClick={() => copyToClipboard(urlPreviews.filter(e => e.r2Url).map(e => e.r2Url).join('\n'))}
+                        >
+                          📋 Copy All R2 URLs ({urlDoneCount})
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Right: Live preview panel */}
+                    <div style={{
+                      border: '1.5px solid var(--color-border)',
+                      borderRadius: 8,
+                      background: 'var(--bg-secondary)',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                      maxHeight: 520,
+                      overflowY: 'auto',
+                      position: 'sticky',
+                      top: 80,
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 4 }}>
+                        👁 Live Preview ({parseUrls(urlInput).length} URLs detected)
+                      </div>
+                      {parseUrls(urlInput).length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-muted)', fontSize: 13 }}>
+                          Paste URLs on the left to preview
+                        </div>
+                      )}
+                      {parseUrls(urlInput).map((src, i) => (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '6px 8px',
+                          background: 'var(--bg-primary)',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 6,
+                        }}>
+                          <img
+                            src={src}
+                            alt=""
+                            style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 4, flexShrink: 0 }}
+                            onError={e => { e.target.style.opacity = '0.2'; }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 10, fontFamily: 'ui-monospace, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
+                              {src.split('/').pop()}
+                            </div>
+                            <div style={{ fontSize: 9, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {src}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(src)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#94a3b8', flexShrink: 0 }}
+                            title="Copy source URL"
+                          >📋</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Imported cards grid ── */}
+                  {urlPreviews.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                        Import Queue — {urlPreviews.length} images
+                      </div>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                        gap: 12,
+                      }}>
+                        {urlPreviews.map(entry => {
+                          const statusColor = {
+                            preview: 'var(--color-text-muted)',
+                            importing: 'var(--color-primary)',
+                            done: 'var(--color-success)',
+                            error: 'var(--color-danger)',
+                          }[entry.status];
+
+                          const statusLabel = {
+                            preview: 'PENDING',
+                            importing: 'IMPORTING…',
+                            done: 'DONE ✓',
+                            error: 'ERROR',
+                          }[entry.status];
+
+                          return (
+                            <div
+                              key={entry.id}
+                              onClick={() => {
+                                if (entry.status === 'importing') return;
+                                setUrlPreviews(prev => prev.map(e =>
+                                  e.id === entry.id ? { ...e, selected: !e.selected } : e
+                                ));
+                              }}
+                              style={{
+                                display: 'flex', flexDirection: 'column',
+                                border: `2px solid ${entry.selected ? (entry.status === 'done' ? '#86efac' : 'var(--color-primary)') : '#e2e8f0'}`,
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                background: entry.selected ? '#f0f9ff' : 'var(--bg-primary)',
+                                cursor: entry.status === 'importing' ? 'wait' : 'pointer',
+                                transition: 'all 0.15s',
+                                position: 'relative',
+                              }}
+                            >
+                              {/* Checkbox overlay */}
+                              <div style={{
+                                position: 'absolute', top: 6, right: 6,
+                                width: 18, height: 18,
+                                borderRadius: '50%',
+                                background: entry.selected ? 'var(--color-primary)' : 'rgba(255,255,255,0.8)',
+                                border: `2px solid ${entry.selected ? 'var(--color-primary)' : '#cbd5e1'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 10, color: 'white', fontWeight: 900,
+                                zIndex: 2,
+                              }}>
+                                {entry.selected ? '✓' : ''}
+                              </div>
+
+                              {/* Image */}
+                              <div style={{ background: '#f8fafc', padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+                                <img
+                                  src={entry.src}
+                                  alt=""
+                                  style={{ maxWidth: '100%', maxHeight: 80, objectFit: 'contain' }}
+                                  onError={e => { e.target.style.opacity = '0.2'; }}
+                                />
+                              </div>
+
+                              {/* Info */}
+                              <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                <div style={{ fontSize: 9, fontWeight: 800, color: statusColor, textTransform: 'uppercase' }}>
+                                  {statusLabel}
+                                </div>
+                                <div style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
+                                  {entry.src.split('/').pop()}
+                                </div>
+                                {entry.sizeBytes && (
+                                  <div style={{ fontSize: 9, color: 'var(--color-success)', fontWeight: 700 }}>
+                                    {Math.round(entry.sizeBytes / 1024)} KB
+                                  </div>
+                                )}
+                                {entry.status === 'error' && (
+                                  <div style={{ fontSize: 9, color: 'var(--color-danger)', fontWeight: 700 }}>{entry.error}</div>
+                                )}
+                                {entry.r2Url && (
+                                  <button
+                                    className={styles.btnOutline}
+                                    style={{ fontSize: 9, padding: '2px 6px', marginTop: 2 }}
+                                    onClick={ev => { ev.stopPropagation(); copyToClipboard(entry.r2Url); }}
+                                  >📋 Copy R2 URL</button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+              {/* ════════════════════════════════════════════════════════════ */}
+              {/* ── FILE UPLOAD MODE (existing) ─────────────────────────── */}
+              {/* ════════════════════════════════════════════════════════════ */}
+              {imgSubTab === 'upload' && (
+                <>
 
               {/* ── Settings strip ── */}
               <div className={styles.borderedPanel}>
@@ -7388,6 +7776,9 @@ Explanation: 5 plus 7 is equal to 12.`}
                   </div>
                 </div>
               )}
+
+                </>
+              )} {/* end imgSubTab === 'upload' */}
 
             </div>
           );
