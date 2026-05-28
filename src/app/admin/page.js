@@ -6873,8 +6873,12 @@ Explanation: 5 plus 7 is equal to 12.`}
           // ── helpers (defined inside render so they close over state) ──────
           const FMT_EXT = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
 
-          /** Client-side resize + compress a File → Blob */
+          /** Client-side resize + compress a File → Blob
+           *  Returns null for SVG (can't meaningfully rasterize to smaller) */
           function compressImage(file, maxWidth, quality, outputMime) {
+            // SVGs are vector XML — skip canvas entirely
+            if (file.type === 'image/svg+xml') return Promise.resolve(null);
+
             return new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onerror = reject;
@@ -6932,22 +6936,50 @@ Explanation: 5 plus 7 is equal to 12.`}
               // 1. mark compressing
               setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'compressing' } : e));
 
-              let blob;
-              try {
-                blob = await compressImage(entry.file, imgMaxWidth, imgQuality, imgFormat);
-              } catch (err) {
-                setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: 'Compress failed: ' + err.message } : e));
-                continue;
+              const isSvg = entry.file.type === 'image/svg+xml';
+              let uploadBlob;   // what actually gets sent
+              let uploadMime;   // mime of what gets sent
+              let uploadExt;    // extension of what gets sent
+              let outKB;
+              let usedOriginal = false;
+
+              if (isSvg) {
+                // SVGs: upload original as-is
+                uploadBlob = entry.file;
+                uploadMime = 'image/svg+xml';
+                uploadExt  = 'svg';
+                outKB      = entry.origKB;
+                usedOriginal = true;
+              } else {
+                let compressed = null;
+                try {
+                  compressed = await compressImage(entry.file, imgMaxWidth, imgQuality, imgFormat);
+                } catch (err) {
+                  setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: 'Compress failed: ' + err.message } : e));
+                  continue;
+                }
+
+                // If compressed is bigger than original, use original instead
+                if (compressed && compressed.size < entry.file.size) {
+                  uploadBlob = compressed;
+                  uploadMime = imgFormat;
+                  uploadExt  = FMT_EXT[imgFormat] || 'webp';
+                  outKB      = Math.round(compressed.size / 1024);
+                } else {
+                  uploadBlob = entry.file;
+                  uploadMime = entry.file.type;
+                  uploadExt  = entry.file.name.split('.').pop() || 'jpg';
+                  outKB      = entry.origKB;
+                  usedOriginal = true;
+                }
               }
 
-              const outKB = Math.round(blob.size / 1024);
-              setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, outKB, status: 'uploading' } : e));
+              setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, outKB, usedOriginal, status: 'uploading' } : e));
 
               // 2. send to API
               try {
-                const ext = FMT_EXT[imgFormat] || 'webp';
                 const safeName = entry.file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-');
-                const uploadFile = new File([blob], `${safeName}.${ext}`, { type: imgFormat });
+                const uploadFile = new File([uploadBlob], `${safeName}.${uploadExt}`, { type: uploadMime });
 
                 const fd = new FormData();
                 fd.append('file', uploadFile);
@@ -6961,7 +6993,7 @@ Explanation: 5 plus 7 is equal to 12.`}
                 }
 
                 const url = data.results?.[0]?.url;
-                setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'done', url, outKB } : e));
+                setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'done', url, outKB, usedOriginal } : e));
               } catch (err) {
                 setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: err.message } : e));
               }
