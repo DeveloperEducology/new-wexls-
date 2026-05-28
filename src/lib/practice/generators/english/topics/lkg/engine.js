@@ -1303,6 +1303,7 @@ function generateWordRecognitionQuestion(skillId, seed, r, config = {}) {
       interaction: 'multi_select',
       multiSelect: true,
       questionText,
+      audioUrl: letterAudios[questionText] || undefined,
       voice: 'Kore',
       generateAudio: 'all',
       explanation: `The two words that are the same are **${targetWord}** and **${targetWord}**.`,
@@ -1310,6 +1311,7 @@ function generateWordRecognitionQuestion(skillId, seed, r, config = {}) {
         id: `opt_${idx}`,
         label: opt.label,
         content: ruledLetterSvg(opt.label, 200, 140),
+        audioUrl: letterAudios[opt.label] || letterAudios[opt.label.toLowerCase()] || undefined,
         isCorrect: opt.isCorrect
       })),
       correctAnswerIndex: correctIndices[0],
@@ -1363,15 +1365,17 @@ function generateWordRecognitionQuestion(skillId, seed, r, config = {}) {
       interaction: 'multi_select',
       multiSelect: true,
       questionText,
+      audioUrl: letterAudios[questionText] || undefined,
       voice: 'Kore',
       generateAudio: 'all',
       explanation: `**${target1}** and **${target2}** both end with the sound **/ ${family} /**.`,
       soundText: family,
-      soundUrl: null, // dynamic TTS
+      soundUrl: letterAudios[family] || undefined,
       options: shuffledOptions.map((opt, idx) => ({
         id: `opt_${idx}`,
         label: opt.label,
         content: ruledLetterSvg(opt.label, 200, 140),
+        audioUrl: letterAudios[opt.label] || letterAudios[opt.label.toLowerCase()] || undefined,
         isCorrect: opt.isCorrect
       })),
       correctAnswerIndex: correctIndices[0],
@@ -1408,6 +1412,7 @@ function generateWordRecognitionQuestion(skillId, seed, r, config = {}) {
       type: 'mcq',
       interaction: 'choice',
       questionText,
+      audioUrl: letterAudios[speechText] || letterAudios[questionText] || undefined,
       voice: 'Kore',
       generateAudio: 'all',
       explanation: `**${target}** is in the sentence: **${sentence}**.`,
@@ -1415,6 +1420,7 @@ function generateWordRecognitionQuestion(skillId, seed, r, config = {}) {
         id: `opt_${idx}`,
         label: word,
         content: ruledLetterSvg(word, 200, 140),
+        audioUrl: letterAudios[word.toLowerCase()] || letterAudios[word] || undefined,
         isCorrect: idx === correctAnswerIndex
       })),
       correctAnswerIndex,
@@ -1478,15 +1484,17 @@ function generateRhymingQuestion(skillId, seed, r) {
       type: 'mcq',
       interaction: 'choice',
       questionText,
+      audioUrl: letterAudios[questionText] || undefined,
       voice: 'Kore',
       generateAudio: 'all',
       explanation: `**${target}** ends with the sound **/ ${family} /**.`,
       soundText: family,
-      soundUrl: null, // dynamic TTS
+      soundUrl: letterAudios[family] || undefined,
       options: shuffledOptions.map((opt, idx) => ({
         id: `opt_${idx}`,
         label: opt.label,
         content: ruledLetterSvg(opt.label, 200, 140),
+        audioUrl: letterAudios[opt.label] || letterAudios[opt.label.toLowerCase()] || undefined,
         isCorrect: opt.isCorrect
       })),
       correctAnswerIndex,
@@ -1534,15 +1542,17 @@ function generateRhymingQuestion(skillId, seed, r) {
       interaction: 'multi_select',
       multiSelect: true,
       questionText,
+      audioUrl: letterAudios[questionText] || undefined,
       voice: 'Kore',
       generateAudio: 'all',
       explanation: `**${target1}** and **${target2}** both end with the sound **/ ${family} /**.`,
       soundText: family,
-      soundUrl: null, // dynamic TTS
+      soundUrl: letterAudios[family] || undefined,
       options: shuffledOptions.map((opt, idx) => ({
         id: `opt_${idx}`,
         label: opt.label,
         content: ruledLetterSvg(opt.label, 200, 140),
+        audioUrl: letterAudios[opt.label] || letterAudios[opt.label.toLowerCase()] || undefined,
         isCorrect: opt.isCorrect
       })),
       correctAnswerIndex: correctIndices[0],
