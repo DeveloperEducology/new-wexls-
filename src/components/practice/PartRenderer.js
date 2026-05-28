@@ -5370,9 +5370,13 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                     __html: (resolvedBackgroundUrl 
                       ? backgroundSvg.replace(/fill="#f8fafc"/g, 'fill="none"') 
                       : backgroundSvg)
-                      + (svgHighlightStyles ? `<style>${svgHighlightStyles}</style>` : '')
                   }}
                 />
+              )}
+              {svgHighlightStyles && (
+                <style key={activeIds.join(',')}>
+                  {svgHighlightStyles}
+                </style>
               )}
               {resolvedBackgroundUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
