@@ -1509,8 +1509,127 @@ function generateRhymingQuestion(skillId, seed, r) {
       ]
     };
   }
-
   return null;
+}
+
+function generateColorIdentificationQuestion(seed, r) {
+  // Combine all assets and filter for those that have a defined color
+  const allAssets = [
+    ...fruits.map(item => ({ ...item, category: 'fruit' })),
+    ...animals.map(item => ({ ...item, category: 'animal' })),
+    ...things.map(item => ({ ...item, category: 'thing' })),
+    ...vehicles.map(item => ({ ...item, category: 'vehicle' }))
+  ].filter(item => item.color);
+
+  // Group assets by color
+  const colorMap = {};
+  allAssets.forEach(item => {
+    if (!colorMap[item.color]) {
+      colorMap[item.color] = [];
+    }
+    colorMap[item.color].push(item);
+  });
+
+  const availableColors = Object.keys(colorMap);
+
+  // Pick a target color
+  const targetColorIdx = Math.floor(r * availableColors.length);
+  const targetColor = availableColors[targetColorIdx];
+  const targetColorItems = colorMap[targetColor];
+
+  // Pick correct item
+  const correctItem = targetColorItems[Math.floor(r * targetColorItems.length)];
+
+  // Pick 3 distractors from different colors
+  const otherColors = availableColors.filter(c => c !== targetColor);
+  const shuffledOtherColors = shuffle(otherColors, r);
+
+  const selectedDistractors = [];
+  for (let i = 0; i < 3 && i < shuffledOtherColors.length; i++) {
+    const colorGroup = colorMap[shuffledOtherColors[i]];
+    const distractorItem = colorGroup[Math.floor(r * colorGroup.length)];
+    selectedDistractors.push(distractorItem);
+  }
+
+  // Combine options
+  const rawOptions = [correctItem, ...selectedDistractors];
+  const optionsList = shuffle(rawOptions, r);
+  const correctAnswerIndex = optionsList.findIndex(opt => opt.name === correctItem.name);
+
+  // Format hotspots
+  const hotspots = optionsList.map((opt, idx) => {
+    const coords = GRID_COORDINATES[idx];
+    return {
+      id: `hs_${opt.name}_${idx}`,
+      label: opt.singular,
+      x: coords.pctX,
+      y: coords.pctY,
+      width: coords.pctW,
+      height: coords.pctH,
+      isCircle: false,
+      isCorrect: idx === correctAnswerIndex,
+      imageUrl: opt.imageUrl,
+      audioUrl: letterAudios[opt.singular]
+    };
+  });
+
+  const partHotspots = optionsList.map((opt, idx) => {
+    const coords = GRID_COORDINATES[idx];
+    return {
+      optionIndex: idx,
+      x: coords.x,
+      y: coords.y,
+      width: coords.width,
+      height: coords.height,
+      label: opt.singular,
+      isCircle: false,
+      imageUrl: opt.imageUrl,
+      id: `hs_${opt.name}_${idx}`,
+      audioUrl: letterAudios[opt.singular]
+    };
+  });
+
+  const gradient = PASTEL_GRADIENTS[Math.floor(r * PASTEL_GRADIENTS.length)];
+  const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+  <defs>${gradient}</defs>
+  <rect width="800" height="465" fill="url(#bgGrad)" rx="20" />
+</svg>`;
+
+  const questionText = `Click on the object that is **${targetColor}**.`;
+  const audioUrl = letterAudios[questionText];
+
+  return {
+    id: `english_lkg_color_identification_${seed}`,
+    type: 'mcq',
+    interaction: 'hotspot_select',
+    layoutMode: 'mcq_hotspot',
+    questionText,
+    audioUrl,
+    voice: 'Kore',
+    generateAudio: 'all',
+    explanation: `The **${correctItem.singular}** is **${targetColor}**.`,
+    options: optionsList.map((opt, idx) => ({
+      id: `opt_${idx}`,
+      label: opt.singular,
+      audioUrl: letterAudios[opt.singular]
+    })),
+    correctAnswerIndex,
+    answer: correctAnswerIndex,
+    hotspots,
+    parts: [
+      {
+        type: 'text',
+        content: questionText
+      },
+      {
+        type: 'hotspot_canvas',
+        canvasWidth: 800,
+        canvasHeight: 465,
+        hotspots: partHotspots,
+        backgroundSvg
+      }
+    ]
+  };
 }
 
 export function resolveLkgGenerator(skillId, config = {}) {
@@ -1542,6 +1661,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateWordRecognitionQuestion(skillId, seed, r, config);
       } else if (template.engine === 'rhyming') {
         question = generateRhymingQuestion(skillId, seed, r);
+      } else if (template.engine === 'color_identification') {
+        question = generateColorIdentificationQuestion(seed, r);
       }
 
       if (question) {

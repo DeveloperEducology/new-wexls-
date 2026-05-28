@@ -27,7 +27,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const { url, folder = 'images' } = body;
+  const { url, folder = 'images', customName } = body;
 
   if (!url || typeof url !== 'string') {
     return NextResponse.json({ error: 'url is required.' }, { status: 400 });
@@ -77,15 +77,23 @@ export async function POST(request) {
     return NextResponse.json({ error: 'R2 is not configured.' }, { status: 503 });
   }
 
-  // Build a clean filename from the source URL path
-  const srcPath = parsed.pathname;
-  const srcFilename = srcPath.split('/').pop() || 'image';
-  const safeName = srcFilename.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 80);
   const ext = EXT_MAP[contentType] || 'png';
+  let finalName;
 
-  // If safeName already has a valid ext, keep it; else append correct ext
-  const hasExt = /\.[a-z]{2,5}$/.test(safeName);
-  const finalName = hasExt ? safeName : `${safeName}.${ext}`;
+  if (customName && typeof customName === 'string' && customName.trim()) {
+    const cleanCustom = customName.trim().replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 80);
+    // If it doesn't end with the correct extension, append it
+    const extRegex = new RegExp(`\\.${ext}$`, 'i');
+    finalName = extRegex.test(cleanCustom) ? cleanCustom : `${cleanCustom}.${ext}`;
+  } else {
+    // Build a clean filename from the source URL path
+    const srcPath = parsed.pathname;
+    const srcFilename = srcPath.split('/').pop() || 'image';
+    const safeName = srcFilename.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 80);
+    // If safeName already has a valid ext, keep it; else append correct ext
+    const hasExt = /\.[a-z]{2,5}$/.test(safeName);
+    finalName = hasExt ? safeName : `${safeName}.${ext}`;
+  }
 
   const cleanFolder = (folder || 'images')
     .replace(/[^a-zA-Z0-9/_-]/g, '')

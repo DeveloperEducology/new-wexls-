@@ -487,21 +487,27 @@ export default function AdminConsolePage() {
   const [imgDragOver, setImgDragOver] = useState(false);
   const imgFileInputRef = useRef(null);
 
+  const [activeUploadPreview, setActiveUploadPreview] = useState(null);
+
   // ── URL Import State ────────────────────────────────────────────────────────
   const [urlInput, setUrlInput] = useState('');
   const [urlPreviews, setUrlPreviews] = useState([]);   // [{id,src,selected,status,r2Url,error,sizeBytes}]
   const [urlImporting, setUrlImporting] = useState(false);
   const [imgSubTab, setImgSubTab] = useState('upload'); // 'upload' | 'urls' | 'gallery'
+  const [urlBaseName, setUrlBaseName] = useState('');
 
   // ── R2 Gallery State ────────────────────────────────────────────────────────
   const [galleryImages, setGalleryImages] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState('');
   const [galleryPrefix, setGalleryPrefix] = useState('images'); // default to images folder
+  const [selectedGalleryKeys, setSelectedGalleryKeys] = useState([]);
+  const [galleryDeleting, setGalleryDeleting] = useState(false);
 
   const fetchGalleryImages = useCallback(async () => {
     setGalleryLoading(true);
     setGalleryError('');
+    setSelectedGalleryKeys([]);
     try {
       const res = await fetch(`/api/admin/list-images?prefix=${encodeURIComponent(galleryPrefix)}`);
       const data = await res.json();
@@ -6917,15 +6923,21 @@ Explanation: 5 plus 7 is equal to 12.`}
           function loadUrlPreviews() {
             const urls = parseUrls(urlInput);
             if (!urls.length) return;
-            const entries = urls.map(src => ({
-              id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-              src,
-              selected: true,
-              status: 'preview',  // preview | importing | done | error
-              r2Url: null,
-              error: null,
-              sizeBytes: null,
-            }));
+            const entries = urls.map((src, idx) => {
+              const filename = src.split('/').pop() || 'image';
+              const baseName = filename.replace(/\.[^.]+$/, '');
+              const cleanBaseName = urlBaseName.trim() ? `${urlBaseName.trim()}${idx + 1}` : baseName;
+              return {
+                id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                src,
+                selected: true,
+                status: 'preview',  // preview | importing | done | error
+                r2Url: null,
+                error: null,
+                sizeBytes: null,
+                customName: cleanBaseName,
+              };
+            });
             setUrlPreviews(entries);
           }
 
@@ -6951,7 +6963,11 @@ Explanation: 5 plus 7 is equal to 12.`}
                 const res = await fetch('/api/admin/fetch-url-image', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ url: entry.src, folder: imgFolder || 'images' }),
+                  body: JSON.stringify({ 
+                    url: entry.src, 
+                    folder: imgFolder || 'images',
+                    customName: entry.customName
+                  }),
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Import failed');
@@ -7112,6 +7128,62 @@ Explanation: 5 plus 7 is equal to 12.`}
             setImgFiles([]);
           }
 
+          async function deleteSelectedImages() {
+            if (!selectedGalleryKeys.length) return;
+            const confirmMsg = `Are you sure you want to permanently delete ${selectedGalleryKeys.length} selected image(s) from Cloudflare R2? This action cannot be undone.`;
+            if (!window.confirm(confirmMsg)) return;
+
+            setGalleryDeleting(true);
+            setGalleryError('');
+            try {
+              const res = await fetch('/api/admin/delete-images', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keys: selectedGalleryKeys }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Failed to delete images');
+              
+              setGalleryImages(prev => prev.filter(img => !selectedGalleryKeys.includes(img.key)));
+              setSelectedGalleryKeys([]);
+            } catch (err) {
+              setGalleryError(err.message);
+            } finally {
+              setGalleryDeleting(false);
+            }
+          }
+
+          function copyCategorizedMap() {
+            const targets = selectedGalleryKeys.length > 0
+              ? galleryImages.filter(img => selectedGalleryKeys.includes(img.key))
+              : galleryImages;
+
+            if (!targets.length) {
+              setAlert({ type: 'error', text: "No images to categorize. Upload or select some images first!" });
+              return;
+            }
+
+            const map = {};
+            targets.forEach(img => {
+              const filename = img.key.split('/').pop();
+              const baseWithPrefix = filename.replace(/\.[^.]+$/, '');
+              const cleanBase = baseWithPrefix.replace(/^\d+-/, '');
+              const objectName = cleanBase.replace(/[-_]?\d+$/, '').toLowerCase();
+
+              if (!map[objectName]) {
+                map[objectName] = [];
+              }
+              map[objectName].push(img.url);
+            });
+
+            const formatted = JSON.stringify(map, null, 2);
+            navigator.clipboard.writeText(formatted).then(() => {
+              setAlert({ type: 'success', text: `Success! Categorized ${Object.keys(map).length} object(s) with ${targets.length} total image URLs and copied to clipboard as JS object!` });
+            }).catch(() => {
+              setAlert({ type: 'error', text: "Failed to write to clipboard. Please copy manually." });
+            });
+          }
+
           async function copyToClipboard(text) {
             try { await navigator.clipboard.writeText(text); } catch {}
           }
@@ -7220,6 +7292,32 @@ Explanation: 5 plus 7 is equal to 12.`}
                         <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', marginTop: 4, fontFamily: 'ui-monospace, monospace' }}>
                           R2: <span style={{ color: 'var(--color-primary)' }}>{imgFolder || 'images'}/</span>timestamp-filename.ext
                         </div>
+                      </div>
+
+                      {/* Optional Base Name prefix */}
+                      <div className={styles.filterGroup} style={{ marginBottom: 16 }}>
+                        <label className={styles.filterLabel}>Optional Base Name Prefix (e.g. "grapes" ──► grapes1, grapes2…)</label>
+                        <input
+                          type="text"
+                          className={styles.formInput}
+                          placeholder="e.g. grapes"
+                          value={urlBaseName}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setUrlBaseName(val);
+                            const trimmed = val.trim();
+                            // Update on-the-fly sequentially or fall back to original name if cleared
+                            setUrlPreviews(prev => prev.map((item, idx) => {
+                              const filename = item.src.split('/').pop() || 'image';
+                              const originalBase = filename.replace(/\.[^.]+$/, '');
+                              return {
+                                ...item,
+                                customName: trimmed ? `${trimmed}${idx + 1}` : originalBase
+                              };
+                            }));
+                          }}
+                          style={{ width: '100%' }}
+                        />
                       </div>
 
                       {/* Action buttons */}
@@ -7445,14 +7543,41 @@ Explanation: 5 plus 7 is equal to 12.`}
                                 />
                               </div>
 
-                              {/* Info */}
-                              <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <div style={{ fontSize: 9, fontWeight: 800, color: statusColor, textTransform: 'uppercase' }}>
-                                  {statusLabel}
-                                </div>
-                                <div style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
-                                  {entry.src.split('/').pop()}
-                                </div>
+                                {/* Info */}
+                                <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                  <div style={{ fontSize: 9, fontWeight: 800, color: statusColor, textTransform: 'uppercase' }}>
+                                    {statusLabel}
+                                  </div>
+                                  <div
+                                    style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}
+                                    onClick={ev => ev.stopPropagation()}
+                                  >
+                                    <input
+                                      type="text"
+                                      placeholder="Custom Name"
+                                      value={entry.customName || ''}
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        setUrlPreviews(prev => prev.map(item => 
+                                          item.id === entry.id ? { ...item, customName: val } : item
+                                        ));
+                                      }}
+                                      disabled={entry.status === 'importing' || entry.status === 'done'}
+                                      style={{
+                                        fontSize: 10,
+                                        padding: '2px 4px',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 4,
+                                        background: 'var(--bg-primary)',
+                                        color: 'var(--color-text-main)',
+                                        width: '100%',
+                                        fontWeight: 'bold',
+                                      }}
+                                    />
+                                  </div>
+                                  <div style={{ fontSize: 8, fontFamily: 'ui-monospace, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)', marginTop: 2 }} title={entry.src}>
+                                    src: {entry.src}
+                                  </div>
                                 {entry.sizeBytes && (
                                   <div style={{ fontSize: 9, color: 'var(--color-success)', fontWeight: 700 }}>
                                     {Math.round(entry.sizeBytes / 1024)} KB
@@ -7488,7 +7613,7 @@ Explanation: 5 plus 7 is equal to 12.`}
                   {/* Controls header */}
                   <div style={{
                     display: 'flex',
-                    alignItems: 'end',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: 20,
                     flexWrap: 'wrap',
@@ -7534,8 +7659,59 @@ Explanation: 5 plus 7 is equal to 12.`}
                       </div>
                     </div>
 
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', display: 'flex', gap: 16, height: '38px', alignItems: 'center' }}>
-                      <span>Images found: <strong>{galleryImages.length}</strong></span>
+                    {/* Multi-select and delete controls */}
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {galleryImages.length > 0 && (
+                        <>
+                          <button
+                            className={styles.btnOutline}
+                            onClick={() => setSelectedGalleryKeys(galleryImages.map(img => img.key))}
+                          >
+                            ✓ Select All
+                          </button>
+                          <button
+                            className={styles.btnOutline}
+                            onClick={() => setSelectedGalleryKeys([])}
+                            disabled={selectedGalleryKeys.length === 0}
+                          >
+                            ✗ Deselect All
+                          </button>
+                          <button
+                            className={styles.btnSolid}
+                            onClick={copyCategorizedMap}
+                            style={{
+                              background: 'var(--color-primary)',
+                              borderColor: 'var(--color-primary)',
+                              color: 'white',
+                              fontWeight: 'bold',
+                            }}
+                            title="Categorize shown/selected images by filename and copy as JS Object Map"
+                          >
+                            📋 Copy JS Object Map
+                          </button>
+                        </>
+                      )}
+                      {selectedGalleryKeys.length > 0 && (
+                        <button
+                          className={styles.btnSolid}
+                          style={{
+                            background: 'var(--color-danger)',
+                            borderColor: 'var(--color-danger)',
+                            color: 'white',
+                            fontWeight: 'bold',
+                          }}
+                          onClick={deleteSelectedImages}
+                          disabled={galleryDeleting}
+                        >
+                          {galleryDeleting ? '⏳ Deleting…' : `🗑 Delete Selected (${selectedGalleryKeys.length})`}
+                        </button>
+                      )}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                        Found: <strong>{galleryImages.length}</strong>
+                        {selectedGalleryKeys.length > 0 && (
+                          <span> (Selected: <strong>{selectedGalleryKeys.length}</strong>)</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -7578,101 +7754,187 @@ Explanation: 5 plus 7 is equal to 12.`}
                       gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
                       gap: 16,
                     }}>
-                      {galleryImages.map(img => (
-                        <div
-                          key={img.key}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            border: '1.5px solid var(--color-border)',
-                            borderRadius: 12,
-                            overflow: 'hidden',
-                            background: 'var(--bg-primary)',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          {/* Image preview frame */}
-                          <div style={{
-                            background: '#f8fafc',
-                            padding: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minHeight: 160,
-                            position: 'relative',
-                            borderBottom: '1px solid #f1f5f9',
-                          }}>
-                            <img
-                              src={img.url}
-                              alt=""
-                              style={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain' }}
-                              loading="lazy"
-                              onError={e => { e.target.style.opacity = '0.2'; }}
-                            />
-                            {/* Format label overlay */}
-                            <span style={{
-                              position: 'absolute',
-                              bottom: 8,
-                              right: 8,
-                              fontSize: 9,
-                              fontWeight: 900,
-                              background: 'rgba(15, 23, 42, 0.8)',
-                              color: 'white',
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              textTransform: 'uppercase',
+                      {galleryImages.map(img => {
+                        const selected = selectedGalleryKeys.includes(img.key);
+                        return (
+                          <div
+                            key={img.key}
+                            onClick={() => {
+                              setSelectedGalleryKeys(prev =>
+                                prev.includes(img.key)
+                                  ? prev.filter(k => k !== img.key)
+                                  : [...prev, img.key]
+                              );
+                            }}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              border: `2px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              background: selected ? '#f0f9ff' : 'var(--bg-primary)',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                              transition: 'all 0.2s',
+                              position: 'relative',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {/* Checkbox overlay */}
+                            <div
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                setSelectedGalleryKeys(prev =>
+                                  prev.includes(img.key)
+                                    ? prev.filter(k => k !== img.key)
+                                    : [...prev, img.key]
+                                );
+                              }}
+                              style={{
+                                position: 'absolute', top: 8, right: 8,
+                                width: 20, height: 20,
+                                borderRadius: '50%',
+                                background: selected ? 'var(--color-primary)' : 'rgba(255,255,255,0.8)',
+                                border: `2px solid ${selected ? 'var(--color-primary)' : '#cbd5e1'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 11, color: 'white', fontWeight: 900,
+                                zIndex: 2,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {selected ? '✓' : ''}
+                            </div>
+
+                            {/* Individual Quick Delete button */}
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                const confirmMsg = `Are you sure you want to permanently delete "${img.key.split('/').pop()}" from Cloudflare R2?`;
+                                if (!window.confirm(confirmMsg)) return;
+                                
+                                const deleteSingle = async () => {
+                                  setGalleryDeleting(true);
+                                  setGalleryError('');
+                                  try {
+                                    const res = await fetch('/api/admin/delete-images', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ keys: [img.key] }),
+                                    });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data.error || 'Failed to delete image');
+                                    
+                                    setGalleryImages(prev => prev.filter(item => item.key !== img.key));
+                                    setSelectedGalleryKeys(prev => prev.filter(key => key !== img.key));
+                                  } catch (err) {
+                                    setGalleryError(err.message);
+                                  } finally {
+                                    setGalleryDeleting(false);
+                                  }
+                                };
+                                deleteSingle();
+                              }}
+                              style={{
+                                position: 'absolute', top: 8, left: 8,
+                                width: 20, height: 20,
+                                borderRadius: '50%',
+                                background: 'rgba(254, 226, 226, 0.9)',
+                                border: '1px solid #fee2e2',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 11, color: '#ef4444', fontWeight: 'bold',
+                                cursor: 'pointer',
+                                zIndex: 3,
+                              }}
+                              title="Delete image"
+                            >
+                              ✕
+                            </button>
+
+                            {/* Image preview frame */}
+                            <div style={{
+                              background: '#f8fafc',
+                              padding: 12,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minHeight: 160,
+                              position: 'relative',
+                              borderBottom: '1px solid #f1f5f9',
                             }}>
-                              {img.key.split('.').pop()}
-                            </span>
-                          </div>
-
-                          {/* Info panel */}
-                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, flex: 1, justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                              {/* Filename */}
-                              <div
-                                style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-main)', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: 28, lineHeight: 1.3 }}
-                                title={img.key.split('/').pop()}
-                              >
-                                {img.key.split('/').pop()}
-                              </div>
-                              {/* Path key */}
-                              <div
-                                style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                title={img.key}
-                              >
-                                key: {img.key}
-                              </div>
-                              {/* Metadata stats */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 700, marginTop: 4 }}>
-                                <span>Size: {Math.round(img.size / 1024 * 10) / 10} KB</span>
-                                <span>{new Date(img.lastModified).toLocaleDateString()}</span>
-                              </div>
+                              <img
+                                src={img.url}
+                                alt=""
+                                style={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain' }}
+                                loading="lazy"
+                                onError={e => { e.target.style.opacity = '0.2'; }}
+                              />
+                              {/* Format label overlay */}
+                              <span style={{
+                                position: 'absolute',
+                                bottom: 8,
+                                right: 8,
+                                fontSize: 9,
+                                fontWeight: 900,
+                                background: 'rgba(15, 23, 42, 0.8)',
+                                color: 'white',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                textTransform: 'uppercase',
+                              }}>
+                                {img.key.split('.').pop()}
+                              </span>
                             </div>
 
-                            {/* Action Row */}
-                            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                              <button
-                                className={styles.btnOutline}
-                                style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                                onClick={() => copyToClipboard(img.url)}
-                              >
-                                📋 Copy URL
-                              </button>
-                              <a
-                                href={img.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className={styles.btnOutline}
-                                style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: 'var(--color-text-main)', background: 'var(--bg-secondary)' }}
-                              >
-                                🔍 Full Size
-                              </a>
+                            {/* Info panel */}
+                            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, flex: 1, justifyContent: 'space-between' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                {/* Filename */}
+                                <div
+                                  style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-main)', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: 28, lineHeight: 1.3 }}
+                                  title={img.key.split('/').pop()}
+                                >
+                                  {img.key.split('/').pop()}
+                                </div>
+                                {/* Path key */}
+                                <div
+                                  style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                  title={img.key}
+                                >
+                                  key: {img.key}
+                                </div>
+                                {/* Metadata stats */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 700, marginTop: 4 }}>
+                                  <span>Size: {Math.round(img.size / 1024 * 10) / 10} KB</span>
+                                  <span>{new Date(img.lastModified).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+
+                              {/* Action Row */}
+                              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                                <button
+                                  className={styles.btnOutline}
+                                  style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                                  onClick={(ev) => {
+                                    ev.stopPropagation();
+                                    copyToClipboard(img.url);
+                                  }}
+                                >
+                                  📋 Copy URL
+                                </button>
+                                <a
+                                  href={img.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={styles.btnOutline}
+                                  onClick={(ev) => ev.stopPropagation()}
+                                  style={{ flex: 1, fontSize: 10, padding: '6px 0', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: 'var(--color-text-main)', background: 'var(--bg-secondary)' }}
+                                >
+                                  🔍 Full Size
+                                </a>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
@@ -7861,144 +8123,215 @@ Explanation: 5 plus 7 is equal to 12.`}
               )}
 
               {/* ── File cards ── */}
-              {imgFiles.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {imgFiles.map(entry => {
-                    const statusColor = {
-                      pending: 'var(--color-text-muted)',
-                      compressing: '#d97706',
-                      uploading: 'var(--color-primary)',
-                      done: 'var(--color-success)',
-                      error: 'var(--color-danger)',
-                    }[entry.status] || 'var(--color-text-muted)';
+              {imgFiles.length > 0 && (() => {
+                const currentPreviewEntry = imgFiles.find(e => e.id === activeUploadPreview) || imgFiles[0];
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+                    
+                    {/* Left Column: Scrollable list of cards */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {imgFiles.map(entry => {
+                        const statusColor = {
+                          pending: 'var(--color-text-muted)',
+                          compressing: '#d97706',
+                          uploading: 'var(--color-primary)',
+                          done: 'var(--color-success)',
+                          error: 'var(--color-danger)',
+                        }[entry.status] || 'var(--color-text-muted)';
 
-                    const statusLabel = {
-                      pending: 'PENDING',
-                      compressing: 'COMPRESSING…',
-                      uploading: 'UPLOADING…',
-                      done: 'DONE ✓',
-                      error: 'ERROR',
-                    }[entry.status];
+                        const statusLabel = {
+                          pending: 'PENDING',
+                          compressing: 'COMPRESSING…',
+                          uploading: 'UPLOADING…',
+                          done: 'DONE ✓',
+                          error: 'ERROR',
+                        }[entry.status];
 
-                    const isActive = entry.status === 'compressing' || entry.status === 'uploading';
+                        const isActive = entry.status === 'compressing' || entry.status === 'uploading';
+                        const isHoveredPreview = currentPreviewEntry && currentPreviewEntry.id === entry.id;
 
-                    return (
-                      <div
-                        key={entry.id}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '80px 1fr auto',
-                          gap: 16,
-                          alignItems: 'center',
-                          background: 'var(--bg-primary)',
-                          border: `1.5px solid ${entry.status === 'error' ? 'var(--color-danger)' : entry.status === 'done' ? '#86efac' : 'var(--color-border)'}`,
-                          borderRadius: 6,
-                          padding: '12px 16px',
-                          opacity: entry.status === 'done' ? 0.9 : 1,
-                        }}
-                      >
-                        {/* Thumbnail */}
-                        <img
-                          src={entry.previewUrl}
-                          alt=""
-                          style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #e2e8f0' }}
-                        />
+                        return (
+                          <div
+                            key={entry.id}
+                            onMouseEnter={() => setActiveUploadPreview(entry.id)}
+                            onClick={() => setActiveUploadPreview(entry.id)}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '80px 1fr auto',
+                              gap: 16,
+                              alignItems: 'center',
+                              background: isHoveredPreview ? '#f0f9ff' : 'var(--bg-primary)',
+                              border: `1.5px solid ${isHoveredPreview ? 'var(--color-primary)' : (entry.status === 'error' ? 'var(--color-danger)' : entry.status === 'done' ? '#86efac' : 'var(--color-border)')}`,
+                              borderRadius: 6,
+                              padding: '12px 16px',
+                              opacity: entry.status === 'done' ? 0.9 : 1,
+                              cursor: 'pointer',
+                              transition: 'all 0.1s',
+                            }}
+                          >
+                            {/* Thumbnail */}
+                            <img
+                              src={entry.previewUrl}
+                              alt=""
+                              style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #e2e8f0' }}
+                            />
 
-                        {/* Info */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}>
-                              {entry.file.name}
-                            </span>
-                            <span style={{ fontSize: 11, fontWeight: 900, color: statusColor, textTransform: 'uppercase', flexShrink: 0 }}>
-                              {statusLabel}
-                            </span>
-                          </div>
-
-                          {/* Size info */}
-                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', display: 'flex', gap: 12 }}>
-                            <span>Original: {entry.origKB} KB</span>
-                            {entry.outKB != null && (
-                              <>
-                                <span>→</span>
-                                <span style={{ color: entry.outKB < entry.origKB ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                                  Output: {entry.outKB} KB
-                                  {entry.origKB > 0 && ` (${Math.round((1 - entry.outKB / entry.origKB) * 100)}% saved)`}
+                            {/* Info */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}>
+                                  {entry.file.name}
                                 </span>
-                              </>
+                                <span style={{ fontSize: 11, fontWeight: 900, color: statusColor, textTransform: 'uppercase', flexShrink: 0 }}>
+                                  {statusLabel}
+                                </span>
+                              </div>
+
+                              {/* Size info */}
+                              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', display: 'flex', gap: 12 }}>
+                                <span>Original: {entry.origKB} KB</span>
+                                {entry.outKB != null && (
+                                  <>
+                                    <span>→</span>
+                                    <span style={{ color: entry.outKB < entry.origKB ? 'var(--color-success)' : 'var(--color-warning)' }}>
+                                      Output: {entry.outKB} KB
+                                      {entry.origKB > 0 && ` (${Math.round((1 - entry.outKB / entry.origKB) * 100)}% saved)`}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Progress bar while active */}
+                              {isActive && (
+                                <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div style={{
+                                    height: '100%',
+                                    width: entry.status === 'uploading' ? '70%' : '30%',
+                                    background: 'var(--color-primary)',
+                                    borderRadius: 2,
+                                    animation: 'pulse 1.2s ease-in-out infinite',
+                                  }} />
+                                </div>
+                              )}
+
+                              {/* URL output */}
+                              {entry.status === 'done' && entry.url && (
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }} onClick={ev => ev.stopPropagation()}>
+                                  <code style={{
+                                    fontSize: 11, fontFamily: 'ui-monospace, monospace',
+                                    background: '#f1f5f9', border: '1px solid #e2e8f0',
+                                    borderRadius: 3, padding: '2px 6px',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    maxWidth: 340, display: 'inline-block',
+                                  }}>
+                                    {entry.url}
+                                  </code>
+                                  <button
+                                    className={styles.btnOutline}
+                                    style={{ padding: '2px 8px', fontSize: 11 }}
+                                    onClick={() => copyToClipboard(entry.url)}
+                                    title="Copy URL"
+                                  >
+                                    📋 Copy URL
+                                  </button>
+                                  <a
+                                    href={entry.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-primary)' }}
+                                  >
+                                    ↗ Open
+                                  </a>
+                                </div>
+                              )}
+
+                              {/* Error */}
+                              {entry.status === 'error' && (
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-danger)' }}>
+                                  ⚠ {entry.error}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Remove button */}
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                removeEntry(entry.id);
+                              }}
+                              disabled={isActive}
+                              style={{
+                                background: 'none', border: 'none', cursor: isActive ? 'not-allowed' : 'pointer',
+                                fontSize: 18, color: '#94a3b8', padding: 4, lineHeight: 1,
+                                alignSelf: 'flex-start',
+                              }}
+                              title="Remove"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Right Column: Sticky Side Image Viewer */}
+                    {currentPreviewEntry && (
+                      <div style={{
+                        border: '1.5px solid var(--color-border)',
+                        borderRadius: 8,
+                        background: 'var(--bg-secondary)',
+                        padding: 16,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                        position: 'sticky',
+                        top: 80,
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)', paddingBottom: 8 }}>
+                          👁 Live Preview
+                        </div>
+                        <div style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 6,
+                          padding: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: 240,
+                          maxHeight: 320,
+                          overflow: 'hidden',
+                        }}>
+                          <img
+                            src={currentPreviewEntry.previewUrl}
+                            alt=""
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 4 }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div
+                            style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-main)', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}
+                            title={currentPreviewEntry.file.name}
+                          >
+                            {currentPreviewEntry.file.name}
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>
+                            Size: <strong>{currentPreviewEntry.origKB} KB</strong>
+                            {currentPreviewEntry.outKB != null && (
+                              <span> → <strong>{currentPreviewEntry.outKB} KB</strong></span>
                             )}
                           </div>
-
-                          {/* Progress bar while active */}
-                          {isActive && (
-                            <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-                              <div style={{
-                                height: '100%',
-                                width: entry.status === 'uploading' ? '70%' : '30%',
-                                background: 'var(--color-primary)',
-                                borderRadius: 2,
-                                animation: 'pulse 1.2s ease-in-out infinite',
-                              }} />
-                            </div>
-                          )}
-
-                          {/* URL output */}
-                          {entry.status === 'done' && entry.url && (
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <code style={{
-                                fontSize: 11, fontFamily: 'ui-monospace, monospace',
-                                background: '#f1f5f9', border: '1px solid #e2e8f0',
-                                borderRadius: 3, padding: '2px 6px',
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                maxWidth: 340, display: 'inline-block',
-                              }}>
-                                {entry.url}
-                              </code>
-                              <button
-                                className={styles.btnOutline}
-                                style={{ padding: '2px 8px', fontSize: 11 }}
-                                onClick={() => copyToClipboard(entry.url)}
-                                title="Copy URL"
-                              >
-                                📋 Copy URL
-                              </button>
-                              <a
-                                href={entry.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-primary)' }}
-                              >
-                                ↗ Open
-                              </a>
-                            </div>
-                          )}
-
-                          {/* Error */}
-                          {entry.status === 'error' && (
-                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-danger)' }}>
-                              ⚠ {entry.error}
-                            </div>
-                          )}
+                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                            Type: <strong>{currentPreviewEntry.file.type}</strong>
+                          </div>
                         </div>
-
-                        {/* Remove button */}
-                        <button
-                          onClick={() => removeEntry(entry.id)}
-                          disabled={isActive}
-                          style={{
-                            background: 'none', border: 'none', cursor: isActive ? 'not-allowed' : 'pointer',
-                            fontSize: 18, color: '#94a3b8', padding: 4, lineHeight: 1,
-                            alignSelf: 'flex-start',
-                          }}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    )}
+
+                  </div>
+                );
+              })()}
 
               {/* ── Done gallery ── */}
               {doneCount > 0 && (

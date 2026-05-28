@@ -34,6 +34,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'rhyming',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.color_identification': {
+    title: 'Color Identification',
+    engine: 'color_identification',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -108,6 +114,12 @@ export const lkgEnglishMicroSkillRegistry = {
     templateId: 'lkg.english.letter_recognition',
     code: 'EL.12',
     title: 'Identify the letter you hear',
+    grade: 'LKG'
+  },
+  'lkg-english-color-identification': {
+    templateId: 'lkg.english.color_identification',
+    code: 'EL.13',
+    title: 'Identify colours',
     grade: 'LKG'
   },
 

@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 
 const r2AccountId = process.env.R2_ACCOUNT_ID || process.env.VITE_R2_ACCOUNT_ID;
 const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID || process.env.VITE_R2_ACCESS_KEY_ID;
@@ -130,4 +130,32 @@ export async function listR2Images(prefix = '') {
     throw error;
   }
 }
+
+/**
+ * Deletes multiple images from Cloudflare R2 bucket
+ * @param {string[]} keys - List of object keys to delete
+ * @returns {Promise<any>}
+ */
+export async function deleteR2Images(keys) {
+  if (!isR2Configured() || !keys.length) {
+    return null;
+  }
+  const bucketName = r2BucketName;
+
+  try {
+    const command = new DeleteObjectsCommand({
+      Bucket: bucketName,
+      Delete: {
+        Objects: keys.map(key => ({ Key: key })),
+        Quiet: false,
+      },
+    });
+    const response = await s3Client.send(command);
+    return response;
+  } catch (error) {
+    console.error('Failed to delete images from Cloudflare R2:', error);
+    throw error;
+  }
+}
+
 
