@@ -36,10 +36,22 @@ export function generateFractionsV2Question(templateConfig) {
   };
 
   // Call the specific engine family with the merged parameters
-  return engineConfig.engine({
+  const question = engineConfig.engine({
     ...templateConfig,
     engineParams: mergedParams
   });
+
+  return {
+    ...question,
+    metadata: {
+      ...(question.metadata || {}),
+      subject: 'math',
+      topic: 'fractions',
+      skillId: logicType,
+      templateId: question.metadata?.templateId || question.metadata?.task || logicType,
+      engine: question.metadata?.engine || engineConfig.engine?.name || 'fractions',
+    }
+  };
 }
 
 // Export the generators object for the main math registry

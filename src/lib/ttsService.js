@@ -181,6 +181,10 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
 
   if (!apiResponse.ok) {
     const errText = await apiResponse.text();
+    // Embed a recognisable tag so route.js can return 503 instead of 500 for quota errors
+    if (apiResponse.status === 429) {
+      throw new Error(`RESOURCE_EXHAUSTED: Gemini TTS quota exceeded. ${errText}`);
+    }
     throw new Error(`Gemini API failed with status ${apiResponse.status}: ${errText}`);
   }
 

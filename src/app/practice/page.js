@@ -29,19 +29,19 @@ import {
   saveMasteryState,
   updateMasteryState,
 } from '../../lib/mastery';
-import { additionSkillsByGrade } from '../../lib/practice/generators/math/topics/addition/skills/index.js';
-import { multiplicationSkillsByGrade } from '../../lib/practice/generators/math/topics/multiplication/skills/index.js';
+import { additionCatalogOptions } from '../../lib/practice/clientCatalogs/additionCatalog.js';
+import { multiplicationCatalogOptions } from '../../lib/practice/clientCatalogs/multiplicationCatalog.js';
 
 import { subtractionSkillsByGrade } from '../../lib/practice/generators/math/topics/subtraction/skills/index.js';
 import { placeValueSkillsByGrade } from '../../lib/practice/generators/math/topics/place-values/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../../lib/practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../../lib/practice/generators/math/topics/shapes/skills/index.js';
-import { MEASUREMENT_CATALOG } from '../../lib/practice/generators/math/topics/measurement/index.js';
-import { topicContracts } from '../../lib/practice/topicContracts.js';
-import { storyMathCatalog } from '../../lib/practice/generators/math/topics/story-math/index.js';
-import { interactiveToolsCatalog } from '../../lib/practice/generators/math/topics/interactive-tools/index.js';
-import { cubeToolsCatalog } from '../../lib/practice/generators/math/topics/cube-tools/index.js';
+import { measurementCatalogOptions } from '../../lib/practice/clientCatalogs/measurementCatalog.js';
+import { dataGraphsCatalogOptions } from '../../lib/practice/clientCatalogs/dataGraphsCatalog.js';
+import { storyMathCatalogOptions } from '../../lib/practice/clientCatalogs/storyMathCatalog.js';
+import { interactiveToolsCatalogOptions } from '../../lib/practice/clientCatalogs/interactiveToolsCatalog.js';
+import { cubeToolsCatalogOptions } from '../../lib/practice/clientCatalogs/cubeToolsCatalog.js';
 import DraggableToolOverlay from '../../components/practice/DraggableToolOverlay';
 import OverlayToolbar from '../../components/practice/OverlayToolbar';
 
@@ -66,13 +66,7 @@ const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([g
   }))
 );
 
-const MULTIPLICATION_OPTIONS = Object.entries(multiplicationSkillsByGrade).flatMap(([grade, skills]) =>
-  skills.map((skill) => ({
-    group: `Grade ${grade}`,
-    label: `${skill.code} ${skill.title}`,
-    value: skill.id
-  }))
-);
+const MULTIPLICATION_OPTIONS = multiplicationCatalogOptions;
 
 const SHAPES_OPTIONS = Object.entries(shapesSkillsByGrade).flatMap(([grade, skills]) =>
   skills.map((skill) => ({
@@ -82,35 +76,11 @@ const SHAPES_OPTIONS = Object.entries(shapesSkillsByGrade).flatMap(([grade, skil
   }))
 );
 
-const MEASUREMENT_OPTIONS = MEASUREMENT_CATALOG.map((skill) => {
-  let groupName = skill.grade;
-  if (['1','2','3','4','5','6','7','8'].includes(skill.grade)) {
-    groupName = `Grade ${skill.grade}`;
-  }
-  return {
-    group: groupName,
-    label: `${skill.code} ${skill.title}`,
-    value: skill.skillId
-  };
-});
+const MEASUREMENT_OPTIONS = measurementCatalogOptions;
 
-const STORY_MATH_OPTIONS = storyMathCatalog.map((skill) => ({
-  group: skill.group,
-  label: `${skill.code} ${skill.title}`,
-  value: skill.skillId
-}));
+const STORY_MATH_OPTIONS = storyMathCatalogOptions;
 
-const INTERACTIVE_TOOLS_OPTIONS = interactiveToolsCatalog.map((skill) => ({
-  group: skill.group,
-  label: `${skill.code} ${skill.title}`,
-  value: skill.skillId
-}));
-
-const CUBE_TOOLS_OPTIONS = cubeToolsCatalog.map((skill) => ({
-  group: skill.group,
-  label: `${skill.code} ${skill.title}`,
-  value: skill.skillId
-}));
+const INTERACTIVE_TOOLS_OPTIONS = interactiveToolsCatalogOptions;
 
 const gradeLabel = (grade) => {
   if (grade === 'remediation') return 'Remediation';
@@ -118,13 +88,10 @@ const gradeLabel = (grade) => {
   return `Grade ${grade}`;
 };
 
-const ADDITION_TOPIC_OPTIONS = Object.entries(additionSkillsByGrade).flatMap(([grade, skills]) => (
-  skills.map((skill) => ({
-    group: gradeLabel(grade),
-    label: `${skill.code} ${skill.title}`,
-    value: skill.id
-  }))
-));
+const ADDITION_TOPIC_OPTIONS = additionCatalogOptions.map((option) => ({
+  ...option,
+  group: option.group === 'Remediation' ? 'Remediation' : option.group,
+}));
 
 const SUBTRACTION_TOPIC_OPTIONS = Object.entries(subtractionSkillsByGrade).flatMap(([grade, skills]) => (
   skills.map((skill) => ({
@@ -366,6 +333,20 @@ const SOURCE_CONFIGS = {
       { label: 'Reusable skills', text: 'Grade skills pass config into shared template families.' },
     ],
   },
+  'data-graphs': {
+    label: 'Data & Graphs Practice',
+    api: '/api/practice',
+    badge: 'MATH',
+    description: 'Picture graphs, bar graphs, scaled charts, tally charts, and line plots.',
+    defaultLogicType: 'data-graphs-g1-read-picture-graph',
+    subject: 'math',
+    topic: 'data-graphs',
+    options: dataGraphsCatalogOptions,
+    tips: [
+      { label: 'Graph-first', text: 'Questions render visual graph data from compact generator JSON.' },
+      { label: 'Skill ladder', text: 'Data graph skills stay in a client-safe catalog for fast sidebar loading.' },
+    ],
+  },
   subtraction: {
     label: 'Subtraction Practice',
     api: '/api/practice',
@@ -500,7 +481,7 @@ const SOURCE_CONFIGS = {
     defaultLogicType: 'cube-tools-build',
     subject: 'math',
     topic: 'cube-tools',
-    options: CUBE_TOOLS_OPTIONS,
+    options: cubeToolsCatalogOptions,
     tips: [
       { label: 'Engine-driven', text: 'All skills reuse the same cube_counter engine with different parameters.' },
       { label: 'Template-ready', text: 'New cube skills can be added by changing config, not UI code.' },
@@ -593,23 +574,6 @@ const SOURCE_CONFIGS = {
   },
 };
 
-function sourceConfigFromContract(contract) {
-  return {
-    label: contract.label,
-    api: '/api/practice',
-    badge: contract.badge || contract.subject.toUpperCase(),
-    description: contract.description,
-    defaultLogicType: contract.defaultSkill,
-    subject: contract.subject,
-    topic: contract.topic,
-    options: contract.catalog.map((skill) => ({
-      group: skill.grade ? `Grade ${skill.grade}` : 'Skills',
-      label: `${skill.code} ${skill.title}`,
-      value: skill.skillId
-    })),
-    tips: contract.tips || []
-  };
-}
 function resolveSearchValue(searchParams, key, fallback = null) {
   const raw = searchParams?.get(key);
   return raw && String(raw).trim() ? String(raw).trim() : fallback;
@@ -1011,10 +975,7 @@ function PracticePageContent() {
   const [curriculumLoading, setCurriculumLoading] = useState(true);
 
   const mergedConfigs = useMemo(() => {
-    const contractConfigs = Object.fromEntries(
-      topicContracts.map((contract) => [contract.topic, sourceConfigFromContract(contract)])
-    );
-    const result = { ...SOURCE_CONFIGS, ...contractConfigs };
+    const result = { ...SOURCE_CONFIGS };
     
     Object.entries(dbConfigs).forEach(([dbKey, dbConfig]) => {
       const matchingKey = Object.keys(result).find(
@@ -1223,6 +1184,79 @@ function PracticePageContent() {
   const questionJson = useMemo(() => (
     JSON.stringify({ question, template: templateJson }, null, 2)
   ), [question, templateJson]);
+
+  const buildQuestionUrl = useCallback((sessionOverride = {}, seed = String(Date.now())) => {
+    const url = new URL(sourceConfig.api, window.location.origin);
+    url.searchParams.set('subject', urlSubject || sourceConfig.subject);
+    url.searchParams.set('topic', urlTopic || sourceConfig.topic);
+    url.searchParams.set('skill', logicType);
+    url.searchParams.set('forcedTask', logicType);
+    url.searchParams.set('difficulty', difficulty);
+    url.searchParams.set('correctStreak', String(sessionOverride.correctStreak ?? correctStreak));
+    url.searchParams.set('practiceLevel', String(sessionOverride.practiceLevel ?? practiceLevel));
+    url.searchParams.set('levelStreak', String(sessionOverride.levelStreak ?? levelStreak));
+    url.searchParams.set('lastResult', sessionOverride.lastResult ?? lastResult);
+
+    const competency = resolveCompetency({
+      subject: urlSubject || sourceConfig.subject,
+      topic: urlTopic || sourceConfig.topic,
+      skillId: logicType,
+    });
+    const storedMastery = loadMasteryState({
+      subject: urlSubject || sourceConfig.subject,
+      topic: urlTopic || sourceConfig.topic,
+      skillId: logicType,
+      competencyId: competency?.id,
+      userId: activeStudent,
+    });
+    const remediationNeeded = sessionOverride.remediationNeeded ?? storedMastery?.remediationNeeded ?? false;
+    url.searchParams.set('remediationActive', remediationNeeded ? 'true' : 'false');
+    url.searchParams.set('remediationStep', remediationNeeded ? '1' : '0');
+    url.searchParams.set('seed', seed);
+
+    return url;
+  }, [
+    activeStudent,
+    correctStreak,
+    difficulty,
+    lastResult,
+    levelStreak,
+    logicType,
+    practiceLevel,
+    sourceConfig,
+    urlSubject,
+    urlTopic,
+  ]);
+
+  const applyQuestionPayload = useCallback((data, sessionOverride = {}) => {
+    if (data?.success && data?.question) {
+      setQuestion(data.question);
+      setTemplateJson(data.template || null);
+      setQuestionStartedAt(Date.now());
+      if (data.question.metadata?.streakThreshold) {
+        setStreakThreshold(Number(data.question.metadata.streakThreshold));
+      } else if (data.question.streakThreshold) {
+        setStreakThreshold(Number(data.question.streakThreshold));
+      } else {
+        setStreakThreshold(5);
+      }
+      if (sessionOverride.slideIn) {
+        setTransitionState('slideIn');
+        window.setTimeout(() => setTransitionState('idle'), 520);
+      }
+      return true;
+    }
+
+    setQuestion(null);
+    setTemplateJson(data?.error || null);
+    return false;
+  }, []);
+
+  const fetchQuestionPayload = useCallback(async (sessionOverride = {}) => {
+    const url = buildQuestionUrl(sessionOverride, String(Date.now()));
+    const res = await fetch(url.toString());
+    return res.json();
+  }, [buildQuestionUrl]);
   const currentCompetency = useMemo(() => (
     resolveCompetency({
       subject: urlSubject || sourceConfig.subject,
@@ -1296,34 +1330,10 @@ function PracticePageContent() {
     }
 
     try {
-      const url = new URL(sourceConfig.api, window.location.origin);
-      url.searchParams.set('subject', urlSubject || sourceConfig.subject);
-      url.searchParams.set('topic', urlTopic || sourceConfig.topic);
-      url.searchParams.set('skill', logicType);
-      url.searchParams.set('forcedTask', logicType);
-      url.searchParams.set('difficulty', difficulty);
-      url.searchParams.set('correctStreak', String(sessionOverride.correctStreak ?? correctStreak));
-      url.searchParams.set('practiceLevel', String(sessionOverride.practiceLevel ?? practiceLevel));
-      url.searchParams.set('levelStreak', String(sessionOverride.levelStreak ?? levelStreak));
-      url.searchParams.set('lastResult', sessionOverride.lastResult ?? lastResult);
-      const competency = resolveCompetency({
-        subject: urlSubject || sourceConfig.subject,
-        topic: urlTopic || sourceConfig.topic,
-        skillId: logicType,
-      });
-      const storedMastery = loadMasteryState({
-        subject: urlSubject || sourceConfig.subject,
-        topic: urlTopic || sourceConfig.topic,
-        skillId: logicType,
-        competencyId: competency?.id,
-        userId: activeStudent,
-      });
-      const remediationNeeded = sessionOverride.remediationNeeded ?? storedMastery?.remediationNeeded ?? false;
-      url.searchParams.set('remediationActive', remediationNeeded ? 'true' : 'false');
-      url.searchParams.set('remediationStep', remediationNeeded ? '1' : '0');
+      let seed = String(Date.now());
       const urlSeed = resolveSearchValue(searchParams, 'seed');
       if (urlSeed && !seedUsedRef.current) {
-        url.searchParams.set('seed', urlSeed);
+        seed = urlSeed;
         seedUsedRef.current = true;
         try {
           const currentUrl = new URL(window.location.href);
@@ -1334,33 +1344,15 @@ function PracticePageContent() {
         } catch (e) {
           console.warn('Failed to clean up seed from URL:', e);
         }
-      } else {
-        url.searchParams.set('seed', String(Date.now()));
       }
+
+      const url = buildQuestionUrl(sessionOverride, seed);
 
       const res = await fetch(url.toString());
       const data = await res.json();
       if (fetchRequestIdRef.current !== requestId) return;
 
-      if (data?.success && data?.question) {
-        setQuestion(data.question);
-        setTemplateJson(data.template || null);
-        setQuestionStartedAt(Date.now());
-        if (data.question.metadata?.streakThreshold) {
-          setStreakThreshold(Number(data.question.metadata.streakThreshold));
-        } else if (data.question.streakThreshold) {
-          setStreakThreshold(Number(data.question.streakThreshold));
-        } else {
-          setStreakThreshold(5);
-        }
-        if (sessionOverride.slideIn) {
-          setTransitionState('slideIn');
-          window.setTimeout(() => setTransitionState('idle'), 520);
-        }
-      } else {
-        setQuestion(null);
-        setTemplateJson(data?.error || null);
-      }
+      applyQuestionPayload(data, sessionOverride);
     } catch (error) {
       if (fetchRequestIdRef.current !== requestId) return;
       console.error('Practice fetch error:', error);
@@ -1372,7 +1364,7 @@ function PracticePageContent() {
         loadingRef.current = false;
       }
     }
-  }, [correctStreak, difficulty, lastResult, levelStreak, logicType, practiceLevel, sourceConfig, urlSubject, urlTopic]);
+  }, [applyQuestionPayload, buildQuestionUrl, searchParams]);
 
   useEffect(() => {
     async function loadCurriculum() {
@@ -1609,6 +1601,19 @@ function PracticePageContent() {
     }
 
     if (correct) {
+      const nextQuestionSession = {
+        correctStreak: nextCorrectStreak,
+        practiceLevel: nextPracticeLevel,
+        levelStreak: finalLevelStreak,
+        lastResult: 'correct',
+        remediationNeeded: false,
+        keepTransition: true,
+        slideIn: true,
+      };
+      const nextQuestionPromise = fetchQuestionPayload(nextQuestionSession).catch((error) => {
+        console.warn('Next question preload skipped:', error.message);
+        return null;
+      });
       const praisePool = didLevelUp
         ? ['Level up!', 'Brilliant streak!', 'You are moving up!']
         : nextCorrectStreak >= 4
@@ -1624,14 +1629,24 @@ function PracticePageContent() {
       setTransitionState('praise');
 
       window.setTimeout(() => {
-        fetchQuestion(false, {
-          correctStreak: nextCorrectStreak,
-          practiceLevel: nextPracticeLevel,
-          levelStreak: finalLevelStreak,
-          lastResult: 'correct',
-          remediationNeeded: false,
-          keepTransition: true,
-          slideIn: true,
+        nextQuestionPromise.then((preloadedData) => {
+          if (preloadedData?.success && preloadedData?.question) {
+            const requestId = fetchRequestIdRef.current + 1;
+            fetchRequestIdRef.current = requestId;
+            loadingRef.current = false;
+            setLoading(false);
+            setLastResult('none');
+            setUserAnswer(null);
+            setActiveOverlays([]);
+            setIsAnswered(false);
+            submittingRef.current = false;
+            setIsSubmitting(false);
+            setIsCorrect(false);
+            setPraiseMessage(null);
+            applyQuestionPayload(preloadedData, nextQuestionSession);
+            return;
+          }
+          fetchQuestion(false, nextQuestionSession);
         });
       }, 950);
     } else {
@@ -2705,6 +2720,8 @@ function PracticePageContent() {
         practiceLevel={practiceLevel}
         levelStreak={levelStreak}
         isSubmitting={isSubmitting}
+        isCorrect={isCorrect}
+        onNext={() => fetchQuestion()}
       >
         {question ? (
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>
@@ -2913,7 +2930,7 @@ function PracticePageContent() {
 
                     const text = JSON.stringify(report, null, 2);
                     if (navigator.clipboard?.writeText) {
-                      navigator.clipboard.writeText(text);
+                      navigator.clipboard.writeText(text).catch(() => {});
                     } else {
                       const ta = document.createElement('textarea');
                       ta.value = text;

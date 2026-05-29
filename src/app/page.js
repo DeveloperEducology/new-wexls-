@@ -1,25 +1,21 @@
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { additionSkillsByGrade } from '../lib/practice/generators/math/topics/addition/skills/index.js';
+import { additionHomeGroups } from '../lib/practice/clientCatalogs/additionCatalog.js';
 import { subtractionSkillsByGrade } from '../lib/practice/generators/math/topics/subtraction/skills/index.js';
-import { multiplicationSkillsByGrade } from '../lib/practice/generators/math/topics/multiplication/skills/index.js';
+import { multiplicationHomeGroups } from '../lib/practice/clientCatalogs/multiplicationCatalog.js';
 import { divisionSkillsByGrade } from '../lib/practice/generators/math/topics/division/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../lib/practice/generators/science/topics/units-measurement/skills/index.js';
 import { grammarSkillsByGrade } from '../lib/practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../lib/practice/generators/math/topics/shapes/skills/index.js';
-import { MEASUREMENT_CATALOG } from '../lib/practice/generators/math/topics/measurement/index.js';
+import { measurementHomeGroups } from '../lib/practice/clientCatalogs/measurementCatalog.js';
 import { getCurriculumTree } from '../lib/curriculum/index.js';
-import { dataGraphsSkillsByGrade } from '../lib/practice/generators/math/topics/data-graphs/index.js';
-import { storyMathCatalog } from '../lib/practice/generators/math/topics/story-math/index.js';
-import { interactiveToolsCatalog } from '../lib/practice/generators/math/topics/interactive-tools/index.js';
-import { cubeToolsCatalog } from '../lib/practice/generators/math/topics/cube-tools/index.js';
+import { dataGraphsHomeGroups } from '../lib/practice/clientCatalogs/dataGraphsCatalog.js';
+import { storyMathHomeGroups } from '../lib/practice/clientCatalogs/storyMathCatalog.js';
+import { interactiveToolsHomeGroups } from '../lib/practice/clientCatalogs/interactiveToolsCatalog.js';
+import { cubeToolsHomeGroups } from '../lib/practice/clientCatalogs/cubeToolsCatalog.js';
 
 export const dynamic = 'force-dynamic';
-
-const additionHomeGroups = Object.entries(additionSkillsByGrade).map(([grade, skills]) => ({
-  title: grade === 'remediation' ? 'Remediation skills' : `${grade}${grade === '1' ? 'st' : grade === '2' ? 'nd' : grade === '3' ? 'rd' : 'th'}-grade skills`,
-  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
-}));
 
 const gradeOrdinal = (grade) => {
   if (grade === 'remediation') return 'Remediation skills';
@@ -28,11 +24,6 @@ const gradeOrdinal = (grade) => {
 };
 
 const subtractionHomeGroups = Object.entries(subtractionSkillsByGrade).map(([grade, skills]) => ({
-  title: gradeOrdinal(grade),
-  skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
-}));
-
-const multiplicationHomeGroups = Object.entries(multiplicationSkillsByGrade).map(([grade, skills]) => ({
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
@@ -46,12 +37,6 @@ const unitsMeasurementHomeGroups = Object.entries(unitsMeasurementSkillsByGrade)
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
-
-const dataGraphsHomeGroups = Object.entries(dataGraphsSkillsByGrade).map(([grade, skills]) => ({
-  title: gradeOrdinal(grade),
-  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId]),
-}));
-
 
 const solarSystemHomeGroups = [
   {
@@ -72,63 +57,6 @@ const shapesHomeGroups = Object.entries(shapesSkillsByGrade).map(([grade, skills
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
-
-const measurementHomeGroupsMap = {};
-MEASUREMENT_CATALOG.forEach((skill) => {
-  const gradeKey = skill.grade;
-  if (!measurementHomeGroupsMap[gradeKey]) {
-    measurementHomeGroupsMap[gradeKey] = [];
-  }
-  measurementHomeGroupsMap[gradeKey].push(skill);
-});
-
-const measurementHomeGroups = Object.entries(measurementHomeGroupsMap).map(([grade, skills]) => {
-  let title = `${grade} skills`;
-  if (grade === '1' || grade === '2' || grade === '3' || grade === '4' || grade === '5' || grade === '6' || grade === '7' || grade === '8') {
-    title = gradeOrdinal(grade);
-  }
-  return {
-    title,
-    skills: skills.map((s) => [s.code, s.title, s.skillId]),
-  };
-});
-
-const storyMathHomeGroups = Object.entries(
-  storyMathCatalog.reduce((groups, skill) => {
-    const key = skill.group || 'Story applets';
-    groups[key] ||= [];
-    groups[key].push(skill);
-    return groups;
-  }, {})
-).map(([group, skills]) => ({
-  title: group,
-  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId])
-}));
-
-const interactiveToolsHomeGroups = Object.entries(
-  interactiveToolsCatalog.reduce((groups, skill) => {
-    const key = skill.group || 'Interactive tools';
-    groups[key] ||= [];
-    groups[key].push(skill);
-    return groups;
-  }, {})
-).map(([group, skills]) => ({
-  title: group,
-  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId])
-}));
-
-const cubeToolsHomeGroups = Object.entries(
-  cubeToolsCatalog.reduce((groups, skill) => {
-    const key = skill.group || 'Cube tools';
-    groups[key] ||= [];
-    groups[key].push(skill);
-    return groups;
-  }, {})
-).map(([group, skills]) => ({
-  title: group,
-  skills: skills.map((skill) => [skill.code, skill.title, skill.skillId])
-}));
-
 
 const TOPICS = [
   {
@@ -872,26 +800,56 @@ function practiceHref(topic, skill) {
   return `/practice?subject=${topic.subject || 'math'}&topic=${topic.topic || topic.id}&skill=${skill}`;
 }
 
+function SiteHeader() {
+  return (
+    <header className="site-header">
+      <div className="site-header-container">
+        <Link href="/" className="site-logo">
+          <Image
+            src="/images/klasschamp_logo.png"
+            alt="KlassChamp Logo"
+            width={40}
+            height={40}
+            className="logo-image"
+          />
+          <span className="logo-text">KlassChamp</span>
+        </Link>
+        <div className="site-header-actions">
+          <Link href="/practice" className="btn-start-practice">
+            Quick Practice
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function HomeHero() {
   return (
-    <section className="home-hero" aria-label="WEXLS learning hero">
+    <section className="home-hero" aria-label="KlassChamp learning hero">
       <div className="home-hero-frame">
         <Image
           className="home-hero-image home-hero-image-desktop"
-          src="/images/heroc.png"
-          alt="Students practicing interactive math and reasoning skills"
-          width={1774}
-          height={887}
+          src="/images/countryside_science_v2_desktop.png"
+          alt="Countryside geometric science adventure hero - Desktop"
+          width={1024}
+          height={1024}
           priority
         />
         <Image
           className="home-hero-image home-hero-image-mobile"
-          src="/images/heromobile.png"
-          alt="Students practicing interactive math and reasoning skills"
-          width={941}
-          height={1672}
+          src="/images/countryside_science_v2.png"
+          alt="Countryside geometric science adventure hero - Mobile"
+          width={1024}
+          height={1024}
           priority
         />
+        <div className="home-hero-overlay">
+          <div className="home-hero-overlay-content">
+            <h1>Interactive & Adaptive Practice</h1>
+            <p>Master Math, English, and Science with gamified worksheets and interactive visual tools built for your level.</p>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -902,7 +860,7 @@ function TopicCatalog({ topics = TOPICS }) {
     <main className="topic-catalog-page">
       <HomeHero />
       <section className="topic-catalog-hero">
-        <p>WEXLS Practice</p>
+        <p>KlassChamp Practice</p>
         <h1>Choose a topic</h1>
       </section>
       <section className="topic-card-list" aria-label="Practice topics">
@@ -983,15 +941,211 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
   );
 }
 
+function SubjectTabs({ activeSubject }) {
+  const subjects = [
+    { id: 'math', label: '🧮 Math' },
+    { id: 'english', label: '📚 English' },
+    { id: 'science', label: '🔬 Science' },
+    { id: 'social', label: '🌍 GK & Social' },
+  ];
+
+  return (
+    <div className="subject-tabs-container">
+      <div className="subject-tabs">
+        {subjects.map((sub) => (
+          <Link 
+            key={sub.id} 
+            href={`/?subject=${sub.id}`}
+            className={`subject-tab ${activeSubject === sub.id ? 'active' : ''}`}
+          >
+            {sub.label}
+          </Link>
+        ))}
+      </div>
+      <Link href="/?view=topics" className="subject-tab view-toggle">
+        📂 View by Topic
+      </Link>
+    </div>
+  );
+}
+
+function getStandardizedGrade(title, topicId) {
+  const t = title.toLowerCase();
+  const id = (topicId || '').toLowerCase();
+  
+  if (id === 'lkg' || t.includes('lkg') || t.includes('lower kindergarten')) return 'LKG';
+  if (id === 'ukg' || t.includes('ukg') || t.includes('upper kindergarten')) return 'UKG';
+  
+  if (t.includes('remediation')) return 'Remediation';
+  if (t.includes('pre-k') || t.includes('prek') || id === 'prek') return 'Pre-K';
+  if (t.includes('first') || t.includes('1st')) return 'Grade 1';
+  if (t.includes('second') || t.includes('2nd')) return 'Grade 2';
+  if (t.includes('third') || t.includes('3rd')) return 'Grade 3';
+  if (t.includes('fourth') || t.includes('4th')) return 'Grade 4';
+  if (t.includes('fifth') || t.includes('5th')) return 'Grade 5';
+  if (t.includes('sixth') || t.includes('6th')) return 'Grade 6';
+  if (t.includes('seventh') || t.includes('7th')) return 'Grade 7';
+  if (t.includes('eighth') || t.includes('8th')) return 'Grade 8';
+  return 'General Skills';
+}
+
+function buildGradeCurriculum(topics, activeSubject) {
+  const subjectTopics = topics.filter(t => (t.subject || 'math') === activeSubject);
+  const gradeMap = new Map();
+
+  subjectTopics.forEach(topic => {
+    (topic.groups || []).forEach(group => {
+      const standardizedGrade = getStandardizedGrade(group.title, topic.id);
+      
+      if (!gradeMap.has(standardizedGrade)) {
+        gradeMap.set(standardizedGrade, new Map()); // Use a Map to group by topic inside the grade
+      }
+      
+      if (group.skills && group.skills.length > 0) {
+        const topicsInGrade = gradeMap.get(standardizedGrade);
+        
+        if (!topicsInGrade.has(topic.id)) {
+          topicsInGrade.set(topic.id, {
+            id: topic.id,
+            title: topic.title,
+            color: topic.color,
+            subject: topic.subject,
+            topic: topic.topic,
+            skills: []
+          });
+        }
+        
+        // Merge the skills into this topic block
+        topicsInGrade.get(topic.id).skills.push(...group.skills);
+      }
+    });
+  });
+
+  // Convert the inner Maps back to Arrays
+  const formattedGrades = Array.from(gradeMap.entries()).map(([grade, topicsMap]) => {
+    return [grade, Array.from(topicsMap.values())];
+  });
+
+  // Sort grades logically
+  const gradeOrder = ['Pre-K', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Remediation', 'General Skills'];
+  
+  const sortedGrades = formattedGrades.sort((a, b) => {
+    const aIndex = gradeOrder.indexOf(a[0]);
+    const bIndex = gradeOrder.indexOf(b[0]);
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    return a[0].localeCompare(b[0]);
+  });
+
+  return sortedGrades;
+}
+
+function GradeLevelCurriculumPage({ topics, activeSubject }) {
+  const sortedGrades = buildGradeCurriculum(topics, activeSubject);
+
+  return (
+    <main className="ixl-landing-page">
+      <HomeHero />
+      <SubjectTabs activeSubject={activeSubject} />
+
+      <div className="curriculum-container">
+        <aside className="grade-sidebar">
+          <h3>Grades</h3>
+          {sortedGrades.map(([gradeTitle]) => (
+            <a key={gradeTitle} href={`#grade-${gradeTitle.split(' ').join('-')}`} className="grade-link">
+              {gradeTitle.replace(' skills', '')}
+            </a>
+          ))}
+        </aside>
+
+        <section className="grade-content">
+          {sortedGrades.length === 0 ? (
+            <p className="empty-state">No skills available for this subject yet.</p>
+          ) : (
+             sortedGrades.map(([gradeTitle, gradeTopics], index) => {
+               const isEarlyYears = gradeTitle === 'LKG' || gradeTitle === 'UKG' || gradeTitle === 'Pre-K';
+               const prevGrade = index > 0 ? sortedGrades[index - 1][0] : null;
+               const prevIsEarlyYears = prevGrade === 'LKG' || prevGrade === 'UKG' || prevGrade === 'Pre-K';
+               
+               const showPrekHero = isEarlyYears && !prevIsEarlyYears;
+               const showPrimaryHero = !isEarlyYears && (index === 0 || prevIsEarlyYears);
+
+               return (
+                 <React.Fragment key={gradeTitle}>
+                   {showPrekHero && (
+                     <div className="inline-hero" style={{ backgroundImage: 'url(/images/prek_landscape.png)' }}>
+                       <div className="inline-hero-content">
+                         <h2>Kindergarten & Pre-K</h2>
+                         <p>Fun, gamified learning environments.</p>
+                       </div>
+                     </div>
+                   )}
+                   {showPrimaryHero && (
+                     <div className="inline-hero" style={{ backgroundImage: 'url(/images/herog.png)' }}>
+                       <div className="inline-hero-content">
+                         <h2>Primary Grades</h2>
+                         <p>Interactive practice for 1st grade and above.</p>
+                       </div>
+                     </div>
+                   )}
+                   <div id={`grade-${gradeTitle.split(' ').join('-')}`} className="grade-section">
+                     <h2 className="grade-heading">{gradeTitle.replace(' skills', '')}</h2>
+                     <div className="grade-topics-grid">
+                       {gradeTopics.map(topic => (
+                         <div key={topic.id} className="topic-block" style={{'--theme-color': topic.color}}>
+                           <h3 className="topic-subheading">{topic.title}</h3>
+                           <div className="skill-pills">
+                             {topic.skills.map(([code, name, skill]) => (
+                               <Link key={skill} href={practiceHref(topic, skill)} className="skill-pill">
+                                 <span className="skill-code">{code}</span>
+                                 <span className="skill-name">{name}</span>
+                               </Link>
+                             ))}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 </React.Fragment>
+               );
+             })
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default async function HomePage({ searchParams }) {
   const params = await searchParams;
   const selectedTopic = params?.topic;
+  const viewMode = params?.view;
+  const activeSubject = params?.subject || 'math';
+  
   const dbTopics = await loadDbTopics();
   const topics = mergeTopics(TOPICS, dbTopics);
 
+  let content;
   if (selectedTopic) {
-    return <TopicSkillsPage selectedTopic={selectedTopic} topics={topics} />;
+    content = <TopicSkillsPage selectedTopic={selectedTopic} topics={topics} />;
+  } else if (viewMode === 'topics') {
+    content = (
+       <>
+         <div className="view-toggle-header">
+           <Link href="/" className="back-link">‹ Back to Grade View</Link>
+         </div>
+         <TopicCatalog topics={topics} />
+       </>
+    );
+  } else {
+    content = <GradeLevelCurriculumPage topics={topics} activeSubject={activeSubject} />;
   }
 
-  return <TopicCatalog topics={topics} />;
+  return (
+    <>
+      <SiteHeader />
+      {content}
+    </>
+  );
 }

@@ -179,7 +179,23 @@ export async function getCurriculumTree(filters = {}) {
 
         let synthesizedParent = null;
 
-        if (node.type === 'skill') {
+        if (node.type === 'skill' && parentSlug === slugify(node.topicId || node.topic || '')) {
+          const subjectId = node.subjectId || 'math';
+          const title = parentSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+          synthesizedParent = {
+            id: parentSlug,
+            type: 'topic',
+            title,
+            parentId: subjectId,
+            topicId: parentSlug,
+            subjectId,
+            children: [],
+            status: 'active',
+            source: 'synthesized',
+            order: 0,
+          };
+        } else if (node.type === 'skill') {
           const topicId = node.topicId || 'patterns';
           const subjectId = node.subjectId || 'math';
           const title = inferChapterTitle(parentSlug, node.grade);
@@ -236,10 +252,28 @@ export async function getCurriculumTree(filters = {}) {
 
   const roots = [];
 
+  const isAncestor = (node, potentialAncestor) => {
+    let current = potentialAncestor;
+    const visited = new Set();
+    while (current) {
+      if (current === node) return true;
+      if (visited.has(current.id)) return true; // Break circular loops in store/DB
+      visited.add(current.id);
+      current = current.parentId ? byId.get(slugify(current.parentId)) : null;
+    }
+    return false;
+  };
+
   byId.forEach((node) => {
-    const parent = node.parentId ? byId.get(slugify(node.parentId)) : null;
-    if (parent) parent.children.push(node);
-    else roots.push(node);
+    const parentSlug = node.parentId ? slugify(node.parentId) : null;
+    const parent = parentSlug ? byId.get(parentSlug) : null;
+    if (parent && parent !== node && !isAncestor(node, parent)) {
+      if (!parent.children.includes(node)) {
+        parent.children.push(node);
+      }
+    } else {
+      roots.push(node);
+    }
   });
 
   const sortTree = (items) => {

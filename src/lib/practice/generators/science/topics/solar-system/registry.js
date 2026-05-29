@@ -26,7 +26,18 @@ export function resolveSolarSystemGenerator(skillId, overrides = {}) {
   }
 
   const generate = (config) => {
-    return generateSolarSystemQuestion(config, skill.params);
+    const question = generateSolarSystemQuestion(config, skill.params);
+    return {
+      ...question,
+      metadata: {
+        ...(question.metadata || {}),
+        subject: 'science',
+        topic: 'solar-system',
+        skillId,
+        templateId: skill.templateId,
+        engine: 'solar-system'
+      }
+    };
   };
 
   return {

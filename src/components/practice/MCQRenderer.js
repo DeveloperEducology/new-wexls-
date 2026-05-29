@@ -370,7 +370,15 @@ export default function MCQRenderer({
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
             </svg>
           </button>
-          <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
+          <h2 style={isPreK ? {
+            margin: '0 auto',
+            textAlign: 'center',
+            color: '#3b0764',
+            fontSize: 'clamp(22px, 5vw, 28px)',
+            lineHeight: 1.3,
+            fontWeight: 900,
+            fontFamily: 'var(--font-outfit), sans-serif',
+          } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
             <InlineMarkdown text={question.questionText} />
           </h2>
         </div>
@@ -510,14 +518,8 @@ export default function MCQRenderer({
             </button>
           )}
           <div
-            className={isPreK ? `${styles.optionsGrid} ${styles.optionsGridVisual}` : gridClassName}
-            style={isPreK ? {
-              display: 'grid',
-              gridTemplateColumns: (question.options?.length === 2 || question.options?.length === 4) ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
-              gap: 'clamp(14px, 3vw, 24px)',
-              width: '100%',
-              margin: 0,
-            } : gridStyle}
+            className={isPreK ? styles.preKOptionsGrid : gridClassName}
+            style={isPreK ? undefined : gridStyle}
             data-option-layout={optionLayout.mode}
           >
             {(question.options || []).map((option, index) => {
@@ -546,7 +548,19 @@ export default function MCQRenderer({
                       speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
                     }
                   }}
-                  className={`${isPreK ? styles.preKOptionButton : styles.optionButton} ${selected ? (isPreK ? styles.preKOptionButtonActive : styles.optionButtonActive) : ''}`}
+                  className={(() => {
+                    if (!isPreK) {
+                      return `${styles.optionButton} ${selected ? styles.optionButtonActive : ''}`;
+                    }
+                    const themes = [
+                      { base: styles.preKOptionYellow, active: styles.preKOptionYellowActive },
+                      { base: styles.preKOptionPink, active: styles.preKOptionPinkActive },
+                      { base: styles.preKOptionBlue, active: styles.preKOptionBlueActive },
+                      { base: styles.preKOptionGreen, active: styles.preKOptionGreenActive },
+                    ];
+                    const theme = themes[index % themes.length];
+                    return `${styles.preKOptionButton} ${theme.base} ${selected ? `${styles.preKOptionButtonActive} ${theme.active}` : ''}`;
+                  })()}
                   style={{
                     position: 'relative',
                     minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
@@ -701,26 +715,7 @@ export default function MCQRenderer({
                     </div>
                   ) : null}
                   {selected && isPreK && !isMultiSelect && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '-10px',
-                      width: '34px',
-                      height: '34px',
-                      borderRadius: '50%',
-                      backgroundColor: '#22c55e',
-                      border: '3px solid #ffffff',
-                      boxShadow: '0 6px 14px rgba(34, 197, 94, 0.4)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 15,
-                      color: '#ffffff',
-                      fontSize: '16px',
-                      fontWeight: '950',
-                      animation: `${styles.badgePop} 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
-                      pointerEvents: 'none'
-                    }}>
+                    <div className={styles.preKCheckmarkBadge}>
                       ✓
                     </div>
                   )}

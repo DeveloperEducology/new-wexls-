@@ -266,7 +266,9 @@ function childDefaults(parent, type) {
 }
 
 function TreeNode({ node, selectedId, onSelect, onChild }) {
+  const [isExpanded, setIsExpanded] = useState(node.type === 'subject');
   const isSelected = node.id === selectedId;
+  const hasChildren = node.children && node.children.length > 0;
   const childTypes =
     node.type === 'subject'
       ? ['topic']
@@ -279,6 +281,29 @@ function TreeNode({ node, selectedId, onSelect, onChild }) {
   return (
     <li className={styles.currTreeItem}>
       <div className={`${styles.currNodeRow} ${isSelected ? styles.currNodeRowActive : ''}`}>
+        {hasChildren ? (
+          <button
+            type="button"
+            className={styles.currNodeToggle}
+            onClick={() => setIsExpanded(!isExpanded)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748b',
+              padding: '4px 8px',
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              userSelect: 'none',
+            }}
+          >
+            {isExpanded ? '▼' : '▶'}
+          </button>
+        ) : (
+          <span style={{ width: 23, display: 'inline-block' }} />
+        )}
         <button type="button" className={styles.currNodeMain} onClick={() => onSelect(node)}>
           <span className={styles.currNodeType}>{node.type}</span>
           <span className={styles.currNodeTitle}>{node.title || node.id}</span>
@@ -294,7 +319,7 @@ function TreeNode({ node, selectedId, onSelect, onChild }) {
           </div>
         ) : null}
       </div>
-      {node.children?.length ? (
+      {hasChildren && isExpanded ? (
         <ul className={styles.currTreeList}>
           {node.children.map((child) => (
             <TreeNode
@@ -850,6 +875,90 @@ export default function AdminConsolePage() {
   const currFlatNodes = useMemo(() => flattenTree(currTree), [currTree]);
   const dbSkills = useMemo(() => currFlatNodes.filter(node => node.type === 'skill'), [currFlatNodes]);
 
+  const [currTreeSearch, setCurrTreeSearch] = useState('');
+  const [currTreeSubjectFilter, setCurrTreeSubjectFilter] = useState('all');
+
+  const [useCustomSubjectId, setUseCustomSubjectId] = useState(false);
+  const [useCustomTopicId, setUseCustomTopicId] = useState(false);
+  const [useCustomChapterId, setUseCustomChapterId] = useState(false);
+  const [useCustomParentId, setUseCustomParentId] = useState(false);
+  const [templatesCatalog, setTemplatesCatalog] = useState(null);
+  const [useCustomTemplateId, setUseCustomTemplateId] = useState(false);
+
+  const uniqueSubjects = useMemo(() => {
+    const subs = currFlatNodes.filter(n => n.type === 'subject').map(n => n.id);
+    return Array.from(new Set(subs));
+  }, [currFlatNodes]);
+
+  const availableSubjects = useMemo(() => {
+    return currFlatNodes.filter(n => n.type === 'subject');
+  }, [currFlatNodes]);
+
+  const availableTopics = useMemo(() => {
+    return currFlatNodes.filter(n => n.type === 'topic');
+  }, [currFlatNodes]);
+
+  const availableChapters = useMemo(() => {
+    return currFlatNodes.filter(n => n.type === 'chapter');
+  }, [currFlatNodes]);
+
+  const parentOptions = useMemo(() => {
+    if (currForm.type === 'topic') return availableSubjects;
+    if (currForm.type === 'chapter') return availableTopics;
+    if (currForm.type === 'skill') return [...availableChapters, ...availableTopics];
+    return [];
+  }, [currForm.type, availableSubjects, availableTopics, availableChapters]);
+
+  const groupedOptions = useMemo(() => {
+    if (!templatesCatalog) return [];
+    const groups = [];
+    for (const [subject, topics] of Object.entries(templatesCatalog)) {
+      for (const [topic, templates] of Object.entries(topics)) {
+        groups.push({
+          label: `${subject.toUpperCase()} - ${topic.charAt(0).toUpperCase() + topic.slice(1)}`,
+          templates: templates
+        });
+      }
+    }
+    return groups;
+  }, [templatesCatalog]);
+
+  const filteredTree = useMemo(() => {
+    if (!currTreeSearch && currTreeSubjectFilter === 'all') {
+      return currTree;
+    }
+    const matchesSearch = (node) => {
+      const q = currTreeSearch.toLowerCase();
+      return (
+        node.title?.toLowerCase().includes(q) ||
+        node.id?.toLowerCase().includes(q) ||
+        node.code?.toLowerCase().includes(q)
+      );
+    };
+
+    const filterNode = (node) => {
+      if (currTreeSubjectFilter !== 'all' && node.type === 'subject' && node.id !== currTreeSubjectFilter) {
+        return null;
+      }
+      
+      const childrenMatches = node.children
+        ? node.children.map(filterNode).filter(Boolean)
+        : [];
+      
+      const nodeMatches = !currTreeSearch || matchesSearch(node) || childrenMatches.length > 0;
+      
+      if (nodeMatches) {
+        return {
+          ...node,
+          children: childrenMatches
+        };
+      }
+      return null;
+    };
+
+    return currTree.map(filterNode).filter(Boolean);
+  }, [currTree, currTreeSearch, currTreeSubjectFilter]);
+
   const loadCurrTree = useCallback(async () => {
     setCurrLoading(true);
     setCurrError('');
@@ -858,13 +967,58 @@ export default function AdminConsolePage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load curriculum tree.');
       setCurrTree(data.tree || []);
-      setCurrStatus(`Loaded ${data.count || 0} curriculum nodes.`);
+      setCurrStatus(`Loaded ${(data.nodes || []).length} curriculum nodes.`);
     } catch (err) {
       setCurrError(err.message);
     } finally {
       setCurrLoading(false);
     }
   }, []);
+
+  const loadTemplatesCatalog = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/templates');
+      const data = await response.json();
+      if (data.success) {
+        setTemplatesCatalog(data.templates);
+      }
+    } catch (err) {
+      console.error('Error loading templates catalog:', err);
+    }
+  }, []);
+
+  const handleTemplateSelectChange = (event) => {
+    const val = event.target.value;
+    setCurrForm((current) => {
+      const updated = { ...current, templateId: val };
+      if (val && templatesCatalog) {
+        let foundTpl = null;
+        for (const subject of Object.values(templatesCatalog)) {
+          for (const topicTemplates of Object.values(subject)) {
+            const found = topicTemplates.find(t => t.id === val);
+            if (found) {
+              foundTpl = found;
+              break;
+            }
+          }
+          if (foundTpl) break;
+        }
+        if (foundTpl) {
+          updated.engine = foundTpl.engine || '';
+          updated.questionType = foundTpl.questionType || '';
+        }
+      }
+      return updated;
+    });
+    if (!currSelected) {
+      setCurrManuallyEdited((prev) => ({
+        ...prev,
+        templateId: true,
+        engine: true,
+        questionType: true
+      }));
+    }
+  };
 
   const updateCurrField = (event) => {
     const { name, value } = event.target;
@@ -994,6 +1148,28 @@ export default function AdminConsolePage() {
       const payload = buildCurrPayload();
       if (!payload.title) throw new Error('Title is required.');
       if (!payload.type) throw new Error('Node type is required.');
+
+      // Client-side loop validation
+      if (payload.parentId && payload.id && payload.parentId === payload.id) {
+        throw new Error(`Circular reference detected: Parent ID cannot be equal to the node's own ID (${payload.id}).`);
+      }
+
+      // Recursive cycle detection
+      const checkIsAncestor = (nodeId, potentialParentId) => {
+        let current = currFlatNodes.find(n => n.id === potentialParentId);
+        const visited = new Set();
+        while (current) {
+          if (current.id === nodeId) return true;
+          if (visited.has(current.id)) return true;
+          visited.add(current.id);
+          current = current.parentId ? currFlatNodes.find(n => n.id === current.parentId) : null;
+        }
+        return false;
+      };
+
+      if (payload.parentId && payload.id && checkIsAncestor(payload.id, payload.parentId)) {
+        throw new Error(`Circular reference detected: Parent node "${payload.parentId}" is a descendant of this node "${payload.id}".`);
+      }
 
       const isUpdate = Boolean(currSelected?.id);
       const url = isUpdate
@@ -1395,8 +1571,30 @@ export default function AdminConsolePage() {
       fetchCacheItems();
     } else if (activeTab === 'curriculum' || activeTab === 'authoring') {
       loadCurrTree();
+      loadTemplatesCatalog();
     }
-  }, [activeTab, fetchQuestions, fetchCacheItems, loadCurrTree]);
+  }, [activeTab, fetchQuestions, fetchCacheItems, loadCurrTree, loadTemplatesCatalog]);
+
+  useEffect(() => {
+    if (currForm.type === 'skill' && templatesCatalog) {
+      const templateId = currSelected?.templateId || '';
+      if (templateId) {
+        let isKnown = false;
+        for (const subject of Object.values(templatesCatalog)) {
+          for (const topicTemplates of Object.values(subject)) {
+            if (topicTemplates.some(t => t.id === templateId)) {
+              isKnown = true;
+              break;
+            }
+          }
+          if (isKnown) break;
+        }
+        setUseCustomTemplateId(!isKnown);
+      } else {
+        setUseCustomTemplateId(false);
+      }
+    }
+  }, [currSelected, templatesCatalog]);
 
   // Reset library page on filter changes
   useEffect(() => {
@@ -6990,9 +7188,30 @@ Explanation: 5 plus 7 is equal to 12.`}
                   </select>
                 </div>
 
-                {currTree.length ? (
+                {/* Tree Search and Filter controls */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', padding: '0 4px' }}>
+                  <input
+                    type="text"
+                    placeholder="Search tree..."
+                    value={currTreeSearch}
+                    onChange={(e) => setCurrTreeSearch(e.target.value)}
+                    style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  />
+                  <select
+                    value={currTreeSubjectFilter}
+                    onChange={(e) => setCurrTreeSubjectFilter(e.target.value)}
+                    style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '120px' }}
+                  >
+                    <option value="all">All Subjects</option>
+                    {uniqueSubjects.map(subId => (
+                      <option key={subId} value={subId}>{subId}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {filteredTree.length ? (
                   <ul className={styles.currTreeListRoot}>
-                    {currTree.map((node) => (
+                    {filteredTree.map((node) => (
                       <TreeNode
                         key={node.id}
                         node={node}
@@ -7065,50 +7284,184 @@ Explanation: 5 plus 7 is equal to 12.`}
                       Stable id
                       <input name="id" value={currForm.id} onChange={updateCurrField} placeholder="fractions" />
                     </label>
-                    <label>
-                      Subject id
-                      <input name="subjectId" value={currForm.subjectId} onChange={updateCurrField} placeholder="math" />
-                    </label>
-                    <label>
-                      Topic id
-                      <input name="topicId" value={currForm.topicId} onChange={updateCurrField} placeholder="fractions" />
-                    </label>
-                    <label>
-                      Chapter id
-                      <input name="chapterId" value={currForm.chapterId} onChange={updateCurrField} placeholder="fraction-operations" />
-                    </label>
-                    <label>
-                      Parent id
-                      <input name="parentId" value={currForm.parentId} onChange={updateCurrField} placeholder="math" />
-                    </label>
-                    <label>
-                      Skill id
-                      <input name="skillId" value={currForm.skillId} onChange={updateCurrField} placeholder="fractions-g5-add-like-fractions" />
-                    </label>
-                    <label>
-                      Code
-                      <input name="code" value={currForm.code} onChange={updateCurrField} placeholder="G5.FR.1" />
-                    </label>
-                    <label>
-                      Grade
-                      <input name="grade" value={currForm.grade} onChange={updateCurrField} inputMode="numeric" placeholder="5" />
-                    </label>
+
+                    {/* Subject field (for topics, chapters, skills) */}
+                    {currForm.type !== 'subject' && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Subject id</span>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomSubjectId(!useCustomSubjectId)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                          >
+                            {useCustomSubjectId ? 'Use Select' : 'Enter Custom'}
+                          </button>
+                        </div>
+                        {useCustomSubjectId ? (
+                          <input name="subjectId" value={currForm.subjectId} onChange={updateCurrField} placeholder="math" />
+                        ) : (
+                          <select name="subjectId" value={currForm.subjectId} onChange={updateCurrField}>
+                            <option value="">-- Select Subject --</option>
+                            {availableSubjects.map(sub => (
+                              <option key={sub.id} value={sub.id}>{sub.title} ({sub.id})</option>
+                            ))}
+                          </select>
+                        )}
+                      </label>
+                    )}
+
+                    {/* Topic field (for chapters, skills) */}
+                    {(currForm.type === 'chapter' || currForm.type === 'skill') && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Topic id</span>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomTopicId(!useCustomTopicId)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                          >
+                            {useCustomTopicId ? 'Use Select' : 'Enter Custom'}
+                          </button>
+                        </div>
+                        {useCustomTopicId ? (
+                          <input name="topicId" value={currForm.topicId} onChange={updateCurrField} placeholder="fractions" />
+                        ) : (
+                          <select name="topicId" value={currForm.topicId} onChange={updateCurrField}>
+                            <option value="">-- Select Topic --</option>
+                            {availableTopics.map(top => (
+                              <option key={top.id} value={top.id}>{top.title || top.id} ({top.id})</option>
+                            ))}
+                          </select>
+                        )}
+                      </label>
+                    )}
+
+                    {/* Chapter field (only for skills) */}
+                    {currForm.type === 'skill' && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Chapter id</span>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomChapterId(!useCustomChapterId)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                          >
+                            {useCustomChapterId ? 'Use Select' : 'Enter Custom'}
+                          </button>
+                        </div>
+                        {useCustomChapterId ? (
+                          <input name="chapterId" value={currForm.chapterId} onChange={updateCurrField} placeholder="fraction-operations" />
+                        ) : (
+                          <select name="chapterId" value={currForm.chapterId} onChange={updateCurrField}>
+                            <option value="">-- Select Chapter --</option>
+                            {availableChapters.map(ch => (
+                              <option key={ch.id} value={ch.id}>{ch.title || ch.id} ({ch.id})</option>
+                            ))}
+                          </select>
+                        )}
+                      </label>
+                    )}
+
+                    {/* Parent field (for topics, chapters, skills) */}
+                    {currForm.type !== 'subject' && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Parent id</span>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomParentId(!useCustomParentId)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                          >
+                            {useCustomParentId ? 'Use Select' : 'Enter Custom'}
+                          </button>
+                        </div>
+                        {useCustomParentId ? (
+                          <input name="parentId" value={currForm.parentId} onChange={updateCurrField} placeholder="math" />
+                        ) : (
+                          <select name="parentId" value={currForm.parentId} onChange={updateCurrField}>
+                            <option value="">-- Select Parent --</option>
+                            {parentOptions.map(p => (
+                              <option key={p.id} value={p.id}>{p.title || p.id} ({p.id})</option>
+                            ))}
+                          </select>
+                        )}
+                      </label>
+                    )}
+
+                    {/* Skill id field (only for skills) */}
+                    {currForm.type === 'skill' && (
+                      <label>
+                        Skill id
+                        <input name="skillId" value={currForm.skillId} onChange={updateCurrField} placeholder="fractions-g5-add-like-fractions" />
+                      </label>
+                    )}
+
+                    {/* Code field (only for skills) */}
+                    {currForm.type === 'skill' && (
+                      <label>
+                        Code
+                        <input name="code" value={currForm.code} onChange={updateCurrField} placeholder="G5.FR.1" />
+                      </label>
+                    )}
+
+                    {/* Grade field (for chapters and skills) */}
+                    {(currForm.type === 'chapter' || currForm.type === 'skill') && (
+                      <label>
+                        Grade
+                        <input name="grade" value={currForm.grade} onChange={updateCurrField} inputMode="numeric" placeholder="5" />
+                      </label>
+                    )}
+
                     <label>
                       Order
                       <input name="order" value={currForm.order} onChange={updateCurrField} inputMode="numeric" placeholder="10" />
                     </label>
-                    <label>
-                      Template id
-                      <input name="templateId" value={currForm.templateId} onChange={updateCurrField} placeholder="fractions.add.like" />
-                    </label>
-                    <label>
-                      Engine
-                      <input name="engine" value={currForm.engine} onChange={updateCurrField} placeholder="fractions" />
-                    </label>
-                    <label>
-                      Question type
-                      <input name="questionType" value={currForm.questionType} onChange={updateCurrField} placeholder="fillInTheBlank" />
-                    </label>
+
+                    {/* Template properties (only for skills) */}
+                    {currForm.type === 'skill' && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Template id</span>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomTemplateId(!useCustomTemplateId)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                          >
+                            {useCustomTemplateId ? 'Use Select' : 'Enter Custom'}
+                          </button>
+                        </div>
+                        {useCustomTemplateId ? (
+                          <input name="templateId" value={currForm.templateId} onChange={updateCurrField} placeholder="fractions.add.like" />
+                        ) : (
+                          <select name="templateId" value={currForm.templateId} onChange={handleTemplateSelectChange}>
+                            <option value="">-- Select Template --</option>
+                            {groupedOptions.map(group => (
+                              <optgroup key={group.label} label={group.label}>
+                                {group.templates.map(tpl => (
+                                  <option key={tpl.id} value={tpl.id}>
+                                    {tpl.title} ({tpl.id})
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                        )}
+                      </label>
+                    )}
+                    {currForm.type === 'skill' && (
+                      <label>
+                        Engine
+                        <input name="engine" value={currForm.engine} onChange={updateCurrField} placeholder="fractions" />
+                      </label>
+                    )}
+                    {currForm.type === 'skill' && (
+                      <label>
+                        Question type
+                        <input name="questionType" value={currForm.questionType} onChange={updateCurrField} placeholder="fillInTheBlank" />
+                      </label>
+                    )}
+
                     <label>
                       Status
                       <select name="status" value={currForm.status} onChange={updateCurrField}>
@@ -7130,36 +7483,40 @@ Explanation: 5 plus 7 is equal to 12.`}
                     />
                   </label>
 
-                  <div className={styles.currFormGrid}>
-                    <label>
-                      Prerequisites
-                      <input
-                        name="prerequisites"
-                        value={currForm.prerequisites}
-                        onChange={updateCurrField}
-                        placeholder="equal_parts, fraction_visual_models"
-                      />
-                    </label>
-                    <label>
-                      Remediation
-                      <input
-                        name="remediation"
-                        value={currForm.remediation}
-                        onChange={updateCurrField}
-                        placeholder="equal_parts"
-                      />
-                    </label>
-                  </div>
+                  {currForm.type === 'skill' && (
+                    <>
+                      <div className={styles.currFormGrid}>
+                        <label>
+                          Prerequisites
+                          <input
+                            name="prerequisites"
+                            value={currForm.prerequisites}
+                            onChange={updateCurrField}
+                            placeholder="equal_parts, fraction_visual_models"
+                          />
+                        </label>
+                        <label>
+                          Remediation
+                          <input
+                            name="remediation"
+                            value={currForm.remediation}
+                            onChange={updateCurrField}
+                            placeholder="equal_parts"
+                          />
+                        </label>
+                      </div>
 
-                  <label>
-                    Tags
-                    <input name="tags" value={currForm.tags} onChange={updateCurrField} placeholder="visual, grade-5, fractions" />
-                  </label>
+                      <label>
+                        Tags
+                        <input name="tags" value={currForm.tags} onChange={updateCurrField} placeholder="visual, grade-5, fractions" />
+                      </label>
 
-                  <label>
-                    Metadata JSON
-                    <textarea name="metadata" value={currForm.metadata} onChange={updateCurrField} rows={8} spellCheck={false} />
-                  </label>
+                      <label>
+                        Metadata JSON
+                        <textarea name="metadata" value={currForm.metadata} onChange={updateCurrField} rows={8} spellCheck={false} />
+                      </label>
+                    </>
+                  )}
 
                   <div className={styles.currActions}>
                     <button type="submit" className={styles.currPrimaryButton} disabled={currSaving}>

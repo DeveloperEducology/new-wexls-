@@ -51,6 +51,43 @@ function resolveSkill(searchParams) {
     || 'addition-g1-e3-model-match-to-10';
 }
 
+const PRACTICE_CACHE_TTL_MS = 5 * 60 * 1000;
+const PRACTICE_CACHE_MAX_ENTRIES = 400;
+const practiceQuestionCache = new Map();
+
+function makePracticeCacheKey(searchParams, fallbackSeed) {
+  const entries = Array.from(searchParams.entries());
+  if (!searchParams.has('seed')) {
+    entries.push(['seed', fallbackSeed]);
+  }
+  return entries
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('&');
+}
+
+function readPracticeCache(cacheKey) {
+  const entry = practiceQuestionCache.get(cacheKey);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > PRACTICE_CACHE_TTL_MS) {
+    practiceQuestionCache.delete(cacheKey);
+    return null;
+  }
+  return entry.payload;
+}
+
+function writePracticeCache(cacheKey, payload) {
+  if (!payload?.success || !payload?.question) return;
+  practiceQuestionCache.set(cacheKey, {
+    createdAt: Date.now(),
+    payload,
+  });
+  if (practiceQuestionCache.size > PRACTICE_CACHE_MAX_ENTRIES) {
+    const oldestKey = practiceQuestionCache.keys().next().value;
+    practiceQuestionCache.delete(oldestKey);
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const subject = searchParams.get('subject') || 'math';
@@ -59,6 +96,27 @@ export async function GET(request) {
   const seed = searchParams.get('seed') || Date.now().toString();
   const source = searchParams.get('source');
   const difficulty = searchParams.get('difficulty') || 'adaptive';
+  const cacheKey = makePracticeCacheKey(searchParams, seed);
+  const cachedPayload = readPracticeCache(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        'Cache-Control': 'private, max-age=0',
+        'X-Practice-Cache': 'HIT',
+      },
+    });
+  }
+  const respond = (payload, init = {}) => {
+    writePracticeCache(cacheKey, payload);
+    return NextResponse.json(payload, {
+      ...init,
+      headers: {
+        'Cache-Control': 'private, max-age=0',
+        'X-Practice-Cache': 'MISS',
+        ...(init.headers || {}),
+      },
+    });
+  };
 
   // Look up the skill node in the DB if available to resolve centralized templates
   let skillNode = null;
@@ -81,6 +139,11 @@ export async function GET(request) {
   const resolvedTemplateId = skillNode?.templateId || skillNode?.metadata?.templateId || skill;
   const resolvedTopic = skillNode?.topicId || topic;
   const targetTopic = skillNode?.engine || resolvedTopic;
+  let resolvedSkillId = skillNode?.skillId || skill;
+
+  if (resolvedSkillId && resolvedSkillId.endsWith('-legacy')) {
+    resolvedSkillId = resolvedSkillId.slice(0, -7);
+  }
 
   const topicContract = findTopicContract(subject, targetTopic);
 
@@ -92,7 +155,12 @@ export async function GET(request) {
     5
   );
 
-  const withCompetency = (payload, ctx) => normalizeWithCompetency(payload, { ...ctx, streakThreshold });
+  const withCompetency = (payload, ctx) => normalizeWithCompetency(payload, {
+    ...ctx,
+    topic: resolvedTopic,
+    skill: resolvedSkillId,
+    streakThreshold
+  });
 
   // Check stored/DB questions first to support dynamic curriculum/topics
   try {
@@ -114,15 +182,15 @@ export async function GET(request) {
     if (!skipDbForGenerator) {
       const storedPayload = await resolveStoredPracticePayload({
         subject,
-        topic,
-        skill,
+        topic: resolvedTopic,
+        skill: resolvedSkillId,
         difficulty,
         seed,
         source,
       });
 
       if (storedPayload) {
-        return NextResponse.json(withCompetency(storedPayload, { subject, topic, skill }));
+        return respond(withCompetency(storedPayload, { subject, topic, skill }));
       }
     }
   } catch (error) {
@@ -145,7 +213,11 @@ export async function GET(request) {
   const isSocialTopic = subject === 'social' && targetTopic === 'gk';
 
   const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system'].includes(targetTopic);
-  const isEnglishTopic = subject === 'english' && ['grammar', 'lkg'].includes(targetTopic);
+  const isEnglishTopic = subject === 'english' && (
+    ['grammar', 'lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 'phonics_vowels', 'phonics_images'].includes(targetTopic) ||
+    resolvedTopic === 'lkg' ||
+    topic === 'english-lkg'
+  );
 
   if (!topicContract && !isMathTopic && !isSocialTopic && !isScienceTopic && !isEnglishTopic) {
     if (isDbTopicActive) {
@@ -185,7 +257,7 @@ export async function GET(request) {
         seed,
       });
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -199,7 +271,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'gk', subject: 'social' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -216,7 +288,7 @@ export async function GET(request) {
         { skill: resolvedTemplateId, seed },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -230,7 +302,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'testing' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -244,7 +316,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'standard-object-measurement' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -258,7 +330,7 @@ export async function GET(request) {
         { skill: resolvedTemplateId, seed },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -272,7 +344,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'place-values' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -284,7 +356,7 @@ export async function GET(request) {
       const question = generateSubtractionTopicQuestion(config);
       const template = createSubtractionTopicTemplate(resolvedTemplateId);
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -302,7 +374,7 @@ export async function GET(request) {
       const question = generateDivisionTopicQuestion(config);
       const template = createDivisionTopicTemplate(resolvedTemplateId);
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -327,7 +399,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: generator.template.engine, subject }
       );
       
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -347,7 +419,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: generator.template.engine, subject }
       );
       
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -355,22 +427,23 @@ export async function GET(request) {
       }, { subject, topic, skill }));
     }
 
-    if (subject === 'english' && ['grammar', 'lkg'].includes(targetTopic)) {
-      const generator = targetTopic === 'lkg'
-        ? (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(skill, config)
-        : (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(skill, config);
+    if (subject === 'english' && (['grammar', 'lkg'].includes(targetTopic) || resolvedTopic === 'lkg' || topic === 'english-lkg')) {
+      const isLkg = targetTopic === 'lkg' || resolvedTopic === 'lkg' || topic === 'english-lkg';
+      const generator = isLkg
+        ? (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(resolvedSkillId, config)
+        : (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(resolvedSkillId, config);
 
       if (!generator) {
-        throw new Error(`Could not resolve generator for ${skill}`);
+        throw new Error(`Could not resolve generator for ${resolvedSkillId}`);
       }
       
       const questionData = generator.generate({ ...config.variables, difficulty: config.difficulty });
       const question = normalizeGenericTopicQuestion(
         questionData,
-        { topic: targetTopic, skill, seed, engine: generator.template.engine, subject }
+        { topic: isLkg ? 'lkg' : targetTopic, skill: resolvedSkillId, seed, engine: generator.template.engine, subject }
       );
       
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -385,7 +458,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'lkg' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -404,7 +477,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'shapes' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -424,7 +497,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'measurement' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -443,7 +516,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'story-math' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -458,7 +531,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'interactive-tools' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -473,7 +546,7 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'cube-tools' },
       );
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -488,7 +561,7 @@ export async function GET(request) {
       );
 
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -509,7 +582,7 @@ export async function GET(request) {
 
       const template = createMultiplicationTemplate(resolvedTemplateId);
 
-      return NextResponse.json(withCompetency({
+      return respond(withCompetency({
         success: true,
         question,
         seed,
@@ -525,7 +598,7 @@ export async function GET(request) {
     const question = generateAdditionTopicQuestion(config);
     const template = createAdditionTopicTemplate(resolvedTemplateId);
 
-    return NextResponse.json(withCompetency({
+    return respond(withCompetency({
       success: true,
       question,
       seed,
@@ -668,6 +741,8 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     categories,
     items,
     targets: Array.isArray(question.targets) ? question.targets : undefined,
+    grid: question.grid,
+    columns: question.columns,
     canvas: question.canvas,
     connectors: Array.isArray(question.connectors) ? question.connectors : undefined,
     behavior: question.behavior,
@@ -679,6 +754,7 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     hideItemLabels: question.hideItemLabels,
     pairs: Array.isArray(question.pairs) ? question.pairs : undefined,
     poolPosition: question.poolPosition,
+    isCopiable: question.isCopiable,
     answer: normalizedAnswer,
     correctAnswerIndex: normalizeIndex(question.correctAnswerIndex) ?? normalizeIndex(question.correct_answer_index),
     correctAnswerIndices: question.correctAnswerIndices,

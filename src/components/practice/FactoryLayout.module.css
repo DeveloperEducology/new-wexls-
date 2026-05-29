@@ -1,6 +1,6 @@
 .pageContainer {
     min-height: 100vh;
-    background: linear-gradient(180deg, #7ad9ff 0%, #a0f6cf 100%);
+    background: #f8fafc;
     padding: 24px;
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
     color: #1e293b;
@@ -757,32 +757,36 @@
 
 /* Pre-K Option Buttons (Chunky 3D sticker-style cards) */
 .preKOptionButton {
-    min-height: 150px;
-    padding: 10px 14px;
-    border-radius: 22px !important;
+    aspect-ratio: 1.1 / 1;
+    width: 100%;
+    padding: 12px;
+    border-radius: 24px !important;
     border: 4px solid #ffffff !important;
     background: #ffffff !important;
     color: #1e293b;
     cursor: pointer;
-    box-shadow: 0 8px 0 #cbd5e1, 0 10px 16px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 6px 0 #cbd5e1, 0 8px 16px rgba(0, 0, 0, 0.04) !important;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
     font-weight: 900;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .preKOptionButton:hover:not(:disabled) {
-    border-color: #38bdf8 !important;
-    transform: scale(1.05);
-    box-shadow: 0 10px 0 #0ea5e9, 0 12px 20px rgba(14, 165, 233, 0.15) !important;
+    transform: translateY(-4px) scale(1.03);
+}
+
+.preKOptionButton:active:not(:disabled) {
+    transform: translateY(2px) scale(0.98);
 }
 
 .preKOptionButtonActive {
     border-color: #22c55e !important;
     background: #ffffff !important;
-    box-shadow: 0 8px 0 #15803d, 0 12px 24px rgba(34, 197, 94, 0.2) !important;
+    box-shadow: 0 6px 0 #15803d, 0 10px 20px rgba(34, 197, 94, 0.2) !important;
 }
 
 
@@ -983,7 +987,7 @@
 
 .preKPageContainer {
     min-height: 100vh;
-    background: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.65)), url('/images/prek_landscape.png') #e0f2fe;
+    background: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/site/prek_landscape.webp') #e0f2fe;
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;
@@ -1050,13 +1054,17 @@
 
 .preKQuestionCard {
     width: 100%;
-    background: #ffffff;
-    border-radius: 36px;
-    border: 6px solid #ffffff;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08), 0 0 0 10px rgba(255, 255, 255, 0.45);
-    padding: 36px;
+    background: linear-gradient(185deg, #ffffff 0%, #fdfcff 100%);
+    border-radius: 32px;
+    border: 5px solid #ffffff;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05), 0 0 0 6px rgba(255, 255, 255, 0.45);
+    padding: 24px 28px;
     position: relative;
     overflow: hidden;
+}
+
+.preKQuestionCard h2 strong {
+    color: #a855f7 !important;
 }
 
 .preKProgressContainer {
@@ -1313,8 +1321,8 @@
 .preKMascotSection {
     display: flex;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 24px;
+    gap: 16px;
+    margin-bottom: 16px;
     width: 100%;
     position: relative;
 }
@@ -1323,20 +1331,19 @@
     background: linear-gradient(135deg, #fef08a 0%, #fef3c7 100%);
     border: 4px solid #ffffff;
     border-radius: 50%;
-    width: 90px;
-    height: 90px;
+    width: 80px;
+    height: 80px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 8px 16px rgba(251, 191, 36, 0.25), 0 0 0 6px rgba(255, 255, 255, 0.45);
+    box-shadow: 0 6px 12px rgba(251, 191, 36, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.45);
     flex-shrink: 0;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: preKMascotBounce 4s ease-in-out infinite;
     position: relative;
     padding: 0;
-    overflow: visible;
 }
 
 .preKMascotAvatar:hover {
@@ -1352,41 +1359,41 @@
     bottom: -6px;
     background: #ea580c;
     color: #ffffff;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 900;
-    padding: 2px 8px;
+    padding: 1px 6px;
     border-radius: 999px;
     text-transform: uppercase;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     white-space: nowrap;
     border: 1.5px solid #ffffff;
 }
 
 @keyframes preKMascotBounce {
     0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-5px) scale(1.02); }
+    50% { transform: translateY(-4px) scale(1.02); }
 }
 
 .preKMascotBubble {
     position: relative;
     background: #fdf4ff; /* soft pastel lavender background */
     border: 4px solid #ffffff;
-    border-radius: 26px;
-    padding: 16px 20px 16px 58px;
-    box-shadow: 0 8px 0 #f3e8ff, 0 12px 24px rgba(243, 232, 255, 0.4);
+    border-radius: 22px;
+    padding: 12px 16px 12px 48px;
+    box-shadow: 0 6px 0 #f3e8ff, 0 8px 16px rgba(243, 232, 255, 0.3);
     flex-grow: 1;
     display: flex;
     align-items: center;
-    min-height: 80px;
+    min-height: 64px;
 }
 
 .preKMascotBubbleTail {
     position: absolute;
-    left: -14px;
+    left: -11px;
     top: 50%;
     transform: translateY(-50%) rotate(45deg);
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     background: #fdf4ff;
     border-left: 4px solid #ffffff;
     border-bottom: 4px solid #ffffff;
@@ -1395,21 +1402,21 @@
 
 .preKSpeakerBtnLarge {
     position: absolute;
-    left: 14px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: none;
     background: #ffffff;
     color: #d946ef;
-    font-size: 18px;
+    font-size: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 8px rgba(217, 70, 239, 0.15);
+    box-shadow: 0 3px 6px rgba(217, 70, 239, 0.15);
     transition: transform 0.15s ease;
     padding: 0;
 }
@@ -1607,6 +1614,475 @@
     70% { transform: scale(1.15); opacity: 0; }
     100% { transform: scale(1.15); opacity: 0; }
 }
+
+/* Redesigned Pre-K header, avatar, and journey progress trail */
+.preKHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 12px;
+    z-index: 10;
+    position: relative;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+}
+
+.preKAvatarContainer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border: 4px solid #ffffff;
+    background: linear-gradient(135deg, #fef08a 0%, #fef3c7 100%);
+    box-shadow: 0 6px 16px rgba(251, 191, 36, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.preKAvatarContainer:hover {
+    transform: scale(1.08) rotate(-4deg);
+}
+
+.preKAvatarStarBadge {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 8px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border: 1.5px solid #ffffff;
+    border-radius: 999px;
+    box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 900;
+    z-index: 15;
+    font-family: var(--font-outfit), sans-serif;
+    white-space: nowrap;
+}
+
+.preKJourneyContainer {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    border: 3px solid #ffffff;
+    border-radius: 24px;
+    padding: 8px 16px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    flex-grow: 1;
+    max-width: 380px;
+    margin: 0 auto;
+    position: relative;
+    min-height: 64px;
+    justify-content: center;
+}
+
+.preKJourneyTitle {
+    font-size: 11px;
+    font-weight: 900;
+    color: #1e3a8a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-outfit), sans-serif;
+}
+
+.preKLevelShield {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    border: 3px solid #ffffff;
+    border-radius: 14px;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(124, 58, 237, 0.2);
+    color: #ffffff;
+    font-family: var(--font-outfit), sans-serif;
+    z-index: 15;
+}
+
+.preKLevelShieldLabel {
+    font-size: 7px;
+    font-weight: 900;
+    opacity: 0.85;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+}
+
+.preKLevelShieldValue {
+    font-size: 20px;
+    font-weight: 950;
+    line-height: 1;
+}
+
+.preKRightStatsContainer {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.preKStatCard {
+    background: #ffffff;
+    border: 3.5px solid #ffffff;
+    border-radius: 18px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
+}
+
+.preKStatCardIcon {
+    font-size: 20px;
+}
+
+.preKStatCardText {
+    display: flex;
+    flex-direction: column;
+}
+
+.preKStatCardValue {
+    font-size: 15px;
+    font-weight: 950;
+    color: #0f172a;
+    line-height: 1;
+    font-family: var(--font-outfit), sans-serif;
+}
+
+.preKStatCardLabel {
+    font-size: 8px;
+    font-weight: 900;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-outfit), sans-serif;
+}
+
+/* 4 colorful pastel themes for option cards */
+.preKOptionYellow {
+    border-color: #fef08a !important;
+    background: #ffffff !important;
+    color: #a16207 !important;
+    box-shadow: 0 6px 0 #fde047, 0 8px 16px rgba(253, 224, 71, 0.15) !important;
+}
+.preKOptionYellowActive {
+    border-color: #eab308 !important;
+    background: #fef9c3 !important;
+    color: #854d0e !important;
+    box-shadow: 0 6px 0 #ca8a04, 0 10px 20px rgba(234, 179, 8, 0.25) !important;
+    animation: preKSelectedBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.preKOptionPink {
+    border-color: #fbcfe8 !important;
+    background: #ffffff !important;
+    color: #be185d !important;
+    box-shadow: 0 6px 0 #f9a8d4, 0 8px 16px rgba(244, 63, 94, 0.15) !important;
+}
+.preKOptionPinkActive {
+    border-color: #ec4899 !important;
+    background: #fce7f3 !important;
+    color: #be185d !important;
+    box-shadow: 0 6px 0 #db2777, 0 10px 20px rgba(236, 72, 153, 0.25) !important;
+    animation: preKSelectedBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.preKOptionBlue {
+    border-color: #bae6fd !important;
+    background: #ffffff !important;
+    color: #0369a1 !important;
+    box-shadow: 0 6px 0 #7dd3fc, 0 8px 16px rgba(14, 165, 233, 0.15) !important;
+}
+.preKOptionBlueActive {
+    border-color: #0ea5e9 !important;
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    box-shadow: 0 6px 0 #0284c7, 0 10px 20px rgba(14, 165, 233, 0.25) !important;
+    animation: preKSelectedBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.preKOptionGreen {
+    border-color: #bbf7d0 !important;
+    background: #ffffff !important;
+    color: #15803d !important;
+    box-shadow: 0 6px 0 #86efac, 0 8px 16px rgba(34, 197, 94, 0.15) !important;
+}
+.preKOptionGreenActive {
+    border-color: #22c55e !important;
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    box-shadow: 0 6px 0 #15803d, 0 10px 20px rgba(34, 197, 94, 0.25) !important;
+    animation: preKSelectedBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes preKSelectedBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1.02); }
+}
+
+/* Reward banner styled as a cute pill */
+.preKRewardBanner {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 3px solid #ffffff;
+    border-radius: 999px;
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 0 6px 16px rgba(251, 191, 36, 0.12);
+    margin: 16px auto 0;
+    width: fit-content;
+    max-width: 90%;
+    color: #b45309;
+    font-size: 14px;
+    font-weight: 900;
+    font-family: var(--font-outfit), sans-serif;
+    border-style: solid;
+}
+
+.preKRewardBannerIcon {
+    font-size: 18px;
+    animation: rewardWiggle 2s ease-in-out infinite;
+}
+
+@keyframes rewardWiggle {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.2) rotate(15deg); }
+}
+
+/* Floating Navigation Arrows */
+.preKNavArrowLeft {
+    position: fixed;
+    bottom: 32px;
+    left: 32px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 4px solid #ffffff;
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35), 0 0 0 4px rgba(255, 255, 255, 0.4);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+    z-index: 100;
+    font-family: var(--font-outfit), sans-serif;
+    padding: 0;
+    outline: none;
+}
+
+.preKNavArrowLeft:hover {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 12px 28px rgba(124, 58, 237, 0.45), 0 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.preKNavArrowLeft:active {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+.preKNavArrowRight {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 4px solid #ffffff;
+    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35), 0 0 0 4px rgba(255, 255, 255, 0.4);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+    z-index: 100;
+    font-family: var(--font-outfit), sans-serif;
+    padding: 0;
+    outline: none;
+}
+
+.preKNavArrowRight:disabled {
+    background: #cbd5e1 !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.preKNavArrowRight:not(:disabled):hover {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 12px 28px rgba(34, 197, 94, 0.45), 0 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.preKNavArrowRight:not(:disabled):active {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+/* Responsiveness overrides for Pre-K */
+@media (max-width: 1024px) {
+    .preKHeader {
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+    }
+}
+
+@media (max-width: 760px) {
+    .preKHeader {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .preKJourneyContainer {
+        max-width: 100%;
+        padding: 6px 12px;
+        min-height: 56px;
+    }
+    
+    .preKRightStatsContainer {
+        width: 100%;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .preKStatCard {
+        padding: 4px 10px;
+        border-radius: 14px;
+    }
+    
+    .preKStatCardIcon {
+        font-size: 18px;
+    }
+    
+    .preKStatCardValue {
+        font-size: 14px;
+    }
+    
+    .preKNavArrowLeft {
+        bottom: 16px;
+        left: 16px;
+        width: 52px;
+        height: 52px;
+        font-size: 22px;
+        border-width: 3px;
+    }
+    
+    .preKNavArrowRight {
+        bottom: 16px;
+        right: 16px;
+        width: 52px;
+        height: 52px;
+        font-size: 22px;
+        border-width: 3px;
+    }
+}
+
+.preKOptionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+    gap: 16px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+    .preKOptionsGrid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+}
+
+/* Immersive background decoration backdrop */
+.preKLandscapeBackdrop {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 180px;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.preKLandscapeHills {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.preKSparkle {
+    position: absolute;
+    font-size: 20px;
+    opacity: 0.35;
+    pointer-events: none;
+    animation: preKSparklePulse 3s ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+    z-index: 1;
+}
+
+@keyframes preKSparklePulse {
+    0%, 100% { transform: scale(0.8) rotate(0deg); opacity: 0.15; }
+    50% { transform: scale(1.2) rotate(180deg); opacity: 0.5; }
+}
+
+.preKCheckmarkBadge {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: #22c55e;
+    border: 3px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(34, 197, 94, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 25;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 950;
+    pointer-events: none;
+    animation: preKBadgePop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes preKBadgePop {
+    0% { transform: scale(0) rotate(-30deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
 
 
 

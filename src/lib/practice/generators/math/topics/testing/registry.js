@@ -54,5 +54,16 @@ export const testingGenerator = {
     description: 'Tests all configurations of the non_standard_object_measurement layout.',
     difficulty: 'easy',
   },
+  'catv2-grid-fill-test': {
+    title: 'Grid Fill Test',
+    description: 'Sample demo for categorizationv2 grid-fill.',
+    difficulty: 'easy',
+  },
+  'catv2.gridFill.numberOrder.demo': {
+    title: 'Grid Fill Test',
+    description: 'Sample demo for categorizationv2 grid-fill.',
+    difficulty: 'easy',
+  },
 };
+
 

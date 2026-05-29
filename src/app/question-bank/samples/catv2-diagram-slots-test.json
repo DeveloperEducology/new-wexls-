@@ -1,0 +1,111 @@
+{
+  "id": "math_testing_catv2_diagram_slots_test",
+  "subject": "math",
+  "topic": "testing",
+  "skillId": "catv2-diagram-slots-test",
+  "microSkillId": "catv2-diagram-slots-test",
+  "difficulty": "beginner",
+  "status": "active",
+  "type": "categorizationv2",
+  "renderer": "html",
+  "layoutMode": "diagram_slots",
+  "questionText": "Drag each label to the correct part of the plant.",
+  "metadata": {
+    "subject": "math",
+    "topic": "testing",
+    "skillId": "catv2-diagram-slots-test",
+    "microSkillId": "catv2-diagram-slots-test",
+    "templateId": "catv2.diagramSlots.plantParts.demo",
+    "engine": "questionBank",
+    "layoutMode": "diagram_slots"
+  },
+  "canvas": {
+    "width": 1024,
+    "height": 1024,
+    "backgroundSize": "contain",
+    "backgroundImage": "/images/questions/plant-diagram.png"
+  },
+  "targets": [
+    {
+      "id": "flower-slot",
+      "label": "Flower",
+      "accepts": ["flower"],
+      "x": 74,
+      "y": 15,
+      "width": 16,
+      "height": 7,
+      "unit": "percent"
+    },
+    {
+      "id": "leaf-slot",
+      "label": "Leaf",
+      "accepts": ["leaf"],
+      "x": 82,
+      "y": 40,
+      "width": 16,
+      "height": 7,
+      "unit": "percent"
+    },
+    {
+      "id": "stem-slot",
+      "label": "Stem",
+      "accepts": ["stem"],
+      "x": 60,
+      "y": 58,
+      "width": 16,
+      "height": 7,
+      "unit": "percent"
+    },
+    {
+      "id": "roots-slot",
+      "label": "Roots",
+      "accepts": ["roots"],
+      "x": 76,
+      "y": 82,
+      "width": 16,
+      "height": 7,
+      "unit": "percent"
+    }
+  ],
+  "items": [
+    {
+      "id": "flower",
+      "content": "Flower"
+    },
+    {
+      "id": "leaf",
+      "content": "Leaf"
+    },
+    {
+      "id": "stem",
+      "content": "Stem"
+    },
+    {
+      "id": "roots",
+      "content": "Roots"
+    }
+  ],
+  "answer": {
+    "flower": "flower-slot",
+    "leaf": "leaf-slot",
+    "stem": "stem-slot",
+    "roots": "roots-slot"
+  },
+  "correctAnswer": {
+    "flower": "flower-slot",
+    "leaf": "leaf-slot",
+    "stem": "stem-slot",
+    "roots": "roots-slot"
+  },
+  "behavior": {
+    "validateOn": "submit",
+    "dragToDrop": true,
+    "clickToDrop": true
+  },
+  "parts": [
+    {
+      "type": "text",
+      "content": "Drag each label to the correct part of the plant."
+    }
+  ]
+}

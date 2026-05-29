@@ -125,6 +125,17 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('TTS API exception:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Distinguish quota exhaustion (Gemini 429 surfaced as Error) from real crashes
+    const msg = error.message || '';
+    if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
+      return NextResponse.json(
+        { error: 'TTS quota exhausted. Please try again later.', retryable: true },
+        {
+          status: 503,
+          headers: { 'Retry-After': '3600' },
+        }
+      );
+    }
+    return NextResponse.json({ error: msg || 'TTS generation failed' }, { status: 500 });
   }
 }

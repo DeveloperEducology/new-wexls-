@@ -1,10 +1,29 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import MCQRenderer from './MCQRenderer';
 import FillInTheBlankRenderer from './FillInTheBlankRenderer';
-import CategorizationRenderer from './CategorizationRenderer';
-import InteractiveAppletRenderer from './applets/InteractiveAppletRenderer';
-import InteractiveToolRenderer from './interactive-tools/InteractiveToolRenderer';
+
+const LoadingRenderer = () => (
+  <div style={{ padding: 24, color: '#64748b', fontWeight: 800 }}>
+    Loading activity...
+  </div>
+);
+
+const InteractiveAppletRenderer = dynamic(
+  () => import('./applets/InteractiveAppletRenderer'),
+  { ssr: false, loading: LoadingRenderer },
+);
+
+const InteractiveToolRenderer = dynamic(
+  () => import('./interactive-tools/InteractiveToolRenderer'),
+  { ssr: false, loading: LoadingRenderer },
+);
+
+const CategorizationRenderer = dynamic(
+  () => import('./CategorizationRenderer'),
+  { ssr: false, loading: LoadingRenderer },
+);
 
 const RENDERERS = {
   mcq: MCQRenderer,

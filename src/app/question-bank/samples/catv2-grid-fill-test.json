@@ -1,0 +1,106 @@
+{
+  "id": "math_testing_catv2_grid_fill_test",
+  "subject": "math",
+  "topic": "testing",
+  "skillId": "catv2-grid-fill-test",
+  "microSkillId": "catv2-grid-fill-test",
+  "difficulty": "beginner",
+  "status": "active",
+  "type": "categorizationv2",
+  "renderer": "html",
+  "layoutMode": "grid_fill",
+  "questionText": "Place the numbers in order from 1 to 4.",
+  "metadata": {
+    "subject": "math",
+    "topic": "testing",
+    "skillId": "catv2-grid-fill-test",
+    "microSkillId": "catv2-grid-fill-test",
+    "templateId": "catv2.gridFill.numberOrder.demo",
+    "engine": "questionBank",
+    "layoutMode": "grid_fill"
+  },
+  "grid": {
+    "columns": 1,
+    "cells": [
+      {
+        "id": "cell-1",
+        "label": "1st"
+      },
+      {
+        "id": "cell-2",
+        "label": "2nd"
+      },
+      {
+        "id": "cell-3",
+        "label": "3rd"
+      },
+      {
+        "id": "cell-4",
+        "label": "4th"
+      }
+    ]
+  },
+  "targets": [
+    {
+      "id": "cell-1",
+      "label": "1st",
+      "accepts": ["num-1"]
+    },
+    {
+      "id": "cell-2",
+      "label": "2nd",
+      "accepts": ["num-2"]
+    },
+    {
+      "id": "cell-3",
+      "label": "3rd",
+      "accepts": ["num-3"]
+    },
+    {
+      "id": "cell-4",
+      "label": "4th",
+      "accepts": ["num-4"]
+    }
+  ],
+  "items": [
+    {
+      "id": "num-3",
+      "content": "3"
+    },
+    {
+      "id": "num-1",
+      "content": "1"
+    },
+    {
+      "id": "num-4",
+      "content": "4"
+    },
+    {
+      "id": "num-2",
+      "content": "2"
+    }
+  ],
+  "answer": {
+    "num-1": "cell-1",
+    "num-2": "cell-2",
+    "num-3": "cell-3",
+    "num-4": "cell-4"
+  },
+  "correctAnswer": {
+    "num-1": "cell-1",
+    "num-2": "cell-2",
+    "num-3": "cell-3",
+    "num-4": "cell-4"
+  },
+  "behavior": {
+    "validateOn": "submit",
+    "dragToDrop": true,
+    "clickToDrop": true
+  },
+  "parts": [
+    {
+      "type": "text",
+      "content": "Place the numbers in order from 1 to 4."
+    }
+  ]
+}

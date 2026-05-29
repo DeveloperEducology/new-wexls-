@@ -24,7 +24,9 @@ export default function LabLayout({
     practiceLevel = 1,
     levelStreak = 0,
     isSubmitting = false,
-    isPreK = false
+    isPreK = false,
+    isCorrect = false,
+    onNext = null
 }) {
     const [isMobile, setIsMobile] = useState(false);
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
@@ -73,31 +75,42 @@ export default function LabLayout({
                     <div className={styles.preKCloud1}>☁️</div>
                     <div className={styles.preKCloud2}>☁️</div>
                     <div className={styles.preKSun}>☀️</div>
+                    <div className={styles.preKLandscapeBackdrop}>
+                        <svg className={styles.preKLandscapeHills} viewBox="0 0 1440 180" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                            <path d="M0 80C120 40 280 20 480 50C680 80 880 120 1080 90C1280 60 1380 40 1440 30V180H0V80Z" fill="#86efac" opacity="0.6"/>
+                            <path d="M0 110C160 80 320 60 520 95C720 130 920 100 1120 70C1320 40 1400 60 1440 70V180H0V110Z" fill="#4ade80"/>
+                        </svg>
+                        <div className={styles.preKSparkle} style={{ '--delay': '0.5s', top: '20px', left: '15%' }}>✨</div>
+                        <div className={styles.preKSparkle} style={{ '--delay': '1.2s', top: '40px', left: '45%' }}>⭐</div>
+                        <div className={styles.preKSparkle} style={{ '--delay': '2s', top: '15px', left: '80%' }}>✨</div>
+                    </div>
                 </>
             )}
 
             <div className={styles.pageWrapper}>
                 
                 {/* Premium Header */}
-                <header className={styles.header} style={isPreK ? { marginBottom: isMobile ? '12px' : '20px' } : undefined}>
-                    <div className={styles.headerLeft}>
-                        <div>
-                            <h1 className={styles.title}>{title}</h1>
-                            <p className={styles.subtitle} style={isPreK ? { color: '#0284c7' } : undefined}>{grade}</p>
-                        </div>
-                    </div>
-
-                    {isPreK && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'flex-start' : 'flex-end', gap: '8px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: '950', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-outfit), sans-serif' }}>
-                                Progress Trail (Level {practiceLevel})
+                {isPreK ? (
+                    <header className={styles.preKHeader}>
+                        {/* 1. Mascot Avatar on the left with overlapping stars badge */}
+                        <div className={styles.preKAvatarContainer} onClick={onReset} title="Restart Practice">
+                            <span style={{ fontSize: '48px', display: 'block', transform: 'scaleX(-1)' }}>
+                                {question?.metadata?.subject === 'english' || question?.subject === 'english' ? '🐻' : '🦉'}
+                            </span>
+                            <div className={styles.preKAvatarStarBadge}>
+                                ⭐ <span>{smartScore}</span>
                             </div>
+                        </div>
+
+                        {/* 2. Your Learning Journey progress track */}
+                        <div className={styles.preKJourneyContainer}>
+                            <div className={styles.preKJourneyTitle}>Your Learning Journey</div>
                             <div className={styles.preKProgressTrail}>
                                 <div className={styles.preKProgressTrack} />
                                 <div className={styles.preKProgressDottedLine} />
-                                {Array.from({ length: 5 }).map((_, index) => {
+                                {Array.from({ length: 4 }).map((_, index) => {
                                     const isFilled = index < levelStreak;
-                                    const leftPct = (index / 4) * 80 + 10;
+                                    const leftPct = (index / 3) * 75 + 10;
                                     return (
                                         <div
                                             key={index}
@@ -114,21 +127,52 @@ export default function LabLayout({
                                     );
                                 })}
                                 <div className={styles.preKProgressGoalNode}>
-                                    🏆
+                                    🎁
                                 </div>
                                 <div 
                                     className={styles.preKProgressRocket}
                                     style={{
-                                        left: `${(levelStreak / 5) * 85}%`,
+                                        left: `${(levelStreak / 5) * 80}%`,
                                     }}
                                 >
                                     🚀
                                 </div>
                             </div>
+                            
+                            {/* Level Shield Badge */}
+                            <div className={styles.preKLevelShield}>
+                                <span className={styles.preKLevelShieldLabel}>Level</span>
+                                <span className={styles.preKLevelShieldValue}>{practiceLevel}</span>
+                            </div>
                         </div>
-                    )}
 
-                    {!isPreK && (
+                        {/* 3. Streak and Stars stats on the right */}
+                        <div className={styles.preKRightStatsContainer}>
+                            <div className={styles.preKStatCard}>
+                                <span className={styles.preKStatCardIcon}>🔥</span>
+                                <div className={styles.preKStatCardText}>
+                                    <span className={styles.preKStatCardValue}>{levelStreak}</span>
+                                    <span className={styles.preKStatCardLabel}>Streak</span>
+                                </div>
+                            </div>
+                            <div className={styles.preKStatCard}>
+                                <span className={styles.preKStatCardIcon}>⭐</span>
+                                <div className={styles.preKStatCardText}>
+                                    <span className={styles.preKStatCardValue}>{smartScore}</span>
+                                    <span className={styles.preKStatCardLabel}>Stars</span>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                ) : (
+                    <header className={styles.header}>
+                        <div className={styles.headerLeft}>
+                            <div>
+                                <h1 className={styles.title}>{title}</h1>
+                                <p className={styles.subtitle}>{grade}</p>
+                            </div>
+                        </div>
+
                         <div className={styles.headerControls}>
                             <div className={styles.difficultyTabs}>
                                 {['adaptive', 'easy', 'medium', 'hard'].map((level) => (
@@ -156,9 +200,7 @@ export default function LabLayout({
                                 Reset
                             </button>
                         </div>
-                    )}
 
-                    {!isPreK && (
                         <div className={styles.mobileStatusBar} aria-label="Practice progress">
                             <div className={styles.mobileStatusItem}>
                                 <span className={styles.mobileStatusLabel}>SmartScore</span>
@@ -170,8 +212,8 @@ export default function LabLayout({
                                 <span className={styles.mobileStatusSubvalue}>Level {practiceLevel}</span>
                             </div>
                         </div>
-                    )}
-                </header>
+                    </header>
+                )}
 
                 {isPreK ? (
                     <main className={styles.preKMainGrid}>
@@ -206,6 +248,14 @@ export default function LabLayout({
                                             <div className={styles.questionFocus} style={{ fontSize: '18px' }}>
                                                 {children}
                                             </div>
+
+                                            {!isAnswered && (
+                                                <div className={styles.preKRewardBanner}>
+                                                    <span className={styles.preKRewardBannerIcon}>🎁</span>
+                                                    <span>Answer correctly to earn Stars!</span>
+                                                    <span style={{ fontWeight: '950', color: '#ea580c' }}>+10 Stars ⭐</span>
+                                                </div>
+                                            )}
 
                                             {feedback && (
                                                 <div style={{ marginTop: '20px' }}>
@@ -450,6 +500,45 @@ export default function LabLayout({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {isPreK && (
+                <>
+                    {/* Left Navigation Arrow (Purple Back Arrow) */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (typeof window !== 'undefined' && window.history.length > 1) {
+                                window.history.back();
+                            } else {
+                                onReset();
+                            }
+                        }}
+                        className={styles.preKNavArrowLeft}
+                        title="Go Back"
+                        aria-label="Go Back"
+                    >
+                        ◀
+                    </button>
+
+                    {/* Right Navigation Arrow (Green Forward Arrow - Submit / Next) */}
+                    <button
+                        type="button"
+                        disabled={!isAnswered && (userAnswer === null || isSubmitting || loading)}
+                        onClick={() => {
+                            if (!isAnswered) {
+                                handleSubmit();
+                            } else if (onNext) {
+                                onNext();
+                            }
+                        }}
+                        className={styles.preKNavArrowRight}
+                        title={isAnswered ? "Next Question" : "Submit Answer"}
+                        aria-label={isAnswered ? "Next Question" : "Submit Answer"}
+                    >
+                        ▶
+                    </button>
+                </>
             )}
         </div>
     );

@@ -610,6 +610,110 @@ function buildNonStandardObjectMeasurementQuestion(skill, seed) {
   return result;
 }
 
+function buildGridFillQuestion(skill, seed) {
+  const start = seed === 'grid-fill-db-check' ? 1 : ((getSeedInt(seed) % 95) + 2);
+  const consecutiveCount = 4;
+  const isCopiable = seed.includes('copiable') || (seed !== 'grid-fill-db-check' && getSeedInt(seed) % 2 === 0);
+  
+  const originalNumbers = Array.from({ length: consecutiveCount }, (_, i) => start + i);
+  
+  const columns = 4;
+  
+  const ordinals = ['1st', '2nd', '3rd', '4th'];
+  const cells = originalNumbers.map((num, i) => ({
+    id: `cell-${i + 1}`,
+    label: ordinals[i] || `${i + 1}`
+  }));
+
+  const targets = originalNumbers.map((num, i) => ({
+    id: `cell-${i + 1}`,
+    label: ordinals[i] || `${i + 1}`,
+    accepts: [`num-${num}`]
+  }));
+
+  // Shuffled items
+  let items = originalNumbers.map((num) => ({
+    id: `num-${num}`,
+    content: String(num)
+  }));
+
+  if (seed === 'grid-fill-db-check') {
+    // Explicitly match the database-seeded question order for testing consistency
+    const orderMap = { 3: 0, 1: 1, 4: 2, 2: 3 };
+    items.sort((a, b) => {
+      const aVal = Number(a.id.split('-')[1]);
+      const bVal = Number(b.id.split('-')[1]);
+      return orderMap[aVal] - orderMap[bVal];
+    });
+  } else {
+    // Deterministic shuffle for other seeds
+    const seedInt = getSeedInt(seed);
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = (seedInt + i) % (i + 1);
+      const temp = items[i];
+      items[i] = items[j];
+      items[j] = temp;
+    }
+  }
+
+  // Answer maps item ID to target cell ID
+  const answer = {};
+  originalNumbers.forEach((num, i) => {
+    answer[`num-${num}`] = `cell-${i + 1}`;
+  });
+
+  const questionText = `Place the numbers in order from ${start} to ${start + consecutiveCount - 1}.`;
+
+  return {
+    id: `testing-${skill}`,
+    type: 'categorizationv2',
+    renderer: 'html',
+    layoutMode: 'grid_fill',
+    isSortable: true,
+    questionText,
+    isCopiable: false,
+    metadata: {
+      subject: 'math',
+      topic: 'testing',
+      skillId: skill,
+      microSkillId: skill,
+      templateId: 'catv2.gridFill.numberOrder.demo',
+      engine: 'testing',
+      layoutMode: 'grid_fill',
+      isSortable: true,
+      isCopiable: false
+    },
+    grid: {
+      columns,
+      cells,
+      isSortable: true
+    },
+    columns,
+    targets,
+    items,
+    answer,
+    correctAnswer: answer,
+    behavior: {
+      validateOn: 'submit',
+      dragToDrop: true,
+      clickToDrop: false,
+      isSortable: true,
+      isCopiable
+    },
+    parts: [
+      {
+        type: 'text',
+        content: questionText
+      }
+    ],
+    solution: {
+      sections: [
+        { type: 'text', content: questionText }
+      ]
+    }
+  };
+}
+
 const BUILDERS = {
   'testing-copy-drag-drop': buildCopyDragQuestion,
   'testing-categorization': buildCategorizationQuestion,
@@ -622,7 +726,10 @@ const BUILDERS = {
   'testing-mixed-parts': buildMixedPartsQuestion,
   'testing-doubles-plus-one-mixed': buildDoublesPlusOneMixedQuestion,
   'testing-non-standard-object-measurement': buildNonStandardObjectMeasurementQuestion,
+  'catv2-grid-fill-test': buildGridFillQuestion,
+  'catv2.gridFill.numberOrder.demo': buildGridFillQuestion,
 };
+
 
 export function generateTestingQuestion(config = {}) {
   const skill = config.logic_type || config.forcedTask || 'testing-copy-drag-drop';
@@ -650,4 +757,3 @@ export function getTestingTemplateConfig(skill) {
 }
 
 export { testingGenerator };
-

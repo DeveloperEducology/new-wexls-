@@ -2,6 +2,7 @@ import { fruits, animals, things, vehicles } from './assets.js';
 import { lkgEnglishTemplateRegistry, lkgEnglishMicroSkillRegistry } from './registry.js';
 import letterAudios from './letterAudios.json' with { type: 'json' };
 import vocabulary from './vocabulary.json' with { type: 'json' };
+import phonicsImages from './phonicsImages.json' with { type: 'json' };
 
 const { wordPool: WORD_POOL, endingFamilies: ENDING_FAMILIES, sentencesPool: SENTENCES_POOL, wordImages: WORD_IMAGES, spottingWordPool: SPOTTING_WORD_POOL } = vocabulary;
 
@@ -575,7 +576,54 @@ const CONFUSING_PAIRS = [
   ['b', 'd'], ['p', 'q'], ['M', 'W'], ['E', 'F'], ['n', 'u'], ['O', 'Q']
 ];
 
-function generateLetterRecognitionQuestion(skillId, seed, r) {
+function getRowCoordinates(numOptions, baseCoords) {
+  const base = baseCoords[0];
+  const width = base.width;
+  const pctW = base.pctW;
+  const height = base.height;
+  const pctH = base.pctH;
+  const y = base.y;
+  const pctY = base.pctY;
+
+  const gap = 40;
+  const totalWidth = numOptions * width + (numOptions - 1) * gap;
+  const startX = (800 - totalWidth) / 2;
+
+  const coords = [];
+  for (let i = 0; i < numOptions; i++) {
+    const x = startX + i * (width + gap);
+    const pctX = (x / 800) * 100;
+    coords.push({
+      pctX,
+      pctY,
+      pctW,
+      pctH,
+      x,
+      y,
+      width,
+      height
+    });
+  }
+  return coords;
+}
+
+function generateLetterRecognitionQuestion(skillId, seed, r, variables = {}, config = {}) {
+  const difficulty = variables.difficulty || config.difficulty || 'adaptive';
+  const history = config.history || { correctStreak: 0, practiceLevel: 1 };
+
+  let effectiveDifficulty = 'easy';
+  if (difficulty === 'adaptive') {
+    if (history.correctStreak >= 6 || history.practiceLevel >= 5) {
+      effectiveDifficulty = 'hard';
+    } else if (history.correctStreak >= 3 || history.practiceLevel >= 3) {
+      effectiveDifficulty = 'medium';
+    } else {
+      effectiveDifficulty = 'easy';
+    }
+  } else {
+    effectiveDifficulty = difficulty;
+  }
+
   let questionText = '';
   let explanation = '';
   let backgroundSvg = '';
@@ -672,7 +720,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     const smallLetter = LOWER_ALPHABET[letterIdx];
     
     const shuffled = shuffle(LOWER_ALPHABET, r);
-    const distractors = shuffled.filter(l => l !== smallLetter).slice(0, 3);
+    const distractorCount = effectiveDifficulty === 'easy' ? 1 : (effectiveDifficulty === 'medium' ? 2 : 3);
+    const distractors = shuffled.filter(l => l !== smallLetter).slice(0, distractorCount);
     
     optionsList = shuffle([smallLetter, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(smallLetter);
@@ -692,8 +741,9 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       <text x="400" y="148" font-size="52" font-weight="900" font-family="'Fredoka', sans-serif" text-anchor="middle" fill="#d97706">${bigLetter}</text>
     </svg>`;
 
+    const coordsForOptions = getRowCoordinates(optionsList.length, ROW_COORDINATES);
     hotspots = optionsList.map((letter, idx) => {
-      const coords = ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         id: `hs_${letter}_${idx}`,
         label: letter,
@@ -707,7 +757,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
     partHotspots = optionsList.map((letter, idx) => {
-      const coords = ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         optionIndex: idx,
         x: coords.x,
@@ -725,7 +775,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     const letter = UPPER_ALPHABET[letterIdx];
     
     const shuffled = shuffle(UPPER_ALPHABET, r);
-    const distractors = shuffled.filter(l => l !== letter).slice(0, 3);
+    const distractorCount = effectiveDifficulty === 'easy' ? 1 : (effectiveDifficulty === 'medium' ? 2 : 3);
+    const distractors = shuffled.filter(l => l !== letter).slice(0, distractorCount);
     
     optionsList = shuffle([letter, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(letter);
@@ -743,8 +794,9 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       <rect width="800" height="465" fill="url(#bgGrad)" rx="28" />
     </svg>`;
 
+    const coordsForOptions = getRowCoordinates(optionsList.length, CENTER_ROW_COORDINATES);
     hotspots = optionsList.map((l, idx) => {
-      const coords = CENTER_ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         id: `hs_${l}_${idx}`,
         label: l,
@@ -758,7 +810,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
     partHotspots = optionsList.map((l, idx) => {
-      const coords = CENTER_ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         optionIndex: idx,
         x: coords.x,
@@ -779,7 +831,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     const L3 = UPPER_ALPHABET[startIdx + 3];
     
     const shuffled = shuffle(UPPER_ALPHABET, r);
-    const distractors = shuffled.filter(l => l !== L0 && l !== L1 && l !== L2 && l !== L3).slice(0, 3);
+    const distractorCount = effectiveDifficulty === 'easy' ? 1 : (effectiveDifficulty === 'medium' ? 2 : 3);
+    const distractors = shuffled.filter(l => l !== L0 && l !== L1 && l !== L2 && l !== L3).slice(0, distractorCount);
     
     optionsList = shuffle([L2, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(L2);
@@ -813,8 +866,9 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       <text x="650" y="135" font-size="44" font-weight="900" font-family="'Fredoka', sans-serif" text-anchor="middle" fill="#1e3a8a">${L3}</text>
     </svg>`;
 
+    const coordsForOptions = getRowCoordinates(optionsList.length, ROW_COORDINATES);
     hotspots = optionsList.map((l, idx) => {
-      const coords = ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         id: `hs_${l}_${idx}`,
         label: l,
@@ -828,7 +882,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
     partHotspots = optionsList.map((l, idx) => {
-      const coords = ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         optionIndex: idx,
         x: coords.x,
@@ -907,7 +961,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     const nextLetter = UPPER_ALPHABET[startIdx + 1];
     
     const shuffled = shuffle(UPPER_ALPHABET, r);
-    const distractors = shuffled.filter(l => l !== letter && l !== nextLetter).slice(0, 3);
+    const distractorCount = effectiveDifficulty === 'easy' ? 1 : (effectiveDifficulty === 'medium' ? 2 : 3);
+    const distractors = shuffled.filter(l => l !== letter && l !== nextLetter).slice(0, distractorCount);
     
     optionsList = shuffle([nextLetter, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(nextLetter);
@@ -936,8 +991,9 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       <text x="510" y="155" font-size="56" font-weight="900" font-family="'Fredoka', sans-serif" text-anchor="middle" fill="#c084fc">?</text>
     </svg>`;
 
+    const coordsForOptions = getRowCoordinates(optionsList.length, ROW_COORDINATES);
     hotspots = optionsList.map((l, idx) => {
-      const coords = ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         id: `hs_${l}_${idx}`,
         label: l,
@@ -951,7 +1007,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
     partHotspots = optionsList.map((l, idx) => {
-      const coords = ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         optionIndex: idx,
         x: coords.x,
@@ -977,7 +1033,8 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     const letter = asset.firstLetter.toUpperCase();
     
     const shuffled = shuffle(UPPER_ALPHABET, r);
-    const distractors = shuffled.filter(l => l !== letter).slice(0, 2);
+    const distractorCount = effectiveDifficulty === 'easy' ? 1 : 2;
+    const distractors = shuffled.filter(l => l !== letter).slice(0, distractorCount);
     
     optionsList = shuffle([letter, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(letter);
@@ -997,14 +1054,9 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       <image href="${asset.imageUrl}" x="325" y="40" width="150" height="150" />
     </svg>`;
 
-    const THREE_ROW_COORDINATES = [
-      { pctX: 20, pctY: 55, pctW: 16.25, pctH: 25, x: 160, y: 260, width: 130, height: 115 },
-      { pctX: 41.875, pctY: 55, pctW: 16.25, pctH: 25, x: 335, y: 260, width: 130, height: 115 },
-      { pctX: 63.75, pctY: 55, pctW: 16.25, pctH: 25, x: 510, y: 260, width: 130, height: 115 }
-    ];
-
+    const coordsForOptions = getRowCoordinates(optionsList.length, ROW_COORDINATES);
     hotspots = optionsList.map((l, idx) => {
-      const coords = THREE_ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         id: `hs_${l}_${idx}`,
         label: l,
@@ -1019,7 +1071,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
     partHotspots = optionsList.map((l, idx) => {
-      const coords = THREE_ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         optionIndex: idx,
         x: coords.x,
@@ -1033,19 +1085,25 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       };
     });
 
-  } else if (skillId === 'lkg-english-letter-recognition-audio-to-letter') {
+  } else if (
+    skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
+    skillId === 'lkg-english-letter-id-hear-lower'
+  ) {
+    const isUpper = skillId !== 'lkg-english-letter-id-hear-lower';
     const letterIdx = Math.floor(r * 26);
-    const letter = UPPER_ALPHABET[letterIdx];
+    const alphabet = isUpper ? UPPER_ALPHABET : LOWER_ALPHABET;
+    const letter = alphabet[letterIdx];
     
-    const shuffled = shuffle(UPPER_ALPHABET, r);
-    const distractors = shuffled.filter(l => l !== letter).slice(0, 3);
+    const shuffled = shuffle(alphabet, r);
+    const distractorCount = effectiveDifficulty === 'easy' ? 1 : (effectiveDifficulty === 'medium' ? 2 : 3);
+    const distractors = shuffled.filter(l => l !== letter).slice(0, distractorCount);
     
     optionsList = shuffle([letter, ...distractors], r);
     correctAnswerIndex = optionsList.indexOf(letter);
     
     questionText = "Listen to the letter. Which letter do you hear?";
     explanation = `The letter you heard is **${letter}**.`;
-    soundUrl = letterAudios[letter];
+    soundUrl = `https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/${letter.toLowerCase()}.wav`;
     soundText = letter;
 
     backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
@@ -1058,8 +1116,9 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
       <rect width="800" height="465" fill="url(#bgGrad)" rx="28" />
     </svg>`;
 
+    const coordsForOptions = getRowCoordinates(optionsList.length, CENTER_ROW_COORDINATES);
     hotspots = optionsList.map((l, idx) => {
-      const coords = CENTER_ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         id: `hs_${l}_${idx}`,
         label: l,
@@ -1073,7 +1132,7 @@ function generateLetterRecognitionQuestion(skillId, seed, r) {
     });
 
     partHotspots = optionsList.map((l, idx) => {
-      const coords = CENTER_ROW_COORDINATES[idx];
+      const coords = coordsForOptions[idx];
       return {
         optionIndex: idx,
         x: coords.x,
@@ -2047,6 +2106,181 @@ Look at the highlighted green lines to see the correct ${lineTypeName} line${cor
   };
 }
 
+const PHONICS_WORDS = {
+  'lkg-english-phonics-short-a': ["cat", "bat", "hat", "mat", "rat", "sat", "pan", "fan", "man", "can", "map", "tap", "cap", "lap", "bag", "tag", "rag", "jam", "ham", "van"],
+  'lkg-english-phonics-short-e': ["bed", "pen", "hen", "ten", "men", "net", "pet", "wet", "red", "leg", "peg", "beg", "fed", "led", "web", "den", "Ben", "set", "jet", "vet"],
+  'lkg-english-phonics-short-i': ["pin", "sit", "pig", "big", "dig", "wig", "fin", "bin", "tin", "lip", "sip", "rip", "kid", "lid", "win", "zip", "hit", "bit", "fit", "kit"],
+  'lkg-english-phonics-short-o': ["dog", "pot", "log", "hot", "mop", "top", "box", "fox", "cot", "dot", "rod", "hop", "pop", "jog", "fog", "hog", "not", "got", "lot", "sob"],
+  'lkg-english-phonics-short-u': ["cup", "sun", "bus", "bug", "hut", "mud", "run", "tub", "nut", "rug", "bun", "fun", "gun", "cut", "but", "pup", "cub", "hum", "gum", "jug"]
+};
+
+function generatePhonicsVowelsQuestion(skillId, seed, r) {
+  const category = skillId.replace('lkg-english-phonics-', ''); // e.g. short-a
+  const words = PHONICS_WORDS[skillId];
+  if (!words) {
+    console.warn(`No words found for skill: ${skillId}`);
+    return null;
+  }
+
+  // Pick a random target word
+  const targetWord = words[Math.floor(r * words.length)];
+
+  // Get other words from this group to act as distractors
+  const otherWords = words.filter(w => w !== targetWord);
+  
+  // Also collect words from other groups
+  const allOtherWords = [];
+  Object.keys(PHONICS_WORDS).forEach(k => {
+    if (k !== skillId) {
+      allOtherWords.push(...PHONICS_WORDS[k]);
+    }
+  });
+
+  // Pick 3 distractors:
+  // - 1 or 2 from the same vowel category (for close spelling/sound match)
+  // - 1 or 2 from other categories (for vowel sound contrast)
+  const categoryDistractors = shuffle(otherWords, r);
+  const otherDistractors = shuffle(allOtherWords.filter(w => w !== targetWord), r);
+
+  const selectedDistractors = [];
+  if (categoryDistractors.length > 0) {
+    selectedDistractors.push(categoryDistractors[0]);
+  }
+  if (categoryDistractors.length > 1) {
+    selectedDistractors.push(categoryDistractors[1]);
+  }
+  while (selectedDistractors.length < 3 && otherDistractors.length > 0) {
+    const d = otherDistractors.shift();
+    if (!selectedDistractors.includes(d)) {
+      selectedDistractors.push(d);
+    }
+  }
+
+  // Combine and shuffle options
+  const rawOptions = [targetWord, ...selectedDistractors.slice(0, 3)];
+  const optionsList = shuffle(rawOptions, r);
+  const correctAnswerIndex = optionsList.findIndex(w => w === targetWord);
+
+  const questionText = "Listen to the word. Which word do you hear?";
+  const audioUrl = `https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/${category}-${targetWord.toLowerCase()}.wav`;
+
+  return {
+    id: `english_lkg_phonics_vowels_${skillId}_${seed}`,
+    type: 'mcq',
+    interaction: 'choice',
+    questionText,
+    audioUrl,
+    voice: 'Puck',
+    generateAudio: 'none',
+    explanation: `The word you hear is **${targetWord}**.`,
+    options: optionsList.map((w, i) => {
+      let optCategory = 'short-a';
+      Object.keys(PHONICS_WORDS).forEach(k => {
+        if (PHONICS_WORDS[k].includes(w)) {
+          optCategory = k.replace('lkg-english-phonics-', '');
+        }
+      });
+      const optAudioUrl = `https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/${optCategory}-${w.toLowerCase()}.wav`;
+
+      return {
+        id: `opt_${i}`,
+        label: w,
+        content: ruledLetterSvg(w, 200, 140),
+        audioUrl: optAudioUrl
+      };
+    }),
+    correctAnswerIndex,
+    answer: correctAnswerIndex,
+    metadata: {
+      chapterId: 'english-lkg-phonics',
+      chapterTitle: 'Phonics'
+    },
+    parts: [
+      { type: 'text', content: questionText }
+    ]
+  };
+}
+
+function generatePhonicsImagesQuestion(skillId, seed, r) {
+  const category = skillId.replace('lkg-english-phonics-image-', ''); // e.g. short-a
+  const categoryImages = phonicsImages[category];
+  if (!categoryImages || categoryImages.length === 0) {
+    console.warn(`No images found for category: ${category}`);
+    return null;
+  }
+
+  // Pick a random target image
+  const targetAsset = categoryImages[Math.floor(r * categoryImages.length)];
+
+  // Gather distractors from other categories
+  const otherAssets = [];
+  Object.keys(phonicsImages).forEach(cat => {
+    if (cat !== category) {
+      otherAssets.push(...phonicsImages[cat]);
+    }
+  });
+
+  // Filter out any distractors that have the same word as the target to avoid ambiguity
+  const filteredOtherAssets = otherAssets.filter(item => item.word !== targetAsset.word);
+
+  // Pick 3 distractors randomly
+  const shuffledDistractors = shuffle(filteredOtherAssets, r);
+  const distractors = [];
+  shuffledDistractors.forEach(item => {
+    if (distractors.length < 3 && !distractors.some(d => d.word === item.word)) {
+      distractors.push(item);
+    }
+  });
+
+  // If not enough distractors, fallback to target category assets
+  if (distractors.length < 3) {
+    const categoryFallback = categoryImages.filter(item => item.word !== targetAsset.word);
+    const shuffledFallback = shuffle(categoryFallback, r);
+    shuffledFallback.forEach(item => {
+      if (distractors.length < 3 && !distractors.some(d => d.word === item.word)) {
+        distractors.push(item);
+      }
+    });
+  }
+
+  // Combine target + 3 distractors, shuffle options
+  const rawOptions = [targetAsset, ...distractors.slice(0, 3)];
+  const optionsList = shuffle(rawOptions, r);
+  const correctAnswerIndex = optionsList.findIndex(item => item.word === targetAsset.word);
+
+  const vowelChar = category.replace('short-', ''); // "a", "e", "i"
+  const questionText = `Listen to each word. Which word has the short ${vowelChar} sound?`;
+
+  return {
+    id: `english_lkg_phonics_images_${skillId}_${seed}`,
+    type: 'mcq',
+    interaction: 'choice',
+    questionText,
+    audioUrl: letterAudios[questionText] || undefined,
+    voice: 'Puck',
+    generateAudio: 'none',
+    explanation: `The word **${targetAsset.word}** has the short ${vowelChar} sound.`,
+    options: optionsList.map((item, i) => {
+      return {
+        id: `opt_${i}`,
+        label: item.word,
+        content: item.url,
+        audioUrl: item.audioUrl,
+        hideLabel: true
+      };
+    }),
+    correctAnswerIndex,
+    answer: correctAnswerIndex,
+    metadata: {
+      chapterId: 'english-lkg-phonics',
+      chapterTitle: 'Phonics'
+    },
+    parts: [
+      { type: 'text', content: questionText }
+    ]
+  };
+}
+
 export function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
@@ -2069,7 +2303,7 @@ export function resolveLkgGenerator(skillId, config = {}) {
       } else if (template.engine === 'identify_category') {
         question = generateIdentifyCategoryQuestion(seed, r);
       } else if (template.engine === 'letter_recognition') {
-        question = generateLetterRecognitionQuestion(skillId, seed, r);
+        question = generateLetterRecognitionQuestion(skillId, seed, r, variables, config);
       } else if (template.engine === 'case_match') {
         question = generateCaseMatchQuestion(skillId, seed, r, config);
       } else if (template.engine === 'word_recognition') {
@@ -2080,6 +2314,10 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateColorIdentificationQuestion(seed, r);
       } else if (template.engine === 'letter_lines') {
         question = generateLetterLinesQuestion(skillId, seed, r);
+      } else if (template.engine === 'phonics_vowels') {
+        question = generatePhonicsVowelsQuestion(skillId, seed, r);
+      } else if (template.engine === 'phonics_images') {
+        question = generatePhonicsImagesQuestion(skillId, seed, r);
       }
 
       if (question) {

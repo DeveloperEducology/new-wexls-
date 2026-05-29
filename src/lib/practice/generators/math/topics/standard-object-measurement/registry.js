@@ -288,6 +288,7 @@ export function generateSOMTopicQuestion(config = {}) {
     metadata: {
       ...(question.metadata || {}),
       skillId: logicType,
+      templateId: question.metadata?.templateId || question.metadata?.task || logicType,
       subject: 'math',
       topic: 'standard-object-measurement',
       engine: 'standard-object-measurement'
@@ -332,7 +333,7 @@ export const somTopicContract = {
         subject: context.subject,
         topic: context.topic,
         skillId: context.skill,
-        templateId: question.metadata?.task || context.skill,
+        templateId: question.metadata?.templateId || question.metadata?.task || context.skill,
         engine: 'standard-object-measurement',
         seed: context.seed,
       },

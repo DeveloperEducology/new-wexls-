@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WEXLS</string>
+    <string name="title_activity_main">WEXLS</string>
+    <string name="package_name">com.wexls.app</string>
+    <string name="custom_url_scheme">com.wexls.app</string>
+</resources>

@@ -46,6 +46,18 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'letter_lines',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.phonics_vowels': {
+    title: 'Phonics Vowel Sounds',
+    engine: 'phonics_vowels',
+    family: 'lkg.english',
+    questionType: 'mcq'
+  },
+  'lkg.english.phonics_images': {
+    title: 'Phonics Vowel Sound Images',
+    engine: 'phonics_images',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -273,6 +285,70 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-basics',
     chapterTitle: 'Letter Recognition & Phonics'
+  },
+  'lkg-english-phonics-short-a': {
+    templateId: 'lkg.english.phonics_vowels',
+    code: 'EL.E1',
+    title: 'Identify short-a sound words',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-short-e': {
+    templateId: 'lkg.english.phonics_vowels',
+    code: 'EL.E2',
+    title: 'Identify short-e sound words',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-short-i': {
+    templateId: 'lkg.english.phonics_vowels',
+    code: 'EL.E3',
+    title: 'Identify short-i sound words',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-short-o': {
+    templateId: 'lkg.english.phonics_vowels',
+    code: 'EL.E4',
+    title: 'Identify short-o sound words',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-short-u': {
+    templateId: 'lkg.english.phonics_vowels',
+    code: 'EL.E5',
+    title: 'Identify short-u sound words',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-image-short-a': {
+    templateId: 'lkg.english.phonics_images',
+    code: 'EL.E6',
+    title: 'Identify short-a sound images',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-image-short-e': {
+    templateId: 'lkg.english.phonics_images',
+    code: 'EL.E7',
+    title: 'Identify short-e sound images',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
+  },
+  'lkg-english-phonics-image-short-i': {
+    templateId: 'lkg.english.phonics_images',
+    code: 'EL.E8',
+    title: 'Identify short-i sound images',
+    grade: 'LKG',
+    chapterId: 'english-lkg-phonics',
+    chapterTitle: 'Phonics'
   }
 };
 

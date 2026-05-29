@@ -1,0 +1,9 @@
+{
+  "appId": "com.wexls.app",
+  "appName": "WEXLS",
+  "webDir": "public",
+  "server": {
+    "url": "https://vijay-mu-five.vercel.app",
+    "cleartext": false
+  }
+}

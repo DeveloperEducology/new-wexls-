@@ -40,6 +40,11 @@ export function stopAllSpeech() {
 }
 
 function fallbackToWebSpeech(plainText, originalText) {
+  const isPhonics = (typeof window !== 'undefined' && window.location.href.includes('phonics'));
+  if (isPhonics) {
+    console.log('[TTS] Browser Web Speech fallback disabled on phonics page.');
+    return;
+  }
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     const utterance = new SpeechSynthesisUtterance(plainText);
     utterance.rate = 0.85; // kid-friendly slightly slower speech rate
@@ -103,7 +108,80 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
     .replace(/\\approx/g, 'approx')
     .trim();
 
-  // If clicking the same text that is currently active, toggle it off
+  // --- Direct audio URL path (pre-baked R2 assets) ---
+  // NEVER toggle: always stop whatever is playing and restart.
+  // This ensures a single tap always produces audio — no double-click needed.
+  if (audioUrl) {
+    // Tear down any existing playback cleanly
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.src = '';   // release the media resource immediately
+      activeAudio = null;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    activeText = text;
+
+    const isPhonics = (typeof window !== 'undefined' && window.location.href.includes('phonics')) ||
+                      audioUrl.includes('audio/phonics/');
+    try {
+      const audio = new Audio();
+      activeAudio = audio;
+
+      audio.addEventListener('ended', () => {
+        if (activeText === text) {
+          activeText = null;
+          activeAudio = null;
+        }
+      });
+
+      audio.addEventListener('error', (e) => {
+        console.warn('[TTS] Pre-baked audio URL error:', e, audioUrl);
+        if (activeAudio === audio) activeAudio = null;
+        if (activeText === text) {
+          activeText = null;
+          // Phonics-only: do NOT fall back to browser TTS
+          if (!isPhonics) {
+            speakText(text, voice, null);
+          }
+        }
+      });
+
+      // Set src AFTER attaching listeners, then load() forces the browser
+      // to decode from the start (important for replaying the same URL).
+      audio.src = audioUrl;
+      audio.load();
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('[TTS] audio.play() rejected:', err, audioUrl);
+          if (activeAudio === audio) activeAudio = null;
+          if (activeText === text) {
+            activeText = null;
+            if (!isPhonics) {
+              speakText(text, voice, null);
+            }
+          }
+        });
+      }
+      return;
+    } catch (err) {
+      console.warn('[TTS] Audio init exception:', err);
+      activeAudio = null;
+      activeText = null;
+      return;
+    }
+  }
+
+  // --- TTS text path ---
+  // Toggle: clicking the same text while it is actively playing stops it.
+  // (Useful for long question read-alouds.)
   if (activeText === text) {
     stopAllSpeech();
     return;
@@ -119,46 +197,6 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
     return;
   }
 
-  // If pre-baked R2 URL is provided, play it directly
-  if (audioUrl) {
-    try {
-      const audio = new Audio(audioUrl);
-      activeAudio = audio;
-
-      audio.addEventListener('ended', () => {
-        if (activeText === text) {
-          activeText = null;
-          activeAudio = null;
-        }
-      });
-
-      audio.addEventListener('error', (e) => {
-        console.warn('Pre-baked audio URL playback error, falling back to dynamic API:', e, audioUrl);
-        activeAudio = null;
-        if (activeText === text) {
-          // Re-trigger speakText without pre-baked URL to fallback to dynamic TTS route
-          activeText = null;
-          speakText(text, voice, null);
-        }
-      });
-
-      audio.play().catch((err) => {
-        console.warn('Pre-baked audio play() interrupted/failed, falling back to dynamic API:', err, audioUrl);
-        activeAudio = null;
-        if (activeText === text) {
-          activeText = null;
-          speakText(text, voice, null);
-        }
-      });
-      return;
-    } catch (err) {
-      console.warn('Exception during pre-baked Audio initialization:', err);
-      activeAudio = null;
-      activeText = null;
-      speakText(text, voice, null);
-      return;
-    }
-  }
 
   const cacheKey = `${voice}:${text}`;
   
@@ -222,6 +260,9 @@ function runServerSideTts(plainText, text, voice, cacheKey) {
     return;
   }
 
+  // Detect phonics page — no Web Speech fallback allowed there
+  const isPhonicsPage = typeof window !== 'undefined' && window.location.href.includes('phonics');
+
   // Construct TTS endpoint
   const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${voice}`;
   
@@ -232,8 +273,12 @@ function runServerSideTts(plainText, text, voice, cacheKey) {
     fetch(url, { signal })
       .then((res) => {
         if (!res.ok) {
-          if (res.status === 429 || res.status === 500) {
+          // 429 / 503 = quota or rate-limit — only activate Web Speech on non-phonics pages
+          if ((res.status === 429 || res.status === 500 || res.status === 503) && !isPhonicsPage) {
             activateWebSpeechFallback();
+          }
+          if (res.status === 429 || res.status === 503) {
+            console.warn(`[TTS] Quota/rate-limit (${res.status}). ${isPhonicsPage ? 'Phonics page — silent fail.' : 'Activating Web Speech fallback.'}`);
           }
           throw new Error(`TTS server returned status ${res.status}`);
         }

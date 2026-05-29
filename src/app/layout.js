@@ -3,7 +3,7 @@ import 'katex/dist/katex.min.css';
 import PWAInstall from '../components/PWAInstall';
 
 export const metadata = {
-  title: 'WEXLS Practice Starter',
+  title: 'KlassChamp Practice',
   description: 'Clean adaptive practice starter with topic-wise generators.',
   manifest: '/manifest.json',
 };

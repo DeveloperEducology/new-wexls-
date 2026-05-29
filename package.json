@@ -6,10 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit:generators": "node --import ./scripts/register-node-aliases.mjs scripts/audit-generators.mjs",
+    "audit:generators:strict": "node --import ./scripts/register-node-aliases.mjs scripts/audit-generators.mjs --strict",
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1051.0",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "@google/genai": "^2.5.0",
     "@mintplex-labs/piper-tts-web": "^1.0.4",
     "katex": "^0.16.47",
