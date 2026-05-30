@@ -1,6 +1,7 @@
 import './globals.css';
 import 'katex/dist/katex.min.css';
 import PWAInstall from '../components/PWAInstall';
+import BackNavigator from '../components/BackNavigator';
 
 export const metadata = {
   title: 'KlassChamp Practice',
@@ -14,6 +15,8 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <PWAInstall />
+        {/* Mobile floating back button + Capacitor hardware back handler */}
+        <BackNavigator />
       </body>
     </html>
   );
