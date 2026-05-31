@@ -634,6 +634,10 @@ export default function AdminConsolePage() {
   const [audioGalleryOptionIdx, setAudioGalleryOptionIdx] = useState(null);
   const [audioGalleryForMainText, setAudioGalleryForMainText] = useState(false);
   const [r2AudioFiles, setR2AudioFiles]             = useState([]);
+  
+  // ── Clone Random State ────────────────────────────────────────────────────
+  const [cloneCount, setCloneCount] = useState(5);
+  const [cloningInProgress, setCloningInProgress] = useState(false);
   const [r2AudioLoading, setR2AudioLoading]         = useState(false);
   const [r2AudioSearch, setR2AudioSearch]           = useState('');
   const [r2AudioFolderFilter, setR2AudioFolderFilter] = useState(''); // '' = all folders
@@ -1889,6 +1893,40 @@ export default function AdminConsolePage() {
       setLoadingQuestions(false);
     }
   }, [qSearch, qSubject, qTopic, qType, qAudioStatus, qPage]);
+
+  const handleCloneRandomQuestions = async () => {
+    if (!qSubject || !qTopic) {
+      setAlert({ type: 'error', text: 'Please select a specific Subject and Topic/Skill in the filters to clone from.' });
+      return;
+    }
+
+    setCloningInProgress(true);
+    setAlert({ type: 'info', text: `Cloning ${cloneCount} random questions from ${qSubject.toUpperCase()} / ${qTopic.toUpperCase()} as drafts...` });
+
+    try {
+      const res = await fetch('/api/admin/questions/clone-random', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: qSubject,
+          topic: qTopic,
+          count: cloneCount
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAlert({ type: 'success', text: `Successfully cloned ${data.clonedCount} questions as drafts! Check the library list below.` });
+        fetchQuestions();
+      } else {
+        throw new Error(data.error || 'Failed to clone questions');
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', text: `Cloning failed: ${err.message}` });
+    } finally {
+      setCloningInProgress(false);
+    }
+  };
 
   // --- FETCH TTS CACHE ITEMS ---
   const fetchCacheItems = useCallback(async () => {
@@ -5504,6 +5542,49 @@ export default function AdminConsolePage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div style={{ padding: '0 20px 12px 20px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={styles.btnOutline}
+                onClick={handleCloneRandomQuestions}
+                style={{ 
+                  background: 'var(--color-bg-panel)', 
+                  borderColor: 'var(--color-brand)',
+                  color: 'var(--color-brand)',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  height: '34px'
+                }}
+                disabled={cloningInProgress}
+              >
+                {cloningInProgress ? (
+                  <>
+                    <span className={styles.spinner} style={{ width: '12px', height: '12px', borderSize: '2px', marginRight: 4 }}></span>
+                    Cloning...
+                  </>
+                ) : (
+                  <>📋 Clone Random Drafts</>
+                )}
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 700 }}>Count:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={cloneCount}
+                  onChange={(e) => setCloneCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className={styles.formInput}
+                  style={{ width: '56px', height: '34px', textAlign: 'center', padding: '0 4px' }}
+                />
+              </div>
+              <small style={{ color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 650 }}>
+                Picks random active questions from the selected <strong>Subject</strong> and <strong>Topic/Skill</strong>, duplicates them, and saves them as reviewable drafts.
+              </small>
             </div>
 
             {loadingQuestions ? (
