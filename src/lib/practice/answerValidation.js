@@ -115,6 +115,22 @@ export function isAnswerCorrect(question, userAnswer) {
   const type = String(question.type || '').toLowerCase();
   const interaction = String(question.interaction || '').toLowerCase();
 
+  if (interaction === 'balloon_tap') {
+    const hitsNeeded = question.hitsNeeded || 3;
+    const hits = Number(userAnswer);
+    return Number.isFinite(hits) && hits >= hitsNeeded;
+  }
+
+  if (interaction === 'direct_image_select' || question.directImageSelect) {
+    const selectedIndex = Number(userAnswer);
+    const parts = Array.isArray(question.parts) ? question.parts : [];
+    if (!Number.isFinite(selectedIndex) || selectedIndex < 0 || selectedIndex >= parts.length) {
+      return false;
+    }
+    const selectedPart = parts[selectedIndex];
+    return !!selectedPart?.isCorrect;
+  }
+
   if (interaction === 'hotspot_multi_select') {
     const options = Array.isArray(question.options) ? question.options : [];
     const correctIndices = options

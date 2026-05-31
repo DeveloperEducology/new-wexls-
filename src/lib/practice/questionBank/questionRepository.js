@@ -17,6 +17,28 @@ function activeStatusFilter() {
 }
 
 function buildSkillFilter({ subject, topic, skill }) {
+  const skillList = Array.isArray(skill) ? skill : [skill];
+  const skillOrConditions = [];
+
+  skillList.forEach(s => {
+    skillOrConditions.push(
+      { skillId: s },
+      { microSkillId: s },
+      { logic_type: s },
+      { 'metadata.skillId': s },
+      { 'metadata.microSkillId': s },
+      { 'metadata.logicType': s },
+      { 'resolvedConfig.logic_type': s },
+      { 'question.skillId': s },
+      { 'question.microSkillId': s },
+      { 'question.logic_type': s },
+      { 'question.metadata.skillId': s },
+      { 'question.metadata.microSkillId': s },
+      { 'question.metadata.logicType': s },
+      { 'question.resolvedConfig.logic_type': s }
+    );
+  });
+
   return {
     $and: [
       {
@@ -34,22 +56,7 @@ function buildSkillFilter({ subject, topic, skill }) {
         ],
       },
       {
-        $or: [
-          { skillId: skill },
-          { microSkillId: skill },
-          { logic_type: skill },
-          { 'metadata.skillId': skill },
-          { 'metadata.microSkillId': skill },
-          { 'metadata.logicType': skill },
-          { 'resolvedConfig.logic_type': skill },
-          { 'question.skillId': skill },
-          { 'question.microSkillId': skill },
-          { 'question.logic_type': skill },
-          { 'question.metadata.skillId': skill },
-          { 'question.metadata.microSkillId': skill },
-          { 'question.metadata.logicType': skill },
-          { 'question.resolvedConfig.logic_type': skill },
-        ],
+        $or: skillOrConditions,
       },
     ],
   };
@@ -57,11 +64,25 @@ function buildSkillFilter({ subject, topic, skill }) {
 
 function buildDifficultyFilter(difficulty) {
   if (!difficulty || difficulty === 'adaptive') return {};
+  
+  const val = String(difficulty).toLowerCase();
+  const equivalents = [val];
+
+  if (val === 'easy' || val === 'beginner') {
+    equivalents.push('easy', 'beginner');
+  } else if (val === 'medium' || val === 'intermediate') {
+    equivalents.push('medium', 'intermediate');
+  } else if (val === 'hard' || val === 'advanced') {
+    equivalents.push('hard', 'advanced');
+  }
+
+  const uniqueEquivalents = Array.from(new Set(equivalents));
+
   return {
     $or: [
-      { difficulty },
-      { 'metadata.difficulty': difficulty },
-      { 'resolvedConfig.config.difficulty': difficulty },
+      { difficulty: { $in: uniqueEquivalents } },
+      { 'metadata.difficulty': { $in: uniqueEquivalents } },
+      { 'resolvedConfig.config.difficulty': { $in: uniqueEquivalents } },
       { difficulty: { $exists: false } },
     ],
   };
@@ -153,13 +174,15 @@ export function normalizeStoredQuestion(document, { subject, topic, skill }) {
   const question = stripMongoFields(document);
   if (!question) return null;
 
+  const resolvedSkill = Array.isArray(skill) ? skill[0] : skill;
+
   const metadata = {
     ...(question.metadata || {}),
     subject: question.metadata?.subject || question.subject || subject,
     topic: question.metadata?.topic || question.topic || topic,
-    skillId: question.metadata?.skillId || question.skillId || skill,
-    microSkillId: question.metadata?.microSkillId || question.microSkillId || skill,
-    templateId: question.metadata?.templateId || question.templateId || question.resolvedConfig?.templateId || skill,
+    skillId: question.metadata?.skillId || question.skillId || resolvedSkill,
+    microSkillId: question.metadata?.microSkillId || question.microSkillId || resolvedSkill,
+    templateId: question.metadata?.templateId || question.templateId || question.resolvedConfig?.templateId || resolvedSkill,
     engine: question.metadata?.engine || question.engine || question.resolvedConfig?.engine || 'questionBank',
   };
 
@@ -200,6 +223,22 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
   }
 }
 
+export async function findStoredQuestionById(questionId) {
+  if (!hasMongoConfig()) return null;
+  try {
+    const db = await getMongoDb();
+    if (!db) return null;
+    const collection = db.collection(getCollectionName());
+    const doc = await collection.findOne({ id: questionId });
+    if (!doc) return null;
+    return stripMongoFields(doc);
+  } catch (error) {
+    console.warn('Mongo question lookup by ID failed:', error.message);
+    return null;
+  }
+}
+
+
 export async function saveStoredPracticeQuestion(input, { mode = 'upsert' } = {}) {
   if (!hasMongoConfig()) {
     throw new Error('MongoDB is not configured. Set MONGODB_URI in .env.local.');
@@ -226,12 +265,14 @@ export async function saveStoredPracticeQuestion(input, { mode = 'upsert' } = {}
     };
   }
 
+  const { createdAt, ...questionWithoutCreatedAt } = question;
+
   const result = await collection.updateOne(
     { id: question.id },
     {
-      $set: question,
+      $set: questionWithoutCreatedAt,
       $setOnInsert: {
-        createdAt: question.createdAt || new Date(),
+        createdAt: createdAt || new Date(),
       },
     },
     { upsert: true }

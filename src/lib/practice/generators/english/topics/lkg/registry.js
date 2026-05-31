@@ -58,6 +58,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'phonics_images',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.balloon_tap': {
+    title: 'Letter Balloon Tap',
+    engine: 'balloon_tap',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -133,6 +139,14 @@ export const lkgEnglishMicroSkillRegistry = {
     code: 'EL.12',
     title: 'Identify the letter you hear',
     grade: 'LKG'
+  },
+  'lkg-english-letter-balloon-tap': {
+    templateId: 'lkg.english.balloon_tap',
+    code: 'EL.S7',
+    title: 'Tap the correct letter balloon — alphabet scrolling game',
+    grade: 'LKG',
+    chapterId: 'english-lkg-letter-identification',
+    chapterTitle: 'Letter Identification'
   },
   'lkg-english-color-identification': {
     templateId: 'lkg.english.color_identification',

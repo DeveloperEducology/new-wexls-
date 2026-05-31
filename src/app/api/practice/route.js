@@ -118,7 +118,60 @@ export async function GET(request) {
     });
   };
 
+  // ── Single Question Lookup by ID ──────────────────────────────────────────
+  const qnId = searchParams.get('qn') || searchParams.get('questionId') || searchParams.get('id');
+  if (qnId) {
+    try {
+      const { findStoredQuestionById, normalizeStoredQuestion } = await import('../../../lib/practice/questionBank/questionRepository.js');
+      const questionDoc = await findStoredQuestionById(qnId);
+      if (questionDoc) {
+        const qSubject = questionDoc.subject || questionDoc.metadata?.subject || subject;
+        const qTopic = questionDoc.topic || questionDoc.metadata?.topic || topic;
+        const qSkill = questionDoc.skillId || questionDoc.metadata?.skillId || skill;
+
+        let qSkillNode = null;
+        try {
+          const matchingNodes = await listCurriculumNodes({ skillId: qSkill });
+          if (matchingNodes && matchingNodes.length > 0) {
+            qSkillNode = matchingNodes[0];
+          }
+        } catch (err) {
+          console.error('Error fetching node for ID lookup:', err);
+        }
+
+        const qResolvedTopic = qSkillNode?.topicId || qTopic;
+        const qResolvedSkillId = qSkillNode?.skillId || qSkill;
+        const qStreakThreshold = Number(qSkillNode?.metadata?.streakThreshold || qSkillNode?.streakThreshold || 5);
+
+        const normalized = normalizeStoredQuestion(questionDoc, { subject: qSubject, topic: qTopic, skill: qSkill });
+
+        return respond(normalizeWithCompetency({
+          success: true,
+          source: 'mongodb',
+          question: normalized,
+          seed,
+          template: {
+            logicType: qSkill,
+            logic_type: qSkill,
+            templateId: normalized.metadata?.templateId,
+            engine: normalized.metadata?.engine,
+            resolved: normalized.resolvedConfig,
+            source: 'mongodb',
+          }
+        }, {
+          subject: qSubject,
+          topic: qResolvedTopic,
+          skill: qResolvedSkillId,
+          streakThreshold: qStreakThreshold
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading question by ID:', error);
+    }
+  }
+
   // Look up the skill node in the DB if available to resolve centralized templates
+
   let skillNode = null;
   try {
     const matchingNodes = await listCurriculumNodes({ skillId: skill });
@@ -180,17 +233,25 @@ export async function GET(request) {
     const skipDbForGenerator = mixWithGenerator && (seedVal < generatorProbability);
 
     if (!skipDbForGenerator) {
+      const skillQueryList = [resolvedSkillId];
+      if (skillNode?.id && !skillQueryList.includes(skillNode.id)) {
+        skillQueryList.push(skillNode.id);
+      }
+      if (skill && !skillQueryList.includes(skill)) {
+        skillQueryList.push(skill);
+      }
+
       const storedPayload = await resolveStoredPracticePayload({
         subject,
         topic: resolvedTopic,
-        skill: resolvedSkillId,
+        skill: skillQueryList,
         difficulty,
         seed,
         source,
       });
 
       if (storedPayload) {
-        return respond(withCompetency(storedPayload, { subject, topic, skill }));
+        return respond(withCompetency(storedPayload, { subject, topic, skill: resolvedSkillId }));
       }
     }
   } catch (error) {
@@ -214,8 +275,10 @@ export async function GET(request) {
 
   const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system'].includes(targetTopic);
   const isEnglishTopic = subject === 'english' && (
-    ['grammar', 'lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 'phonics_vowels', 'phonics_images'].includes(targetTopic) ||
+    ['grammar', 'lkg', 'english-lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 'phonics_vowels', 'phonics_images'].includes(targetTopic) ||
     resolvedTopic === 'lkg' ||
+    resolvedTopic === 'english-lkg' ||
+    topic === 'lkg' ||
     topic === 'english-lkg'
   );
 
@@ -427,8 +490,8 @@ export async function GET(request) {
       }, { subject, topic, skill }));
     }
 
-    if (subject === 'english' && (['grammar', 'lkg'].includes(targetTopic) || resolvedTopic === 'lkg' || topic === 'english-lkg')) {
-      const isLkg = targetTopic === 'lkg' || resolvedTopic === 'lkg' || topic === 'english-lkg';
+    if (subject === 'english' && (['grammar', 'lkg', 'english-lkg'].includes(targetTopic) || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg')) {
+      const isLkg = targetTopic === 'lkg' || targetTopic === 'english-lkg' || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg';
       const generator = isLkg
         ? (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(resolvedSkillId, config)
         : (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(resolvedSkillId, config);

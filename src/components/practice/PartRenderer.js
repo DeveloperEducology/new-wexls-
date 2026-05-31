@@ -547,30 +547,184 @@ function drawInteractiveBalanceScaleSVG({ leftWeight, rightWeight, leftLabel = '
 
 
 
-function ImagePart({ part, inGroup = false }) {
+function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAnswered, partIndex }) {
+  const isPreK = typeof window !== 'undefined' && 
+    (window.location.search.toLowerCase().includes('topic=lkg') || 
+     window.location.search.toLowerCase().includes('topic=ukg') || 
+     window.location.search.toLowerCase().includes('topic=pre-k') || 
+     window.location.search.toLowerCase().includes('topic=prek'));
+
+  const src = part.imageUrl || part.src || part.content || null;
+  if (!src) {
+    return (
+      <div
+        style={{
+          width: inGroup ? '120px' : '100%',
+          height: inGroup ? '120px' : '150px',
+          border: '2px dashed #cbd5e1',
+          borderRadius: 12,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#94a3b8',
+          fontSize: 13,
+          fontWeight: 600,
+          background: '#f8fafc',
+          margin: '10px 0'
+        }}
+      >
+        📷 [Empty Image Part]
+      </div>
+    );
+  }
+
+  const isTransparent = src.match(/\.(png|svg|webp)($|\?)/i);
+  const labelText = part.label || part.alt || '';
+  const canPlaySound = part.playLabelSound && labelText;
+
+  const isDirectSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
+  const isSelected = isDirectSelect && partIndex !== undefined && userAnswer !== null && Number(userAnswer) === partIndex;
+
+  const handleImageClick = (e) => {
+    if (isDirectSelect && !isAnswered && onAnswer) {
+      onAnswer(partIndex);
+    } else if (canPlaySound) {
+      speakText(labelText, question?.voice || part.voice || 'Puck');
+    }
+  };
+
+  const commonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
+  const isFixedWidth = !!commonImageWidth;
+  const widthVal = isFixedWidth ? `clamp(100px, 42vw, ${commonImageWidth}px)` : (inGroup ? 'auto' : '100%');
+  const maxWidthVal = isFixedWidth ? `${commonImageWidth}px` : (inGroup ? 220 : 300);
+
+  const cardBorder = isSelected 
+    ? '4px solid #22c55e' 
+    : '2.5px solid #f1f5f9';
+  const cardShadow = isSelected 
+    ? '0 0 0 6px rgba(34, 197, 94, 0.2), 0 16px 40px rgba(34, 197, 94, 0.15)' 
+    : '0 12px 28px rgba(15, 23, 42, 0.06), 0 4px 10px rgba(15, 23, 42, 0.03)';
+  const cardTransform = isSelected ? 'scale(1.03)' : 'none';
+
   return (
     <div
+      onClick={handleImageClick}
       style={{
-        width: inGroup ? 'auto' : '100%',
-        maxWidth: inGroup ? 220 : 460,
-        flex: inGroup ? '0 0 auto' : 'initial',
+        width: widthVal,
+        maxWidth: maxWidthVal,
+        flex: isFixedWidth ? `0 1 ${part.commonImageWidth}px` : (inGroup ? '0 0 auto' : 'initial'),
         display: 'flex',
-        justifyContent: 'flex-start',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: (isDirectSelect && !isAnswered) ? 'pointer' : (canPlaySound ? 'pointer' : 'default'),
+        position: 'relative',
+        transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transform: cardTransform,
         ...(part.style || {}),
       }}
     >
-      <img
-        src={part.imageUrl || part.src || part.content}
-        alt={part.alt || ''}
-        style={{
-          width: '100%',
-          maxWidth: part.maxWidth || 340,
-          maxHeight: part.maxHeight || 280,
-          objectFit: 'contain',
-          borderRadius: 18,
-          boxShadow: '0 16px 36px rgba(15, 23, 42, 0.12)',
+      <div 
+        style={{ 
+          position: 'relative', 
+          width: '100%', 
+          display: 'flex', 
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          borderRadius: 20,
+          border: cardBorder,
+          boxShadow: cardShadow,
+          padding: '12px',
+          boxSizing: 'border-box',
+          aspectRatio: '1.15 / 1',
+          transition: 'border 0.2s ease, box-shadow 0.2s ease',
         }}
-      />
+      >
+        <img
+          src={src}
+          alt={part.alt || ''}
+          style={{
+            width: '100%',
+            height: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            borderRadius: isTransparent ? undefined : 14,
+            transition: canPlaySound ? 'transform 0.2s ease' : 'none',
+          }}
+          onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
+          onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
+        />
+        {canPlaySound && (
+          <div
+            onClick={(e) => {
+              if (isDirectSelect) {
+                e.stopPropagation();
+                speakText(labelText, question?.voice || part.voice || 'Puck');
+              }
+            }}
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: '#e0f2fe',
+              borderRadius: '50%',
+              width: 26,
+              height: 26,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+              color: '#0284c7',
+              cursor: 'pointer',
+              zIndex: 10,
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </div>
+        )}
+        {isSelected && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              right: 8,
+              backgroundColor: '#22c55e',
+              color: '#ffffff',
+              borderRadius: '50%',
+              width: 24,
+              height: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              fontWeight: 'bold',
+              boxShadow: '0 2px 6px rgba(34,197,94,0.3)',
+              zIndex: 10,
+            }}
+          >
+            ✓
+          </div>
+        )}
+      </div>
+
+      {part.showLabel && labelText && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: isPreK ? '18px' : '14px',
+            fontWeight: 800,
+            color: '#1e293b',
+            textAlign: 'center',
+            fontFamily: 'var(--font-outfit), sans-serif',
+            userSelect: 'none',
+          }}
+        >
+          {labelText}
+        </div>
+      )}
     </div>
   );
 }
@@ -5093,6 +5247,377 @@ function PlaySoundCard({ question }) {
   );
 }
 
+// ─── Balloon Tap Part ────────────────────────────────────────────────────────
+// Animated letters float up as colourful balloons; student taps the target one.
+const BALLOON_COLORS = [
+  { body: '#f87171', shine: '#fca5a5', knot: '#dc2626', shadow: '#991b1b' }, // red
+  { body: '#fb923c', shine: '#fdba74', knot: '#ea580c', shadow: '#9a3412' }, // orange
+  { body: '#facc15', shine: '#fde68a', knot: '#ca8a04', shadow: '#713f12' }, // yellow
+  { body: '#4ade80', shine: '#86efac', knot: '#16a34a', shadow: '#14532d' }, // green
+  { body: '#60a5fa', shine: '#93c5fd', knot: '#2563eb', shadow: '#1e3a8a' }, // blue
+  { body: '#c084fc', shine: '#e9d5ff', knot: '#9333ea', shadow: '#581c87' }, // purple
+  { body: '#f472b6', shine: '#f9a8d4', knot: '#db2777', shadow: '#831843' }, // pink
+];
+
+function BalloonSvg({ letter, color, size = 90 }) {
+  const { body, shine, knot } = color;
+  return (
+    <svg viewBox="0 0 80 110" width={size} height={size * 1.37} xmlns="http://www.w3.org/2000/svg">
+      {/* balloon body */}
+      <ellipse cx="40" cy="42" rx="32" ry="36" fill={body} />
+      {/* shine highlight */}
+      <ellipse cx="28" cy="24" rx="10" ry="12" fill={shine} opacity="0.55" />
+      {/* knot */}
+      <polygon points="37,77 43,77 40,84" fill={knot} />
+      {/* string */}
+      <path d="M40 84 Q45 95 40 108" stroke={knot} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      {/* letter */}
+      <text
+        x="40" y="52"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize="30"
+        fontWeight="900"
+        fontFamily="'Outfit','Fredoka','Arial Rounded MT Bold',sans-serif"
+        fill="white"
+        style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
+      >
+        {letter}
+      </text>
+    </svg>
+  );
+}
+
+function BalloonTapPart({ part, question, userAnswer, onAnswer, isAnswered }) {
+  // part.letters   — array of letter objects: [{letter, colorIndex}]
+  // part.target    — the letter the student must tap
+  // part.hitsNeeded— how many correct taps to win (default 3)
+  const target      = part.target || question.targetLetter || 'A';
+  const hitsNeeded  = part.hitsNeeded || 3;
+  const allLetters  = part.letters  || [];
+  const audioUrl    = question.audioUrl;
+
+  // ── state ──────────────────────────────────────────────────────────────────
+  const [balloons, setBalloons] = useState(() => []);
+  const [hits, setHits]         = useState(0);
+  const [bursts, setBursts]     = useState([]);
+  const [shakeIds, setShakeIds] = useState(new Set());
+  const nextId   = useRef(0);
+  const timerRef = useRef(null);
+  const done     = hits >= hitsNeeded;
+
+  // ── CSS keyframes injected once ────────────────────────────────────────────
+  useEffect(() => {
+    const styleId = 'balloon-tap-styles';
+    if (!document.getElementById(styleId)) {
+      const s = document.createElement('style');
+      s.id = styleId;
+      s.textContent = `
+        @keyframes balloonFloat {
+          0%   { transform: translateY(0)    rotate(-2deg); opacity: 1; }
+          50%  { transform: translateY(-45%) rotate(2deg);  opacity: 1; }
+          100% { transform: translateY(-95%) rotate(-1deg); opacity: 0; }
+        }
+        @keyframes balloonPop {
+          0%   { transform: scale(1);    opacity: 1; }
+          40%  { transform: scale(1.35); opacity: 0.8; }
+          100% { transform: scale(0);   opacity: 0; }
+        }
+        @keyframes burstParticle {
+          0%   { transform: translate(0, 0) scale(1);   opacity: 1; }
+          100% { transform: translate(var(--bx), var(--by)) scale(0); opacity: 0; }
+        }
+        @keyframes balloonShake {
+          0%, 100% { transform: translateX(0); }
+          25%       { transform: translateX(-8px) rotate(-6deg); }
+          75%       { transform: translateX(8px)  rotate(6deg); }
+        }
+        .balloon-float  { animation: balloonFloat var(--dur, 4s) linear forwards; }
+        .balloon-pop    { animation: balloonPop 0.35s ease-out forwards; }
+        .balloon-shake  { animation: balloonShake 0.4s ease; }
+      `;
+      document.head.appendChild(s);
+    }
+  }, []);
+
+  // ── spawn balloons on a timer ───────────────────────────────────────────────
+  useEffect(() => {
+    if (done || isAnswered) return;
+    const pool = allLetters.length > 0 ? allLetters : [{ letter: target, colorIndex: 0 }];
+
+    const spawn = () => {
+      const idx      = Math.floor(Math.random() * pool.length);
+      const entry    = pool[idx];
+      const id       = nextId.current++;
+      const leftPct  = 8 + Math.random() * 78;          // 8..86 %
+      const dur      = 3.5 + Math.random() * 2.5;       // 3.5..6 s
+      const size     = 72 + Math.random() * 28;         // 72..100 px
+
+      setBalloons(prev => [
+        ...prev.filter(b => !b.popped || Date.now() - b.poppedAt < 600),
+        { id, letter: entry.letter, colorIndex: entry.colorIndex, leftPct, dur, size, popped: false }
+      ]);
+
+      // auto-remove after animation ends
+      setTimeout(() => {
+        setBalloons(prev => prev.filter(b => b.id !== id));
+      }, (dur + 0.5) * 1000);
+    };
+
+    spawn(); // spawn immediately
+    timerRef.current = setInterval(spawn, 1200);
+    return () => clearInterval(timerRef.current);
+  }, [done, isAnswered, allLetters, target]);
+
+  // ── tap handler ────────────────────────────────────────────────────────────
+  const handleTap = (balloon) => {
+    if (balloon.popped || isAnswered) return;
+
+    if (balloon.letter === target) {
+      // ✅ correct — pop + burst
+      const newHits = hits + 1;
+      setHits(newHits);
+      setBalloons(prev => prev.map(b =>
+        b.id === balloon.id ? { ...b, popped: true, poppedAt: Date.now() } : b
+      ));
+
+      // burst particles
+      const color = BALLOON_COLORS[balloon.colorIndex % BALLOON_COLORS.length];
+      const particles = Array.from({ length: 8 }, (_, i) => ({
+        id: `${balloon.id}-${i}`,
+        left: balloon.leftPct,
+        color: i % 2 === 0 ? color.body : color.shine,
+        angle: (i / 8) * 360,
+      }));
+      setBursts(prev => [...prev, ...particles]);
+      setTimeout(() => setBursts(prev => prev.filter(p => !particles.some(pp => pp.id === p.id))), 700);
+
+      if (newHits >= hitsNeeded) {
+        clearInterval(timerRef.current);
+        onAnswer(newHits);
+        speakText(target, question.voice || 'Kore', audioUrl);
+      } else {
+        speakText(target, question.voice || 'Kore', audioUrl);
+      }
+    } else {
+      // ❌ wrong — shake
+      setShakeIds(prev => new Set([...prev, balloon.id]));
+      setTimeout(() => setShakeIds(prev => { const s = new Set(prev); s.delete(balloon.id); return s; }), 450);
+    }
+  };
+
+  const progressPct = Math.min(100, (hits / hitsNeeded) * 100);
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      height: 'clamp(280px, 55vw, 420px)',
+      background: 'linear-gradient(180deg, #e0f2fe 0%, #bae6fd 40%, #f0fdf4 100%)',
+      borderRadius: 24,
+      overflow: 'hidden',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      touchAction: 'manipulation',
+    }}>
+      {/* ── ground strip ───────────────────────────────────────────── */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 28,
+        background: 'linear-gradient(0deg, #bbf7d0, #d1fae5)',
+        borderTop: '2px solid #6ee7b7',
+      }} />
+
+      {/* ── progress bar ───────────────────────────────────────────── */}
+      <div style={{
+        position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+        width: 'min(240px, 80%)', height: 14,
+        background: 'rgba(255,255,255,0.55)',
+        borderRadius: 99, overflow: 'hidden',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+        border: '1.5px solid rgba(255,255,255,0.8)',
+      }}>
+        <div style={{
+          height: '100%', width: `${progressPct}%`,
+          background: 'linear-gradient(90deg, #34d399, #10b981)',
+          borderRadius: 99,
+          transition: 'width 0.4s ease',
+        }} />
+      </div>
+
+      {/* ── hits counter ───────────────────────────────────────────── */}
+      <div style={{
+        position: 'absolute', top: 30, left: '50%', transform: 'translateX(-50%)',
+        fontSize: 12, fontWeight: 700, color: '#065f46',
+        fontFamily: 'var(--font-outfit, sans-serif)',
+      }}>
+        {hits} / {hitsNeeded}
+      </div>
+
+      {/* ── done banner ────────────────────────────────────────────── */}
+      {done && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(240,253,244,0.85)', zIndex: 20,
+          animation: 'none',
+        }}>
+          <div style={{ fontSize: 64 }}>🎉</div>
+          <div style={{
+            fontSize: 'clamp(22px,6vw,32px)', fontWeight: 900,
+            color: '#065f46', fontFamily: 'var(--font-outfit,sans-serif)',
+            marginTop: 8,
+          }}>Great job!</div>
+        </div>
+      )}
+
+      {/* ── burst particles ────────────────────────────────────────── */}
+      {bursts.map(p => {
+        const bx = `${Math.cos(p.angle * Math.PI / 180) * 60}px`;
+        const by = `${Math.sin(p.angle * Math.PI / 180) * 60}px`;
+        return (
+          <div key={p.id} style={{
+            position: 'absolute',
+            left: `${p.left}%`,
+            top: '30%',
+            width: 10, height: 10,
+            borderRadius: '50%',
+            background: p.color,
+            '--bx': bx, '--by': by,
+            animation: 'burstParticle 0.65s ease-out forwards',
+            pointerEvents: 'none',
+            zIndex: 15,
+          }} />
+        );
+      })}
+
+      {/* ── balloons ───────────────────────────────────────────────── */}
+      {balloons.map(balloon => {
+        const color = BALLOON_COLORS[balloon.colorIndex % BALLOON_COLORS.length];
+        const isWrong = balloon.letter !== target;
+        return (
+          <div
+            key={balloon.id}
+            onClick={() => handleTap(balloon)}
+            className={[
+              balloon.popped ? 'balloon-pop' : 'balloon-float',
+              shakeIds.has(balloon.id) ? 'balloon-shake' : '',
+            ].join(' ')}
+            style={{
+              position: 'absolute',
+              bottom: 28,
+              left: `${balloon.leftPct}%`,
+              '--dur': `${balloon.dur}s`,
+              cursor: balloon.popped ? 'default' : 'pointer',
+              zIndex: 10,
+              filter: isWrong
+                ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.18))'
+                : 'drop-shadow(0 4px 12px rgba(16,185,129,0.35))',
+              transition: 'filter 0.2s',
+            }}
+          >
+            <BalloonSvg letter={balloon.letter} color={color} size={balloon.size} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// AudioPart — plays an attached audio URL (R2 or external)
+// ───────────────────────────────────────────────────────────────────────────
+function AudioPart({ part }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+
+  const url = part.audioUrl || part.content || '';
+  const label = part.label || '';
+
+  const handlePlay = () => {
+    if (!url) return;
+    if (playing) {
+      audioRef.current?.pause();
+      if (audioRef.current) audioRef.current.currentTime = 0;
+      setPlaying(false);
+    } else {
+      audioRef.current?.play();
+      setPlaying(true);
+    }
+  };
+
+  if (!url) return null;
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 8,
+      margin: '8px 0',
+    }}>
+      {/* Hidden audio element */}
+      <audio
+        ref={audioRef}
+        src={url}
+        onEnded={() => setPlaying(false)}
+        onPause={() => setPlaying(false)}
+        preload="auto"
+      />
+
+      {/* Big tap-to-play button */}
+      <button
+        type="button"
+        onClick={handlePlay}
+        aria-label={label ? `Play: ${label}` : 'Play audio'}
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: '50%',
+          border: 'none',
+          background: playing
+            ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
+            : 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+          boxShadow: playing
+            ? '0 0 0 8px rgba(124,58,237,0.2), 0 8px 24px rgba(124,58,237,0.4)'
+            : '0 4px 16px rgba(124,58,237,0.35)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 28,
+          transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          transform: playing ? 'scale(1.08)' : 'scale(1)',
+          animation: playing ? 'audioPulse 1.2s ease-in-out infinite' : 'none',
+        }}
+      >
+        {playing ? '⏹' : '🔊'}
+      </button>
+
+      {/* Label */}
+      {label && (
+        <span style={{
+          fontSize: 'clamp(14px, 3.5vw, 18px)',
+          fontWeight: 700,
+          color: '#4c1d95',
+          letterSpacing: '0.01em',
+          textAlign: 'center',
+          fontFamily: 'var(--font-outfit, sans-serif)',
+        }}>
+          {label}
+        </span>
+      )}
+
+      {/* Inject pulse keyframe once */}
+      <style>{`
+        @keyframes audioPulse {
+          0%, 100% { box-shadow: 0 0 0 8px rgba(124,58,237,0.2), 0 8px 24px rgba(124,58,237,0.4); }
+          50%       { box-shadow: 0 0 0 16px rgba(124,58,237,0.08), 0 8px 32px rgba(124,58,237,0.5); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
   text: TextPart,
   play_sound_card: PlaySoundCard,
@@ -5146,6 +5671,8 @@ const PART_RENDERERS = {
   interactive_svg: InteractiveSvgPart,
   hotspot_canvas: HotspotCanvasPart,
   case_match_shown_letter: CaseMatchShownLetterPart,
+  balloon_tap: BalloonTapPart,
+  audio: AudioPart,
 };
 
 function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }) {
@@ -5594,6 +6121,7 @@ export default function PartRenderer({
   inGroup = false,
   showSpeaker,
   speakTextValue,
+  partIndex,
 }) {
   if (!part) return null;
   const Renderer = PART_RENDERERS[part.type];
@@ -5616,6 +6144,7 @@ export default function PartRenderer({
       inGroup={inGroup}
       showSpeaker={showSpeaker}
       speakTextValue={speakTextValue}
+      partIndex={partIndex}
     />
   );
 }

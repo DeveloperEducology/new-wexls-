@@ -284,7 +284,7 @@
     "cat": "https://cdn-icons-png.flaticon.com/512/1998/1998592.png",
     "pig": "https://cdn-icons-png.flaticon.com/512/2264/2264627.png",
     "rug": "https://cdn-icons-png.flaticon.com/512/2250/2250005.png",
-    "fox": "https://cdn-icons-png.flaticon.com/512/1998/1998631.png",
+    "fox": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780134635070-fox.png",
     "sun": "https://cdn-icons-png.flaticon.com/512/4814/4814268.png",
     "men": "https://cdn-icons-png.flaticon.com/512/4140/4140037.png",
     "pet": "https://cdn-icons-png.flaticon.com/512/616/616408.png",
@@ -388,7 +388,9 @@
     "bread": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780028070694-bread.jpg",
     "night": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780030900805-road.png",
     "road": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780030881708-road.png",
-    "day": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780030894958-road.png"
+    "day": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780030894958-road.png",
+    "jug": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780134805977-jug.png",
+    "white": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780134868129-jug.png"
   },
   "endingFamilies": {
     "at": [

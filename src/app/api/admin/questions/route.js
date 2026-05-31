@@ -36,6 +36,8 @@ export async function getOrGenerateR2Audio(text, voice) {
             return r2Url;
           }
         }
+        // Return local API streaming fallback if R2 is not active
+        return `/api/tts?text=${encodeURIComponent(text)}&voice=${voice}`;
       }
     }
   } catch (error) {
@@ -73,7 +75,11 @@ export async function getOrGenerateR2Audio(text, voice) {
       console.warn('Failed to save generated audio to cache:', dbError);
     }
 
-    return r2Url;
+    if (r2Url) {
+      return r2Url;
+    }
+    // Return local API streaming fallback if R2 is not active
+    return `/api/tts?text=${encodeURIComponent(text)}&voice=${voice}`;
   } catch (err) {
     console.error(`Audio generation/upload error for text "${text}":`, err);
     return null;
@@ -113,7 +119,18 @@ export async function GET(request) {
     if (topic) filter.topic = topic;
     if (skillId) filter.skillId = skillId;
     if (type) filter.type = type;
-    if (difficulty) filter.difficulty = difficulty;
+    if (difficulty) {
+      const val = String(difficulty).toLowerCase();
+      const equivalents = [val];
+      if (val === 'easy' || val === 'beginner') {
+        equivalents.push('easy', 'beginner');
+      } else if (val === 'medium' || val === 'intermediate') {
+        equivalents.push('medium', 'intermediate');
+      } else if (val === 'hard' || val === 'advanced') {
+        equivalents.push('hard', 'advanced');
+      }
+      filter.difficulty = { $in: equivalents };
+    }
 
     if (audioStatus === 'withAudio') {
       filter.audioUrl = { $exists: true, $ne: null, $ne: '' };
@@ -176,7 +193,7 @@ export async function POST(request) {
 
     if (shouldGenerateQuestionAudio) {
       // 1. Process question text audio
-      if (payload.questionText) {
+      if (payload.questionText && !payload.audioUrl) {
         const audioUrl = await getOrGenerateR2Audio(payload.questionText, voice);
         if (audioUrl) {
           payload.audioUrl = audioUrl;
@@ -201,7 +218,7 @@ export async function POST(request) {
             optionObj = { ...option };
           }
 
-          if (optionText) {
+          if (optionText && !optionObj.audioUrl) {
             const optionAudioUrl = await getOrGenerateR2Audio(optionText, voice);
             if (optionAudioUrl) {
               optionObj.audioUrl = optionAudioUrl;

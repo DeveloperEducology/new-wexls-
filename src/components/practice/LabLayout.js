@@ -26,7 +26,8 @@ export default function LabLayout({
     isSubmitting = false,
     isPreK = false,
     isCorrect = false,
-    onNext = null
+    onNext = null,
+    subject = ''
 }) {
     const [isMobile, setIsMobile] = useState(false);
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
@@ -95,7 +96,7 @@ export default function LabLayout({
                         {/* 1. Mascot Avatar on the left with overlapping stars badge */}
                         <div className={styles.preKAvatarContainer} onClick={onReset} title="Restart Practice">
                             <span style={{ fontSize: '48px', display: 'block', transform: 'scaleX(-1)' }}>
-                                {question?.metadata?.subject === 'english' || question?.subject === 'english' ? '🐻' : '🦉'}
+                                {String(subject || question?.metadata?.subject || question?.subject || '').toLowerCase() === 'english' ? '🐻' : '🦉'}
                             </span>
                             <div className={styles.preKAvatarStarBadge}>
                                 ⭐ <span>{smartScore}</span>
@@ -148,14 +149,14 @@ export default function LabLayout({
 
                         {/* 3. Streak and Stars stats on the right */}
                         <div className={styles.preKRightStatsContainer}>
-                            <div className={styles.preKStatCard}>
+                            <div className={`${styles.preKStatCard} ${styles.preKStreakCard}`}>
                                 <span className={styles.preKStatCardIcon}>🔥</span>
                                 <div className={styles.preKStatCardText}>
                                     <span className={styles.preKStatCardValue}>{levelStreak}</span>
                                     <span className={styles.preKStatCardLabel}>Streak</span>
                                 </div>
                             </div>
-                            <div className={styles.preKStatCard}>
+                            <div className={`${styles.preKStatCard} ${styles.preKStarsCard}`}>
                                 <span className={styles.preKStatCardIcon}>⭐</span>
                                 <div className={styles.preKStatCardText}>
                                     <span className={styles.preKStatCardValue}>{smartScore}</span>

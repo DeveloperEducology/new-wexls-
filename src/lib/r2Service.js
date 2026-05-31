@@ -132,6 +132,67 @@ export async function listR2Images(prefix = '') {
 }
 
 /**
+ * List audio files in Cloudflare R2 bucket under an optional prefix.
+ * Uses pagination (ContinuationToken) so ALL files across ALL subfolders
+ * are returned, even when there are more than 1000 objects.
+ * @param {string} prefix - Folder prefix (e.g. 'audio/')
+ * @returns {Promise<Array<{key: string, url: string, size: number, lastModified: Date, folder: string}>>}
+ */
+export async function listR2Audio(prefix = '') {
+  if (!isR2Configured()) {
+    return [];
+  }
+  const bucketName = r2BucketName;
+  const basePublicUrl = r2PublicUrl.replace(/\/$/, '');
+
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+  const allItems = [];
+
+  try {
+    let continuationToken = undefined;
+
+    // Paginate through ALL objects — R2 returns max 1000 per request
+    do {
+      const command = new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix,
+        // No Delimiter — this makes listing recursive into all subfolders
+        ...(continuationToken ? { ContinuationToken: continuationToken } : {}),
+      });
+
+      const response = await s3Client.send(command);
+
+      if (response.Contents) {
+        for (const item of response.Contents) {
+          const lowerKey = item.Key.toLowerCase();
+          if (!audioExtensions.some(ext => lowerKey.endsWith(ext))) continue;
+
+          // Derive folder name from key path (everything after the prefix, up to last /)
+          const relativePath = item.Key.slice(prefix.length);
+          const slashIdx = relativePath.lastIndexOf('/');
+          const folder = slashIdx !== -1 ? relativePath.slice(0, slashIdx) : '';
+
+          allItems.push({
+            key: item.Key,
+            url: `${basePublicUrl}/${item.Key}`,
+            size: item.Size,
+            lastModified: item.LastModified,
+            folder, // e.g. 'phonics', 'lkg', 'tts', ''
+          });
+        }
+      }
+
+      continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return allItems;
+  } catch (error) {
+    console.error('Failed to list audio from Cloudflare R2:', error);
+    throw error;
+  }
+}
+
+/**
  * Deletes multiple images from Cloudflare R2 bucket
  * @param {string[]} keys - List of object keys to delete
  * @returns {Promise<any>}

@@ -193,20 +193,15 @@ function renderPart(part, props, index, context = {}) {
   }
   if (part.type === 'image') {
     return (
-      <div key={index} style={{ width: '100%', display: 'flex', justifyContent: 'flex-start', ...(part.style || {}) }}>
-        <img
-          src={part.imageUrl || part.src || part.content}
-          alt={part.alt || ''}
-          style={{
-            width: '100%',
-            maxWidth: part.maxWidth || 340,
-            maxHeight: part.maxHeight || 280,
-            objectFit: 'contain',
-            borderRadius: 18,
-            boxShadow: '0 16px 36px rgba(15, 23, 42, 0.12)',
-          }}
-        />
-      </div>
+      <PartRenderer
+        key={index}
+        part={part}
+        question={props.question}
+        userAnswer={props.userAnswer}
+        onAnswer={props.onAnswer}
+        isAnswered={props.isAnswered}
+        inGroup={context.inGroup}
+      />
     );
   }
   if (part.type === 'input') return <InputPart key={index} id={part.id || part.name} {...props} style={part.style} />;
@@ -326,21 +321,80 @@ export default function FillInTheBlankRenderer({
         </div>
       ) : null}
 
-      {displayParts.map((part, index) => {
-        const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
-        return (
-          <PartRenderer
-            key={index}
-            part={part}
-            question={question}
-            userAnswer={userAnswer}
-            onAnswer={onAnswer}
-            isAnswered={isAnswered}
-            showSpeaker={!question.questionText && isFirstTextPart}
-            speakTextValue={speechText}
-          />
-        );
-      })}
+      {(() => {
+        if (question.arrangeImagesRow) {
+          const elements = [];
+          let currentImageRow = [];
+
+          const flushImageRow = (key) => {
+            if (currentImageRow.length > 0) {
+              elements.push(
+                <div
+                  key={`image-row-${key}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 16,
+                    width: '100%',
+                    margin: '10px 0'
+                  }}
+                >
+                  {currentImageRow}
+                </div>
+              );
+              currentImageRow = [];
+            }
+          };
+
+          displayParts.forEach((part, index) => {
+            const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+            const partElement = (
+              <PartRenderer
+                key={index}
+                part={{
+                  ...part,
+                  ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180 } : {})
+                }}
+                question={question}
+                userAnswer={userAnswer}
+                onAnswer={onAnswer}
+                isAnswered={isAnswered}
+                showSpeaker={!question.questionText && isFirstTextPart}
+                speakTextValue={speechText}
+              />
+            );
+
+            if (part.type === 'image') {
+              currentImageRow.push(partElement);
+            } else {
+              flushImageRow(index);
+              elements.push(partElement);
+            }
+          });
+
+          flushImageRow('end');
+          return elements;
+        }
+
+        return displayParts.map((part, index) => {
+          const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+          return (
+            <PartRenderer
+              key={index}
+              part={part}
+              question={question}
+              userAnswer={userAnswer}
+              onAnswer={onAnswer}
+              isAnswered={isAnswered}
+              showSpeaker={!question.questionText && isFirstTextPart}
+              speakTextValue={speechText}
+            />
+          );
+        });
+      })()}
     </section>
   );
 }

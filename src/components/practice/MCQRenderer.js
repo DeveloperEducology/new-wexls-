@@ -213,6 +213,7 @@ function Part({ part, inGroup = false }) {
   }
 
   if (part?.type === 'image') {
+    const isTransparent = (part.imageUrl || part.src || part.content || '').match(/\.(png|svg|webp)($|\?)/i);
     return (
       <div
         style={{
@@ -220,7 +221,7 @@ function Part({ part, inGroup = false }) {
           maxWidth: inGroup ? 220 : 460,
           flex: inGroup ? '0 0 auto' : 'initial',
           display: 'flex',
-          justifyContent: 'flex-start',
+          justifyContent: inGroup ? 'flex-start' : 'center',
           ...(part.style || {}),
         }}
       >
@@ -232,8 +233,8 @@ function Part({ part, inGroup = false }) {
             maxWidth: part.maxWidth || 340,
             maxHeight: part.maxHeight || 280,
             objectFit: 'contain',
-            borderRadius: 18,
-            boxShadow: '0 16px 36px rgba(15, 23, 42, 0.12)',
+            borderRadius: isTransparent ? undefined : 18,
+            boxShadow: (isPreK && isTransparent) ? 'none' : '0 16px 36px rgba(15, 23, 42, 0.12)',
           }}
         />
       </div>
@@ -385,26 +386,87 @@ export default function MCQRenderer({
       ) : null}
 
       {Array.isArray(question.parts) && question.parts.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
-          {question.parts.map((part, index) => {
-            const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
-            return (
-              <PartRenderer
-                key={index}
-                part={part}
-                question={question}
-                userAnswer={userAnswer}
-                onAnswer={onAnswer}
-                isAnswered={isAnswered}
-                showSpeaker={showInlineSpeaker && isFirstTextPart}
-                speakTextValue={speechText}
-              />
-            );
-          })}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isPreK ? 'center' : 'flex-start', gap: 12, width: '100%' }}>
+          {(() => {
+            if (question.arrangeImagesRow) {
+              const elements = [];
+              let currentImageRow = [];
+
+              const flushImageRow = (key) => {
+                if (currentImageRow.length > 0) {
+                  elements.push(
+                    <div
+                      key={`image-row-${key}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 16,
+                        width: '100%',
+                        margin: '10px 0'
+                      }}
+                    >
+                      {currentImageRow}
+                    </div>
+                  );
+                  currentImageRow = [];
+                }
+              };
+
+              question.parts.forEach((part, index) => {
+                const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+                const partElement = (
+                  <PartRenderer
+                    key={index}
+                    part={{
+                      ...part,
+                      ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180 } : {})
+                    }}
+                    question={question}
+                    userAnswer={userAnswer}
+                    onAnswer={onAnswer}
+                    isAnswered={isAnswered}
+                    showSpeaker={showInlineSpeaker && isFirstTextPart}
+                    speakTextValue={speechText}
+                    partIndex={index}
+                  />
+                );
+
+                if (part.type === 'image') {
+                  currentImageRow.push(partElement);
+                } else {
+                  flushImageRow(index);
+                  elements.push(partElement);
+                }
+              });
+
+              flushImageRow('end');
+              return elements;
+            }
+
+            return question.parts.map((part, index) => {
+              const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+              return (
+                <PartRenderer
+                  key={index}
+                  part={part}
+                  question={question}
+                  userAnswer={userAnswer}
+                  onAnswer={onAnswer}
+                  isAnswered={isAnswered}
+                  showSpeaker={showInlineSpeaker && isFirstTextPart}
+                  speakTextValue={speechText}
+                  partIndex={index}
+                />
+              );
+            });
+          })()}
         </div>
       ) : null}
 
-      {['interactive_svg', 'hotspot_select', 'hotspot_multi_select'].includes(question.interaction) ? null : question.layoutConfig?.variant === 'capsule' ? (
+      {['interactive_svg', 'hotspot_select', 'hotspot_multi_select', 'balloon_tap', 'direct_image_select'].includes(question.interaction) || question.directImageSelect ? null : question.layoutConfig?.variant === 'capsule' ? (
         <div 
           style={{
             display: 'flex',
@@ -442,7 +504,7 @@ export default function MCQRenderer({
                   } else {
                     onAnswer(index);
                   }
-                  if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
+                  if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(value, question.voice || 'Puck', option?.audioUrl);
                   }
                 }}
@@ -476,47 +538,9 @@ export default function MCQRenderer({
         </div>
       ) : (
         <div
-          style={isPreK ? {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            maxWidth: '720px',
-            margin: '20px auto',
-            width: '100%',
-          } : undefined}
+          className={isPreK ? styles.preKOptionsContainer : undefined}
         >
-          {isPreK && (
-            <button
-              type="button"
-              onClick={() => {
-                const texts = (question.options || []).map((opt, idx) => getOptionLabel(opt, idx));
-                speakText(texts.join('. '), question.voice || 'Kore');
-              }}
-              style={{
-                background: '#e0f2fe',
-                border: 'none',
-                borderRadius: '50%',
-                width: '42px',
-                height: '42px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#0284c7',
-                boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
-                transition: 'transform 0.2s ease, background 0.2s ease',
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-              title="Read all options out loud"
-              aria-label="Read all options out loud"
-            >
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-              </svg>
-            </button>
-          )}
+
           <div
             className={isPreK ? styles.preKOptionsGrid : gridClassName}
             style={isPreK ? undefined : gridStyle}
@@ -544,7 +568,7 @@ export default function MCQRenderer({
                     } else {
                       onAnswer(index);
                     }
-                    if (option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
+                    if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                       speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
                     }
                   }}
@@ -559,7 +583,8 @@ export default function MCQRenderer({
                       { base: styles.preKOptionGreen, active: styles.preKOptionGreenActive },
                     ];
                     const theme = themes[index % themes.length];
-                    return `${styles.preKOptionButton} ${theme.base} ${selected ? `${styles.preKOptionButtonActive} ${theme.active}` : ''}`;
+                    const mediaClass = hasMedia ? styles.preKOptionButtonWithMedia : styles.preKOptionButtonTextOnly;
+                    return `${styles.preKOptionButton} ${mediaClass} ${theme.base} ${selected ? `${styles.preKOptionButtonActive} ${theme.active}` : ''}`;
                   })()}
                   style={{
                     position: 'relative',
@@ -597,7 +622,7 @@ export default function MCQRenderer({
                       {selected ? '✓' : ''}
                     </div>
                   )}
-                  {(question.metaConfig?.readOptions || question.metaConfig?.readable) ? (
+                  {(isPreK || question.metaConfig?.readOptions || question.metaConfig?.readable) ? (
                     <span
                       role="button"
                       tabIndex={0}
@@ -701,7 +726,13 @@ export default function MCQRenderer({
                     </div>
                   ) : null}
                   {!isSvgOption && !isImageOption && !(option && option.emoji) ? (
-                    <div style={{ fontSize: 'clamp(14px, 3.8vw, 17px)', fontWeight: 'inherit', lineHeight: 1.35 }}>
+                    <div 
+                      style={{ 
+                        fontSize: isPreK ? 'clamp(20px, 4.8vw, 26px)' : 'clamp(14px, 3.8vw, 17px)', 
+                        fontWeight: isPreK ? '900' : 'inherit', 
+                        lineHeight: 1.35 
+                      }}
+                    >
                       {option?.type === 'latex' ? (
                         <KaTeXRenderer math={getOptionLabel(option, index)} />
                       ) : (

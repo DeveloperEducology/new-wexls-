@@ -628,7 +628,7 @@ function buildPracticeOptionsFromDbTopic(topicNode) {
     description: topicNode.description || topicNode.metadata?.description || 'Curriculum topic from database.',
     defaultLogicType,
     subject: topicNode.subjectId || 'math',
-    topic: topicNode.topicId || topicNode.id,
+    topic: topicNode.id,
     options,
     tips: topicNode.metadata?.tips || [
       { label: 'Database Stored', text: 'This topic was loaded dynamically from the curriculum database.' }
@@ -652,6 +652,7 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'science' && normTopic === 'units-measurement') return 'units-measurement';
   if (subject === 'science' && normTopic === 'solar-system') return 'solar-system';
   if (subject === 'english' && normTopic === 'grammar') return 'english-grammar';
+  if (subject === 'english' && (normTopic === 'lkg' || normTopic === 'english-lkg')) return 'english-lkg';
   return topic; // return the topic ID for db fetched topics
 }
 
@@ -965,11 +966,15 @@ function PracticePageContent() {
   const urlSubject = resolveSearchValue(searchParams, 'subject');
   const urlTopic = resolveSearchValue(searchParams, 'topic');
   const urlSkill = resolveSearchValue(searchParams, 'skill');
+  const urlQn = resolveSearchValue(searchParams, 'qn')
+    || resolveSearchValue(searchParams, 'questionId')
+    || resolveSearchValue(searchParams, 'id');
   const initialSource = resolveSearchValue(searchParams, 'source', 'addition-topic');
   const resolvedInitialSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
   const initialLogicType = urlSkill
     || resolveSearchValue(searchParams, 'forcedTask')
     || resolveSearchValue(searchParams, 'logic_type');
+
 
   const [dbConfigs, setDbConfigs] = useState({});
   const [curriculumLoading, setCurriculumLoading] = useState(true);
@@ -1197,6 +1202,10 @@ function PracticePageContent() {
     url.searchParams.set('levelStreak', String(sessionOverride.levelStreak ?? levelStreak));
     url.searchParams.set('lastResult', sessionOverride.lastResult ?? lastResult);
 
+    if (urlQn) {
+      url.searchParams.set('qn', urlQn);
+    }
+
     const competency = resolveCompetency({
       subject: urlSubject || sourceConfig.subject,
       topic: urlTopic || sourceConfig.topic,
@@ -1226,6 +1235,7 @@ function PracticePageContent() {
     sourceConfig,
     urlSubject,
     urlTopic,
+    urlQn,
   ]);
 
   const applyQuestionPayload = useCallback((data, sessionOverride = {}) => {
@@ -1601,6 +1611,13 @@ function PracticePageContent() {
     }
 
     if (correct) {
+      if (urlQn) {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('qn');
+        params.delete('questionId');
+        params.delete('id');
+        router.replace(`/practice?${params.toString()}`, { scroll: false });
+      }
       const nextQuestionSession = {
         correctStreak: nextCorrectStreak,
         practiceLevel: nextPracticeLevel,
@@ -1799,12 +1816,23 @@ function PracticePageContent() {
     }
   }, [questionJson]);
 
+  const handleNextQuestion = useCallback(() => {
+    if (urlQn) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('qn');
+      params.delete('questionId');
+      params.delete('id');
+      router.replace(`/practice?${params.toString()}`, { scroll: false });
+    }
+    fetchQuestion();
+  }, [urlQn, fetchQuestion, router]);
+
   const inlineFeedback = isAnswered && !isCorrect ? (
     <PracticeFeedback
       question={question}
       isCorrect={isCorrect}
       isPreK={isPreK}
-      onNext={() => fetchQuestion()}
+      onNext={handleNextQuestion}
       loading={loading}
     />
   ) : null;
@@ -2703,6 +2731,7 @@ function PracticePageContent() {
         title={sourceConfig.label}
         grade={isPreK ? "Pre-K Learning 🌟" : "Shared Practice Shell"}
         isPreK={isPreK}
+        subject={urlSubject || question?.metadata?.subject || question?.subject || ''}
         smartScore={smartScore}
         difficulty={difficulty}
         setDifficulty={setDifficulty}
@@ -2721,7 +2750,7 @@ function PracticePageContent() {
         levelStreak={levelStreak}
         isSubmitting={isSubmitting}
         isCorrect={isCorrect}
-        onNext={() => fetchQuestion()}
+        onNext={handleNextQuestion}
       >
         {question ? (
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>
@@ -2757,6 +2786,40 @@ function PracticePageContent() {
           </div>
         )}
       </LabLayout>
+
+      {question?.id && (
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            width: '100%', 
+            padding: '16px 0 24px 0', 
+            fontSize: '12px', 
+            fontWeight: 700 
+          }}
+        >
+          <a
+            href={`/practice?subject=${urlSubject || sourceConfig.subject}&topic=${urlTopic || sourceConfig.topic}&skill=${logicType}&qn=${question.id}`}
+            style={{ 
+              color: isPreK ? '#0369a1' : '#6366f1', 
+              textDecoration: 'none', 
+              background: isPreK ? 'rgba(255, 255, 255, 0.85)' : '#f1f5f9', 
+              padding: '6px 14px', 
+              borderRadius: 999, 
+              border: '1.5px solid currentColor', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            🔗 Direct Link to Question: {question.id}
+          </a>
+        </div>
+      )}
 
       {masteredOverlayEl}
       {adaptiveBannerEl}

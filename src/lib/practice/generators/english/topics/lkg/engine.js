@@ -2106,13 +2106,74 @@ Look at the highlighted green lines to see the correct ${lineTypeName} line${cor
   };
 }
 
+
 const PHONICS_WORDS = {
-  'lkg-english-phonics-short-a': ["cat", "bat", "hat", "mat", "rat", "sat", "pan", "fan", "man", "can", "map", "tap", "cap", "lap", "bag", "tag", "rag", "jam", "ham", "van"],
-  'lkg-english-phonics-short-e': ["bed", "pen", "hen", "ten", "men", "net", "pet", "wet", "red", "leg", "peg", "beg", "fed", "led", "web", "den", "Ben", "set", "jet", "vet"],
-  'lkg-english-phonics-short-i': ["pin", "sit", "pig", "big", "dig", "wig", "fin", "bin", "tin", "lip", "sip", "rip", "kid", "lid", "win", "zip", "hit", "bit", "fit", "kit"],
-  'lkg-english-phonics-short-o': ["dog", "pot", "log", "hot", "mop", "top", "box", "fox", "cot", "dot", "rod", "hop", "pop", "jog", "fog", "hog", "not", "got", "lot", "sob"],
-  'lkg-english-phonics-short-u': ["cup", "sun", "bus", "bug", "hut", "mud", "run", "tub", "nut", "rug", "bun", "fun", "gun", "cut", "but", "pup", "cub", "hum", "gum", "jug"]
+  'lkg-english-phonics-short-a': [
+    "cat","bat","hat","mat","rat","sat","pat","fat","vat","chat",
+    "pan","fan","man","can","ran","tan","van","jam","ham","yam",
+    "map","tap","cap","lap","nap","sap","gap","rap","zap","clap",
+    "bag","tag","rag","wag","lag","nag","sag","flag","drag","brag",
+    "dad","mad","sad","bad","pad","glad","had","lad","fad","rad",
+    "cab","dab","jab","lab","nab","tab","grab","crab","slab","scab",
+    "bat","chat","flat","gnat","that","spat","brat","drat","splat","sat",
+    "ash","dash","lash","mash","rash","cash","flash","trash","crash","smash",
+    "and","band","hand","land","sand","stand","grand","brand","planned","strand",
+    "ank","bank","tank","rank","thank","blank","crank","plank","spank","shank"
+  ],
+
+  'lkg-english-phonics-short-e': [
+    "bed","red","fed","led","wed","shed","thread","spread","bled","sled",
+    "pen","hen","ten","men","den","Ben","Ken","then","when","wren",
+    "net","pet","wet","jet","vet","get","set","let","met","bet",
+    "peg","leg","beg","keg","egg","meg","Greg","fled","sled","wed",
+    "web","deb","gem","hem","them","stem","step","kept","wept","slept",
+    "bell","sell","tell","well","fell","yell","shell","smell","spell","dwell",
+    "neck","deck","peck","check","wreck","speck","fleck","trek","crept","step",
+    "red","shed","bled","sled","thread","spread","bread","dread","tread","stead",
+    "nest","best","rest","test","west","pest","chest","quest","zest","jest",
+    "end","bend","lend","send","tend","spend","blend","friend","trend","mend"
+  ],
+
+  'lkg-english-phonics-short-i': [
+    "pin","bin","tin","win","fin","chin","skin","spin","grin","thin",
+    "sit","fit","hit","bit","kit","lit","pit","wit","split","quit",
+    "pig","big","dig","fig","wig","jig","twig","rig","gig","sprig",
+    "lip","sip","rip","tip","dip","hip","nip","zip","clip","slip",
+    "kid","lid","hid","did","bid","rid","skid","grid","mid","quid",
+    "fish","dish","wish","swish","finish","trick","brick","stick","click","flick",
+    "hill","fill","bill","pill","mill","drill","spill","still","grill","skill",
+    "kick","lick","pick","tick","sick","quick","thick","brick","stick","trick",
+    "ring","sing","wing","king","bring","swing","thing","sting","cling","spring",
+    "ink","pink","sink","wink","blink","drink","think","stink","rink","link"
+  ],
+
+  'lkg-english-phonics-short-o': [
+    "dog","fog","hog","log","jog","bog","frog","clog","smog","tog",
+    "pot","hot","cot","dot","lot","not","got","shot","spot","plot",
+    "mop","top","hop","pop","cop","shop","drop","stop","flop","crop",
+    "box","fox","pox","ox","rocks","socks","clock","block","shock","stock",
+    "rod","cod","nod","pod","sod","trod","prod","plod","odd","god",
+    "sob","mob","cob","job","rob","blob","glob","throb","snob","knob",
+    "rock","sock","dock","lock","mock","clock","block","shock","stock","flock",
+    "pond","bond","fond","beyond","blond","frond","wand","yawn","spawn","strong",
+    "cross","loss","boss","moss","toss","gloss","frost","cost","post","most",
+    "song","long","gong","strong","wrong","throng","along","belong","prong","pong"
+  ],
+
+  'lkg-english-phonics-short-u': [
+    "cup","pup","sup","up","shut","strut","cut","hut","nut","gut",
+    "sun","fun","run","bun","gun","nun","stun","spun","shun","done",
+    "bus","bug","mug","rug","hug","jug","dug","plug","slug","shrug",
+    "mud","bud","thud","stud","flood","blood","crud","spud","dud","scud",
+    "tub","rub","cub","sub","stub","club","scrub","snub","grub","pub",
+    "hum","gum","sum","drum","plum","thumb","crumb","strum","slum","glum",
+    "duck","luck","truck","stuck","pluck","snuck","cluck","muck","buck","tuck",
+    "jump","bump","hump","dump","pump","stump","thump","lump","grump","trump",
+    "must","dust","rust","trust","crust","gust","just","plus","thus","fuss",
+    "under","thunder","wonder","blunder","number","runner","summer","butter","puppy","sunny"
+  ]
 };
+
 
 function generatePhonicsVowelsQuestion(skillId, seed, r) {
   const category = skillId.replace('lkg-english-phonics-', ''); // e.g. short-a
@@ -2281,6 +2342,67 @@ function generatePhonicsImagesQuestion(skillId, seed, r) {
   };
 }
 
+// ─── Balloon Tap generator ────────────────────────────────────────────────────
+// Produces a `balloon_tap` part where letters float up as balloons.
+// The student must tap every balloon that shows the target letter.
+const BALLOON_TAP_COLOR_COUNT = 7; // matches PartRenderer BALLOON_COLORS length
+
+function generateBalloonTapQuestion(skillId, seed, r) {
+  const useUppercase = !skillId.includes('lowercase');
+  const alphabet = useUppercase
+    ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+    : 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+  // Pick target letter
+  const targetIdx    = Math.floor(r * alphabet.length);
+  const targetLetter = alphabet[targetIdx];
+
+  // Pick 4 distinct distractors
+  const otherLetters = alphabet.filter(l => l !== targetLetter);
+  const shuffled     = shuffle(otherLetters, r);
+  const distractors  = shuffled.slice(0, 4);
+
+  // Build letter pool: target appears twice as often as each distractor
+  const pool = [
+    { letter: targetLetter, colorIndex: targetIdx % BALLOON_TAP_COLOR_COUNT },
+    { letter: targetLetter, colorIndex: (targetIdx + 3) % BALLOON_TAP_COLOR_COUNT },
+    ...distractors.map((l, i) => ({ letter: l, colorIndex: (targetIdx + i + 1) % BALLOON_TAP_COLOR_COUNT })),
+  ];
+
+  const questionText = `Tap every balloon with the letter **${targetLetter}**!`;
+  const audioUrl = letterAudios[questionText] || letterAudios[targetLetter] || undefined;
+
+  return {
+    id: `english_lkg_balloon_tap_${skillId}_${seed}`,
+    type: 'mcq',
+    interaction: 'balloon_tap',
+    questionText,
+    targetLetter,
+    audioUrl,
+    voice: 'Kore',
+    generateAudio: 'all',
+    hitsNeeded: 3,
+    explanation: `The letter **${targetLetter}** floats up on the balloons. You popped them all!`,
+    remediation: `Look for the letter **${targetLetter}** — it looks like this: ${targetLetter}`,
+    options: pool.map((entry, i) => ({ id: `opt_${i}`, label: entry.letter })),
+    correctAnswerIndex: 0,
+    answer: targetLetter,
+    metadata: {
+      chapterId: 'english-lkg-letter-identification',
+      chapterTitle: 'Letter Identification',
+    },
+    parts: [
+      { type: 'text', content: questionText },
+      {
+        type: 'balloon_tap',
+        target: targetLetter,
+        hitsNeeded: 3,
+        letters: pool,
+      },
+    ],
+  };
+}
+
 export function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
@@ -2318,6 +2440,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generatePhonicsVowelsQuestion(skillId, seed, r);
       } else if (template.engine === 'phonics_images') {
         question = generatePhonicsImagesQuestion(skillId, seed, r);
+      } else if (template.engine === 'balloon_tap') {
+        question = generateBalloonTapQuestion(skillId, seed, r);
       }
 
       if (question) {

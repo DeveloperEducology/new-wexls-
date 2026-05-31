@@ -545,7 +545,7 @@
 
     /* Pre-K Mobile Overrides */
     .preKPageContainer {
-        padding: 10px 8px;
+        padding: 10px 8px 160px 8px;
     }
 
     .preKCloud1, 
@@ -755,11 +755,10 @@
     cursor: default;
 }
 
-/* Pre-K Option Buttons (Chunky 3D sticker-style cards) */
 .preKOptionButton {
-    aspect-ratio: 1.1 / 1;
     width: 100%;
-    padding: 12px;
+    max-width: 280px;
+    margin: 0 auto;
     border-radius: 24px !important;
     border: 4px solid #ffffff !important;
     background: #ffffff !important;
@@ -773,6 +772,17 @@
     flex-direction: column;
     font-weight: 900;
     transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.preKOptionButtonWithMedia {
+    aspect-ratio: 1.2 / 1;
+    padding: 16px;
+}
+
+.preKOptionButtonTextOnly {
+    aspect-ratio: 2.2 / 1;
+    padding: 12px 16px;
+    min-height: 80px;
 }
 
 .preKOptionButton:hover:not(:disabled) {
@@ -992,7 +1002,7 @@
     background-position: center bottom;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    padding: 24px;
+    padding: 24px 24px 220px 24px;
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
     color: #1e293b;
     position: relative;
@@ -1741,17 +1751,40 @@
 
 .preKStatCard {
     background: #ffffff;
-    border: 3.5px solid #ffffff;
+    border: 2.5px solid #e2e8f0;
     border-radius: 18px;
-    padding: 6px 12px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
+    gap: 10px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    transition: all 0.2s ease;
+}
+
+.preKStreakCard {
+    border: 2.5px solid #ffedd5;
+    background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%);
+}
+
+.preKStreakCard:hover {
+    border-color: #fdb528;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(251, 146, 60, 0.15);
+}
+
+.preKStarsCard {
+    border: 2.5px solid #fef9c3;
+    background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+}
+
+.preKStarsCard:hover {
+    border-color: #eab308;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(234, 179, 8, 0.15);
 }
 
 .preKStatCardIcon {
-    font-size: 20px;
+    font-size: 24px;
 }
 
 .preKStatCardText {
@@ -1760,16 +1793,16 @@
 }
 
 .preKStatCardValue {
-    font-size: 15px;
-    font-weight: 950;
-    color: #0f172a;
-    line-height: 1;
+    font-size: 20px;
+    font-weight: 900;
+    color: #1e293b;
+    line-height: 1.1;
     font-family: var(--font-outfit), sans-serif;
 }
 
 .preKStatCardLabel {
-    font-size: 8px;
-    font-weight: 900;
+    font-size: 11px;
+    font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1872,6 +1905,7 @@
 
 /* Floating Navigation Arrows */
 .preKNavArrowLeft {
+    display: none;
     position: fixed;
     bottom: 32px;
     left: 32px;
@@ -1881,7 +1915,6 @@
     border: 4px solid #ffffff;
     background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
     color: #ffffff;
-    display: flex;
     align-items: center;
     justify-content: center;
     font-size: 28px;
@@ -1905,6 +1938,7 @@
 }
 
 .preKNavArrowRight {
+    display: none;
     position: fixed;
     bottom: 32px;
     right: 32px;
@@ -1914,7 +1948,6 @@
     border: 4px solid #ffffff;
     background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
     color: #ffffff;
-    display: flex;
     align-items: center;
     justify-content: center;
     font-size: 28px;
@@ -1953,6 +1986,12 @@
         gap: 12px;
         align-items: center;
     }
+    .preKNavArrowLeft {
+        display: flex;
+    }
+    .preKNavArrowRight {
+        display: flex;
+    }
 }
 
 @media (max-width: 760px) {
@@ -1976,19 +2015,24 @@
     }
     
     .preKStatCard {
-        padding: 4px 10px;
+        padding: 6px 12px;
         border-radius: 14px;
     }
     
     .preKStatCardIcon {
-        font-size: 18px;
+        font-size: 20px;
     }
     
     .preKStatCardValue {
-        font-size: 14px;
+        font-size: 16px;
+    }
+    
+    .preKStatCardLabel {
+        font-size: 9px;
     }
     
     .preKNavArrowLeft {
+        display: flex;
         bottom: 16px;
         left: 16px;
         width: 52px;
@@ -1998,6 +2042,7 @@
     }
     
     .preKNavArrowRight {
+        display: flex;
         bottom: 16px;
         right: 16px;
         width: 52px;
@@ -2005,20 +2050,57 @@
         font-size: 22px;
         border-width: 3px;
     }
+
+    .preKOptionButton {
+        border-radius: 18px !important;
+        border-width: 3px !important;
+        max-width: 190px;
+        box-shadow: 0 4px 0 #cbd5e1, 0 6px 12px rgba(0, 0, 0, 0.04) !important;
+    }
+    
+    .preKOptionButtonActive {
+        box-shadow: 0 4px 0 #15803d, 0 8px 16px rgba(34, 197, 94, 0.2) !important;
+    }
+
+    .preKOptionYellow {
+        box-shadow: 0 4px 0 #fde047, 0 6px 12px rgba(253, 224, 71, 0.15) !important;
+    }
+    .preKOptionYellowActive {
+        box-shadow: 0 4px 0 #ca8a04, 0 8px 16px rgba(234, 179, 8, 0.25) !important;
+    }
+    .preKOptionPink {
+        box-shadow: 0 4px 0 #f9a8d4, 0 6px 12px rgba(244, 63, 94, 0.15) !important;
+    }
+    .preKOptionPinkActive {
+        box-shadow: 0 4px 0 #db2777, 0 8px 16px rgba(236, 72, 153, 0.25) !important;
+    }
+    .preKOptionBlue {
+        box-shadow: 0 4px 0 #7dd3fc, 0 6px 12px rgba(14, 165, 233, 0.15) !important;
+    }
+    .preKOptionBlueActive {
+        box-shadow: 0 4px 0 #0284c7, 0 8px 16px rgba(14, 165, 233, 0.25) !important;
+    }
+    .preKOptionGreen {
+        box-shadow: 0 4px 0 #86efac, 0 6px 12px rgba(34, 197, 94, 0.15) !important;
+    }
+    .preKOptionGreenActive {
+        box-shadow: 0 4px 0 #16a34a, 0 8px 16px rgba(34, 197, 94, 0.25) !important;
+    }
 }
 
 .preKOptionsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
-    gap: 16px;
+    gap: 12px;
     width: 100%;
     margin-top: 10px;
+    justify-content: center;
 }
 
 @media (max-width: 760px) {
     .preKOptionsGrid {
         grid-template-columns: repeat(2, 1fr) !important;
-        gap: 12px !important;
+        gap: 10px !important;
     }
 }
 
@@ -2081,6 +2163,25 @@
 @keyframes preKBadgePop {
     0% { transform: scale(0) rotate(-30deg); }
     100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Pre-K MCQ Options Container with Speaker alignment */
+.preKOptionsContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    max-width: 720px;
+    margin: 10px auto;
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .preKOptionsContainer {
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
 }
 
 

@@ -343,9 +343,65 @@ function getNormalizedVoiceValue(v) {
   return `gemini:${v}`;
 }
 
+function getQuestionTemplateForSkill(skillId) {
+  const normalized = (skillId || '').toLowerCase().trim();
+  let baseTemplate = '';
+  
+  if (normalized.includes('noun')) {
+    baseTemplate = 'Generate questions where the student has to identify the noun(s) in a sentence. Keep sentences simple and engaging (e.g. "The brown dog barked loudly.").';
+  } else if (normalized.includes('parts-of-speech') || normalized.includes('speech')) {
+    baseTemplate = 'Generate questions asking the student to identify the part of speech (noun, verb, adjective, pronoun, etc.) of a highlighted word in a sentence.';
+  } else if (normalized.includes('addition')) {
+    baseTemplate = 'Generate basic addition word problems or numerical equations suitable for elementary students, focusing on conceptual understanding (e.g. combining items).';
+  } else if (normalized.includes('subtraction')) {
+    baseTemplate = 'Generate basic subtraction word problems or equations suitable for elementary students (e.g. taking items away or finding difference).';
+  } else if (normalized.includes('multiplication')) {
+    baseTemplate = 'Generate simple multiplication problems (e.g. single/double digit multiplication) or array/grouping-based word problems.';
+  } else if (normalized.includes('fraction')) {
+    baseTemplate = 'Generate questions about fractions, parts of a whole, fraction models (visual representations), or basic fraction comparisons.';
+  } else if (normalized.includes('coordinate')) {
+    baseTemplate = 'Generate questions about coordinates, locating points on a 2D plane, identifying X and Y axes, or simple coordinate grid patterns.';
+  } else if (normalized.includes('mammal') || normalized.includes('animal')) {
+    baseTemplate = 'Generate questions about mammal classification, differences between warm-blooded and cold-blooded animals, habitats, or diets.';
+  } else if (normalized.includes('time') || normalized.includes('clock')) {
+    baseTemplate = 'Generate questions about reading analog clocks, identifying half-hours/quarter-hours, or converting between digital and analog times.';
+  } else {
+    baseTemplate = `Generate multiple choice questions focused on teaching and testing the concept of "${skillId}". Ensure questions are clear, have a single correct answer, and include helpful explanations.`;
+  }
+
+  return `${baseTemplate}
+
+Example Format:
+Question: Which word matches the picture?
+A. pin
+B. dad
+C. pot
+Correct: B
+Explanation: The word dad has the short a sound, like the a in bad.`;
+}
+
 export default function AdminConsolePage() {
+  const [theme, setTheme] = useState('light');
   const [activeTab, setActiveTab] = useState('dashboard');
   
+  useEffect(() => {
+    const stored = localStorage.getItem('adminTheme');
+    if (stored) {
+      setTheme(stored);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    let nextTheme;
+    if (theme === 'light') nextTheme = 'dark';
+    else if (theme === 'dark') nextTheme = 'blue';
+    else nextTheme = 'light';
+    setTheme(nextTheme);
+    localStorage.setItem('adminTheme', nextTheme);
+  };
+
   // Notification alert state
   const [alert, setAlert] = useState(null); // { type: 'success'|'error'|'info', text: '' }
 
@@ -397,7 +453,23 @@ export default function AdminConsolePage() {
   const [subject, setSubject] = useState('english');
   const [topic, setTopic] = useState('grammar');
   const [skillId, setSkillId] = useState('nouns');
-  const [difficulty, setDifficulty] = useState('beginner');
+  const [difficulty, _setDifficulty] = useState('easy');
+  const setDifficulty = (val) => {
+    if (!val) {
+      _setDifficulty('easy');
+      return;
+    }
+    const d = String(val).toLowerCase();
+    if (d === 'easy' || d === 'beginner') {
+      _setDifficulty('easy');
+    } else if (d === 'medium' || d === 'intermediate') {
+      _setDifficulty('medium');
+    } else if (d === 'hard' || d === 'advanced') {
+      _setDifficulty('hard');
+    } else {
+      _setDifficulty(d);
+    }
+  };
   const [type, setType] = useState('mcq');
   const [questionText, setQuestionText] = useState('Is the word **frog** a person, place, animal, or thing?');
   const [voice, setVoice] = useState('Puck');
@@ -423,6 +495,9 @@ export default function AdminConsolePage() {
   const [parts, setParts] = useState([
     { type: 'text', content: 'Is the word **frog** a person, place, animal, or thing?' }
   ]);
+  const [arrangeImagesRow, setArrangeImagesRow] = useState(false);
+  const [commonImageWidth, setCommonImageWidth] = useState(180);
+  const [directImageSelect, setDirectImageSelect] = useState(false);
 
   // Categorization state
   const [categories, setCategories] = useState([
@@ -462,8 +537,11 @@ export default function AdminConsolePage() {
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [generatingSingleAudio, setGeneratingSingleAudio] = useState(false);
 
-  // --- Redesign States & Workspace Elements ---
-  const [authoringMode, setAuthoringMode] = useState('manual'); // 'manual' | 'paste' | 'import'
+  const [authoringMode, setAuthoringMode] = useState('manual'); // 'manual' | 'paste' | 'import' | 'ai_bulk'
+  const [questionStatus, setQuestionStatus] = useState('active');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiCount, setAiCount] = useState(5);
+  const [generatingAi, setGeneratingAi] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
     details: false,
     content: false,
@@ -481,6 +559,28 @@ export default function AdminConsolePage() {
 
   // Paste & Parse State
   const [rawTextToParse, setRawTextToParse] = useState('');
+  const [parsedBatch, setParsedBatch] = useState([]); // array of parsed question objects
+  const [parseBatchSaving, setParseBatchSaving] = useState(false);
+  const [parseBatchSubject, setParseBatchSubject] = useState('');
+  const [parseBatchTopic, setParseBatchTopic] = useState('');
+  const [parseBatchSkillId, setParseBatchSkillId] = useState('');
+  const [parseBatchDifficulty, _setParseBatchDifficulty] = useState('easy');
+  const setParseBatchDifficulty = (val) => {
+    if (!val) {
+      _setParseBatchDifficulty('easy');
+      return;
+    }
+    const d = String(val).toLowerCase();
+    if (d === 'easy' || d === 'beginner') {
+      _setParseBatchDifficulty('easy');
+    } else if (d === 'medium' || d === 'intermediate') {
+      _setParseBatchDifficulty('medium');
+    } else if (d === 'hard' || d === 'advanced') {
+      _setParseBatchDifficulty('hard');
+    } else {
+      _setParseBatchDifficulty(d);
+    }
+  };
 
   // Import JSON State
   const [jsonTextToImport, setJsonTextToImport] = useState('');
@@ -513,6 +613,210 @@ export default function AdminConsolePage() {
   const imgFileInputRef = useRef(null);
 
   const [activeUploadPreview, setActiveUploadPreview] = useState(null);
+
+  // ── Image Picker Modal State (for Part editor Upload/Gallery buttons) ─────────
+  const [imgPickerOpen, setImgPickerOpen]         = useState(false);
+  const [imgPickerPartIdx, setImgPickerPartIdx]   = useState(null); // which part to fill
+  const [imgPickerOptionIdx, setImgPickerOptionIdx] = useState(null); // which MCQ option to fill
+  const [imgPickerTab, setImgPickerTab]           = useState('gallery'); // 'gallery' | 'upload'
+  const [imgPickerSearch, setImgPickerSearch]     = useState('');
+  const [imgPickerFolder, setImgPickerFolder]     = useState('images');
+  const [imgPickerImages, setImgPickerImages]     = useState([]);
+  const [imgPickerLoading, setImgPickerLoading]   = useState(false);
+  const [imgPickerError, setImgPickerError]       = useState('');
+  const [imgPickerUploading, setImgPickerUploading] = useState(false);
+  const imgPickerFileRef = useRef(null);
+  const [imgPreviewUrl, setImgPreviewUrl]         = useState(null);
+
+  // ── R2 Audio Gallery Modal State ──────────────────────────────────────────
+  const [showAudioGallery, setShowAudioGallery]     = useState(false);
+  const [audioGalleryPartIdx, setAudioGalleryPartIdx] = useState(null);
+  const [audioGalleryOptionIdx, setAudioGalleryOptionIdx] = useState(null);
+  const [audioGalleryForMainText, setAudioGalleryForMainText] = useState(false);
+  const [r2AudioFiles, setR2AudioFiles]             = useState([]);
+  const [r2AudioLoading, setR2AudioLoading]         = useState(false);
+  const [r2AudioSearch, setR2AudioSearch]           = useState('');
+  const [r2AudioFolderFilter, setR2AudioFolderFilter] = useState(''); // '' = all folders
+  const [r2AudioPreview, setR2AudioPreview]         = useState(null); // url being previewed
+
+  const [webSearchQuery, setWebSearchQuery]       = useState('');
+  const [webSearchType, setWebSearchType]         = useState('clipart'); // 'clipart' | 'photo' | 'any'
+  const [webSearchResults, setWebSearchResults]   = useState([]);
+  const [webSearchLoading, setWebSearchLoading]   = useState(false);
+  const [webSearchSelectedUrl, setWebSearchSelectedUrl] = useState(''); // track downloading image URL
+
+  const openImgPicker = (partIdx, tab = 'gallery') => {
+    setImgPickerPartIdx(partIdx);
+    setImgPickerOptionIdx(null);
+    setImgPickerTab(tab);
+    setImgPickerSearch('');
+    setWebSearchQuery('');
+    setWebSearchResults([]);
+    setImgPickerOpen(true);
+    // auto-load gallery
+    fetchImgPickerGallery('images');
+  };
+
+  const fetchR2AudioFiles = async () => {
+    setR2AudioLoading(true);
+    try {
+      const res = await fetch('/api/admin/list-audio?prefix=audio/');
+      const data = await res.json();
+      if (data.audio) setR2AudioFiles(data.audio);
+    } catch (e) {
+      console.warn('Failed to load R2 audio files:', e);
+    } finally {
+      setR2AudioLoading(false);
+    }
+  };
+
+  const openImgPickerForOption = (optionIdx, tab = 'gallery') => {
+    setImgPickerOptionIdx(optionIdx);
+    setImgPickerPartIdx(null);
+    setImgPickerTab(tab);
+    setImgPickerSearch('');
+    setWebSearchQuery('');
+    setWebSearchResults([]);
+    setImgPickerOpen(true);
+    // auto-load gallery
+    fetchImgPickerGallery('images');
+  };
+
+  const openAudioGalleryForOption = (optionIdx) => {
+    setAudioGalleryOptionIdx(optionIdx);
+    setAudioGalleryPartIdx(null);
+    setShowAudioGallery(true);
+    if (r2AudioFiles.length === 0) fetchR2AudioFiles();
+  };
+
+  const updateOptionAudioUrl = (idx, url) => {
+    const updated = [...options];
+    updated[idx].audioUrl = url;
+    setOptions(updated);
+  };
+
+  const handleWebSearch = async (query = webSearchQuery, type = webSearchType) => {
+    if (!query || !query.trim()) return;
+    setWebSearchLoading(true);
+    setImgPickerError('');
+    try {
+      const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(query.trim())}&type=${type}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Web search failed');
+      setWebSearchResults(data.results || []);
+    } catch (err) {
+      setImgPickerError(err.message);
+    } finally {
+      setWebSearchLoading(false);
+    }
+  };
+
+  const handleWebSearchSelect = async (item) => {
+    if (webSearchSelectedUrl) return; // prevent double clicks
+    setWebSearchSelectedUrl(item.image);
+    setImgPickerError('');
+    try {
+      const res = await fetch('/api/admin/fetch-url-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: item.image,
+          folder: imgPickerFolder || 'images',
+          customName: webSearchQuery.trim() || 'web-search-import'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to download search image');
+      // Auto-select the newly uploaded R2 URL
+      handleImgPickerSelect(data.r2Url);
+      // Refresh the background gallery list
+      fetchImgPickerGallery(imgPickerFolder);
+    } catch (err) {
+      setImgPickerError(err.message);
+    } finally {
+      setWebSearchSelectedUrl('');
+    }
+  };
+
+  const fetchImgPickerGallery = async (prefix = imgPickerFolder) => {
+    setImgPickerLoading(true);
+    setImgPickerError('');
+    try {
+      const res  = await fetch(`/api/admin/list-images?prefix=${encodeURIComponent(prefix)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to list images');
+      setImgPickerImages(data.images || []);
+    } catch (err) {
+      setImgPickerError(err.message);
+    } finally {
+      setImgPickerLoading(false);
+    }
+  };
+
+  const extractLabelFromUrl = (url) => {
+    if (!url) return '';
+    try {
+      const filename = url.substring(url.lastIndexOf('/') + 1);
+      const cleanFilename = filename.split(/[?#]/)[0];
+      const withoutExt = cleanFilename.substring(0, cleanFilename.lastIndexOf('.')) || cleanFilename;
+      const decoded = decodeURIComponent(withoutExt);
+      return decoded.replace(/[-_]/g, ' ').trim();
+    } catch (err) {
+      console.error('Failed to extract label:', err);
+      return '';
+    }
+  };
+
+  const handleImgPickerSelect = (url) => {
+    if (imgPickerOptionIdx !== null) {
+      updateOptionImageUrl(imgPickerOptionIdx, url);
+      // Auto-fill label when picking image
+      const currentLabel = options[imgPickerOptionIdx]?.label || '';
+      if (currentLabel.startsWith('Option ') || !currentLabel.trim()) {
+        const extractedLabel = extractLabelFromUrl(url);
+        updateOptionText(imgPickerOptionIdx, extractedLabel);
+      }
+      setImgPickerOptionIdx(null);
+      setImgPickerOpen(false);
+    } else if (imgPickerPartIdx !== null) {
+      handleUpdatePartFields(imgPickerPartIdx, { imageUrl: url, src: url, content: url });
+      setImgPickerPartIdx(null);
+      setImgPickerOpen(false);
+    }
+  };
+
+  const handleImgPickerUploads = async (files) => {
+    if (!files || files.length === 0) return;
+    setImgPickerUploading(true);
+    setImgPickerError('');
+    try {
+      const fd = new FormData();
+      fd.append('folder', imgPickerFolder || 'images');
+      fd.append('maxWidth', '1200');
+      fd.append('quality', '85');
+      fd.append('format', 'image/webp');
+      files.forEach(file => {
+        fd.append('files[]', file);
+      });
+      const res  = await fetch('/api/admin/upload-image', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      if (data.errors && data.errors.length > 0) {
+        const errMsg = data.errors.map(e => `${e.file}: ${e.error}`).join(', ');
+        setImgPickerError(`Some files failed: ${errMsg}`);
+      }
+      if (files.length === 1 && data.results && data.results.length === 1) {
+        handleImgPickerSelect(data.results[0].url);
+      } else {
+        setImgPickerTab('gallery');
+        await fetchImgPickerGallery(imgPickerFolder);
+      }
+    } catch (err) {
+      setImgPickerError(err.message);
+    } finally {
+      setImgPickerUploading(false);
+    }
+  };
 
   // ── Image Cropper State ──────────────────────────────────────────────────────
   const [cropTarget, setCropTarget] = useState(null); // { id, file, previewUrl }
@@ -874,6 +1178,59 @@ export default function AdminConsolePage() {
 
   const currFlatNodes = useMemo(() => flattenTree(currTree), [currTree]);
   const dbSkills = useMemo(() => currFlatNodes.filter(node => node.type === 'skill'), [currFlatNodes]);
+
+  const [selectedLinkSubject, setSelectedLinkSubject] = useState('');
+  const [selectedLinkTopic, setSelectedLinkTopic]     = useState('');
+  const [skillSearchQuery, setSkillSearchQuery]       = useState('');
+
+  const uniqueLinkSubjects = useMemo(() => {
+    const subs = dbSkills.map(s => s.subjectId).filter(Boolean);
+    return Array.from(new Set(subs)).sort();
+  }, [dbSkills]);
+
+  const uniqueLinkTopics = useMemo(() => {
+    if (!selectedLinkSubject) return [];
+    const topics = dbSkills
+      .filter(s => s.subjectId === selectedLinkSubject)
+      .map(s => s.topicId)
+      .filter(Boolean);
+    return Array.from(new Set(topics)).sort();
+  }, [dbSkills, selectedLinkSubject]);
+
+  const filteredLinkSkills = useMemo(() => {
+    const q = skillSearchQuery.toLowerCase().trim();
+    if (q) {
+      return dbSkills.filter(s => 
+        (s.title || '').toLowerCase().includes(q) || 
+        (s.id || '').toLowerCase().includes(q) ||
+        (s.skillId || '').toLowerCase().includes(q) ||
+        (s.topicId || '').toLowerCase().includes(q) ||
+        (s.subjectId || '').toLowerCase().includes(q)
+      );
+    }
+    if (!selectedLinkSubject || !selectedLinkTopic) return [];
+    return dbSkills.filter(s => s.subjectId === selectedLinkSubject && s.topicId === selectedLinkTopic);
+  }, [dbSkills, selectedLinkSubject, selectedLinkTopic, skillSearchQuery]);
+
+  useEffect(() => {
+    if (skillId && dbSkills.length > 0) {
+      const skill = dbSkills.find(s => s.id === skillId || s.skillId === skillId);
+      if (skill) {
+        if (skill.subjectId && skill.subjectId !== selectedLinkSubject) {
+          setSelectedLinkSubject(skill.subjectId);
+        }
+        if (skill.topicId && skill.topicId !== selectedLinkTopic) {
+          setSelectedLinkTopic(skill.topicId);
+        }
+      }
+    }
+  }, [skillId, dbSkills]);
+
+  useEffect(() => {
+    if (authoringMode === 'ai_bulk' && skillId) {
+      setAiPrompt(getQuestionTemplateForSkill(skillId));
+    }
+  }, [skillId, authoringMode]);
 
   const [currTreeSearch, setCurrTreeSearch] = useState('');
   const [currTreeSubjectFilter, setCurrTreeSubjectFilter] = useState('all');
@@ -1390,6 +1747,7 @@ export default function AdminConsolePage() {
     id: true,
     subject: true,
     topic: true,
+    skillId: true,
     type: true,
     questionText: true,
     audioStatus: true,
@@ -1402,7 +1760,8 @@ export default function AdminConsolePage() {
     const storedColumns = localStorage.getItem('curriculum_admin_visible_columns');
     if (storedColumns) {
       try {
-        setVisibleColumns(JSON.parse(storedColumns));
+        const parsed = JSON.parse(storedColumns);
+        setVisibleColumns(prev => ({ ...prev, ...parsed }));
       } catch (e) {
         console.error('Failed to parse visible columns from localStorage:', e);
       }
@@ -1804,6 +2163,112 @@ export default function AdminConsolePage() {
     const updated = [...options];
     updated[idx].label = val;
     setOptions(updated);
+  };
+
+  const updateOptionImageUrl = (idx, url) => {
+    const updated = [...options];
+    updated[idx].imageUrl = url;
+    setOptions(updated);
+  };
+
+  const updateOptionHideLabel = (idx, hide) => {
+    const updated = [...options];
+    updated[idx].hideLabel = hide;
+    setOptions(updated);
+  };
+
+  const handleAutoLinkOptions = async () => {
+    const hasLabels = options.some(opt => opt.label.trim());
+    if (!hasLabels) {
+      setAlert({ type: 'error', text: 'Please type some option text labels first to auto-link matching assets.' });
+      return;
+    }
+
+    setAlert({ type: 'info', text: 'Scanning database for matching images and audio files...' });
+    try {
+      const imagesRes = await fetch('/api/admin/list-images?prefix=images/');
+      const imagesData = await imagesRes.json();
+      const imagesList = imagesData.images || [];
+
+      const audioRes = await fetch('/api/admin/list-audio?prefix=audio/');
+      const audioData = await audioRes.json();
+      const audioList = audioData.audio || [];
+
+      const updated = [...options];
+      let linkedImagesCount = 0;
+      let linkedAudioCount = 0;
+      const matchedDetails = [];
+
+      for (let i = 0; i < updated.length; i++) {
+        const label = updated[i].label.trim().toLowerCase();
+        if (!label) continue;
+
+        let imageMatched = false;
+        let audioMatched = false;
+
+        if (!updated[i].imageUrl) {
+          const matchedImg = imagesList.find(img => {
+            const cleanKey = img.key.substring(img.key.lastIndexOf('/') + 1)
+              .split(/[?#]/)[0]
+              .replace(/\.[^/.]+$/, "")
+              .toLowerCase()
+              .replace(/[-_]/g, ' ')
+              .trim();
+            const filenameMatch = cleanKey === label || cleanKey.includes(label);
+            const tagMatch = img.classification?.tags?.some(tag => tag.toLowerCase().trim() === label);
+            return filenameMatch || tagMatch;
+          });
+
+          if (matchedImg) {
+            updated[i].imageUrl = matchedImg.url;
+            linkedImagesCount++;
+            imageMatched = true;
+          }
+        }
+
+        if (!updated[i].audioUrl) {
+          const matchedAud = audioList.find(aud => {
+            const cleanKey = aud.key.substring(aud.key.lastIndexOf('/') + 1)
+              .split(/[?#]/)[0]
+              .replace(/\.[^/.]+$/, "")
+              .toLowerCase()
+              .replace(/[-_]/g, ' ')
+              .trim();
+            return cleanKey === label || cleanKey.includes(label);
+          });
+
+          if (matchedAud) {
+            updated[i].audioUrl = matchedAud.url;
+            linkedAudioCount++;
+            audioMatched = true;
+          }
+        }
+
+        if (imageMatched || audioMatched) {
+          const subDetails = [];
+          if (imageMatched) subDetails.push('Image 🖼️');
+          if (audioMatched) subDetails.push('Audio 🔊');
+          matchedDetails.push(`"${updated[i].label}" (${subDetails.join(' + ')})`);
+        }
+      }
+
+      setOptions(updated);
+
+      if (linkedImagesCount > 0 || linkedAudioCount > 0) {
+        setAlert({ 
+          type: 'success', 
+          text: `Auto-linked ${linkedImagesCount} images and ${linkedAudioCount} audio files for: ${matchedDetails.join(', ')}!` 
+        });
+      } else {
+        setAlert({ 
+          type: 'info', 
+          text: 'No matching image or audio assets found in database for the typed option labels.' 
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', text: `Failed to auto-link option assets: ${err.message}` });
+    }
   };
 
   const setCorrectOption = (idx) => {
@@ -2387,6 +2852,9 @@ export default function AdminConsolePage() {
       newPart.style = { maxWidth: '100%', height: 'auto' };
     } else if (partType === 'svg') {
       newPart.content = '';
+    } else if (partType === 'audio') {
+      newPart.audioUrl = '';
+      newPart.label = '';
     }
     setParts([...parts, newPart]);
   };
@@ -2447,6 +2915,9 @@ export default function AdminConsolePage() {
     setParts([
       { type: 'text', content: 'Is the word **frog** a person, place, animal, or thing?' }
     ]);
+    setArrangeImagesRow(false);
+    setCommonImageWidth(180);
+    setDirectImageSelect(false);
     setCategories([
       { id: 'cat_1', label: 'Category 1' },
       { id: 'cat_2', label: 'Category 2' }
@@ -2482,6 +2953,78 @@ export default function AdminConsolePage() {
     setPreviewSimulateState(null);
     setIsDirty(false);
     setAutosaveStatus('');
+    setQuestionStatus('active');
+  };
+
+  const handleEmptyFields = () => {
+    ignoreDirtyChange.current = true;
+    setEditMode(false);
+    setEditId(null);
+    setSubject('english');
+    setTopic('');
+    setSkillId('');
+    setDifficulty('beginner');
+    setType('mcq');
+    setQuestionText('');
+    setVoice('Puck');
+    setExplanation('');
+    setAudioUrl('');
+    setGenerateAudioCheckbox('all');
+    setReadable(true);
+    setReadOptions(true);
+    setOptions([
+      { label: '', isCorrect: false },
+      { label: '', isCorrect: false },
+      { label: '', isCorrect: false },
+      { label: '', isCorrect: false },
+    ]);
+    setCorrectAnswer('');
+    
+    setParts([
+      { type: 'text', content: '' }
+    ]);
+    setArrangeImagesRow(false);
+    setCommonImageWidth(180);
+    setDirectImageSelect(false);
+    setCategories([]);
+    setCategorizationItems([]);
+    setFibAnswers({});
+    
+    // Clear custom fields
+    setTeacherNotes('');
+    setTags('');
+    setEstimatedGrade('');
+    setTimeEstimate('');
+    setSourceMapping('');
+
+    // Clear Universal DnD specific fields
+    setLayoutMode('');
+    setInteraction('');
+    setTargets(null);
+    setBackgroundImage('');
+    setCanvas(null);
+    setBehavior(null);
+    setSourceTray(null);
+    setCardStyle('');
+    setHideItemLabels(false);
+    setShowHotspotLabels(false);
+
+    setPreviewAnswer(null);
+    setPreviewCheckResult(null);
+    setPreviewSimulateState(null);
+    setIsDirty(false);
+    setAutosaveStatus('');
+    setQuestionStatus('active');
+  };
+
+  const handleEmptyFieldsWithConfirm = () => {
+    if (isDirty) {
+      if (!window.confirm('Are you sure you want to discard your changes and clear all form fields?')) {
+        return;
+      }
+    }
+    handleEmptyFields();
+    localStorage.removeItem('curriculum_authoring_draft');
   };
 
   const handleResetFormWithConfirm = () => {
@@ -2497,6 +3040,7 @@ export default function AdminConsolePage() {
   // --- LOAD TO FORM (EDIT OR DUPLICATE) ---
   const loadQuestionData = (q, mode = 'edit') => {
     ignoreDirtyChange.current = true;
+    setQuestionStatus(q.status || 'active');
     setType(q.type || 'mcq');
     setSubject(q.subject || '');
     setTopic(q.topic || '');
@@ -2639,6 +3183,10 @@ export default function AdminConsolePage() {
       setBackgroundSvg('');
     }
 
+    setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
+    setCommonImageWidth(q.commonImageWidth || q.metadata?.commonImageWidth || 180);
+    setDirectImageSelect(Boolean(q.directImageSelect || q.interaction === 'direct_image_select' || q.metadata?.directImageSelect));
+
     // Extract parts or default to first question text part
     if (loadedParts.length > 0) {
       setParts(loadedParts.filter(p => p.type !== 'categorization' && p.type !== 'hotspot_canvas'));
@@ -2653,7 +3201,10 @@ export default function AdminConsolePage() {
       const correctIdx = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.answer;
       setOptions(q.options.map((opt, idx) => ({
         label: opt.label || '',
-        isCorrect: idx === correctIdx || opt.isCorrect || false
+        isCorrect: idx === correctIdx || opt.isCorrect || false,
+        imageUrl: opt.imageUrl || '',
+        hideLabel: !!opt.hideLabel,
+        audioUrl: opt.audioUrl || ''
       })));
     } else {
       setOptions([
@@ -2703,6 +3254,7 @@ export default function AdminConsolePage() {
       }
     }
     loadQuestionData(q, mode);
+    setAuthoringMode('manual');
     setActiveTab('authoring');
   };
 
@@ -2744,7 +3296,13 @@ export default function AdminConsolePage() {
     setTeacherNotes(tpl.teacherNotes || '');
     
     if (tpl.type === 'mcq') {
-      setOptions(tpl.options.map(opt => ({ label: opt.label, isCorrect: opt.isCorrect })));
+      setOptions(tpl.options.map(opt => ({
+        label: opt.label,
+        isCorrect: opt.isCorrect,
+        imageUrl: opt.imageUrl || '',
+        hideLabel: !!opt.hideLabel,
+        audioUrl: opt.audioUrl || ''
+      })));
       setCorrectAnswer(tpl.options.find(opt => opt.isCorrect)?.label || '');
     } else if (tpl.type === 'categorizationv2') {
       if (tpl.categories && Array.isArray(tpl.categories)) {
@@ -2823,13 +3381,13 @@ export default function AdminConsolePage() {
     setAlert({ type: 'info', text: `Loaded template: ${tpl.name}` });
   };
 
-  // --- PASTE & PARSE INGESTION ---
   const parseRawQuestionText = (text) => {
     const lines = text.split('\n');
     let qText = '';
     let parsedOptions = [];
     let parsedCorrect = '';
     let parsedExplanation = '';
+    let parsedDifficulty = '';
     
     let currentSection = 'question';
     
@@ -2855,6 +3413,11 @@ export default function AdminConsolePage() {
         currentSection = 'explanation';
         const offset = lowerLine.indexOf(':') + 1;
         parsedExplanation = line.substring(offset).trim();
+        continue;
+      } else if (lowerLine.startsWith('difficulty:') || lowerLine.startsWith('diff:')) {
+        currentSection = 'difficulty';
+        const offset = lowerLine.indexOf(':') + 1;
+        parsedDifficulty = line.substring(offset).trim();
         continue;
       }
       
@@ -2887,6 +3450,8 @@ export default function AdminConsolePage() {
         parsedCorrect += (parsedCorrect ? ' ' : '') + line;
       } else if (currentSection === 'explanation') {
         parsedExplanation += (parsedExplanation ? '\n' : '') + line;
+      } else if (currentSection === 'difficulty') {
+        parsedDifficulty += (parsedDifficulty ? ' ' : '') + line;
       }
     }
     
@@ -2910,11 +3475,18 @@ export default function AdminConsolePage() {
       }
     }
     
+    let normDiff = '';
+    const cleanDiff = parsedDifficulty.trim().toLowerCase();
+    if (cleanDiff === 'easy' || cleanDiff === 'beginner') normDiff = 'easy';
+    else if (cleanDiff === 'medium' || cleanDiff === 'intermediate') normDiff = 'medium';
+    else if (cleanDiff === 'hard' || cleanDiff === 'advanced') normDiff = 'hard';
+    
     return {
       questionText: qText.trim(),
       options: parsedOptions,
       correctAnswer: parsedCorrect.trim(),
       explanation: parsedExplanation.trim(),
+      difficulty: normDiff,
       correctAnswerIndex: finalCorrectIndex,
       type: parsedOptions.length > 0 ? 'mcq' : 'fillInTheBlank'
     };
@@ -2937,6 +3509,9 @@ export default function AdminConsolePage() {
       setQuestionText(result.questionText);
       setType(result.type);
       setExplanation(result.explanation);
+      if (result.difficulty) {
+        setDifficulty(result.difficulty);
+      }
       
       if (result.type === 'mcq') {
         setOptions(result.options);
@@ -2961,6 +3536,178 @@ export default function AdminConsolePage() {
       setAuthoringMode('manual');
     } catch (err) {
       setAlert({ type: 'error', text: `Parsing Failed: ${err.message}` });
+    }
+  };
+
+  // --- BULK PASTE & PARSE (multi-question, save as draft) ---
+  const handleParseBulk = () => {
+    if (!rawTextToParse.trim()) {
+      setAlert({ type: 'error', text: 'Please paste at least one question.' });
+      return;
+    }
+
+    // Split by --- (separator) or double blank lines
+    const blocks = rawTextToParse
+      .split(/\n---+\n|\n\s*\n\s*\n/)
+      .map(b => b.trim())
+      .filter(Boolean);
+
+    if (blocks.length === 0) {
+      setAlert({ type: 'error', text: 'No question blocks found. Separate questions with ---.' });
+      return;
+    }
+
+    const results = [];
+    const errors = [];
+
+    blocks.forEach((block, idx) => {
+      try {
+        const parsed = parseRawQuestionText(block);
+        if (!parsed.questionText) throw new Error('No question text found.');
+        results.push({ ...parsed, _blockIndex: idx + 1, _raw: block });
+      } catch (e) {
+        errors.push(`Block ${idx + 1}: ${e.message}`);
+      }
+    });
+
+    setParsedBatch(results);
+
+    if (errors.length > 0) {
+      setAlert({ type: 'error', text: `Parsed ${results.length} questions. ${errors.length} failed: ${errors.join('; ')}` });
+    } else {
+      setAlert({ type: 'success', text: `Parsed ${results.length} question(s) successfully. Fill in the skill fields below and click Save All as Drafts.` });
+    }
+  };
+
+  const handleSaveParsedBulk = async () => {
+    if (parsedBatch.length === 0) {
+      setAlert({ type: 'error', text: 'No parsed questions to save. Parse first.' });
+      return;
+    }
+    if (!parseBatchSubject || !parseBatchTopic || !parseBatchSkillId) {
+      setAlert({ type: 'error', text: 'Please fill in Subject, Topic, and Skill ID before saving.' });
+      return;
+    }
+
+    setParseBatchSaving(true);
+    setAlert({ type: 'info', text: `Saving ${parsedBatch.length} questions as drafts...` });
+
+    let saved = 0;
+    const errs = [];
+
+    for (let i = 0; i < parsedBatch.length; i++) {
+      const q = parsedBatch[i];
+      try {
+        const payload = {
+          subject: parseBatchSubject,
+          topic: parseBatchTopic,
+          skillId: parseBatchSkillId,
+          difficulty: q.difficulty || parseBatchDifficulty || 'easy',
+          type: q.type || 'mcq',
+          questionText: q.questionText,
+          options: q.options || [],
+          correctAnswer: q.correctAnswer || '',
+          correctAnswerIndex: q.correctAnswerIndex ?? -1,
+          explanation: q.explanation || '',
+          status: 'draft',
+          voice: 'Puck',
+          generateAudio: 'none', // don't auto-generate audio on bulk paste draft
+        };
+
+        const res = await fetch('/api/admin/questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: payload, mode: 'insert' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          saved++;
+        } else {
+          errs.push(`Q${i + 1}: ${data.error || 'Save failed'}`);
+        }
+      } catch (e) {
+        errs.push(`Q${i + 1}: ${e.message}`);
+      }
+    }
+
+    setParseBatchSaving(false);
+
+    if (errs.length === 0) {
+      setAlert({ type: 'success', text: `✅ ${saved} question(s) saved as drafts! Find them in the Questions Library.` });
+      setParsedBatch([]);
+      setRawTextToParse('');
+      fetchQuestions();
+    } else {
+      setAlert({ type: 'error', text: `Saved ${saved}. Errors: ${errs.join('; ')}` });
+      fetchQuestions();
+    }
+  };
+
+  const handleGenerateAiBulk = async () => {
+    if (!aiPrompt.trim()) {
+      setAlert({ type: 'error', text: 'Please provide prompt guidelines.' });
+      return;
+    }
+
+    setGeneratingAi(true);
+    setAlert({ type: 'info', text: 'Generating draft questions via Gemini. Please wait...' });
+
+    try {
+      const res = await fetch('/api/admin/questions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          subject,
+          topic,
+          skillId,
+          difficulty,
+          count: aiCount
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAlert({ type: 'success', text: `Successfully generated ${data.questions.length} draft questions! Find them in the Questions Library.` });
+        setAiPrompt('');
+        fetchQuestions();
+      } else {
+        setAlert({ type: 'error', text: data.error || 'Failed to generate questions.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', text: err.message });
+    } finally {
+      setGeneratingAi(false);
+    }
+  };
+
+  const handleApproveQuestion = async (q) => {
+    try {
+      const updated = {
+        ...q,
+        status: 'active',
+      };
+      
+      const res = await fetch('/api/admin/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: updated,
+          mode: 'upsert'
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setAlert({ type: 'success', text: `Question ${q.id} approved and published successfully!` });
+        fetchQuestions();
+      } else {
+        setAlert({ type: 'error', text: data.error || 'Failed to approve question.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', text: err.message });
     }
   };
 
@@ -3337,6 +4084,9 @@ export default function AdminConsolePage() {
       estimatedGrade: estimatedGrade.trim(),
       timeEstimate: parsedTimeLimit,
       sourceMapping: sourceMapping.trim(),
+      arrangeImagesRow,
+      commonImageWidth: Number(commonImageWidth) || 180,
+      directImageSelect,
       metaConfig: {
         readable,
         readOptions
@@ -3352,6 +4102,9 @@ export default function AdminConsolePage() {
         estimatedGrade: estimatedGrade.trim(),
         timeEstimate: parsedTimeLimit,
         sourceMapping: sourceMapping.trim(),
+        arrangeImagesRow,
+        commonImageWidth: Number(commonImageWidth) || 180,
+        directImageSelect,
       }
     };
 
@@ -3420,14 +4173,28 @@ export default function AdminConsolePage() {
       
       payload.parts = [...parts.map(p => ({ ...p })), hotspotPart];
     } else if (type === 'mcq') {
-      payload.options = options.map((opt, idx) => ({
-        id: `opt_${idx}`,
-        label: opt.label.trim(),
-      }));
-      const correctIdx = options.findIndex(opt => opt.isCorrect);
-      payload.correctAnswerIndex = correctIdx;
-      payload.answer = correctIdx;
-      payload.parts = parts.map(p => ({ ...p }));
+      if (directImageSelect) {
+        payload.interaction = 'direct_image_select';
+        payload.directImageSelect = true;
+        payload.metadata.directImageSelect = true;
+        payload.options = [];
+        const correctIdx = parts.findIndex(p => p.isCorrect);
+        payload.correctAnswerIndex = correctIdx >= 0 ? correctIdx : null;
+        payload.answer = correctIdx >= 0 ? correctIdx : null;
+        payload.parts = parts.map(p => ({ ...p }));
+      } else {
+        payload.options = options.map((opt, idx) => ({
+          id: `opt_${idx}`,
+          label: opt.label.trim(),
+          imageUrl: opt.imageUrl || undefined,
+          hideLabel: opt.hideLabel || undefined,
+          audioUrl: opt.audioUrl || undefined,
+        }));
+        const correctIdx = options.findIndex(opt => opt.isCorrect);
+        payload.correctAnswerIndex = correctIdx;
+        payload.answer = correctIdx;
+        payload.parts = parts.map(p => ({ ...p }));
+      }
     } else if (type === 'categorizationv2' || type === 'categorization') {
       payload.options = [];
       const itemMapping = {};
@@ -3599,7 +4366,7 @@ export default function AdminConsolePage() {
   };
 
   // --- VALIDATION AND SAVE ---
-  const handleSaveQuestion = async () => {
+  const handleSaveQuestion = async (statusOverride = 'active') => {
     if (!subject.trim()) {
       setAlert({ type: 'error', text: 'Validation Error: Subject field is required.' });
       return;
@@ -3622,9 +4389,9 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: 'Validation Error: MCQ questions must have at least 2 options.' });
         return;
       }
-      const hasEmptyLabel = options.some(opt => !opt.label.trim());
+      const hasEmptyLabel = options.some(opt => !opt.label.trim() && !opt.imageUrl);
       if (hasEmptyLabel) {
-        setAlert({ type: 'error', text: 'Validation Error: All MCQ option labels must be filled out.' });
+        setAlert({ type: 'error', text: 'Validation Error: All MCQ options must have a text label or an image.' });
         return;
       }
       const correctIndex = options.findIndex(opt => opt.isCorrect);
@@ -3701,6 +4468,7 @@ export default function AdminConsolePage() {
     }
 
     const payload = buildQuestionPayload(false);
+    payload.status = statusOverride; 
 
     setSavingQuestion(true);
     setAlert({ type: 'info', text: 'Saving question document and uploading TTS audio streams...' });
@@ -3722,10 +4490,29 @@ export default function AdminConsolePage() {
         
         let msg = `Question saved successfully with ID: ${savedQ.id}.`;
         if (savedQ.audioUrl) {
-          msg += ` Audio successfully generated and stored in R2.`;
-          setAudioUrl(savedQ.audioUrl);
+          msg += ` Audio successfully generated and stored.`;
         } else if (generateAudioCheckbox !== 'none') {
           msg += ` WARNING: Saved question without audio. R2 Credentials are likely not configured on this server.`;
+        }
+        
+        setAudioUrl(savedQ.audioUrl || '');
+
+        if (savedQ.options && Array.isArray(savedQ.options)) {
+          const correctIdx = savedQ.correctAnswerIndex !== undefined ? savedQ.correctAnswerIndex : savedQ.answer;
+          setOptions(savedQ.options.map((opt, idx) => ({
+            label: opt.label || '',
+            isCorrect: idx === correctIdx || opt.isCorrect || false,
+            imageUrl: opt.imageUrl || '',
+            hideLabel: !!opt.hideLabel,
+            audioUrl: opt.audioUrl || ''
+          })));
+        }
+
+        if (savedQ.parts && Array.isArray(savedQ.parts)) {
+          const filteredParts = savedQ.parts.filter(p => p.type !== 'categorization' && p.type !== 'hotspot_canvas');
+          if (filteredParts.length > 0) {
+            setParts(filteredParts);
+          }
         }
 
         setAlert({ type: 'success', text: msg });
@@ -3736,6 +4523,7 @@ export default function AdminConsolePage() {
           setEditId(savedQ.id);
         }
 
+        setQuestionStatus(statusOverride);
         setIsDirty(false);
         setAutosaveStatus('● Saved');
         localStorage.removeItem('curriculum_authoring_draft');
@@ -3827,7 +4615,10 @@ export default function AdminConsolePage() {
       cardStyle,
       hideItemLabels,
       JSON.stringify(hotspots),
-      backgroundSvg
+      backgroundSvg,
+      arrangeImagesRow,
+      commonImageWidth,
+      directImageSelect
     ].join('|');
     
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
@@ -3917,6 +4708,8 @@ export default function AdminConsolePage() {
         parts: mockPartsHotspot,
         audioUrl,
         voice,
+        arrangeImagesRow,
+        commonImageWidth: Number(commonImageWidth) || 180,
         options: hotspots.map((hs, idx) => ({ id: `opt_${idx}`, label: hs.label })),
         answer: hotspots.findIndex(hs => hs.isCorrect),
         correctAnswerIndex: hotspots.findIndex(hs => hs.isCorrect),
@@ -3930,19 +4723,28 @@ export default function AdminConsolePage() {
     return {
       id: uniqueId,
       type,
+      interaction: directImageSelect ? 'direct_image_select' : (interaction || undefined),
+      directImageSelect,
       questionText: questionText.trim(),
       parts: mockParts,
       audioUrl,
       voice,
-      options: type === 'mcq' ? options.map((o, idx) => ({ id: `opt_${idx}`, label: o.label, audioUrl: audioUrl ? null : undefined })) : [],
+      arrangeImagesRow,
+      commonImageWidth: Number(commonImageWidth) || 180,
+      options: directImageSelect ? [] : (type === 'mcq' ? options.map((o, idx) => ({
+        id: `opt_${idx}`,
+        label: o.label,
+        imageUrl: o.imageUrl || undefined,
+        hideLabel: o.hideLabel || undefined,
+        audioUrl: o.audioUrl || undefined
+      })) : []),
       categories: (type === 'categorizationv2' || type === 'categorization') ? categories.map(c => ({ ...c, id: c.id, label: c.label })) : undefined,
       items: (type === 'categorizationv2' || type === 'categorization') ? serializedItems : undefined,
-      answer: type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)),
-      correctAnswer: type === 'mcq' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)),
+      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer))),
+      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer))),
       metaConfig: { readable, readOptions },
       // Universal DnD fields
       layoutMode: layoutMode || undefined,
-      interaction: interaction || undefined,
       targets: targets || undefined,
       backgroundImage: backgroundImage || undefined,
       canvas: canvas || undefined,
@@ -3974,7 +4776,8 @@ export default function AdminConsolePage() {
     cardStyle,
     hideItemLabels,
     hotspots,
-    backgroundSvg
+    backgroundSvg,
+    directImageSelect
   ]);
 
   const handleCheckAnswer = () => {
@@ -3992,7 +4795,8 @@ export default function AdminConsolePage() {
     : 0;
 
   return (
-    <div className={styles.adminContainer}>
+    <>
+    <div className={`${styles.adminContainer} ${theme === 'dark' ? styles.darkMode : theme === 'blue' ? styles.blueMode : ''}`}>
       <header className={styles.adminHeader}>
         <div className={styles.headerInfo}>
           <h1>Curriculum Operations</h1>
@@ -4000,8 +4804,37 @@ export default function AdminConsolePage() {
         </div>
         
         <div className={styles.headerStatus}>
+          {/* Theme Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: '1.5px solid var(--color-border)',
+              background: 'var(--bg-primary)',
+              color: 'var(--color-text-main)',
+              fontSize: '12px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textTransform: 'uppercase',
+              height: '31px',
+              boxSizing: 'border-box',
+            }}
+            title={
+              theme === 'light' ? 'Switch to Dark Mode' :
+              theme === 'dark' ? 'Switch to Ocean Blue Mode' : 'Switch to Light Mode'
+            }
+          >
+            {theme === 'light' ? '🌙 Dark Mode' :
+             theme === 'dark' ? '💧 Blue Mode' : '☀️ Light Mode'}
+          </button>
+
           <div className={styles.compactStatusBadge} title="MongoDB Status">
-            <span className={`${styles.statusIndicatorDot} ${stats.dbConnected ? styles.dotGreen : styles.dotRed}`} />
+            <span className={`${styles.statusIndicatorDot} ${stats.dbConnected ? styles.dotGreen : stats.dotRed}`} />
             <span>DB: {stats.dbConnected ? 'ONLINE' : 'OFFLINE'}</span>
           </div>
 
@@ -4640,6 +5473,7 @@ export default function AdminConsolePage() {
                       id: 'ID',
                       subject: 'Subject',
                       topic: 'Topic',
+                      skillId: 'Skill',
                       type: 'Type',
                       questionText: 'Question Text',
                       audioStatus: 'Audio Status',
@@ -4657,6 +5491,7 @@ export default function AdminConsolePage() {
                             id: 'ID',
                             subject: 'Subject',
                             topic: 'Topic',
+                            skillId: 'Skill',
                             type: 'Type',
                             questionText: 'Question Text',
                             audioStatus: 'Audio Status',
@@ -4687,11 +5522,12 @@ export default function AdminConsolePage() {
                     <thead>
                       <tr>
                         {visibleColumns.id && <th style={{ width: '5%' }}>ID</th>}
-                        {visibleColumns.subject && <th style={{ width: '9%' }}>Subject</th>}
-                        {visibleColumns.topic && <th style={{ width: '9%' }}>Topic</th>}
-                        {visibleColumns.type && <th style={{ width: '7%' }}>Type</th>}
+                        {visibleColumns.subject && <th style={{ width: '8%' }}>Subject</th>}
+                        {visibleColumns.topic && <th style={{ width: '8%' }}>Topic</th>}
+                        {visibleColumns.skillId && <th style={{ width: '10%' }}>Skill</th>}
+                        {visibleColumns.type && <th style={{ width: '6%' }}>Type</th>}
                         {visibleColumns.questionText && <th style={{ width: 'auto' }}>Question Text</th>}
-                        {visibleColumns.audioStatus && <th style={{ width: '9%' }}>Audio Status</th>}
+                        {visibleColumns.audioStatus && <th style={{ width: '8%' }}>Audio Status</th>}
                         {visibleColumns.play && <th style={{ width: '5%', textAlign: 'center' }}>Play</th>}
                         {visibleColumns.actions && <th style={{ width: '11%' }}>Actions</th>}
                       </tr>
@@ -4702,6 +5538,21 @@ export default function AdminConsolePage() {
                           {visibleColumns.id && (
                             <td className={styles.idCol}>
                               <code>{q.id}</code>
+                              {q.status === 'draft' && (
+                                <span style={{ 
+                                  marginLeft: 6, 
+                                  padding: '2px 6px', 
+                                  fontSize: 9, 
+                                  fontWeight: 'bold', 
+                                  color: '#ea580c', 
+                                  backgroundColor: '#ffedd5', 
+                                  borderRadius: 4,
+                                  border: '1px solid #fed7aa',
+                                  display: 'inline-block' 
+                                }}>
+                                  DRAFT
+                                </span>
+                              )}
                             </td>
                           )}
                           {visibleColumns.subject && (
@@ -4709,6 +5560,9 @@ export default function AdminConsolePage() {
                           )}
                           {visibleColumns.topic && (
                             <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{q.topic}</td>
+                          )}
+                          {visibleColumns.skillId && (
+                            <td style={{ fontSize: 12, wordBreak: 'break-all' }}>{q.skillId || '—'}</td>
                           )}
                           {visibleColumns.type && (
                             <td>
@@ -4752,6 +5606,23 @@ export default function AdminConsolePage() {
                             <td>
                               <div className={styles.actionIconGroup}>
                                 <div className={styles.actionRowInline}>
+                                  {q.status === 'draft' && (
+                                    <button 
+                                      className={styles.btnSolid}
+                                      onClick={() => handleApproveQuestion(q)}
+                                      style={{ 
+                                        backgroundColor: '#16a34a', 
+                                        borderColor: '#16a34a', 
+                                        color: '#fff',
+                                        fontWeight: 'bold',
+                                        padding: '2px 8px',
+                                        fontSize: 10,
+                                        marginRight: 4
+                                      }}
+                                    >
+                                      Approve
+                                    </button>
+                                  )}
                                   <button 
                                     className={`${styles.btnOutline} ${styles.btnCompact}`}
                                     onClick={() => handleLoadQuestionToForm(q, 'edit')}
@@ -4765,9 +5636,30 @@ export default function AdminConsolePage() {
                                     Duplicate
                                   </button>
                                 </div>
+                                <div className={styles.actionRowInline} style={{ marginTop: 4, gap: 4 }}>
+                                  <a 
+                                    href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&qn=${q.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                    style={{ textDecoration: 'none', color: '#0ea5e9', borderColor: '#0ea5e9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, padding: '2px 6px' }}
+                                  >
+                                    Test (qn)
+                                  </a>
+                                  <a 
+                                    href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&id=${q.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                    style={{ textDecoration: 'none', color: '#8b5cf6', borderColor: '#8b5cf6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, padding: '2px 6px' }}
+                                  >
+                                    Test (id)
+                                  </a>
+                                </div>
                                 <button 
                                   className={`${styles.btnDanger} ${styles.btnCompact}`}
                                   onClick={() => handleDeleteQuestion(q.id)}
+                                  style={{ marginTop: 4 }}
                                 >
                                   Delete
                                 </button>
@@ -4855,6 +5747,14 @@ export default function AdminConsolePage() {
                     {editMode ? 'Cancel Edit' : 'Reset Form'}
                   </button>
 
+                  <button 
+                    type="button"
+                    className={styles.btnOutline} 
+                    onClick={handleEmptyFieldsWithConfirm}
+                  >
+                    Empty Fields
+                  </button>
+
                   {editMode && (
                     <button 
                       type="button"
@@ -4866,55 +5766,80 @@ export default function AdminConsolePage() {
                     </button>
                   )}
 
-                  <button 
-                    type="button"
-                    className={styles.btnOutline} 
-                    onClick={() => {
-                      // Manual Draft Save: trigger autosave format immediately
-                      const draft = {
-                        editMode,
-                        editId,
-                        subject,
-                        topic,
-                        skillId,
-                        difficulty,
-                        type,
-                        questionText,
-                        voice,
-                        explanation,
-                        audioUrl,
-                        generateAudioCheckbox,
-                        readable,
-                        readOptions,
-                        options,
-                        correctAnswer,
-                        fibAnswers,
-                        teacherNotes,
-                        tags,
-                        estimatedGrade,
-                        timeEstimate,
-                        sourceMapping,
-                        parts,
-                        categories,
-                        categorizationItems,
-                        timestamp: Date.now()
-                      };
-                      localStorage.setItem('curriculum_authoring_draft', JSON.stringify(draft));
-                      setAutosaveStatus(`● Draft saved manually`);
-                      setAlert({ type: 'success', text: 'Draft saved successfully to local storage.' });
-                    }}
-                  >
-                    Save Draft
-                  </button>
+                  {questionStatus === 'draft' ? (
+                    <>
+                      <button 
+                        type="button"
+                        className={styles.btnOutline} 
+                        style={{ marginRight: 8 }}
+                        onClick={() => handleSaveQuestion('draft')}
+                        disabled={savingQuestion}
+                      >
+                        {savingQuestion ? 'Saving...' : 'Save Draft to DB'}
+                      </button>
+                      <button 
+                        type="button"
+                        className={styles.btnSolid} 
+                        onClick={() => handleSaveQuestion('active')}
+                        disabled={savingQuestion}
+                        style={{ backgroundColor: '#16a34a', borderColor: '#16a34a', color: '#fff' }}
+                      >
+                        {savingQuestion ? 'Approving...' : 'Approve & Publish'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        type="button"
+                        className={styles.btnOutline} 
+                        style={{ marginRight: 8 }}
+                        onClick={() => {
+                          const draft = {
+                            editMode,
+                            editId,
+                            subject,
+                            topic,
+                            skillId,
+                            difficulty,
+                            type,
+                            questionText,
+                            voice,
+                            explanation,
+                            audioUrl,
+                            generateAudioCheckbox,
+                            readable,
+                            readOptions,
+                            options,
+                            correctAnswer,
+                            fibAnswers,
+                            teacherNotes,
+                            tags,
+                            estimatedGrade,
+                            timeEstimate,
+                            sourceMapping,
+                            parts,
+                            categories,
+                            categorizationItems,
+                            timestamp: Date.now()
+                          };
+                          localStorage.setItem('curriculum_authoring_draft', JSON.stringify(draft));
+                          setAutosaveStatus(`● Draft saved manually`);
+                          setAlert({ type: 'success', text: 'Draft saved successfully to local storage.' });
+                        }}
+                      >
+                        Save Draft
+                      </button>
 
-                  <button 
-                    type="button"
-                    className={styles.btnSolid} 
-                    onClick={handleSaveQuestion}
-                    disabled={savingQuestion}
-                  >
-                    {savingQuestion ? 'Publishing...' : editMode ? 'Save Question' : 'Publish Question'}
-                  </button>
+                      <button 
+                        type="button"
+                        className={styles.btnSolid} 
+                        onClick={() => handleSaveQuestion('active')}
+                        disabled={savingQuestion}
+                      >
+                        {savingQuestion ? 'Publishing...' : editMode ? 'Save Question' : 'Publish Question'}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -4955,7 +5880,14 @@ export default function AdminConsolePage() {
                 <button
                   type="button"
                   className={`${styles.selectorButton} ${authoringMode === 'paste' ? styles.selectorButtonActive : ''}`}
-                  onClick={() => setAuthoringMode('paste')}
+                  onClick={() => {
+                    // Auto-sync current form fields into batch skill assignment
+                    if (subject && !parseBatchSubject) setParseBatchSubject(subject);
+                    if (topic && !parseBatchTopic) setParseBatchTopic(topic);
+                    if (skillId && !parseBatchSkillId) setParseBatchSkillId(skillId);
+                    if (difficulty && !parseBatchDifficulty) setParseBatchDifficulty(difficulty);
+                    setAuthoringMode('paste');
+                  }}
                 >
                   Paste & Parse
                 </button>
@@ -4965,6 +5897,13 @@ export default function AdminConsolePage() {
                   onClick={() => setAuthoringMode('import')}
                 >
                   Import JSON
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.selectorButton} ${authoringMode === 'ai_bulk' ? styles.selectorButtonActive : ''}`}
+                  onClick={() => setAuthoringMode('ai_bulk')}
+                >
+                  AI Bulk Generator
                 </button>
               </div>
 
@@ -4988,33 +5927,102 @@ export default function AdminConsolePage() {
                       
                       {!collapsedSections.details && (
                         <div className={styles.accordionBody}>
-                          <div className={styles.formRow} style={{ marginBottom: '1rem' }}>
-                            <div className={styles.formGroup} style={{ flex: '1 1 100%' }}>
-                              <label className={styles.filterLabel}>Link to Database Skill (Prefills fields below)</label>
+                          <div className={styles.formRow} style={{ marginBottom: '1rem', gap: '12px' }}>
+                            <div className={styles.formGroup} style={{ flex: '1 1 33%' }}>
+                              <label className={styles.filterLabel}>Link to Database Skill: 1. Subject</label>
                               <select 
                                 className={styles.formSelect}
-                                value={dbSkills.some(s => s.id === skillId) ? skillId : ''}
+                                value={selectedLinkSubject}
+                                onChange={(e) => {
+                                  setSelectedLinkSubject(e.target.value);
+                                  setSelectedLinkTopic('');
+                                  setSkillId('');
+                                }}
+                              >
+                                <option value="">-- Select Subject --</option>
+                                {uniqueLinkSubjects.map(sub => (
+                                  <option key={sub} value={sub}>{sub.toUpperCase()}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className={styles.formGroup} style={{ flex: '1 1 33%' }}>
+                              <label className={styles.filterLabel}>2. Topic / Chapter</label>
+                              <select 
+                                className={styles.formSelect}
+                                value={selectedLinkTopic}
+                                disabled={!selectedLinkSubject}
+                                onChange={(e) => {
+                                  setSelectedLinkTopic(e.target.value);
+                                  setSkillId('');
+                                }}
+                              >
+                                <option value="">-- Select Topic --</option>
+                                {uniqueLinkTopics.map(topic => (
+                                  <option key={topic} value={topic}>{topic}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className={styles.formGroup} style={{ flex: '1 1 34%' }}>
+                              <label className={styles.filterLabel}>3. Skill to Link</label>
+                              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                                <input
+                                  type="text"
+                                  className={styles.formInput}
+                                  placeholder="Search database skills..."
+                                  value={skillSearchQuery}
+                                  onChange={(e) => setSkillSearchQuery(e.target.value)}
+                                  style={{ padding: '6px 10px', fontSize: 13, height: 38 }}
+                                />
+                                {skillSearchQuery && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSkillSearchQuery('')}
+                                    style={{
+                                      border: '1px solid #cbd5e1',
+                                      background: '#f1f5f9',
+                                      borderRadius: 8,
+                                      padding: '0 12px',
+                                      cursor: 'pointer',
+                                      fontSize: 12,
+                                      color: '#475569',
+                                      fontWeight: 500,
+                                      height: 38,
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                              </div>
+                              <select 
+                                className={styles.formSelect}
+                                value={dbSkills.find(s => s.id === skillId || s.skillId === skillId)?.id || ''}
+                                disabled={!skillSearchQuery.trim() && (!selectedLinkSubject || !selectedLinkTopic)}
                                 onChange={(e) => {
                                   const selectedSkillId = e.target.value;
-                                  if (!selectedSkillId) return;
+                                  if (!selectedSkillId) {
+                                    setSkillId('');
+                                    return;
+                                  }
                                   const skill = dbSkills.find(s => s.id === selectedSkillId);
                                   if (skill) {
                                     setSubject(skill.subjectId || '');
                                     setTopic(skill.topicId || '');
-                                    setSkillId(skill.id || '');
+                                    setSkillId(skill.skillId || skill.id || '');
                                     if (skill.grade) {
                                       setEstimatedGrade(`Grade ${skill.grade}`);
                                     }
                                     logActivity(`Linked question to skill: ${skill.title} (${skill.id})`, 'info');
+                                    setSkillSearchQuery(''); // clear search after linking
                                   }
                                 }}
                               >
-                                <option value="">-- Choose an existing skill to link --</option>
-                                {dbSkills.map((skill) => (
+                                <option value="">-- Select Skill --</option>
+                                {filteredLinkSkills.map((skill, index) => (
                                   <option key={skill.id} value={skill.id}>
-                                    {skill.subjectId ? `${skill.subjectId.toUpperCase()} > ` : ''}
-                                    {skill.topicId ? `${skill.topicId} > ` : ''}
-                                    {skill.title || skill.id} ({skill.id})
+                                    {index + 1}. {skill.title || skill.id} ({skill.id})
                                   </option>
                                 ))}
                               </select>
@@ -5064,9 +6072,9 @@ export default function AdminConsolePage() {
                                 value={difficulty} 
                                 onChange={(e) => setDifficulty(e.target.value)}
                               >
-                                <option value="beginner">Beginner</option>
-                                <option value="intermediate">Intermediate</option>
-                                <option value="advanced">Advanced</option>
+                                <option value="easy">Easy</option>
+                                <option value="medium">Medium</option>
+                                <option value="hard">Hard</option>
                                 <option value="adaptive">Adaptive</option>
                               </select>
                             </div>
@@ -5242,7 +6250,8 @@ export default function AdminConsolePage() {
 
                                       {part.type === 'image' && (
                                         <>
-                                          <div className={styles.formRow}>
+                                          {/* ── Image URL row + Upload/Gallery buttons ── */}
+                                          <div className={styles.formRow} style={{ alignItems: 'flex-end', gap: 8 }}>
                                             <div className={styles.formGroup} style={{ flex: 2 }}>
                                               <label style={{ fontSize: 11, fontWeight: 700 }}>Image URL / Path</label>
                                               <input
@@ -5257,6 +6266,40 @@ export default function AdminConsolePage() {
                                                 placeholder="e.g. /images/diagram.png or external link"
                                               />
                                             </div>
+                                            {/* Upload button */}
+                                            <button
+                                              type="button"
+                                              title="Upload a file from your computer"
+                                              onClick={() => openImgPicker(realIdx, 'upload')}
+                                              style={{
+                                                flexShrink: 0, height: 34, padding: '0 12px',
+                                                borderRadius: 8, border: '1.5px solid #6366f1',
+                                                background: '#6366f1', color: '#fff',
+                                                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: 5,
+                                                whiteSpace: 'nowrap',
+                                              }}
+                                            >
+                                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                                              Upload
+                                            </button>
+                                            {/* Gallery button */}
+                                            <button
+                                              type="button"
+                                              title="Pick from R2 image gallery"
+                                              onClick={() => openImgPicker(realIdx, 'gallery')}
+                                              style={{
+                                                flexShrink: 0, height: 34, padding: '0 12px',
+                                                borderRadius: 8, border: '1.5px solid #0ea5e9',
+                                                background: '#0ea5e9', color: '#fff',
+                                                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: 5,
+                                                whiteSpace: 'nowrap',
+                                              }}
+                                            >
+                                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                              Gallery
+                                            </button>
                                             <div className={styles.formGroup} style={{ flex: 1 }}>
                                               <label style={{ fontSize: 11, fontWeight: 700 }}>Alt Text</label>
                                               <input
@@ -5268,6 +6311,84 @@ export default function AdminConsolePage() {
                                               />
                                             </div>
                                           </div>
+                                          {/* Image preview strip */}
+                                          {(part.imageUrl || part.src || part.content) && !isInlineSvg(part.imageUrl || part.src || part.content) && (
+                                            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                              <img
+                                                src={part.imageUrl || part.src || part.content}
+                                                alt="preview"
+                                                style={{ height: 52, maxWidth: 90, objectFit: 'contain', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                                                onError={e => { e.target.style.display = 'none'; }}
+                                              />
+                                              <span style={{ fontSize: 10, color: '#64748b', wordBreak: 'break-all' }}>{part.imageUrl || part.src || part.content}</span>
+                                            </div>
+                                          )}
+                                          <div className={styles.formRow} style={{ marginTop: 8, gap: 12, alignItems: 'center' }}>
+                                            <div className={styles.formGroup} style={{ flex: 2 }}>
+                                              <label style={{ fontSize: 11, fontWeight: 700 }}>Label Text (Optional)</label>
+                                              <input
+                                                type="text"
+                                                className={styles.formInput}
+                                                style={{ padding: '4px', height: 28, fontSize: 11 }}
+                                                value={part.label || ''}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { label: e.target.value })}
+                                                placeholder="Text displayed / spoken"
+                                              />
+                                            </div>
+                                            <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 16 }}>
+                                              <input
+                                                type="checkbox"
+                                                id={`part_showLabel_${idx}`}
+                                                className={styles.checkboxInput}
+                                                checked={!!part.showLabel}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { showLabel: e.target.checked })}
+                                              />
+                                              <label htmlFor={`part_showLabel_${idx}`} style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                                Show Label
+                                              </label>
+                                            </div>
+                                            <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 16 }}>
+                                              <input
+                                                type="checkbox"
+                                                id={`part_playLabelSound_${idx}`}
+                                                className={styles.checkboxInput}
+                                                checked={!!part.playLabelSound}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { playLabelSound: e.target.checked })}
+                                              />
+                                              <label htmlFor={`part_playLabelSound_${idx}`} style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                                Click to Play Sound
+                                              </label>
+                                            </div>
+                                            {directImageSelect && (
+                                              <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 16 }}>
+                                                <input
+                                                  type="checkbox"
+                                                  id={`part_isCorrect_${idx}`}
+                                                  className={styles.checkboxInput}
+                                                  checked={!!part.isCorrect}
+                                                  onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    const updatedParts = parts.map((p, pIdx) => {
+                                                      if (pIdx === realIdx) {
+                                                        return { ...p, isCorrect: checked };
+                                                      }
+                                                      if (checked) {
+                                                        return { ...p, isCorrect: false };
+                                                      }
+                                                      return p;
+                                                    });
+                                                    setParts(updatedParts);
+                                                    setIsDirty(true);
+                                                    ignoreDirtyChange.current = false;
+                                                  }}
+                                                />
+                                                <label htmlFor={`part_isCorrect_${idx}`} style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#16a34a' }}>
+                                                  Correct Answer?
+                                                </label>
+                                              </div>
+                                            )}
+                                          </div>
+
                                           <div className={styles.formRow} style={{ marginTop: 8 }}>
                                             <div className={styles.formGroup} style={{ flex: 1 }}>
                                               <label style={{ fontSize: 11, fontWeight: 700 }}>Max Width (px)</label>
@@ -5305,13 +6426,70 @@ export default function AdminConsolePage() {
                                           />
                                         </>
                                       )}
+
+                                      {part.type === 'audio' && (
+                                        <>
+                                          <div className={styles.formRow} style={{ alignItems: 'flex-end', gap: 8 }}>
+                                            <div className={styles.formGroup} style={{ flex: 2 }}>
+                                              <label style={{ fontSize: 11, fontWeight: 700 }}>Audio URL (R2 or external)</label>
+                                              <input
+                                                type="text"
+                                                className={styles.formInput}
+                                                value={part.audioUrl || ''}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { audioUrl: e.target.value })}
+                                                placeholder="https://pub-xxx.r2.dev/audio/phonics/aa.wav"
+                                              />
+                                            </div>
+                                            {/* Browse R2 Audio Gallery */}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setAudioGalleryPartIdx(realIdx);
+                                                setShowAudioGallery(true);
+                                                if (r2AudioFiles.length === 0) fetchR2AudioFiles();
+                                              }}
+                                              style={{
+                                                flexShrink: 0, height: 34, padding: '0 12px',
+                                                borderRadius: 8, border: '1.5px solid #7c3aed',
+                                                background: '#7c3aed', color: '#fff',
+                                                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: 5,
+                                                whiteSpace: 'nowrap',
+                                              }}
+                                            >
+                                              🎵 Browse R2
+                                            </button>
+                                            <div className={styles.formGroup} style={{ flex: 1 }}>
+                                              <label style={{ fontSize: 11, fontWeight: 700 }}>Label (spoken/display)</label>
+                                              <input
+                                                type="text"
+                                                className={styles.formInput}
+                                                value={part.label || ''}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { label: e.target.value })}
+                                                placeholder="e.g. /æ/ as in cat"
+                                              />
+                                            </div>
+                                          </div>
+                                          {/* Audio preview */}
+                                          {part.audioUrl && (
+                                            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                              <audio controls src={part.audioUrl} style={{ height: 32 }} />
+                                              <span style={{ fontSize: 10, color: '#64748b', wordBreak: 'break-all', flex: 1 }}>{part.audioUrl.split('/').pop()}</span>
+                                            </div>
+                                          )}
+                                          {!part.audioUrl && (
+                                            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, fontStyle: 'italic' }}>No audio attached. Click Browse R2 to pick a file, or paste a URL above.</p>
+                                          )}
+                                        </>
+                                      )}
+
                                     </div>
                                   </div>
                                 );
                               })}
                             </div>
                             
-                            <div className={styles.addButtonRow} style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                            <div className={styles.addButtonRow} style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <button
                                 type="button"
                                 className={styles.btnOutline}
@@ -5344,6 +6522,71 @@ export default function AdminConsolePage() {
                               >
                                 + Add SVG Part
                               </button>
+                              <button
+                                type="button"
+                                className={styles.btnOutline}
+                                style={{ padding: '4px 8px', fontSize: 11, borderColor: '#7c3aed', color: '#7c3aed' }}
+                                onClick={() => handleAddPart('audio')}
+                              >
+                                🎵 + Add Audio Part
+                              </button>
+                            </div>
+
+                            {/* Image Layout Configuration */}
+                            <div className={styles.formRow} style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #cbd5e1', gap: 20 }}>
+                              <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input
+                                  type="checkbox"
+                                  id="arrangeImagesRow"
+                                  className={styles.checkboxInput}
+                                  checked={arrangeImagesRow}
+                                  onChange={(e) => {
+                                    setArrangeImagesRow(e.target.checked);
+                                    ignoreDirtyChange.current = false;
+                                    setIsDirty(true);
+                                  }}
+                                />
+                                <label htmlFor="arrangeImagesRow" className={styles.filterLabel} style={{ cursor: 'pointer', margin: 0, fontWeight: 700 }}>
+                                  Arrange image parts in a horizontal flex row
+                                </label>
+                              </div>
+
+                              {arrangeImagesRow && (
+                                <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <label htmlFor="commonImageWidth" className={styles.filterLabel} style={{ margin: 0, fontWeight: 700 }}>
+                                    Common Fixed Width (px)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    id="commonImageWidth"
+                                    className={styles.formInput}
+                                    style={{ width: 80, height: 32, padding: '4px 8px' }}
+                                    value={commonImageWidth}
+                                    onChange={(e) => {
+                                      setCommonImageWidth(Number(e.target.value) || 180);
+                                      ignoreDirtyChange.current = false;
+                                      setIsDirty(true);
+                                    }}
+                                  />
+                                </div>
+                              )}
+
+                              <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                                <input
+                                  type="checkbox"
+                                  id="directImageSelect"
+                                  className={styles.checkboxInput}
+                                  checked={directImageSelect}
+                                  onChange={(e) => {
+                                    setDirectImageSelect(e.target.checked);
+                                    ignoreDirtyChange.current = false;
+                                    setIsDirty(true);
+                                  }}
+                                />
+                                <label htmlFor="directImageSelect" className={styles.filterLabel} style={{ cursor: 'pointer', margin: 0, fontWeight: 700, color: '#0ea5e9' }}>
+                                  🎯 Direct Image Selection (No Bottom Options Grid)
+                                </label>
+                              </div>
                             </div>
                           </div>
 
@@ -5409,9 +6652,20 @@ export default function AdminConsolePage() {
 
                           {type === 'mcq' && (
                             <div className={styles.formGroup}>
-                              <label className={styles.filterLabel}>
-                                MCQ Options (Select correct answer radio, reorder, or edit keyboard shortcuts)
-                              </label>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <label className={styles.filterLabel} style={{ marginBottom: 0 }}>
+                                  MCQ Options (Select correct answer radio, reorder, or edit keyboard shortcuts)
+                                </label>
+                                <button
+                                  type="button"
+                                  className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                  onClick={handleAutoLinkOptions}
+                                  title="Automatically link matching images and audio files from database based on typed option text"
+                                  style={{ padding: '4px 10px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                >
+                                  🔗 Auto-Link Option Assets
+                                </button>
+                              </div>
                               
                               <div className={styles.optionsList}>
                                 {options.map((option, idx) => (
@@ -5445,14 +6699,126 @@ export default function AdminConsolePage() {
                                       </button>
                                     </div>
 
+                                    {option.imageUrl && (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                        <img 
+                                          src={option.imageUrl} 
+                                          alt="" 
+                                          style={{ width: 42, height: 42, objectFit: 'contain', borderRadius: 6, border: '2px solid #e2e8f0', background: '#f8fafc' }} 
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => updateOptionImageUrl(idx, '')}
+                                          title="Remove image from this option"
+                                          style={{
+                                            position: 'absolute',
+                                            top: -6,
+                                            right: -6,
+                                            border: 'none',
+                                            background: '#ef4444',
+                                            color: '#ffffff',
+                                            borderRadius: '50%',
+                                            width: 16,
+                                            height: 16,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 9,
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                          }}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {option.audioUrl && (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handlePlayUrlAudio(`opt_preview_${idx}`, option.audioUrl)}
+                                          className={styles.iconPlayBtn}
+                                          style={{
+                                            width: 42, height: 42, borderRadius: 6,
+                                            border: '2px solid #e2e8f0', background: '#f8fafc',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 16, cursor: 'pointer',
+                                            padding: 0
+                                          }}
+                                          title="Play option audio"
+                                        >
+                                          {playingAudioId === `opt_preview_${idx}` ? '⏹' : '🔊'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => updateOptionAudioUrl(idx, '')}
+                                          title="Remove audio from this option"
+                                          style={{
+                                            position: 'absolute',
+                                            top: -6,
+                                            right: -6,
+                                            border: 'none',
+                                            background: '#ef4444',
+                                            color: '#ffffff',
+                                            borderRadius: '50%',
+                                            width: 16,
+                                            height: 16,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 9,
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                          }}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    )}
+
                                     <input 
                                       type="text" 
                                       className={styles.optionTextInput} 
                                       value={option.label} 
                                       onChange={(e) => updateOptionText(idx, e.target.value)}
                                       onKeyDown={(e) => handleOptionKeyDown(e, idx)}
-                                      placeholder={`Option ${idx + 1}`}
+                                      placeholder={option.imageUrl ? "Option Text Label (Optional caption)" : `Option ${idx + 1}`}
                                     />
+                                    
+                                    {option.imageUrl && (
+                                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, userSelect: 'none', color: '#64748b', cursor: 'pointer', flexShrink: 0, marginLeft: 8, marginRight: 4 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={!!option.hideLabel}
+                                          onChange={(e) => updateOptionHideLabel(idx, e.target.checked)}
+                                          style={{ width: 14, height: 14, cursor: 'pointer' }}
+                                        />
+                                        Hide Label
+                                      </label>
+                                    )}
+                                    
+                                    <button 
+                                      type="button"
+                                      className={styles.iconPlayBtn} 
+                                      onClick={() => openImgPickerForOption(idx, 'gallery')}
+                                      title="Add/Upload image for this option"
+                                      style={{ marginRight: 4 }}
+                                    >
+                                      🖼️
+                                    </button>
+                                    
+                                    <button 
+                                      type="button"
+                                      className={styles.iconPlayBtn} 
+                                      onClick={() => openAudioGalleryForOption(idx)}
+                                      title="Add/Select audio for this option"
+                                      style={{ marginRight: 4 }}
+                                    >
+                                      🎵
+                                    </button>
                                     
                                     <button 
                                       type="button"
@@ -6657,14 +8023,53 @@ export default function AdminConsolePage() {
 
                             <div className={styles.formGroup}>
                               <label className={styles.filterLabel}>R2 CDN Audio URL</label>
-                              <input 
-                                type="text" 
-                                className={styles.formInput} 
-                                value={audioUrl} 
-                                onChange={(e) => setAudioUrl(e.target.value)}
-                                placeholder="No R2 audio synced yet"
-                                disabled
-                              />
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <input 
+                                  type="text" 
+                                  className={styles.formInput} 
+                                  style={{ flex: 1 }}
+                                  value={audioUrl} 
+                                  onChange={(e) => setAudioUrl(e.target.value)}
+                                  placeholder="No R2 audio synced yet"
+                                />
+                                {audioUrl && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => handlePlayUrlAudio('main_question_audio', audioUrl)}
+                                      style={{ padding: '6px 12px', fontSize: 13, height: 38 }}
+                                      title="Preview audio playback"
+                                    >
+                                      {playingAudioId === 'main_question_audio' ? '⏹' : '🔊'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => setAudioUrl('')}
+                                      style={{ padding: '6px 12px', fontSize: 13, height: 38, color: 'var(--color-status-wrong)', borderColor: 'var(--color-status-wrong)' }}
+                                      title="Clear audio URL from question"
+                                    >
+                                      ❌
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => {
+                                    setAudioGalleryForMainText(true);
+                                    setAudioGalleryPartIdx(null);
+                                    setAudioGalleryOptionIdx(null);
+                                    setShowAudioGallery(true);
+                                    fetchR2AudioFiles();
+                                  }}
+                                  style={{ padding: '6px 12px', fontSize: 13, height: 38 }}
+                                  title="Browse audio from Cloudflare R2 bucket"
+                                >
+                                  🎵 Browse
+                                </button>
+                              </div>
                             </div>
                           </div>
 
@@ -6783,41 +8188,302 @@ export default function AdminConsolePage() {
                   </div>
                 )}
 
-                {/* MODE B: PASTE & PARSE */}
+                {/* MODE B: PASTE & PARSE (multi-question bulk draft) */}
                 {authoringMode === 'paste' && (
                   <div className={styles.parseWorkspaceContainer}>
+
+                    {/* Instructions + Format */}
                     <div className={styles.parseInstructions}>
-                      <h4>Smart Text Ingest Instructions</h4>
-                      <p>Paste a raw question string below. The system will parse question details, choices, correct answers, and explanations dynamically.</p>
-                      <pre className={styles.parseFormatExample}>
-{`Question: What is 5 + 7?
+                      <h4>📋 Paste & Parse — Bulk Draft Importer</h4>
+                      <p style={{ marginBottom: 8 }}>Paste one or more questions in the format below. Separate multiple questions with <code>---</code> on its own line. All questions will be saved as <strong>drafts</strong> (invisible to students until approved).</p>
+                      <pre className={styles.parseFormatExample}>{`Question: Which word has the short /a/ sound?
+A. pin
+B. dad
+C. pot
+D. mud
+Correct: B
+Explanation: The word "dad" has the short a sound, like the a in "bad".
+
+---
+
+Question: What is 5 + 7?
 A. 10
 B. 12
 C. 14
 Correct: B
-Explanation: 5 plus 7 is equal to 12.`}
-                      </pre>
+Explanation: 5 plus 7 is equal to 12.
+
+---
+
+Question: Which sentence uses the correct punctuation?
+A. Where are you going
+B. Where are you going?
+C. where are you going?
+Correct: B
+Explanation: A question must end with a question mark.`}</pre>
                     </div>
 
-                    <div className={styles.formGroup} style={{ marginTop: 16 }}>
-                      <label className={styles.filterLabel}>Raw Question Text</label>
+                    {/* Skill assignment fields */}
+                    <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid var(--color-border)', borderRadius: 4, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10, color: 'var(--color-text-main)' }}>Skill Assignment (applied to all questions)</div>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.filterLabel}>Subject *</label>
+                          <select
+                            className={styles.formSelect}
+                            value={parseBatchSubject}
+                            onChange={e => {
+                              setParseBatchSubject(e.target.value);
+                              setParseBatchTopic('');
+                              setParseBatchSkillId('');
+                            }}
+                          >
+                            <option value="">-- Select Subject --</option>
+                            {uniqueLinkSubjects.map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label className={styles.filterLabel}>Topic *</label>
+                          <select
+                            className={styles.formSelect}
+                            value={parseBatchTopic}
+                            disabled={!parseBatchSubject}
+                            onChange={e => {
+                              setParseBatchTopic(e.target.value);
+                              setParseBatchSkillId('');
+                            }}
+                          >
+                            <option value="">-- Select Topic --</option>
+                            {dbSkills
+                              .filter(s => s.subjectId === parseBatchSubject)
+                              .map(s => s.topicId).filter(Boolean)
+                              .filter((v, i, a) => a.indexOf(v) === i).sort()
+                              .map(t => (
+                                <option key={t} value={t}>{t}</option>
+                              ))
+                            }
+                          </select>
+                        </div>
+                        <div className={styles.formGroup} style={{ flex: 2 }}>
+                          <label className={styles.filterLabel}>Skill *</label>
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                            <input
+                              type="text"
+                              className={styles.formInput}
+                              placeholder="Search skill by name or ID..."
+                              value={skillSearchQuery}
+                              onChange={e => setSkillSearchQuery(e.target.value)}
+                              style={{ fontSize: 12, height: 34 }}
+                            />
+                            {skillSearchQuery && (
+                              <button type="button" className={`${styles.btnOutline} ${styles.btnCompact}`} onClick={() => setSkillSearchQuery('')} style={{ height: 34, whiteSpace: 'nowrap' }}>Clear</button>
+                            )}
+                          </div>
+                          <select
+                            className={styles.formSelect}
+                            value={parseBatchSkillId}
+                            disabled={!skillSearchQuery.trim() && (!parseBatchSubject || !parseBatchTopic)}
+                            onChange={e => {
+                              const selectedId = e.target.value;
+                              if (!selectedId) { setParseBatchSkillId(''); return; }
+                              const skill = dbSkills.find(s => s.id === selectedId);
+                              if (skill) {
+                                setParseBatchSubject(skill.subjectId || '');
+                                setParseBatchTopic(skill.topicId || '');
+                                setParseBatchSkillId(skill.skillId || skill.id || '');
+                                setSkillSearchQuery('');
+                              }
+                            }}
+                          >
+                            <option value="">-- Select Skill --</option>
+                            {(skillSearchQuery.trim()
+                              ? filteredLinkSkills
+                              : dbSkills.filter(s => s.subjectId === parseBatchSubject && s.topicId === parseBatchTopic)
+                            ).map((skill, index) => (
+                              <option key={skill.id} value={skill.id}>
+                                {index + 1}. {skill.title || skill.id} ({skill.skillId || skill.id})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label className={styles.filterLabel}>Difficulty</label>
+                          <select
+                            className={styles.formSelect}
+                            value={parseBatchDifficulty}
+                            onChange={e => setParseBatchDifficulty(e.target.value)}
+                          >
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                          </select>
+                        </div>
+                      </div>
+                      {/* Show resolved values once skill is selected */}
+                      {parseBatchSkillId && (
+                        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 700, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                          <span>✓ Subject: <strong style={{ color: 'var(--color-text-main)' }}>{parseBatchSubject}</strong></span>
+                          <span>✓ Topic: <strong style={{ color: 'var(--color-text-main)' }}>{parseBatchTopic}</strong></span>
+                          <span>✓ Skill ID: <strong style={{ color: 'var(--color-text-main)' }}>{parseBatchSkillId}</strong></span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Paste textarea */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.filterLabel}>Paste Questions Here</label>
                       <textarea
                         className={styles.textareaInput}
-                        style={{ minHeight: 200, fontFamily: 'monospace' }}
+                        style={{ minHeight: 280, fontFamily: 'monospace', fontSize: 12 }}
                         value={rawTextToParse}
-                        onChange={(e) => setRawTextToParse(e.target.value)}
-                        placeholder="Paste question text here..."
+                        onChange={(e) => { setRawTextToParse(e.target.value); setParsedBatch([]); }}
+                        placeholder={`Question: Which word has the short /a/ sound?\nA. pin\nB. dad\nC. pot\nCorrect: B\nExplanation: Dad has the short a sound.\n\n---\n\nQuestion: What is 5 + 7?\nA. 10\nB. 12\nC. 14\nCorrect: B`}
                       />
+                      <small style={{ color: 'var(--color-text-muted)', fontSize: 11, marginTop: 4, display: 'block' }}>
+                        Separate multiple questions with <code>---</code> on its own line. Supported fields: <code>Question:</code>, <code>A. / B. / C. / D.</code>, <code>Correct:</code>, <code>Explanation:</code>
+                      </small>
                     </div>
 
-                    <button
-                      type="button"
-                      className={styles.btnSolid}
-                      style={{ marginTop: 12, alignSelf: 'flex-start' }}
-                      onClick={handleParseQuestion}
-                    >
-                      Parse & Load into Builder
-                    </button>
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className={styles.btnOutline}
+                        onClick={handleParseBulk}
+                        disabled={!rawTextToParse.trim()}
+                      >
+                        🔍 Preview Parsed Questions ({rawTextToParse.trim() ? rawTextToParse.split(/\n---+\n|\n\s*\n\s*\n/).filter(b => b.trim()).length : 0})
+                      </button>
+
+                      {parsedBatch.length > 0 && (
+                        <button
+                          type="button"
+                          className={styles.btnSolid}
+                          onClick={handleSaveParsedBulk}
+                          disabled={parseBatchSaving || !parseBatchSubject || !parseBatchTopic || !parseBatchSkillId}
+                        >
+                          {parseBatchSaving ? 'Saving...' : `💾 Save All ${parsedBatch.length} as Drafts`}
+                        </button>
+                      )}
+
+                      {parsedBatch.length > 0 && (!parseBatchSubject || !parseBatchTopic || !parseBatchSkillId) && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 4, padding: '4px 10px' }}>
+                          ⚠️ Fill in Subject, Topic & Skill ID above to enable saving
+                        </span>
+                      )}
+
+                      {parsedBatch.length > 0 && (
+                        <button
+                          type="button"
+                          className={styles.btnOutline}
+                          style={{ marginLeft: 'auto' }}
+                          onClick={() => {
+                            // Load first parsed question into builder
+                            const q = parsedBatch[0];
+                            ignoreDirtyChange.current = true;
+                            setQuestionText(q.questionText);
+                            setType(q.type);
+                            setExplanation(q.explanation);
+                            setOptions(q.options || []);
+                            if (q.correctAnswerIndex !== -1 && q.options[q.correctAnswerIndex]) {
+                              setCorrectAnswer(q.options[q.correctAnswerIndex].label);
+                            } else {
+                              setCorrectAnswer(q.correctAnswer || '');
+                            }
+                            if (parseBatchSubject) setSubject(parseBatchSubject);
+                            if (parseBatchTopic) setTopic(parseBatchTopic);
+                            if (parseBatchSkillId) setSkillId(parseBatchSkillId);
+                            setIsDirty(true);
+                            setAuthoringMode('manual');
+                            setAlert({ type: 'info', text: 'Loaded Q1 into builder.' });
+                          }}
+                        >
+                          ✏️ Edit Q1 in Builder
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Parsed Preview Table */}
+                    {parsedBatch.length > 0 && (
+                      <div style={{ marginTop: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>Parsed Questions Preview</span>
+                          <span style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #7dd3fc', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>{parsedBatch.length} questions</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {parsedBatch.map((q, idx) => (
+                            <div key={idx} style={{ border: '1.5px solid var(--color-border)', borderRadius: 4, padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 12 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: 900, marginBottom: 4, color: 'var(--color-text-main)' }}>
+                                    <span style={{ color: 'var(--color-text-muted)', marginRight: 6 }}>Q{idx + 1}</span>
+                                    {q.questionText}
+                                  </div>
+                                  {q.options && q.options.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', marginTop: 4 }}>
+                                      {q.options.map((opt, oi) => (
+                                        <span key={oi} style={{
+                                          padding: '2px 8px',
+                                          borderRadius: 4,
+                                          border: `1px solid ${opt.isCorrect ? '#16a34a' : 'var(--color-border)'}`,
+                                          background: opt.isCorrect ? '#f0fdf4' : 'var(--bg-secondary)',
+                                          color: opt.isCorrect ? '#15803d' : 'var(--color-text-muted)',
+                                          fontWeight: opt.isCorrect ? 900 : 700,
+                                          fontSize: 11
+                                        }}>
+                                          {String.fromCharCode(65 + oi)}. {opt.label}{opt.isCorrect ? ' ✓' : ''}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {q.explanation && (
+                                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>💡 {q.explanation}</div>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
+                                  <span style={{ background: 'var(--bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{q.type}</span>
+                                  <button
+                                    type="button"
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--color-text-muted)', padding: '2px 4px' }}
+                                    onClick={() => {
+                                      ignoreDirtyChange.current = true;
+                                      setQuestionText(q.questionText);
+                                      setType(q.type);
+                                      setExplanation(q.explanation);
+                                      setOptions(q.options || []);
+                                      if (q.correctAnswerIndex !== -1 && q.options[q.correctAnswerIndex]) {
+                                        setCorrectAnswer(q.options[q.correctAnswerIndex].label);
+                                      } else {
+                                        setCorrectAnswer(q.correctAnswer || '');
+                                      }
+                                      if (parseBatchSubject) setSubject(parseBatchSubject);
+                                      if (parseBatchTopic) setTopic(parseBatchTopic);
+                                      if (parseBatchSkillId) setSkillId(parseBatchSkillId);
+                                      setIsDirty(true);
+                                      setAuthoringMode('manual');
+                                    }}
+                                    title="Edit this question in the builder"
+                                  >
+                                    ✏️ Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: '#dc2626', padding: '2px 4px' }}
+                                    onClick={() => setParsedBatch(prev => prev.filter((_, i) => i !== idx))}
+                                    title="Remove this question"
+                                  >
+                                    🗑 Remove
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 )}
 
@@ -6885,6 +8551,158 @@ Explanation: 5 plus 7 is equal to 12.`}
                       onClick={handleImportJSON}
                     >
                       Validate & Import Schema
+                    </button>
+                  </div>
+                )}
+
+                {/* MODE D: AI BULK GENERATOR */}
+                {authoringMode === 'ai_bulk' && (
+                  <div className={styles.parseWorkspaceContainer}>
+                    <div className={styles.parseInstructions}>
+                      <h4>⚡ Option 4: AI Bulk Question Generator (Super Fast AI Seeding)</h4>
+                      <p>Generate multiple draft questions using Gemini AI for a specific skill. Drafts are saved to the database with <code>status: 'draft'</code> and remain invisible to students until approved.</p>
+                    </div>
+
+                    <div className={styles.formRow} style={{ marginTop: 16 }}>
+                      <div className={styles.formGroup} style={{ flex: 2 }}>
+                        <label className={styles.filterLabel}>Link to Curriculum Skill (Search by Title or ID)</label>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                          <input 
+                            type="text" 
+                            className={styles.formInput} 
+                            placeholder="Type to filter skills..." 
+                            value={skillSearchQuery}
+                            onChange={(e) => setSkillSearchQuery(e.target.value)}
+                            style={{ padding: '6px 10px', fontSize: 13, height: 38 }}
+                          />
+                          {skillSearchQuery && (
+                            <button
+                              type="button"
+                              className={`${styles.btnOutline} ${styles.btnCompact}`}
+                              onClick={() => setSkillSearchQuery('')}
+                              style={{ height: 38 }}
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <select 
+                          className={styles.formSelect}
+                          value={dbSkills.find(s => s.id === skillId || s.skillId === skillId)?.id || ''}
+                          disabled={!skillSearchQuery.trim() && (!selectedLinkSubject || !selectedLinkTopic)}
+                          onChange={(e) => {
+                            const selectedSkillId = e.target.value;
+                            if (!selectedSkillId) {
+                              setSkillId('');
+                              return;
+                            }
+                            const skill = dbSkills.find(s => s.id === selectedSkillId);
+                            if (skill) {
+                              setSubject(skill.subjectId || '');
+                              setTopic(skill.topicId || '');
+                              setSkillId(skill.skillId || skill.id || '');
+                              if (skill.grade) {
+                                setEstimatedGrade(`Grade ${skill.grade}`);
+                              }
+                              logActivity(`Linked AI Seeder to skill: ${skill.title} (${skill.id})`, 'info');
+                              setSkillSearchQuery(''); // clear search after linking
+                            }
+                          }}
+                        >
+                          <option value="">-- Select Skill --</option>
+                          {filteredLinkSkills.map((skill, index) => (
+                            <option key={skill.id} value={skill.id}>
+                              {index + 1}. {skill.title || skill.id} ({skill.id})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className={styles.formRow}>
+                      <div className={styles.formGroup}>
+                        <label className={styles.filterLabel}>Subject</label>
+                        <input 
+                          type="text" 
+                          className={styles.formInput} 
+                          value={subject} 
+                          onChange={(e) => setSubject(e.target.value)} 
+                          placeholder="e.g. english, math"
+                        />
+                      </div>
+                      
+                      <div className={styles.formGroup}>
+                        <label className={styles.filterLabel}>Topic / Chapter</label>
+                        <input 
+                          type="text" 
+                          className={styles.formInput} 
+                          value={topic} 
+                          onChange={(e) => setTopic(e.target.value)} 
+                          placeholder="e.g. grammar, fractions"
+                        />
+                      </div>
+                    </div>
+
+                    <div className={styles.formRow}>
+                      <div className={styles.formGroup}>
+                        <label className={styles.filterLabel}>Skill ID / Logic Type</label>
+                        <input 
+                          type="text" 
+                          className={styles.formInput} 
+                          value={skillId} 
+                          onChange={(e) => setSkillId(e.target.value)} 
+                          placeholder="e.g. nouns, addition"
+                        />
+                      </div>
+                      
+                      <div className={styles.formGroup}>
+                        <label className={styles.filterLabel}>Difficulty</label>
+                        <select 
+                          className={styles.formSelect}
+                          value={difficulty} 
+                          onChange={(e) => setDifficulty(e.target.value)}
+                        >
+                          <option value="easy">Easy</option>
+                          <option value="medium">Medium</option>
+                          <option value="hard">Hard</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className={styles.formGroup} style={{ marginTop: 16 }}>
+                      <label className={styles.filterLabel}>Prompt Guidelines / Question Template</label>
+                      <textarea
+                        className={styles.textareaInput}
+                        style={{ minHeight: 120 }}
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="E.g., Generate questions asking to select the nouns..."
+                      />
+                      <small style={{ color: 'var(--color-text-muted)', display: 'block', marginTop: 4 }}>
+                        Describe the format or context of the questions. Overwritten with a customized template when a skill is selected.
+                      </small>
+                    </div>
+
+                    <div className={styles.formGroup} style={{ marginTop: 16, maxWidth: 200 }}>
+                      <label className={styles.filterLabel}>Number of Questions to Generate</label>
+                      <input
+                        type="number"
+                        className={styles.formInput}
+                        min={1}
+                        max={20}
+                        value={aiCount}
+                        onChange={(e) => setAiCount(parseInt(e.target.value) || 5)}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.btnSolid}
+                      style={{ marginTop: 16, alignSelf: 'flex-start' }}
+                      onClick={handleGenerateAiBulk}
+                      disabled={generatingAi}
+                    >
+                      {generatingAi ? 'Generating and seeding...' : '⚡ Generate Draft Questions'}
                     </button>
                   </div>
                 )}
@@ -7020,8 +8838,65 @@ Explanation: 5 plus 7 is equal to 12.`}
                       <strong>Explanation:</strong> {explanation}
                     </div>
                   )}
+
+                  {editMode && editId && (
+                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6, padding: 10, background: '#f8fafc', borderRadius: 10, border: '1px dashed #cbd5e1' }}>
+                      <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#64748b', textAlign: 'center' }}>Test Saved Question</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <a 
+                          href={`/practice?subject=${subject}&topic=${topic}&skill=${skillId}&qn=${editId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.btnOutline}
+                          style={{ textDecoration: 'none', color: '#0ea5e9', borderColor: '#0ea5e9', fontSize: 11, padding: '4px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, fontWeight: 700 }}
+                        >
+                          🎯 Test (qn)
+                        </a>
+                        <a 
+                          href={`/practice?subject=${subject}&topic=${topic}&skill=${skillId}&id=${editId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.btnOutline}
+                          style={{ textDecoration: 'none', color: '#8b5cf6', borderColor: '#8b5cf6', fontSize: 11, padding: '4px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, fontWeight: 700 }}
+                        >
+                          🎯 Test (id)
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              <details style={{
+                marginTop: 20,
+                background: 'var(--bg-card, #ffffff)',
+                border: '1.5px solid var(--color-border-subtle, #e2e8f0)',
+                borderRadius: 12,
+                padding: '12px 16px',
+                color: 'var(--text-primary, #0f172a)'
+              }}>
+                <summary style={{ fontWeight: 800, fontSize: 13, cursor: 'pointer', outline: 'none', userSelect: 'none' }}>
+                  🔍 View Generated Question JSON payload
+                </summary>
+                <pre style={{
+                  marginTop: 10,
+                  maxHeight: 300,
+                  overflowY: 'auto',
+                  background: 'var(--bg-secondary, #f8fafc)',
+                  border: '1px solid var(--color-border-subtle, #cbd5e1)',
+                  borderRadius: 8,
+                  padding: 10,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: 'var(--text-primary, #0f172a)',
+                  textAlign: 'left',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all'
+                }}>
+                  {JSON.stringify(authoringMockQuestion, null, 2)}
+                </pre>
+              </details>
+
             </aside>
 
           </div>
@@ -10465,12 +12340,765 @@ Explanation: 5 plus 7 is equal to 12.`}
                   </div>
                 </div>
               )}
-
             </div>
           );
         })()}
 
       </main>
     </div>
+
+    {/* ═══════════════════════════════════════════════════════════
+        IMAGE PICKER MODAL
+        Opens when user clicks Upload or Gallery on an image part
+    ═══════════════════════════════════════════════════════════ */}
+    {imgPickerOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pick an image"
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9000,
+          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+        onClick={e => { if (e.target === e.currentTarget) setImgPickerOpen(false); }}
+      >
+        <div style={{
+          background: '#fff', borderRadius: 16, width: 'min(92vw, 860px)',
+          maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
+          overflow: 'hidden',
+        }}>
+          {/* ── Header ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px 12px', borderBottom: '1px solid #e2e8f0', flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🖼</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>Pick an Image</span>
+            </div>
+            {/* Tab switcher */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[['gallery','🗂 Gallery'], ['upload','⬆ Upload'], ['web','🔍 Web Search']].map(([t,label]) => (
+                <button key={t} type="button"
+                  onClick={() => setImgPickerTab(t)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontWeight: 700, fontSize: 12,
+                    background: imgPickerTab === t ? '#6366f1' : '#f1f5f9',
+                    color: imgPickerTab === t ? '#fff' : '#475569',
+                    transition: 'all .15s',
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setImgPickerOpen(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#94a3b8', lineHeight: 1, padding: 4 }}
+              aria-label="Close"
+            >✕</button>
+          </div>
+
+          {/* ── Body ── */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+
+            {/* ────── GALLERY TAB ────── */}
+            {imgPickerTab === 'gallery' && (
+              <>
+                {/* Search + folder */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    placeholder="Search by filename…"
+                    value={imgPickerSearch}
+                    onChange={e => setImgPickerSearch(e.target.value)}
+                    style={{
+                      flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 8,
+                      border: '1.5px solid #e2e8f0', fontSize: 13, outline: 'none',
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Folder prefix (e.g. images)"
+                    value={imgPickerFolder}
+                    onChange={e => setImgPickerFolder(e.target.value)}
+                    style={{
+                      width: 180, padding: '8px 12px', borderRadius: 8,
+                      border: '1.5px solid #e2e8f0', fontSize: 13, outline: 'none',
+                    }}
+                  />
+                  <button type="button"
+                    onClick={() => fetchImgPickerGallery(imgPickerFolder)}
+                    disabled={imgPickerLoading}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      background: '#0ea5e9', color: '#fff', fontWeight: 700, fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >{imgPickerLoading ? '⏳ Loading…' : '🔍 Browse'}</button>
+                </div>
+
+                {imgPickerError && (
+                  <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 10 }}>⚠ {imgPickerError}</div>
+                )}
+
+                {/* Grid */}
+                {(() => {
+                  const q = imgPickerSearch.trim().toLowerCase();
+                  const filtered = q
+                    ? imgPickerImages.filter(img => img.key?.toLowerCase().includes(q) || img.url?.toLowerCase().includes(q))
+                    : imgPickerImages;
+                  if (imgPickerLoading) return <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Loading images…</div>;
+                  if (filtered.length === 0) return (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}>📂</div>
+                      <div style={{ fontSize: 13 }}>{imgPickerImages.length === 0 ? 'Click Browse to load images' : 'No images match your search'}</div>
+                    </div>
+                  );
+                  return (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                      gap: 10,
+                    }}>
+                       {filtered.map(img => (
+                        <div
+                          key={img.key}
+                          title={img.key}
+                          onClick={() => handleImgPickerSelect(img.url)}
+                          style={{
+                            background: '#f8fafc', border: '2px solid #e2e8f0',
+                            borderRadius: 10, padding: 6, cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                            transition: 'border-color .15s, transform .12s',
+                            minHeight: 100,
+                            position: 'relative',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.transform = 'scale(1.04)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                          <img
+                            src={img.url}
+                            alt={img.key}
+                            style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 6 }}
+                            loading="lazy"
+                            onError={e => { e.target.style.opacity = '.3'; }}
+                          />
+                          <span style={{
+                            fontSize: 9, color: '#475569', wordBreak: 'break-all',
+                            textAlign: 'center', lineHeight: 1.3, maxWidth: '100%',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{img.key?.split('/').pop()}</span>
+                          
+                          {/* Preview button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setImgPreviewUrl(img.url);
+                            }}
+                            style={{
+                              position: 'absolute', top: 4, right: 4,
+                              width: 22, height: 22, borderRadius: '50%',
+                              background: 'rgba(255,255,255,0.85)', border: '1px solid #cbd5e1',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', fontSize: 11, boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                              transition: 'all 0.15s',
+                              color: '#475569',
+                            }}
+                            title="Preview image"
+                            onMouseEnter={e => { e.currentTarget.style.background = '#6366f1'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#6366f1'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.85)'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                          >
+                            👁️
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+
+            {/* ────── UPLOAD TAB ────── */}
+            {imgPickerTab === 'upload' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Folder target */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', whiteSpace: 'nowrap' }}>Upload to folder:</label>
+                  <input
+                    type="text"
+                    value={imgPickerFolder}
+                    onChange={e => setImgPickerFolder(e.target.value)}
+                    placeholder="e.g. images/science"
+                    style={{
+                      flex: 1, padding: '8px 12px', borderRadius: 8,
+                      border: '1.5px solid #e2e8f0', fontSize: 13, outline: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Drop zone */}
+                <div
+                  onClick={() => imgPickerFileRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#eef2ff'; }}
+                  onDragLeave={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#f8fafc'; }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    e.currentTarget.style.borderColor = '#c7d2fe';
+                    e.currentTarget.style.background = '#f8fafc';
+                    const files = Array.from(e.dataTransfer.files || []);
+                    if (files.length > 0) handleImgPickerUploads(files);
+                  }}
+                  style={{
+                    border: '2.5px dashed #c7d2fe', borderRadius: 14,
+                    background: '#f8fafc', padding: '48px 24px',
+                    textAlign: 'center', cursor: 'pointer', transition: 'all .15s',
+                  }}
+                >
+                  {imgPickerUploading ? (
+                    <div style={{ color: '#6366f1', fontWeight: 700, fontSize: 14 }}>⏳ Uploading…</div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 40, marginBottom: 10 }}>📤</div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#334155' }}>Click to browse or drag & drop (multiple allowed)</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>PNG, JPG, WebP, GIF, SVG</div>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={imgPickerFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0) handleImgPickerUploads(files);
+                    e.target.value = '';
+                  }}
+                />
+                {imgPickerError && (
+                  <div style={{ color: '#ef4444', fontSize: 12 }}>⚠ {imgPickerError}</div>
+                )}
+              </div>
+            )}
+
+            {/* ────── WEB SEARCH TAB ────── */}
+            {imgPickerTab === 'web' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Search Bar */}
+                <form 
+                  onSubmit={e => { e.preventDefault(); handleWebSearch(); }}
+                  style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Search DuckDuckGo (e.g. red apple)…"
+                    value={webSearchQuery}
+                    onChange={e => setWebSearchQuery(e.target.value)}
+                    style={{
+                      flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 8,
+                      border: '1.5px solid #e2e8f0', fontSize: 13, outline: 'none',
+                    }}
+                  />
+                  <select
+                    value={webSearchType}
+                    onChange={e => setWebSearchType(e.target.value)}
+                    style={{
+                      width: 120, padding: '8px 12px', borderRadius: 8,
+                      border: '1.5px solid #e2e8f0', fontSize: 13, outline: 'none',
+                      background: '#fff', cursor: 'pointer'
+                    }}
+                  >
+                    <option value="clipart">🎨 Clipart</option>
+                    <option value="photo">📷 Photo</option>
+                    <option value="any">🌐 Any</option>
+                  </select>
+                  <button 
+                    type="submit"
+                    disabled={webSearchLoading}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: 13,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
+                    }}
+                  >
+                    {webSearchLoading ? '⏳ Searching…' : '🔍 Search'}
+                  </button>
+                </form>
+
+                {imgPickerError && (
+                  <div style={{ color: '#ef4444', fontSize: 12, margin: '4px 0' }}>⚠ {imgPickerError}</div>
+                )}
+
+                {/* Search Results Grid */}
+                {(() => {
+                  if (webSearchLoading) return <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Searching Web Images (via DuckDuckGo)…</div>;
+                  if (webSearchResults.length === 0) return (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}>🌐</div>
+                      <div style={{ fontSize: 13 }}>Enter a keyword and click Search to query DuckDuckGo</div>
+                    </div>
+                  );
+                  return (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: 12,
+                      maxHeight: '40vh',
+                      overflowY: 'auto',
+                      padding: '4px'
+                    }}>
+                      {webSearchResults.map((item, idx) => {
+                        const isDownloading = webSearchSelectedUrl === item.image;
+                        return (
+                          <div
+                            key={idx}
+                            title={item.title}
+                            onClick={() => {
+                              if (!webSearchSelectedUrl) handleWebSearchSelect(item);
+                            }}
+                            style={{
+                              background: '#f8fafc', border: '2px solid #e2e8f0',
+                              borderRadius: 10, padding: 6, cursor: isDownloading ? 'wait' : (webSearchSelectedUrl ? 'not-allowed' : 'pointer'),
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                              transition: 'border-color .15s, transform .12s',
+                              minHeight: 110,
+                              position: 'relative',
+                              opacity: (!!webSearchSelectedUrl && !isDownloading) ? 0.6 : 1,
+                            }}
+                            onMouseEnter={e => { if (!webSearchSelectedUrl) { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.transform = 'scale(1.04)'; } }}
+                            onMouseLeave={e => { if (!webSearchSelectedUrl) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'scale(1)'; } }}
+                          >
+                            <img
+                              src={item.thumbnail || item.image}
+                              alt=""
+                              style={{ width: '100%', height: 80, objectFit: 'contain', borderRadius: 6 }}
+                              loading="lazy"
+                              onError={e => { e.target.style.opacity = '.3'; }}
+                            />
+                            <span style={{
+                              fontSize: 9, color: '#475569', wordBreak: 'break-all',
+                              textAlign: 'center', lineHeight: 1.3, maxWidth: '100%',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>{item.source || 'Web Image'}</span>
+                            
+                            {/* Preview button */}
+                            {!isDownloading && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setImgPreviewUrl(item.image);
+                                }}
+                                style={{
+                                  position: 'absolute', top: 4, right: 4,
+                                  width: 22, height: 22, borderRadius: '50%',
+                                  background: 'rgba(255,255,255,0.85)', border: '1px solid #cbd5e1',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  cursor: 'pointer', fontSize: 11, boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                  transition: 'all 0.15s',
+                                  color: '#475569',
+                                }}
+                                title="Preview image"
+                                onMouseEnter={e => { e.currentTarget.style.background = '#6366f1'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#6366f1'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.85)'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                              >
+                                👁️
+                              </button>
+                            )}
+
+                            {isDownloading && (
+                              <div style={{
+                                position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)',
+                                borderRadius: 8, display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center', gap: 4
+                              }}>
+                                <span style={{ fontSize: 16 }}>⏳</span>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: '#475569' }}>Saving…</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* ── Footer ── */}
+          <div style={{
+            padding: '12px 20px', borderTop: '1px solid #e2e8f0',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexShrink: 0, background: '#f8fafc',
+          }}>
+            <span style={{ fontSize: 12, color: '#64748b' }}>
+              {imgPickerTab === 'gallery'
+                ? `${imgPickerImages.length} images in folder`
+                : imgPickerTab === 'web'
+                  ? 'Selected image will be downloaded, saved to R2, and inserted'
+                  : 'Image will be uploaded to R2 and auto-inserted'}
+            </span>
+            <button type="button" onClick={() => setImgPickerOpen(false)}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0',
+                background: '#fff', color: '#475569', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              }}
+            >Cancel</button>
+          </div>
+        </div>
+      </div>
+    )}
+    {imgPreviewUrl && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Image Preview"
+        style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20
+        }}
+        onClick={() => setImgPreviewUrl(null)}
+      >
+        <div 
+          style={{
+            position: 'relative',
+            background: '#fff', borderRadius: 12, padding: 10,
+            maxWidth: '90vw', maxHeight: '90vh',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <img 
+            src={imgPreviewUrl} 
+            alt="Preview" 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '75vh', 
+              objectFit: 'contain', 
+              borderRadius: 6,
+              border: '1px solid #e2e8f0'
+            }} 
+          />
+          <div style={{ 
+            marginTop: 10, 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            width: '100%', 
+            alignItems: 'center',
+            gap: 20
+          }}>
+            <span style={{ fontSize: 12, color: '#64748b', wordBreak: 'break-all', flex: 1 }}>{imgPreviewUrl}</span>
+            <button
+              type="button"
+              onClick={() => setImgPreviewUrl(null)}
+              style={{
+                padding: '6px 16px', borderRadius: 8, border: 'none',
+                background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ═══════════════════════════════════════════════════════════
+        R2 AUDIO GALLERY MODAL
+        Opens when user clicks "Browse R2" on an audio part
+    ═══════════════════════════════════════════════════════════ */}
+    {showAudioGallery && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pick an audio file"
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9100,
+          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+        onClick={e => { if (e.target === e.currentTarget) { setShowAudioGallery(false); setAudioGalleryPartIdx(null); setAudioGalleryOptionIdx(null); setAudioGalleryForMainText(false); } }}
+      >
+        <div style={{
+          background: '#fff', borderRadius: 16, width: 'min(92vw, 740px)',
+          maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.35)', overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px 12px', borderBottom: '1px solid #e2e8f0', flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 22 }}>🎵</span>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 15, color: '#0f172a' }}>R2 Audio Gallery</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Browse and attach audio files from Cloudflare R2 storage</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setShowAudioGallery(false); setAudioGalleryPartIdx(null); setAudioGalleryOptionIdx(null); setAudioGalleryForMainText(false); }}
+              style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+            >×</button>
+          </div>
+
+          {/* Search + Folder Filter + Refresh */}
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={r2AudioSearch}
+                onChange={e => {
+                  setR2AudioSearch(e.target.value);
+                  if (e.target.value.trim() !== '') {
+                    setR2AudioFolderFilter('');
+                  }
+                }}
+                placeholder="Search filename across ALL folders (e.g. aa, short_a, phonics)..."
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0',
+                  fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                }}
+              />
+              <button
+                type="button"
+                onClick={fetchR2AudioFiles}
+                disabled={r2AudioLoading}
+                style={{
+                  padding: '8px 14px', borderRadius: 8, border: '1.5px solid #7c3aed',
+                  background: '#7c3aed', color: '#fff', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                {r2AudioLoading ? '⏳ Loading...' : '🔄 Refresh'}
+              </button>
+            </div>
+            {/* Folder filter pills */}
+            {r2AudioFiles.length > 0 && (() => {
+              const folders = ['', ...Array.from(new Set(r2AudioFiles.map(f => f.folder || ''))).sort()];
+              return (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {folders.map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setR2AudioFolderFilter(f)}
+                      style={{
+                        padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 800,
+                        border: `1.5px solid ${r2AudioFolderFilter === f ? '#7c3aed' : '#e2e8f0'}`,
+                        background: r2AudioFolderFilter === f ? '#7c3aed' : '#f8fafc',
+                        color: r2AudioFolderFilter === f ? '#fff' : '#475569',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {f === '' ? '📂 All Folders' : `📁 ${f}`}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* File list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+            {r2AudioLoading && (
+              <div style={{ textAlign: 'center', padding: 40, color: '#7c3aed', fontWeight: 700 }}>Loading audio files from R2...</div>
+            )}
+            {!r2AudioLoading && r2AudioFiles.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>
+                No audio files found in R2 storage.<br/>
+                <span style={{ fontSize: 11 }}>Upload .wav/.mp3 files to your R2 bucket under the <code>audio/</code> prefix.</span>
+              </div>
+            )}
+            {!r2AudioLoading && (() => {
+              const q = r2AudioSearch.toLowerCase().trim();
+              const filtered = r2AudioFiles.filter(f => {
+                // folder filter
+                if (r2AudioFolderFilter !== '' && (f.folder || '') !== r2AudioFolderFilter) return false;
+                // text search — matches anywhere in the full key path
+                if (q && !f.key.toLowerCase().includes(q)) return false;
+                return true;
+              });
+              if (filtered.length === 0) {
+                return <div style={{ textAlign: 'center', padding: 30, color: '#94a3b8', fontSize: 13 }}>
+                  {q || r2AudioFolderFilter ? `No files matching your filter.` : 'No audio files found.'}
+                </div>;
+              }
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {filtered.map((file, fi) => {
+                    const fileName = file.key.split('/').pop();
+                    const isPreviewing = r2AudioPreview === file.url;
+                    const isSelected = (audioGalleryPartIdx !== null && parts[audioGalleryPartIdx]?.audioUrl === file.url) ||
+                      (audioGalleryOptionIdx !== null && options[audioGalleryOptionIdx]?.audioUrl === file.url) ||
+                      (audioGalleryForMainText && audioUrl === file.url);
+                    return (
+                      <div
+                        key={fi}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 12px', borderRadius: 8,
+                          border: `1.5px solid ${isSelected ? '#7c3aed' : '#e2e8f0'}`,
+                          background: isSelected ? '#f5f3ff' : '#fafafa',
+                          transition: 'all 0.1s',
+                        }}
+                      >
+                        {/* Play/stop toggle */}
+                        <button
+                          type="button"
+                          onClick={() => setR2AudioPreview(isPreviewing ? null : file.url)}
+                          style={{
+                            flexShrink: 0, width: 32, height: 32, borderRadius: '50%',
+                            border: '1.5px solid #7c3aed', background: isPreviewing ? '#7c3aed' : '#f5f3ff',
+                            color: isPreviewing ? '#fff' : '#7c3aed',
+                            fontSize: 14, cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                          }}
+                          title={isPreviewing ? 'Stop preview' : 'Preview audio'}
+                        >
+                          {isPreviewing ? '⏹' : '▶'}
+                        </button>
+
+                        {/* File info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <span style={{ fontWeight: 800, fontSize: 13, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {fileName}
+                            </span>
+                            {file.folder && (
+                              <span style={{
+                                fontSize: 9, fontWeight: 900, textTransform: 'uppercase',
+                                background: '#ede9fe', color: '#6d28d9',
+                                border: '1px solid #c4b5fd', borderRadius: 4,
+                                padding: '1px 5px', flexShrink: 0,
+                              }}>
+                                {file.folder}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {file.key}
+                          </div>
+                          {isPreviewing && (
+                            <audio
+                              autoPlay
+                              src={file.url}
+                              onEnded={() => setR2AudioPreview(null)}
+                              style={{ marginTop: 6, height: 28, width: '100%' }}
+                              controls
+                            />
+                          )}
+                        </div>
+
+                        {/* Size */}
+                        <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>
+                          {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
+                        </span>
+
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm(`Are you sure you want to permanently delete "${fileName}" from Cloudflare R2? This cannot be undone.`)) {
+                              return;
+                            }
+                            try {
+                              const res = await fetch('/api/admin/delete-audio', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ keys: [file.key] })
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                setAlert({ type: 'success', text: 'Audio file deleted from R2 successfully.' });
+                                fetchR2AudioFiles();
+                              } else {
+                                throw new Error(data.error || 'Failed to delete audio file.');
+                              }
+                            } catch (err) {
+                              setAlert({ type: 'error', text: err.message });
+                            }
+                          }}
+                          style={{
+                            flexShrink: 0, padding: '6px 10px', borderRadius: 8,
+                            border: '1.5px solid #ef4444',
+                            background: 'transparent',
+                            color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                            marginRight: 6
+                          }}
+                          title="Delete from Cloudflare R2 bucket permanently"
+                        >
+                          🗑️
+                        </button>
+
+                        {/* Select button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (audioGalleryPartIdx !== null) {
+                              handleUpdatePartFields(audioGalleryPartIdx, { audioUrl: file.url });
+                            } else if (audioGalleryOptionIdx !== null) {
+                              updateOptionAudioUrl(audioGalleryOptionIdx, file.url);
+                            } else if (audioGalleryForMainText) {
+                              setAudioUrl(file.url);
+                            }
+                            setShowAudioGallery(false);
+                            setAudioGalleryPartIdx(null);
+                            setAudioGalleryOptionIdx(null);
+                            setAudioGalleryForMainText(false);
+                            setR2AudioPreview(null);
+                          }}
+                          style={{
+                            flexShrink: 0, padding: '6px 14px', borderRadius: 8,
+                            border: 'none',
+                            background: isSelected ? '#6d28d9' : '#7c3aed',
+                            color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          {isSelected ? '✓ Selected' : 'Use This'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            padding: '12px 20px', borderTop: '1px solid #f1f5f9',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexShrink: 0, fontSize: 11, color: '#94a3b8',
+          }}>
+            <span>
+              {r2AudioFiles.length} total file(s)
+              {(r2AudioSearch || r2AudioFolderFilter) && (
+                <> &bull; filtered</>
+              )}
+              {' '}&bull; Prefix: <code>audio/</code>
+            </span>
+            <button
+              type="button"
+              onClick={() => { setShowAudioGallery(false); setAudioGalleryPartIdx(null); setAudioGalleryOptionIdx(null); setAudioGalleryForMainText(false); setR2AudioPreview(null); }}
+              style={{
+                padding: '6px 16px', borderRadius: 8, border: '1.5px solid #e2e8f0',
+                background: '#fff', color: '#374151', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+              }}
+            >Close</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
