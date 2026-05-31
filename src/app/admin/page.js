@@ -637,6 +637,8 @@ export default function AdminConsolePage() {
   
   // ── Clone Random State ────────────────────────────────────────────────────
   const [cloneCount, setCloneCount] = useState(5);
+  const [cloneSkillId, setCloneSkillId] = useState('');
+  const [customCloneSkillId, setCustomCloneSkillId] = useState('');
   const [cloningInProgress, setCloningInProgress] = useState(false);
   const [r2AudioLoading, setR2AudioLoading]         = useState(false);
   const [r2AudioSearch, setR2AudioSearch]           = useState('');
@@ -1182,6 +1184,19 @@ export default function AdminConsolePage() {
 
   const currFlatNodes = useMemo(() => flattenTree(currTree), [currTree]);
   const dbSkills = useMemo(() => currFlatNodes.filter(node => node.type === 'skill'), [currFlatNodes]);
+
+  const availableSkillsForClone = useMemo(() => {
+    if (!qSubject || !qTopic) return [];
+    return dbSkills.filter(
+      s => (s.subjectId || '').toLowerCase() === qSubject.toLowerCase() &&
+           (s.topicId || '').toLowerCase() === qTopic.toLowerCase()
+    );
+  }, [dbSkills, qSubject, qTopic]);
+
+  useEffect(() => {
+    setCloneSkillId('');
+    setCustomCloneSkillId('');
+  }, [qSubject, qTopic]);
 
   const [selectedLinkSubject, setSelectedLinkSubject] = useState('');
   const [selectedLinkTopic, setSelectedLinkTopic]     = useState('');
@@ -1900,8 +1915,11 @@ export default function AdminConsolePage() {
       return;
     }
 
+    const targetSkillId = cloneSkillId === '__custom__' ? customCloneSkillId.trim() : cloneSkillId.trim();
+
     setCloningInProgress(true);
-    setAlert({ type: 'info', text: `Cloning ${cloneCount} random questions from ${qSubject.toUpperCase()} / ${qTopic.toUpperCase()} as drafts...` });
+    const skillText = targetSkillId ? ` (Skill: ${targetSkillId})` : '';
+    setAlert({ type: 'info', text: `Cloning ${cloneCount} random questions from ${qSubject.toUpperCase()} / ${qTopic.toUpperCase()}${skillText} as drafts...` });
 
     try {
       const res = await fetch('/api/admin/questions/clone-random', {
@@ -1910,6 +1928,7 @@ export default function AdminConsolePage() {
         body: JSON.stringify({
           subject: qSubject,
           topic: qTopic,
+          skillId: targetSkillId || undefined,
           count: cloneCount
         })
       });
@@ -5582,8 +5601,39 @@ export default function AdminConsolePage() {
                   style={{ width: '56px', height: '34px', textAlign: 'center', padding: '0 4px' }}
                 />
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 700 }}>Skill ID:</span>
+                <select
+                  value={cloneSkillId}
+                  onChange={(e) => setCloneSkillId(e.target.value)}
+                  className={styles.formSelect}
+                  style={{ height: '34px', padding: '0 8px', minWidth: '150px' }}
+                  disabled={!qSubject || !qTopic}
+                >
+                  <option value="">-- All Skills --</option>
+                  {availableSkillsForClone.map(skill => (
+                    <option key={skill.id} value={skill.skillId || skill.id}>
+                      {skill.title || skill.skillId || skill.id} ({skill.skillId || skill.id})
+                    </option>
+                  ))}
+                  <option value="__custom__">-- Custom Skill ID --</option>
+                </select>
+              </div>
+              {cloneSkillId === '__custom__' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter custom Skill ID..."
+                    value={customCloneSkillId}
+                    onChange={(e) => setCustomCloneSkillId(e.target.value)}
+                    className={styles.formInput}
+                    style={{ height: '34px', padding: '0 8px', width: '200px' }}
+                    disabled={!qSubject || !qTopic}
+                  />
+                </div>
+              )}
               <small style={{ color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 650 }}>
-                Picks random active questions from the selected <strong>Subject</strong> and <strong>Topic/Skill</strong>, duplicates them, and saves them as reviewable drafts.
+                Picks random active questions from the selected <strong>Subject</strong>, <strong>Topic/Skill</strong>, and optional <strong>Skill ID</strong>, duplicates them, and saves them as reviewable drafts.
               </small>
             </div>
 

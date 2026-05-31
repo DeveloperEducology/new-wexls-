@@ -5,7 +5,7 @@ import crypto from 'crypto';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { subject, topic, count = 5 } = body;
+    const { subject, topic, skillId, count = 5 } = body;
 
     if (!subject || !topic) {
       return NextResponse.json({ success: false, error: 'Missing subject or topic' }, { status: 400 });
@@ -29,6 +29,10 @@ export async function POST(request) {
         { status: 'published' }
       ]
     };
+
+    if (skillId) {
+      query.skillId = skillId;
+    }
 
     // Use MongoDB aggregation framework with $sample to get random questions
     const candidates = await collection.aggregate([
