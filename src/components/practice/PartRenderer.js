@@ -134,9 +134,11 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
         // Check if this is an MCQ/choice question to render the selected option as text instead of input
         const isMcq = question?.type === 'mcq' || question?.interaction === 'choice' || question?.interaction === 'option_select';
         if (isMcq) {
-          const selectedIndex = typeof userAnswer === 'object' && userAnswer !== null
-            ? Number(userAnswer?.selectedIndex ?? userAnswer?.index ?? userAnswer[blankId])
-            : Number(userAnswer);
+          const selectedIndex = (userAnswer === null || userAnswer === undefined || userAnswer === '')
+            ? NaN
+            : (typeof userAnswer === 'object'
+                ? Number(userAnswer?.selectedIndex ?? userAnswer?.index ?? userAnswer[blankId])
+                : Number(userAnswer));
 
           let resolvedValue = '';
           if (Number.isFinite(selectedIndex) && question.options?.[selectedIndex]) {
