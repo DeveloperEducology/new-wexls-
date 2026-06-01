@@ -824,6 +824,8 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     multiSelect: question.multiSelect,
     shownLetter: question.shownLetter,
     shownLetterSvg: question.shownLetterSvg,
+    backgroundUrl: question.backgroundUrl,
+    backgroundImage: question.backgroundImage,
     solution: normalizeSolution(question.solution || question.explanation),
     metadata: {
       ...(question.metadata || {}),
