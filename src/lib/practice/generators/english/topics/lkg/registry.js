@@ -483,6 +483,22 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-sight-words',
     chapterTitle: 'Sight words'
+  },
+  'lkg-demo-grid-blank': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.DEMO',
+    title: 'How many hats: Demo',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-vocab-use-number-words-1to10': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.R4',
+    title: 'Use number words: one to ten',
+    grade: 'LKG',
+    chapterId: 'english-lkg-colour-number-words',
+    chapterTitle: 'Colour and number words'
   }
 };
 
