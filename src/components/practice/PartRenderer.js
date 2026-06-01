@@ -246,6 +246,7 @@ function cleanSpeechText(value) {
 function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue, partIndex }) {
   const content = part.content || part.text || '';
   const spokenRef = useRef(false);
+  const shouldShowSpeaker = showSpeaker && part.showSpeaker !== false && !part.noSpeaker;
 
   const isPreK = useMemo(() => {
     const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
@@ -381,14 +382,16 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
         
         <div className={styles.preKMascotBubble}>
           <div className={styles.preKMascotBubbleTail} />
-          <button
-            type="button"
-            onClick={() => speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl)}
-            className={styles.preKSpeakerBtnLarge}
-            title="Read instruction out loud"
-          >
-            🔊
-          </button>
+          {shouldShowSpeaker && (
+            <button
+              type="button"
+              onClick={() => speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl)}
+              className={styles.preKSpeakerBtnLarge}
+              title="Read instruction out loud"
+            >
+              🔊
+            </button>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
             {textElement}
             {isAudioToLetter && (question?.soundUrl || question?.soundText) && (
@@ -419,7 +422,7 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
     );
   }
 
-  if (showSpeaker) {
+  if (shouldShowSpeaker) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
         <button
