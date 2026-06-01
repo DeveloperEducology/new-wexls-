@@ -64,6 +64,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'balloon_tap',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.loc_next_beside': {
+    title: 'Next to and beside',
+    engine: 'loc_next_beside',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -507,6 +513,14 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-nouns',
     chapterTitle: 'Nouns'
+  },
+  'lkg-english-loc-next-beside': {
+    templateId: 'lkg.english.loc_next_beside',
+    code: 'EL.V3',
+    title: 'Next to and beside',
+    grade: 'LKG',
+    chapterId: 'english-lkg-location-words',
+    chapterTitle: 'Location words'
   }
 };
 

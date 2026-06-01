@@ -2231,7 +2231,7 @@ function generatePhonicsVowelsQuestion(skillId, seed, r) {
     interaction: 'choice',
     questionText,
     audioUrl,
-    voice: 'Puck',
+    voice: 'Kore',
     generateAudio: 'none',
     explanation: `The word you hear is **${targetWord}**.`,
     options: optionsList.map((w, i) => {
@@ -2318,7 +2318,7 @@ function generatePhonicsImagesQuestion(skillId, seed, r) {
     interaction: 'choice',
     questionText,
     audioUrl: letterAudios[questionText] || undefined,
-    voice: 'Puck',
+    voice: 'Kore',
     generateAudio: 'none',
     explanation: `The word **${targetAsset.word}** has the short ${vowelChar} sound.`,
     options: optionsList.map((item, i) => {
@@ -2403,6 +2403,174 @@ function generateBalloonTapQuestion(skillId, seed, r) {
   };
 }
 
+function generateLocNextBesideQuestion(skillId, seed, r) {
+  const SCENES = [
+    {
+      name: 'bed',
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984568906-bed.png',
+      bgElement: { x: 220, y: 160, width: 360, height: 240 },
+      positions: {
+        beside_left: { x: 80, y: 220, width: 120, height: 120 },
+        beside_right: { x: 600, y: 220, width: 120, height: 120 },
+        on_top: { x: 340, y: 110, width: 120, height: 100 }
+      }
+    },
+    {
+      name: 'table',
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779994263347-table.png',
+      bgElement: { x: 220, y: 180, width: 360, height: 220 },
+      positions: {
+        beside_left: { x: 80, y: 240, width: 120, height: 120 },
+        beside_right: { x: 600, y: 240, width: 120, height: 120 },
+        on_top: { x: 340, y: 100, width: 120, height: 100 }
+      }
+    },
+    {
+      name: 'box',
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984495333-box.png',
+      bgElement: { x: 240, y: 200, width: 320, height: 220 },
+      positions: {
+        beside_left: { x: 90, y: 240, width: 120, height: 120 },
+        beside_right: { x: 590, y: 240, width: 120, height: 120 },
+        on_top: { x: 340, y: 110, width: 120, height: 100 }
+      }
+    }
+  ];
+
+  const OBJECTS = [
+    { name: 'frog', label: 'frog', imageUrl: '/images/lkg/frog.png' },
+    { name: 'duck', label: 'duck', imageUrl: '/images/lkg/duck.png' },
+    { name: 'ball', label: 'ball', imageUrl: '/images/lkg/ball.png' },
+    { name: 'apple', label: 'apple', imageUrl: '/images/lkg/apple.png' },
+    { name: 'car', label: 'toy car', imageUrl: '/images/lkg/car.png' },
+    { name: 'butterfly', label: 'butterfly', imageUrl: '/images/lkg/butterfly.png' }
+  ];
+
+  const sceneIdx = Math.floor(r * SCENES.length);
+  const scene = SCENES[sceneIdx];
+
+  const targetObjIdx = Math.floor(r * OBJECTS.length);
+  const targetObj = OBJECTS[targetObjIdx];
+
+  const distractorObjIdx = (targetObjIdx + 1) % OBJECTS.length;
+  const distractorObj = OBJECTS[distractorObjIdx];
+
+  const targetPosKey = r > 0.5 ? 'beside_left' : 'beside_right';
+  const otherBesideKey = targetPosKey === 'beside_left' ? 'beside_right' : 'beside_left';
+
+  const optionsRaw = [
+    {
+      id: 'correct_beside',
+      label: `${targetObj.label} beside the ${scene.name}`,
+      imageUrl: targetObj.imageUrl,
+      posKey: targetPosKey,
+      isCorrect: true
+    },
+    {
+      id: 'distractor_on',
+      label: `${targetObj.label} on top of the ${scene.name}`,
+      imageUrl: targetObj.imageUrl,
+      posKey: 'on_top',
+      isCorrect: false
+    },
+    {
+      id: 'distractor_beside',
+      label: `${distractorObj.label} beside the ${scene.name}`,
+      imageUrl: distractorObj.imageUrl,
+      posKey: otherBesideKey,
+      isCorrect: false
+    }
+  ];
+
+  const optionsList = shuffle(optionsRaw, r);
+  const correctAnswerIndex = optionsList.findIndex(opt => opt.isCorrect);
+
+  const term = r > 0.5 ? 'beside' : 'next to';
+  const questionText = `Click on the **${targetObj.label}** that is **${term}** the **${scene.name}**.`;
+
+  const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bae6fd" />
+      <stop offset="100%" stop-color="#e0f2fe" />
+    </linearGradient>
+    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#fef9c3" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="260" fill="url(#wallGrad)" />
+  <rect y="260" width="800" height="205" fill="url(#floorGrad)" />
+  <rect y="254" width="800" height="6" fill="#e2e8f0" />
+  <image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />
+</svg>`;
+
+  const hotspots = optionsList.map((opt, idx) => {
+    const coords = scene.positions[opt.posKey];
+    return {
+      id: `hs_${opt.id}_${idx}`,
+      label: opt.label,
+      x: (coords.x / 800) * 100,
+      y: (coords.y / 465) * 100,
+      width: (coords.width / 800) * 100,
+      height: (coords.height / 465) * 100,
+      isCircle: false,
+      isCorrect: opt.isCorrect,
+      imageUrl: opt.imageUrl,
+      transparent: true
+    };
+  });
+
+  const partHotspots = optionsList.map((opt, idx) => {
+    const coords = scene.positions[opt.posKey];
+    return {
+      optionIndex: idx,
+      x: coords.x,
+      y: coords.y,
+      width: coords.width,
+      height: coords.height,
+      label: opt.label,
+      isCircle: false,
+      imageUrl: opt.imageUrl,
+      id: `hs_${opt.id}_${idx}`,
+      transparent: true
+    };
+  });
+
+  return {
+    id: `english_lkg_loc_next_beside_${seed}`,
+    type: 'mcq',
+    interaction: 'hotspot_select',
+    layoutMode: 'mcq_hotspot',
+    questionText,
+    voice: 'Kore',
+    generateAudio: 'all',
+    explanation: `The **${targetObj.label}** is sitting right **${term}** (beside) the **${scene.name}**.`,
+    options: optionsList.map((opt, idx) => ({
+      id: `opt_${idx}`,
+      label: opt.label,
+      isCorrect: opt.isCorrect
+    })),
+    correctAnswerIndex,
+    answer: correctAnswerIndex,
+    hotspots,
+    parts: [
+      {
+        type: 'text',
+        content: questionText
+      },
+      {
+        type: 'hotspot_canvas',
+        canvasWidth: 800,
+        canvasHeight: 465,
+        hotspots: partHotspots,
+        backgroundSvg,
+        transparent: true
+      }
+    ]
+  };
+}
+
 export function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
@@ -2442,6 +2610,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generatePhonicsImagesQuestion(skillId, seed, r);
       } else if (template.engine === 'balloon_tap') {
         question = generateBalloonTapQuestion(skillId, seed, r);
+      } else if (template.engine === 'loc_next_beside') {
+        question = generateLocNextBesideQuestion(skillId, seed, r);
       }
 
       if (question) {

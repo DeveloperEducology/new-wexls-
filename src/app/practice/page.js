@@ -1531,6 +1531,11 @@ function PracticePageContent() {
         level: nextPracticeLevel,
         isMaxLevel: nextPracticeLevel === 5,
       });
+      if (isPreK) {
+        speakText(`Awesome! Level ${nextPracticeLevel}! Keep going!`, question?.voice || 'Kore');
+      } else {
+        speakText(`Level ${nextPracticeLevel} unlocked.`, question?.voice || 'Puck');
+      }
     } else {
       setPracticeLevel(nextPracticeLevel);
       setLevelStreak(finalLevelStreak);
@@ -3099,20 +3104,37 @@ function PracticePageContent() {
               width: 'min(340px, 100%)',
               borderRadius: 22,
               background: '#ffffff',
-              border: '1px solid #dcfce7',
+              border: isPreK ? '1px solid #fde047' : '1px solid #dcfce7',
               boxShadow: '0 26px 70px rgba(15, 23, 42, 0.22)',
               padding: 22,
               textAlign: 'center',
             }}
           >
-            <div style={{ width: 54, height: 54, margin: '0 auto 12px', borderRadius: 999, background: '#dcfce7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 950 }}>
-              {levelModal.level}
+            <div style={{ 
+              width: 64, 
+              height: 64, 
+              margin: '0 auto 12px', 
+              borderRadius: '50%', 
+              background: isPreK ? '#fef9c3' : '#dcfce7', 
+              color: isPreK ? '#ca8a04' : '#166534', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontSize: isPreK ? 32 : 26, 
+              fontWeight: 950,
+              boxShadow: isPreK ? '0 4px 14px rgba(234, 179, 8, 0.25)' : 'none'
+            }}>
+              {isPreK ? '🌟' : levelModal.level}
             </div>
             <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontSize: 22, lineHeight: 1.15 }}>
-              {levelModal.isMaxLevel ? 'Level 5 reached' : `Level ${levelModal.level} unlocked`}
+              {isPreK 
+                ? (levelModal.isMaxLevel ? 'Level 5! 🎉' : `Level ${levelModal.level}! 🚀`)
+                : (levelModal.isMaxLevel ? 'Level 5 reached' : `Level ${levelModal.level} unlocked`)}
             </h3>
             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: 13, fontWeight: 750, lineHeight: 1.45 }}>
-              Five correct answers in a row. The next set can step up in challenge.
+              {isPreK
+                ? 'You got 5 correct answers! Keep going!'
+                : 'Five correct answers in a row. The next set can step up in challenge.'}
             </p>
             <button
               type="button"
@@ -3120,16 +3142,18 @@ function PracticePageContent() {
               style={{
                 border: 0,
                 borderRadius: 999,
-                background: '#4fb77a',
+                background: isPreK ? '#3b82f6' : '#4fb77a',
                 color: '#ffffff',
-                padding: '10px 18px',
-                fontSize: 13,
+                padding: isPreK ? '10px 24px' : '10px 18px',
+                fontSize: isPreK ? 14 : 13,
                 fontWeight: 900,
                 cursor: 'pointer',
-                boxShadow: '0 12px 24px rgba(34, 197, 94, 0.22)',
+                boxShadow: isPreK 
+                  ? '0 12px 24px rgba(59, 130, 246, 0.35)' 
+                  : '0 12px 24px rgba(34, 197, 94, 0.22)',
               }}
             >
-              Keep practicing
+              {isPreK ? 'Go! ▶️' : 'Keep practicing'}
             </button>
           </div>
         </div>

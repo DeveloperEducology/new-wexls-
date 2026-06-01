@@ -700,7 +700,10 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
             maxHeight: '100%',
             objectFit: 'contain',
             borderRadius: isTransparent ? undefined : 14,
-            transition: canPlaySound ? 'transform 0.2s ease' : 'none',
+            transition: 'transform 0.2s ease, filter 0.2s ease',
+            filter: (part.transparent && isSelected)
+              ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
+              : 'none',
           }}
           onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
           onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
@@ -5877,10 +5880,12 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
     }
   };
 
+  const isAnyTransparent = Boolean(part.transparent || question?.transparent || (part.hotspots || []).some(hs => hs.transparent));
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%' }}>
       <div
-        className={`${styles.hotspotCanvasWrapper} ${isPreK ? styles.preKHotspotCanvasWrapper : ''} ${isPreK && hasImages ? styles.preKHotspotGrid : ''}`}
+        className={`${styles.hotspotCanvasWrapper} ${isPreK ? styles.preKHotspotCanvasWrapper : ''} ${isPreK && hasImages && !isAnyTransparent ? styles.preKHotspotGrid : ''}`}
         style={{
           aspectRatio: `${canvasWidth} / ${canvasHeight}`,
           height: 'auto',
@@ -6016,12 +6021,25 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
           const isCard = Boolean(imageUrl || question?.layoutMode === 'mcq_hotspot');
           const isInvisible = Boolean(part.invisibleHotspots || question?.invisibleHotspots);
 
+          const isTransparentHotspot = Boolean(part.transparent || hs.transparent || question?.transparent);
+
           const dynamicStyles = isInvisible ? {
             background: 'transparent',
             border: 'none',
             cursor: isAnswered ? 'default' : 'pointer',
             outline: 'none',
             boxShadow: 'none',
+            zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
+          } : (isTransparentHotspot ? {
+            background: 'transparent',
+            border: 'none',
+            cursor: isAnswered ? 'default' : 'pointer',
+            outline: 'none',
+            boxShadow: 'none',
+            transform: isSelected 
+              ? 'scale(1.02)' 
+              : (isHovered ? 'scale(1.05)' : 'scale(1)'),
+            transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
           } : (isPreK ? (isCard ? {
             border: isSelected 
@@ -6055,7 +6073,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
           } : {
             zIndex: isSelected ? 30 : (isHovered ? 20 : 10)
-          }));
+          })));
 
           return (
             <button
@@ -6065,10 +6083,14 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
               onClick={() => handleClick(hs.optionIndex)}
               onMouseEnter={() => setHoveredIndex(hs.optionIndex)}
               onMouseLeave={() => setHoveredIndex(null)}
-              className={isInvisible ? '' : [
-                styles.hotspotZone,
-                isSelected ? styles.hotspotZoneSelected : '',
-              ].join(' ')}
+              className={isInvisible ? '' : (
+                isTransparentHotspot
+                  ? styles.hotspotZoneTransparent
+                  : [
+                      styles.hotspotZone,
+                      isSelected ? styles.hotspotZoneSelected : '',
+                    ].join(' ')
+              )}
               style={{
                 left:   `${(newX / canvasWidth)      * 100}%`,
                 top:    `${(newY / canvasHeight)     * 100}%`,
@@ -6087,10 +6109,40 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
               }}
             >
               {imageUrl ? (
-                <img src={imageUrl} alt={hs.label || ''} style={{ height: '90%', width: 'auto', objectFit: 'contain', pointerEvents: 'none', zIndex: 1 }} />
+                <img 
+                  src={imageUrl} 
+                  alt={hs.label || ''} 
+                  style={{ 
+                    height: '90%', 
+                    width: 'auto', 
+                    objectFit: 'contain', 
+                    pointerEvents: 'none', 
+                    zIndex: 1,
+                    transition: 'filter 0.25s ease, transform 0.25s ease',
+                    filter: isTransparentHotspot
+                      ? (isSelected
+                          ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
+                          : (isHovered ? 'drop-shadow(3px 0 0 #38bdf8) drop-shadow(-3px 0 0 #38bdf8) drop-shadow(0 3px 0 #38bdf8) drop-shadow(0 -3px 0 #38bdf8) drop-shadow(0 0 8px rgba(56, 189, 248, 0.35))' : 'none'))
+                      : 'none'
+                  }} 
+                />
               ) : hs.svgContent ? (
                 <div
-                  style={{ width: '90%', height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 1 }}
+                  style={{ 
+                    width: '90%', 
+                    height: '90%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    pointerEvents: 'none', 
+                    zIndex: 1,
+                    transition: 'filter 0.25s ease, transform 0.25s ease',
+                    filter: isTransparentHotspot
+                      ? (isSelected
+                          ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
+                          : (isHovered ? 'drop-shadow(3px 0 0 #38bdf8) drop-shadow(-3px 0 0 #38bdf8) drop-shadow(0 3px 0 #38bdf8) drop-shadow(0 -3px 0 #38bdf8) drop-shadow(0 0 8px rgba(56, 189, 248, 0.35))' : 'none'))
+                      : 'none'
+                  }}
                   dangerouslySetInnerHTML={{ __html: hs.svgContent }}
                 />
               ) : (

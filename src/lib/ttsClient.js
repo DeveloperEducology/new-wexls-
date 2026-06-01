@@ -145,10 +145,8 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
         if (activeAudio === audio) activeAudio = null;
         if (activeText === text) {
           activeText = null;
-          // Phonics-only: do NOT fall back to browser TTS
-          if (!isPhonics) {
-            speakText(text, voice, null);
-          }
+          // Fall back to server-side synthesis (native browser synthesis is blocked inside fallbackToWebSpeech for Phonics)
+          speakText(text, voice, null);
         }
       });
 
@@ -164,9 +162,7 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
           if (activeAudio === audio) activeAudio = null;
           if (activeText === text) {
             activeText = null;
-            if (!isPhonics) {
-              speakText(text, voice, null);
-            }
+            speakText(text, voice, null);
           }
         });
       }
