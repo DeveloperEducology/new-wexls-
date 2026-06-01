@@ -403,6 +403,38 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-sight-words',
     chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set4': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N6',
+    title: 'Read sight words set 4: can, it, not, up, yes',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set5': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N7',
+    title: 'Read sight words set 5: an, do, jump, look, make',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set6': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N8',
+    title: 'Read sight words set 6: down, go, out, so, two',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-review456': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N9',
+    title: 'Read sight words: review sets 4, 5, 6',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
   }
 };
 
