@@ -1055,7 +1055,7 @@
     background-position: center bottom;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    padding: 24px 24px 220px 24px;
+    padding: 0 0 220px 0;
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
     color: #1e293b;
     position: relative;
@@ -1117,17 +1117,19 @@
 
 .preKQuestionCard {
     width: 100%;
-    background: linear-gradient(185deg, #ffffff 0%, #fdfcff 100%);
-    border-radius: 32px;
-    border: 5px solid #ffffff;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05), 0 0 0 6px rgba(255, 255, 255, 0.45);
-    padding: 24px 28px;
+    background: transparent !important;
+    border-radius: 0px !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
     position: relative;
-    overflow: hidden;
+    overflow: visible !important;
 }
 
-.preKQuestionCard h2 strong {
+.preKQuestionCard h2 strong,
+.preKMascotBubble :global(strong) {
     color: #a855f7 !important;
+    font-weight: 900;
 }
 
 .preKProgressContainer {
@@ -1384,28 +1386,29 @@
 .preKMascotSection {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 0px; /* Overlap handles spacing */
+    margin-bottom: 24px;
     width: 100%;
     position: relative;
+    box-sizing: border-box;
 }
 
 .preKMascotAvatar {
     background: linear-gradient(135deg, #fef08a 0%, #fef3c7 100%);
     border: 4px solid #ffffff;
     border-radius: 50%;
-    width: 80px;
-    height: 80px;
+    width: 88px;
+    height: 88px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 6px 12px rgba(251, 191, 36, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.45);
+    box-shadow: 0 6px 14px rgba(251, 191, 36, 0.25), 0 0 0 4px rgba(255, 255, 255, 0.45);
     flex-shrink: 0;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: preKMascotBounce 4s ease-in-out infinite;
     position: relative;
+    z-index: 15; /* Sits above bubble border overlap */
     padding: 0;
 }
 
@@ -1417,76 +1420,65 @@
     transform: scale(0.95);
 }
 
-.preKMascotSpeechTag {
-    position: absolute;
-    bottom: -6px;
-    background: #ea580c;
-    color: #ffffff;
-    font-size: 9px;
-    font-weight: 900;
-    padding: 1px 6px;
-    border-radius: 999px;
-    text-transform: uppercase;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-    border: 1.5px solid #ffffff;
-}
-
 @keyframes preKMascotBounce {
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-4px) scale(1.02); }
 }
 
 .preKMascotBubble {
-    position: relative;
-    background: #fdf4ff; /* soft pastel lavender background */
-    border: 4px solid #ffffff;
-    border-radius: 22px;
-    padding: 12px 16px 12px 48px;
-    box-shadow: 0 6px 0 #f3e8ff, 0 8px 16px rgba(243, 232, 255, 0.3);
+    background: #ffffff;
+    border: 3.5px solid #e9d5ff; /* Soft purple border */
+    border-radius: 24px;
+    padding: 14px 60px 14px 32px; /* Large right padding for speaker, left padding for overlap safety */
+    box-shadow: 0 8px 24px rgba(243, 232, 255, 0.35);
     flex-grow: 1;
+    position: relative;
+    margin-left: -16px; /* Neg-margin creates overlap */
+    z-index: 5;
+    min-height: 64px;
     display: flex;
     align-items: center;
-    min-height: 64px;
+    box-sizing: border-box;
 }
 
 .preKMascotBubbleTail {
     position: absolute;
-    left: -11px;
+    left: -9px;
     top: 50%;
     transform: translateY(-50%) rotate(45deg);
-    width: 18px;
-    height: 18px;
-    background: #fdf4ff;
-    border-left: 4px solid #ffffff;
-    border-bottom: 4px solid #ffffff;
-    border-radius: 0 0 0 6px;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-left: 3.5px solid #e9d5ff;
+    border-bottom: 3.5px solid #e9d5ff;
+    border-radius: 0 0 0 4px;
+    z-index: -1;
 }
 
 .preKSpeakerBtnLarge {
     position: absolute;
-    left: 12px;
+    right: -18px; /* Overlaps right border */
     top: 50%;
     transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    border: none;
-    background: #ffffff;
-    color: #d946ef;
-    font-size: 14px;
-    cursor: pointer;
+    border: 3px solid #ffffff;
+    background: #a855f7; /* Violet */
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 3px 6px rgba(217, 70, 239, 0.15);
-    transition: transform 0.15s ease;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(168, 85, 247, 0.35);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 20;
     padding: 0;
+    outline: none;
 }
 
 .preKSpeakerBtnLarge:hover {
-    transform: translateY(-50%) scale(1.1);
-    background: #fdf4ff;
+    transform: translateY(-50%) scale(1.08);
 }
 
 .preKSpeakerBtnLarge:active {
@@ -1680,186 +1672,91 @@
 
 /* Redesigned Pre-K header, avatar, and journey progress trail */
 .preKHeader {
+    background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-bottom: 12px;
-    z-index: 10;
+    box-sizing: border-box;
+    border-bottom: 3.5px solid #4338ca;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    z-index: 50;
     position: relative;
-    background: transparent;
-    border: none;
-    padding: 0;
-    box-shadow: none;
+    margin-bottom: 16px;
+    border-radius: 0 0 20px 20px;
 }
 
-.preKAvatarContainer {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 76px;
-    height: 76px;
-    border-radius: 50%;
-    border: 4px solid #ffffff;
-    background: linear-gradient(135deg, #fef08a 0%, #fef3c7 100%);
-    box-shadow: 0 6px 16px rgba(251, 191, 36, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.4);
-    flex-shrink: 0;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.preKAvatarContainer:hover {
-    transform: scale(1.08) rotate(-4deg);
-}
-
-.preKAvatarStarBadge {
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 1px 8px;
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    border: 1.5px solid #ffffff;
-    border-radius: 999px;
-    box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 900;
-    z-index: 15;
-    font-family: var(--font-outfit), sans-serif;
-    white-space: nowrap;
-}
-
-.preKJourneyContainer {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(12px);
-    border: 3px solid #ffffff;
-    border-radius: 24px;
-    padding: 8px 16px 8px 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
-    flex-grow: 1;
-    max-width: 380px;
-    margin: 0 auto;
-    position: relative;
-    min-height: 64px;
-    justify-content: center;
-}
-
-.preKJourneyTitle {
-    font-size: 11px;
-    font-weight: 900;
-    color: #1e3a8a;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-family: var(--font-outfit), sans-serif;
-}
-
-.preKLevelShield {
-    position: absolute;
-    right: -12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
-    border: 3px solid #ffffff;
-    border-radius: 14px;
-    width: 52px;
-    height: 52px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 6px 14px rgba(124, 58, 237, 0.2);
-    color: #ffffff;
-    font-family: var(--font-outfit), sans-serif;
-    z-index: 15;
-}
-
-.preKLevelShieldLabel {
-    font-size: 7px;
-    font-weight: 900;
-    opacity: 0.85;
-    text-transform: uppercase;
-    margin-bottom: 1px;
-}
-
-.preKLevelShieldValue {
-    font-size: 20px;
-    font-weight: 950;
-    line-height: 1;
-}
-
-.preKRightStatsContainer {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.preKStatCard {
+.preKHeaderPill {
     background: #ffffff;
     border: 2.5px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 8px 16px;
+    border-radius: 16px;
+    padding: 6px 14px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
-    transition: all 0.2s ease;
+    gap: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    min-height: 44px;
+    box-sizing: border-box;
 }
 
-.preKStreakCard {
-    border: 2.5px solid #ffedd5;
-    background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%);
+/* The first Star Pill gets a golden yellow theme */
+.preKHeaderPill:first-child {
+    background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+    border-color: #fbbf24;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
 }
 
-.preKStreakCard:hover {
-    border-color: #fdb528;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(251, 146, 60, 0.15);
+.preKPillIcon {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
 }
 
-.preKStarsCard {
-    border: 2.5px solid #fef9c3;
-    background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
-}
-
-.preKStarsCard:hover {
-    border-color: #eab308;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(234, 179, 8, 0.15);
-}
-
-.preKStatCardIcon {
-    font-size: 24px;
-}
-
-.preKStatCardText {
+.preKPillText {
     display: flex;
     flex-direction: column;
-}
-
-.preKStatCardValue {
-    font-size: 20px;
-    font-weight: 900;
-    color: #1e293b;
     line-height: 1.1;
+}
+
+.preKPillValue {
+    font-size: 15px;
+    font-weight: 950;
+    color: #1e293b;
     font-family: var(--font-outfit), sans-serif;
 }
 
-.preKStatCardLabel {
-    font-size: 11px;
-    font-weight: 700;
+.preKPillLabel {
+    font-size: 8px;
+    font-weight: 900;
     color: #64748b;
-    text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-family: var(--font-outfit), sans-serif;
+}
+
+.preKLockBtn {
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    color: #ffffff;
+    border: 2.5px solid #ffffff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25), 0 0 0 3px rgba(255, 255, 255, 0.2);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
+    outline: none;
+}
+
+.preKLockBtn:hover {
+    transform: scale(1.08) rotate(5deg);
+}
+
+.preKLockBtn:active {
+    transform: scale(0.95);
 }
 
 /* 4 colorful pastel themes for option cards */
@@ -2305,6 +2202,210 @@
 @media (max-width: 760px) {
     .hotspotCheckmark {
         display: none !important;
+    }
+}
+
+.preKBottomBar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 820px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    z-index: 110;
+    box-sizing: border-box;
+}
+
+.preKBottomArrowBtn {
+    background: #a855f7;
+    color: #ffffff;
+    border: 3px solid #ffffff;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.3);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.preKBottomArrowBtn:hover:not(:disabled) {
+    transform: scale(1.08);
+}
+
+.preKBottomArrowBtn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.preKBottomArrowBtn:disabled {
+    background: #cbd5e1 !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+}
+
+.preKSubmitBtn {
+    flex-grow: 1;
+    max-width: 480px;
+    height: 58px;
+    border-radius: 999px;
+    border: 3px solid #fbd5b8;
+    background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%) !important;
+    color: #ffffff !important;
+    font-size: 20px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 8px 0 #b45309, 0 10px 20px rgba(234, 88, 12, 0.25);
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.1s ease;
+    font-family: 'Fredoka', 'Outfit', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 24px;
+    outline: none;
+}
+
+.preKSubmitBtn:disabled {
+    background: #cbd5e1 !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 4px 0 #94a3b8 !important;
+    color: #64748b !important;
+    cursor: not-allowed;
+    transform: translateY(4px) !important;
+}
+
+.preKSubmitBtn:not(:disabled):hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 0 #b45309, 0 12px 24px rgba(234, 88, 12, 0.3);
+}
+
+.preKSubmitBtn:not(:disabled):active {
+    transform: translateY(6px) scale(0.98);
+    box-shadow: 0 2px 0 #b45309;
+}
+
+@media (max-width: 760px) {
+    .preKHeader {
+        padding: 8px 12px !important;
+        margin-bottom: 12px !important;
+        border-radius: 0 0 16px 16px !important;
+    }
+    
+    .preKHeaderPill {
+        padding: 4px 10px !important;
+        min-height: 36px !important;
+        border-radius: 12px !important;
+    }
+    
+    .preKPillIcon {
+        font-size: 16px !important;
+    }
+    
+    .preKPillValue {
+        font-size: 13px !important;
+    }
+    
+    .preKPillLabel {
+        font-size: 7px !important;
+    }
+    
+    .preKLockBtn {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 16px !important;
+    }
+    
+    .preKMainGrid {
+        padding: 0px 8px !important;
+    }
+    
+    .preKMascotSection {
+        margin-bottom: 16px !important;
+        gap: 0px !important;
+    }
+    
+    .preKMascotAvatar {
+        width: 68px !important;
+        height: 68px !important;
+        border-width: 3px !important;
+        box-shadow: 0 4px 10px rgba(251, 191, 36, 0.2), 0 0 0 3px rgba(255, 255, 255, 0.4) !important;
+    }
+    .preKMascotAvatar span {
+        font-size: 38px !important;
+    }
+    
+    .preKMascotBubble {
+        padding: 10px 48px 10px 24px !important;
+        border-radius: 18px !important;
+        min-height: 52px !important;
+        margin-left: -12px !important;
+        border-width: 3px !important;
+    }
+    
+    .preKInstructionText {
+        font-size: 15px !important;
+    }
+    
+    .preKMascotBubbleTail {
+        width: 10px !important;
+        height: 10px !important;
+        left: -7px !important;
+        border-left-width: 3px !important;
+        border-bottom-width: 3px !important;
+    }
+    
+    .preKSpeakerBtnLarge {
+        width: 32px !important;
+        height: 32px !important;
+        right: -14px !important;
+        border-width: 2px !important;
+    }
+    .preKSpeakerBtnLarge svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+    
+    .preKBottomBar {
+        bottom: 16px !important;
+        width: calc(100% - 16px) !important;
+        gap: 10px !important;
+    }
+    
+    .preKBottomArrowBtn {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 20px !important;
+        border-width: 2.5px !important;
+    }
+    
+    .preKSubmitBtn {
+        height: 48px !important;
+        font-size: 16px !important;
+        border-width: 2.5px !important;
+        box-shadow: 0 4px 0 #b45309, 0 8px 16px rgba(234, 88, 12, 0.2) !important;
+    }
+    .preKSubmitBtn:disabled {
+        box-shadow: 0 2px 0 #94a3b8 !important;
+    }
+    .preKSubmitBtn:not(:disabled):hover {
+        box-shadow: 0 5px 0 #b45309, 0 10px 20px rgba(234, 88, 12, 0.25) !important;
+        transform: translateY(-1px) scale(1.02) !important;
+    }
+    .preKSubmitBtn:not(:disabled):active {
+        box-shadow: 0 1px 0 #b45309 !important;
+        transform: translateY(3px) scale(0.98) !important;
     }
 }
 

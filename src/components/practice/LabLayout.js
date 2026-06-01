@@ -63,8 +63,16 @@ export default function LabLayout({
         }
     };
 
+    const isLocationWords = String(question?.id || '').includes('loc_position') || String(question?.id || '').includes('loc_next_beside');
+    const resolvedBackgroundUrl = question?.backgroundImage || question?.backgroundUrl;
+    const pageStyle = isPreK ? (
+        isLocationWords
+            ? { background: 'linear-gradient(to bottom, #bae6fd 0%, #e0f2fe 57%, #e2e8f0 57%, #e2e8f0 57.5%, #fef08a 57.5%, #fef9c3 100%)' }
+            : (resolvedBackgroundUrl ? { backgroundImage: `url(${resolvedBackgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center center' } : {})
+    ) : {};
+
     return (
-        <div className={isPreK ? styles.preKPageContainer : styles.pageContainer}>
+        <div className={isPreK ? styles.preKPageContainer : styles.pageContainer} style={pageStyle}>
             {isPreK && (
                 <>
                     <style dangerouslySetInnerHTML={{ __html: `
@@ -93,77 +101,40 @@ export default function LabLayout({
                 {/* Premium Header */}
                 {isPreK ? (
                     <header className={styles.preKHeader}>
-                        {/* 1. Mascot Avatar on the left with overlapping stars badge */}
-                        <div className={styles.preKAvatarContainer} onClick={onReset} title="Restart Practice">
-                            <span style={{ fontSize: '48px', display: 'block', transform: 'scaleX(-1)' }}>
-                                {String(subject || question?.metadata?.subject || question?.subject || '').toLowerCase() === 'english' ? '🐻' : '🦉'}
-                            </span>
-                            <div className={styles.preKAvatarStarBadge}>
-                                ⭐ <span>{smartScore}</span>
+                        {/* 1. Score/Level Pill */}
+                        <div className={styles.preKHeaderPill} onClick={onReset} style={{ cursor: 'pointer' }} title="Restart Session">
+                            <span className={styles.preKPillIcon}>⭐</span>
+                            <span className={styles.preKPillValue} style={{ fontSize: '18px', fontWeight: '950' }}>{smartScore}</span>
+                        </div>
+
+                        {/* 2. Streak Pill */}
+                        <div className={styles.preKHeaderPill}>
+                            <span className={styles.preKPillIcon}>🔥</span>
+                            <div className={styles.preKPillText}>
+                                <span className={styles.preKPillValue}>{levelStreak}</span>
+                                <span className={styles.preKPillLabel}>STREAK</span>
                             </div>
                         </div>
 
-                        {/* 2. Your Learning Journey progress track */}
-                        <div className={styles.preKJourneyContainer}>
-                            <div className={styles.preKJourneyTitle}>Your Learning Journey</div>
-                            <div className={styles.preKProgressTrail}>
-                                <div className={styles.preKProgressTrack} />
-                                <div className={styles.preKProgressDottedLine} />
-                                {Array.from({ length: 4 }).map((_, index) => {
-                                    const isFilled = index < levelStreak;
-                                    const leftPct = (index / 3) * 75 + 10;
-                                    return (
-                                        <div
-                                            key={index}
-                                            className={styles.preKProgressStarNode}
-                                            style={{
-                                                left: `${leftPct}%`,
-                                                opacity: isFilled ? 1 : 0.45,
-                                                filter: isFilled ? 'none' : 'grayscale(1)',
-                                                transform: isFilled ? 'scale(1.2) translateY(-50%)' : 'scale(1) translateY(-50%)',
-                                            }}
-                                        >
-                                            ⭐
-                                        </div>
-                                    );
-                                })}
-                                <div className={styles.preKProgressGoalNode}>
-                                    🎁
-                                </div>
-                                <div 
-                                    className={styles.preKProgressRocket}
-                                    style={{
-                                        left: `${(levelStreak / 5) * 80}%`,
-                                    }}
-                                >
-                                    🚀
-                                </div>
-                            </div>
-                            
-                            {/* Level Shield Badge */}
-                            <div className={styles.preKLevelShield}>
-                                <span className={styles.preKLevelShieldLabel}>Level</span>
-                                <span className={styles.preKLevelShieldValue}>{practiceLevel}</span>
+                        {/* 3. Stars Pill */}
+                        <div className={styles.preKHeaderPill}>
+                            <span className={styles.preKPillIcon}>⭐</span>
+                            <div className={styles.preKPillText}>
+                                <span className={styles.preKPillValue}>{smartScore}</span>
+                                <span className={styles.preKPillLabel}>STARS</span>
                             </div>
                         </div>
 
-                        {/* 3. Streak and Stars stats on the right */}
-                        <div className={styles.preKRightStatsContainer}>
-                            <div className={`${styles.preKStatCard} ${styles.preKStreakCard}`}>
-                                <span className={styles.preKStatCardIcon}>🔥</span>
-                                <div className={styles.preKStatCardText}>
-                                    <span className={styles.preKStatCardValue}>{levelStreak}</span>
-                                    <span className={styles.preKStatCardLabel}>Streak</span>
-                                </div>
-                            </div>
-                            <div className={`${styles.preKStatCard} ${styles.preKStarsCard}`}>
-                                <span className={styles.preKStatCardIcon}>⭐</span>
-                                <div className={styles.preKStatCardText}>
-                                    <span className={styles.preKStatCardValue}>{smartScore}</span>
-                                    <span className={styles.preKStatCardLabel}>Stars</span>
-                                </div>
-                            </div>
-                        </div>
+                        {/* 4. Parent settings lock button */}
+                        <button
+                            type="button"
+                            onClick={handleOpenTeacherPanel}
+                            className={styles.preKLockBtn}
+                            title="Parent/Teacher Settings"
+                            aria-label="Parent/Teacher Settings"
+                        >
+                            🔒
+                        </button>
                     </header>
                 ) : (
                     <header className={styles.header}>
@@ -264,53 +235,13 @@ export default function LabLayout({
                                                 </div>
                                             )}
                                             
-                                            {!isAnswered && question?.showSubmitButton !== false && (
-                                                <div className={styles.submitRow} style={{ marginTop: '28px', justifyContent: 'center' }}>
-                                                    <button 
-                                                        onClick={() => handleSubmit()}
-                                                        disabled={userAnswer === null || isSubmitting}
-                                                        className={isPreK ? styles.preKSubmitBtn : styles.submitButton}
-                                                        style={isPreK ? undefined : {
-                                                            ...(question?.submitButtonStyle || {}),
-                                                            padding: '16px 36px',
-                                                            borderRadius: '20px',
-                                                            fontSize: '18px',
-                                                            fontWeight: '900',
-                                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                                            boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)',
-                                                            border: 'none',
-                                                            color: '#ffffff',
-                                                            cursor: isSubmitting ? 'not-allowed' : (userAnswer === null ? 'default' : 'pointer'),
-                                                            opacity: isSubmitting ? 0.65 : 1,
-                                                            transform: userAnswer !== null ? 'scale(1.03)' : 'scale(1)',
-                                                            transition: 'all 0.2s ease'
-                                                        }}
-                                                    >
-                                                        {isPreK ? (
-                                                            isSubmitting ? 'Checking... 🚀' : '🚀 Check My Answer'
-                                                        ) : (
-                                                            isSubmitting ? 'Checking... 🎉' : (question?.submitButtonText || "Let's Check! 🌟")
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            )}
+                                            {/* Note: Check button is rendered in the unified bottom bar for Pre-K */}
                                         </>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Centered Parent/Teacher button flows naturally at the bottom */}
-                            <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: isMobile ? '8px' : '16px', marginBottom: '8px' }}>
-                                <button
-                                    type="button"
-                                    onClick={handleOpenTeacherPanel}
-                                    className={styles.teacherZoneBtn}
-                                    style={{ position: 'static', margin: 0 }}
-                                >
-                                    🔒 Parent/Teacher Settings
-                                </button>
-                            </div>
-
+                            {/* Note: Parent/TeacherSettings button is rendered in the header for Pre-K */}
                         </div>
                     </main>
                 ) : (
@@ -504,7 +435,7 @@ export default function LabLayout({
             )}
 
             {isPreK && (
-                <>
+                <div className={styles.preKBottomBar}>
                     {/* Left Navigation Arrow (Purple Back Arrow) */}
                     <button
                         type="button"
@@ -515,14 +446,34 @@ export default function LabLayout({
                                 onReset();
                             }
                         }}
-                        className={styles.preKNavArrowLeft}
+                        className={styles.preKBottomArrowBtn}
                         title="Go Back"
                         aria-label="Go Back"
                     >
                         ◀
                     </button>
 
-                    {/* Right Navigation Arrow (Green Forward Arrow - Submit / Next) */}
+                    {/* Center Check/Next Button (Orange Capsule Button) */}
+                    {!isAnswered ? (
+                        <button
+                            type="button"
+                            onClick={() => handleSubmit()}
+                            disabled={userAnswer === null || isSubmitting || loading}
+                            className={styles.preKSubmitBtn}
+                        >
+                            <span>🚀 Check My Answer</span>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => onNext && onNext()}
+                            className={styles.preKSubmitBtn}
+                        >
+                            <span>🚀 Next Question</span>
+                        </button>
+                    )}
+
+                    {/* Right Navigation Arrow */}
                     <button
                         type="button"
                         disabled={!isAnswered && (userAnswer === null || isSubmitting || loading)}
@@ -533,13 +484,13 @@ export default function LabLayout({
                                 onNext();
                             }
                         }}
-                        className={styles.preKNavArrowRight}
+                        className={styles.preKBottomArrowBtn}
                         title={isAnswered ? "Next Question" : "Submit Answer"}
                         aria-label={isAnswered ? "Next Question" : "Submit Answer"}
                     >
                         ▶
                     </button>
-                </>
+                </div>
             )}
         </div>
     );
