@@ -2404,7 +2404,6 @@ function generateBalloonTapQuestion(skillId, seed, r) {
 }
 
 function generateLocNextBesideQuestion(skillId, seed, r) {
-  const bgImgUrl = 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337176148-room_bg_image.webp';
   const SCENES = [
     {
       name: 'bed',
@@ -2450,6 +2449,10 @@ function generateLocNextBesideQuestion(skillId, seed, r) {
   const sceneIdx = Math.floor(r * SCENES.length);
   const scene = SCENES[sceneIdx];
 
+  const bgImgUrl = scene.name === 'bed'
+    ? 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780336658654-backgroound_image.webp'
+    : 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337176148-room_bg_image.webp';
+
   const targetObjIdx = Math.floor(r * OBJECTS.length);
   const targetObj = OBJECTS[targetObjIdx];
 
@@ -2490,7 +2493,7 @@ function generateLocNextBesideQuestion(skillId, seed, r) {
   const questionText = `Click on the **${targetObj.label}** that is **${term}** the **${scene.name}**.`;
 
   const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
-  <image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />
+  ${scene.name !== 'bed' ? `<image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />` : ''}
 </svg>`;
 
   const hotspots = optionsList.map((opt, idx) => {
@@ -2569,7 +2572,6 @@ function generateLocNextBesideQuestion(skillId, seed, r) {
 // The question asks students to tap ALL objects in a given position.
 // Two out of four slots will match the asked position → multi-select answer.
 function generateLocPositionMultiQuestion(skillId, seed, r) {
-  const bgImgUrl = 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337176148-room_bg_image.webp';
   const SCENES = [
     {
       name: 'bed',
@@ -2622,6 +2624,10 @@ function generateLocPositionMultiQuestion(skillId, seed, r) {
   const sceneIdx    = Math.floor(r * SCENES.length);
   const scene       = SCENES[sceneIdx];
 
+  const bgImgUrl = scene.name === 'bed'
+    ? 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780336658654-backgroound_image.webp'
+    : 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337176148-room_bg_image.webp';
+
   // Which positional concept are we testing this round?
   // 0=above  1=below  2=beside/next-to
   const r2          = seededRandom(seed + 1);
@@ -2666,7 +2672,7 @@ function generateLocPositionMultiQuestion(skillId, seed, r) {
     : `Tap **all** the images that are **${concept.questionWord}** the **${scene.name}**.`;
 
   const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
-  <image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />
+  ${scene.name !== 'bed' ? `<image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />` : ''}
 </svg>`;
 
   const partHotspots = shuffled.map((item, idx) => {

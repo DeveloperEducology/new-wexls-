@@ -5947,7 +5947,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                 <div
                   className={styles.hotspotBg}
                   style={{
-                    ...(resolvedBackgroundUrl ? { position: 'absolute', inset: 0, zIndex: 1 } : {}),
+                    ...(resolvedBackgroundUrl ? { position: 'absolute', inset: 0, zIndex: 2 } : {}),
                     cursor: isAnswered ? 'default' : 'pointer'
                   }}
                   onClick={handleSvgClick}
@@ -5969,7 +5969,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                   src={resolvedBackgroundUrl} 
                   alt="scene" 
                   className={styles.hotspotBg} 
-                  style={backgroundSvg ? { position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' } : undefined} 
+                  style={backgroundSvg ? { position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' } : undefined} 
                 />
               )}
 

@@ -65,13 +65,11 @@ export default function LabLayout({
 
     const isLocationWords = String(question?.id || '').includes('loc_position') || String(question?.id || '').includes('loc_next_beside');
     const resolvedBackgroundUrl = question?.backgroundImage || question?.backgroundUrl;
+    const isHotspotQuestion = question?.interaction === 'hotspot_select' || question?.layoutMode === 'mcq_hotspot' || isLocationWords;
     const pageStyle = isPreK ? (
-        resolvedBackgroundUrl
+        (resolvedBackgroundUrl && !isHotspotQuestion)
             ? { backgroundImage: `url(${resolvedBackgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center center' }
-            : (isLocationWords
-                ? { background: 'linear-gradient(to bottom, #bae6fd 0%, #e0f2fe 57%, #e2e8f0 57%, #e2e8f0 57.5%, #fef08a 57.5%, #fef9c3 100%)' }
-                : {}
-              )
+            : {}
     ) : {};
 
     return (

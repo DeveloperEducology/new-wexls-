@@ -530,6 +530,7 @@ export default function AdminConsolePage() {
   const [selectedHotspotId, setSelectedHotspotId] = useState(null);
   const [backgroundSvg, setBackgroundSvg] = useState('');
   const [showHotspotLabels, setShowHotspotLabels] = useState(false);
+  const [isHotspotTransparent, setIsHotspotTransparent] = useState(false);
   // Preview Answer checking state
   const [previewAnswer, setPreviewAnswer] = useState(null);
   const [previewCheckResult, setPreviewCheckResult] = useState(null); // 'correct', 'incorrect', or null
@@ -618,6 +619,7 @@ export default function AdminConsolePage() {
   const [imgPickerOpen, setImgPickerOpen]         = useState(false);
   const [imgPickerPartIdx, setImgPickerPartIdx]   = useState(null); // which part to fill
   const [imgPickerOptionIdx, setImgPickerOptionIdx] = useState(null); // which MCQ option to fill
+  const [imgPickerHotspotId, setImgPickerHotspotId] = useState(null); // which hotspot to fill
   const [imgPickerTab, setImgPickerTab]           = useState('gallery'); // 'gallery' | 'upload'
   const [imgPickerSearch, setImgPickerSearch]     = useState('');
   const [imgPickerFolder, setImgPickerFolder]     = useState('images');
@@ -654,6 +656,7 @@ export default function AdminConsolePage() {
   const openImgPicker = (partIdx, tab = 'gallery') => {
     setImgPickerPartIdx(partIdx);
     setImgPickerOptionIdx(null);
+    setImgPickerHotspotId(null);
     setImgPickerTab(tab);
     setImgPickerSearch('');
     setWebSearchQuery('');
@@ -678,6 +681,20 @@ export default function AdminConsolePage() {
 
   const openImgPickerForOption = (optionIdx, tab = 'gallery') => {
     setImgPickerOptionIdx(optionIdx);
+    setImgPickerPartIdx(null);
+    setImgPickerHotspotId(null);
+    setImgPickerTab(tab);
+    setImgPickerSearch('');
+    setWebSearchQuery('');
+    setWebSearchResults([]);
+    setImgPickerOpen(true);
+    // auto-load gallery
+    fetchImgPickerGallery('images');
+  };
+
+  const openImgPickerForHotspot = (hotspotId, tab = 'gallery') => {
+    setImgPickerHotspotId(hotspotId);
+    setImgPickerOptionIdx(null);
     setImgPickerPartIdx(null);
     setImgPickerTab(tab);
     setImgPickerSearch('');
@@ -774,7 +791,20 @@ export default function AdminConsolePage() {
   };
 
   const handleImgPickerSelect = (url) => {
-    if (imgPickerOptionIdx !== null) {
+    if (imgPickerHotspotId !== null) {
+      const updated = hotspots.map(h => {
+        if (h.id === imgPickerHotspotId) {
+          const newLabel = (!h.label || h.label.startsWith('Hotspot ') || h.label === '')
+            ? extractLabelFromUrl(url)
+            : h.label;
+          return { ...h, imageUrl: url, label: newLabel };
+        }
+        return h;
+      });
+      syncHotspotsToOptions(updated);
+      setImgPickerHotspotId(null);
+      setImgPickerOpen(false);
+    } else if (imgPickerOptionIdx !== null) {
       updateOptionImageUrl(imgPickerOptionIdx, url);
       // Auto-fill label when picking image
       const currentLabel = options[imgPickerOptionIdx]?.label || '';
@@ -3004,6 +3034,7 @@ export default function AdminConsolePage() {
     setCardStyle('');
     setHideItemLabels(false);
     setShowHotspotLabels(false);
+    setIsHotspotTransparent(false);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -3065,6 +3096,7 @@ export default function AdminConsolePage() {
     setCardStyle('');
     setHideItemLabels(false);
     setShowHotspotLabels(false);
+    setIsHotspotTransparent(false);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -3202,6 +3234,13 @@ export default function AdminConsolePage() {
       q.parts?.find(p => p.type === 'hotspot_canvas')?.showHotspotLabels
     );
     setShowHotspotLabels(extractedShowHotspotLabels);
+    const extractedIsHotspotTransparent = Boolean(
+      q.transparent || 
+      q.behavior?.transparent || 
+      q.metadata?.transparent ||
+      q.parts?.find(p => p.type === 'hotspot_canvas')?.transparent
+    );
+    setIsHotspotTransparent(extractedIsHotspotTransparent);
 
     // Reconstruct MCQ hotspot select variables
     if (q.interaction === 'hotspot_select' || q.interaction === 'hotspot_multi_select' || q.layoutMode === 'height_comparison' || q.layoutMode === 'mcq_hotspot') {
@@ -4213,17 +4252,20 @@ export default function AdminConsolePage() {
       payload.correctAnswerIndex = correctIdx;
       payload.answer = correctIdx;
       
-      payload.hotspots = hotspots;
-      payload.metadata.hotspots = hotspots;
+      payload.hotspots = hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }));
+      payload.metadata.hotspots = hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }));
       payload.metadata.layoutMode = 'mcq_hotspot';
       payload.layoutMode = 'mcq_hotspot';
+      payload.transparent = isHotspotTransparent;
+      payload.metadata.transparent = isHotspotTransparent;
       
       const hotspotPart = {
         type: 'hotspot_canvas',
         canvasWidth: canvasW,
         canvasHeight: canvasH,
-        hotspots: serializedHotspots,
-        showHotspotLabels: showHotspotLabels
+        hotspots: serializedHotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent })),
+        showHotspotLabels: showHotspotLabels,
+        transparent: isHotspotTransparent
       };
       if (backgroundImage) hotspotPart.backgroundUrl = backgroundImage;
       if (backgroundSvg) hotspotPart.backgroundSvg = backgroundSvg;
@@ -7015,6 +7057,19 @@ export default function AdminConsolePage() {
                                   />
                                   <span>Show Hotspot Labels (display labels over hotspots in student view)</span>
                                 </label>
+                                <label className={styles.label} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isHotspotTransparent} 
+                                    onChange={(e) => {
+                                      setIsHotspotTransparent(e.target.checked);
+                                      ignoreDirtyChange.current = false;
+                                      setIsDirty(true);
+                                    }} 
+                                    className={styles.checkbox}
+                                  />
+                                  <span>Transparent Hotspots (hides border / cards, supports clean clipart outlines and outlines on hover/select)</span>
+                                </label>
                               </div>
                               {/* Background Options */}
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
@@ -7330,17 +7385,28 @@ export default function AdminConsolePage() {
                                       
                                       <div className={styles.formGroup}>
                                         <label className={styles.filterLabel} style={{ fontSize: 11 }}>Image URL (Optional)</label>
-                                        <input
-                                          type="text"
-                                          className={styles.formInput}
-                                          value={activeHs.imageUrl || ''}
-                                          onChange={(e) => {
-                                            const updated = hotspots.map(h => h.id === activeHs.id ? { ...h, imageUrl: e.target.value } : h);
-                                            syncHotspotsToOptions(updated);
-                                          }}
-                                          placeholder="https://example.com/image.png"
-                                          style={{ marginTop: 4, fontSize: 12 }}
-                                        />
+                                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={activeHs.imageUrl || ''}
+                                            onChange={(e) => {
+                                              const updated = hotspots.map(h => h.id === activeHs.id ? { ...h, imageUrl: e.target.value } : h);
+                                              syncHotspotsToOptions(updated);
+                                            }}
+                                            placeholder="https://example.com/image.png"
+                                            style={{ fontSize: 12, flex: 1, margin: 0 }}
+                                          />
+                                          <button
+                                            type="button"
+                                            className={styles.btnOutline}
+                                            onClick={() => openImgPickerForHotspot(activeHs.id, 'gallery')}
+                                            title="Browse local gallery or search web images"
+                                            style={{ padding: '6px 12px', fontSize: 12, height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }}
+                                          >
+                                            🔍 Search
+                                          </button>
+                                        </div>
                                       </div>
 
                                       <div className={styles.formGroup} style={{ display: 'flex', flexDirection: 'row', gap: 20, alignItems: 'center', marginTop: 16 }}>

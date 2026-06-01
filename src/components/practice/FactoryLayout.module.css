@@ -546,6 +546,8 @@
     /* Pre-K Mobile Overrides */
     .preKPageContainer {
         padding: 10px 6px 140px 6px;
+        background-image: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337898252-kids_practice_bg_mobile.webp') !important;
+        background-attachment: scroll !important;
     }
 
     .preKCloud1, 
@@ -1050,9 +1052,10 @@
 
 .preKPageContainer {
     min-height: 100vh;
-    background: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/site/prek_landscape.webp') #e0f2fe;
+    background-image: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337770572-kids_practice_bg.webp');
+    background-color: #e0f2fe;
     background-size: cover;
-    background-position: center bottom;
+    background-position: center center;
     background-repeat: no-repeat;
     background-attachment: fixed;
     padding: 0 0 220px 0;
@@ -2408,6 +2411,31 @@
         transform: translateY(3px) scale(0.98) !important;
     }
 }
+
+/* Pre-K Immersive Hotspot Canvas Wrapper */
+.preKHotspotCanvasWrapper {
+    max-width: 900px !important;
+    border-radius: 28px !important;
+    border: 8px solid #ffffff !important;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+    background-color: transparent !important;
+    margin: 20px auto !important;
+}
+
+.preKHotspotCanvasWrapper img {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+@media (max-width: 760px) {
+    .preKHotspotCanvasWrapper {
+        border-width: 4px !important;
+        border-radius: 18px !important;
+        margin: 10px auto !important;
+    }
+}
+
 
 
 
