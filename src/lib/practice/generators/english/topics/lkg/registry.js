@@ -371,6 +371,14 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-sight-words',
     chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set1': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N2',
+    title: 'Read sight words set 1: a, in, run, the, you',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
   }
 };
 
