@@ -70,6 +70,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'loc_next_beside',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.loc_position_multi': {
+    title: 'Above, Below, Next to and Beside — Select All',
+    engine: 'loc_position_multi',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -518,6 +524,14 @@ export const lkgEnglishMicroSkillRegistry = {
     templateId: 'lkg.english.loc_next_beside',
     code: 'EL.V3',
     title: 'Next to and beside',
+    grade: 'LKG',
+    chapterId: 'english-lkg-location-words',
+    chapterTitle: 'Location words'
+  },
+  'lkg-english-loc-above-below-multi': {
+    templateId: 'lkg.english.loc_position_multi',
+    code: 'EL.V4',
+    title: 'Above, below, next to and beside \u2014 select all',
     grade: 'LKG',
     chapterId: 'english-lkg-location-words',
     chapterTitle: 'Location words'

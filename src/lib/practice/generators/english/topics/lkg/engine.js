@@ -2571,6 +2571,192 @@ function generateLocNextBesideQuestion(skillId, seed, r) {
   };
 }
 
+// ─── Above / Below / Next-to / Beside — Multi-Select ────────────────────────
+// Each question places 4 transparent objects around a furniture scene:
+//   • 1 ABOVE  (the target object, correct if the term is "above")
+//   • 1 BELOW  (beside/under the furniture, correct if term is "below")
+//   • 1 BESIDE LEFT  (correct if term is "beside" / "next to")
+//   • 1 BESIDE RIGHT (another distractor)
+// The question asks students to tap ALL objects in a given position.
+// Two out of four slots will match the asked position → multi-select answer.
+function generateLocPositionMultiQuestion(skillId, seed, r) {
+  const SCENES = [
+    {
+      name: 'bed',
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984568906-bed.png',
+      bgElement: { x: 220, y: 145, width: 360, height: 240 },
+      positions: {
+        above:        { x: 320, y:  20, width: 120, height: 115 },
+        beside_left:  { x:  55, y: 210, width: 130, height: 130 },
+        beside_right: { x: 615, y: 210, width: 130, height: 130 },
+        below:        { x: 320, y: 330, width: 120, height: 115 }
+      }
+    },
+    {
+      name: 'table',
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779994263347-table.png',
+      bgElement: { x: 220, y: 155, width: 360, height: 220 },
+      positions: {
+        above:        { x: 320, y:  20, width: 120, height: 115 },
+        beside_left:  { x:  55, y: 225, width: 130, height: 130 },
+        beside_right: { x: 615, y: 225, width: 130, height: 130 },
+        below:        { x: 320, y: 330, width: 120, height: 115 }
+      }
+    },
+    {
+      name: 'box',
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984495333-box.png',
+      bgElement: { x: 240, y: 170, width: 320, height: 220 },
+      positions: {
+        above:        { x: 320, y:  20, width: 120, height: 115 },
+        beside_left:  { x:  60, y: 235, width: 130, height: 130 },
+        beside_right: { x: 610, y: 235, width: 130, height: 130 },
+        below:        { x: 320, y: 330, width: 120, height: 115 }
+      }
+    }
+  ];
+
+  // Richer set of objects (all local + a couple of remote ones)
+  const OBJECTS = [
+    { name: 'frog',      label: 'frog',      imageUrl: '/images/lkg/frog.png' },
+    { name: 'duck',      label: 'duck',      imageUrl: '/images/lkg/duck.png' },
+    { name: 'ball',      label: 'ball',      imageUrl: '/images/lkg/ball.png' },
+    { name: 'apple',     label: 'apple',     imageUrl: '/images/lkg/apple.png' },
+    { name: 'car',       label: 'toy car',   imageUrl: '/images/lkg/car.png' },
+    { name: 'butterfly', label: 'butterfly', imageUrl: '/images/lkg/butterfly.png' },
+    { name: 'flower',    label: 'flower',    imageUrl: '/images/lkg/flower.png' },
+    { name: 'hippo',     label: 'hippo',     imageUrl: '/images/lkg/hippo.png' }
+  ];
+
+  // Choose scene & target position concept
+  const sceneIdx    = Math.floor(r * SCENES.length);
+  const scene       = SCENES[sceneIdx];
+
+  // Which positional concept are we testing this round?
+  // 0=above  1=below  2=beside/next-to
+  const r2          = seededRandom(seed + 1);
+  const conceptIdx  = Math.floor(r2 * 3);
+  const CONCEPTS    = [
+    { term: 'above',   correctKeys: ['above'],                        questionWord: 'above' },
+    { term: 'below',   correctKeys: ['below'],                        questionWord: 'below' },
+    { term: 'beside',  correctKeys: ['beside_left', 'beside_right'],  questionWord: r > 0.5 ? 'beside' : 'next to' }
+  ];
+  const concept = CONCEPTS[conceptIdx];
+
+  // Pick the target object (used in ALL 4 positions so kids must identify by LOCATION)
+  const targetObjIdx = Math.floor(seededRandom(seed + 2) * OBJECTS.length);
+  const targetObj    = OBJECTS[targetObjIdx];
+
+  // Pick 3 distinct distractor objects for the other positions
+  const distractors = [];
+  let di = (targetObjIdx + 1) % OBJECTS.length;
+  while (distractors.length < 3) {
+    if (di !== targetObjIdx) distractors.push(OBJECTS[di]);
+    di = (di + 1) % OBJECTS.length;
+  }
+
+  // Map each position to an object + whether it's correct
+  const posKeys   = ['above', 'beside_left', 'beside_right', 'below'];
+  const posItems  = posKeys.map((key, i) => {
+    const isCorrect = concept.correctKeys.includes(key);
+    // Correct slots get the target object; wrong slots get a distractor
+    const obj = isCorrect ? targetObj : distractors[i % distractors.length];
+    return { key, obj, isCorrect };
+  });
+
+  // Shuffle presentation order but keep mapping
+  const shuffled = shuffle(posItems, r2);
+
+  const correctIndices = shuffled
+    .map((item, idx) => (item.isCorrect ? idx : -1))
+    .filter(idx => idx >= 0);
+
+  const questionText = concept.correctKeys.length > 1
+    ? `Tap **all** the **${targetObj.label}** images that are **${concept.questionWord}** the **${scene.name}**.`
+    : `Tap **all** the images that are **${concept.questionWord}** the **${scene.name}**.`;
+
+  const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bae6fd" />
+      <stop offset="100%" stop-color="#e0f2fe" />
+    </linearGradient>
+    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#fef9c3" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="265" fill="url(#wallGrad)" />
+  <rect y="265" width="800" height="200" fill="url(#floorGrad)" />
+  <rect y="259" width="800" height="6" fill="#e2e8f0" />
+  <image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />
+</svg>`;
+
+  const partHotspots = shuffled.map((item, idx) => {
+    const coords = scene.positions[item.key];
+    return {
+      optionIndex: idx,
+      x: coords.x,
+      y: coords.y,
+      width: coords.width,
+      height: coords.height,
+      label: `${item.obj.label} ${item.key.replace('_', ' ')} the ${scene.name}`,
+      isCircle: false,
+      imageUrl: item.obj.imageUrl,
+      id: `hs_${item.key}_${idx}`,
+      transparent: true
+    };
+  });
+
+  return {
+    id: `english_lkg_loc_position_multi_${seed}`,
+    type: 'mcq',
+    interaction: 'hotspot_multi_select',
+    layoutMode: 'mcq_hotspot',
+    questionText,
+    voice: 'Kore',
+    generateAudio: 'all',
+    explanation: `The correct images are those **${concept.questionWord}** the **${scene.name}**.`,
+    options: shuffled.map((item, idx) => ({
+      id: `opt_${idx}`,
+      label: `${item.obj.label} ${item.key.replace('_', ' ')} the ${scene.name}`,
+      isCorrect: item.isCorrect
+    })),
+    answer: correctIndices,
+    correctAnswerIndex: correctIndices,
+    hotspots: shuffled.map((item, idx) => {
+      const coords = scene.positions[item.key];
+      return {
+        id: `hs_${item.key}_${idx}`,
+        label: `${item.obj.label} ${item.key.replace('_', ' ')} the ${scene.name}`,
+        x: (coords.x / 800) * 100,
+        y: (coords.y / 465) * 100,
+        width: (coords.width / 800) * 100,
+        height: (coords.height / 465) * 100,
+        isCircle: false,
+        isCorrect: item.isCorrect,
+        imageUrl: item.obj.imageUrl,
+        transparent: true
+      };
+    }),
+    parts: [
+      {
+        type: 'text',
+        content: questionText
+      },
+      {
+        type: 'hotspot_canvas',
+        canvasWidth: 800,
+        canvasHeight: 465,
+        hotspots: partHotspots,
+        backgroundSvg,
+        transparent: true,
+        multiSelect: true
+      }
+    ]
+  };
+}
+
 export function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
@@ -2612,6 +2798,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateBalloonTapQuestion(skillId, seed, r);
       } else if (template.engine === 'loc_next_beside') {
         question = generateLocNextBesideQuestion(skillId, seed, r);
+      } else if (template.engine === 'loc_position_multi') {
+        question = generateLocPositionMultiQuestion(skillId, seed, r);
       }
 
       if (question) {
