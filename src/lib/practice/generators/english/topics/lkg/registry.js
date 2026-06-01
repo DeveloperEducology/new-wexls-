@@ -435,6 +435,54 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-sight-words',
     chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set7': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N10',
+    title: 'Read sight words set 7: find, my, no, red, see',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set8': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N11',
+    title: 'Read sight words set 8: come, funny, little, me, sit',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set9': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N12',
+    title: 'Read sight words set 9: big, help, play, three, yellow',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set10': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N13',
+    title: 'Read sight words set 10: away, blue, here, us, where',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-review78910': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N14',
+    title: 'Read sight words: review sets 7, 8, 9, 10',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-review1to10': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N15',
+    title: 'Read sight words: review sets 1-10',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
   }
 };
 
