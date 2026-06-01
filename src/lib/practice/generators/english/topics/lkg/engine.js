@@ -2488,20 +2488,9 @@ function generateLocNextBesideQuestion(skillId, seed, r) {
   const term = r > 0.5 ? 'beside' : 'next to';
   const questionText = `Click on the **${targetObj.label}** that is **${term}** the **${scene.name}**.`;
 
+  const bgImgUrl = 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780336658654-backgroound_image.webp';
   const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#bae6fd" />
-      <stop offset="100%" stop-color="#e0f2fe" />
-    </linearGradient>
-    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fef08a" />
-      <stop offset="100%" stop-color="#fef9c3" />
-    </linearGradient>
-  </defs>
-  <rect width="800" height="260" fill="url(#wallGrad)" />
-  <rect y="260" width="800" height="205" fill="url(#floorGrad)" />
-  <rect y="254" width="800" height="6" fill="#e2e8f0" />
+  <image href="${bgImgUrl}" width="800" height="465" preserveAspectRatio="none" />
   <image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />
 </svg>`;
 
@@ -2554,6 +2543,7 @@ function generateLocNextBesideQuestion(skillId, seed, r) {
     correctAnswerIndex,
     answer: correctAnswerIndex,
     hotspots,
+    backgroundUrl: bgImgUrl,
     parts: [
       {
         type: 'text',
@@ -2675,20 +2665,9 @@ function generateLocPositionMultiQuestion(skillId, seed, r) {
     ? `Tap **all** the **${targetObj.label}** images that are **${concept.questionWord}** the **${scene.name}**.`
     : `Tap **all** the images that are **${concept.questionWord}** the **${scene.name}**.`;
 
+  const bgImgUrl = 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780336658654-backgroound_image.webp';
   const backgroundSvg = `<svg viewBox="0 0 800 465" width="800" height="465" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#bae6fd" />
-      <stop offset="100%" stop-color="#e0f2fe" />
-    </linearGradient>
-    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fef08a" />
-      <stop offset="100%" stop-color="#fef9c3" />
-    </linearGradient>
-  </defs>
-  <rect width="800" height="265" fill="url(#wallGrad)" />
-  <rect y="265" width="800" height="200" fill="url(#floorGrad)" />
-  <rect y="259" width="800" height="6" fill="#e2e8f0" />
+  <image href="${bgImgUrl}" width="800" height="465" preserveAspectRatio="none" />
   <image href="${scene.imageUrl}" x="${scene.bgElement.x}" y="${scene.bgElement.y}" width="${scene.bgElement.width}" height="${scene.bgElement.height}" />
 </svg>`;
 
@@ -2739,6 +2718,7 @@ function generateLocPositionMultiQuestion(skillId, seed, r) {
         transparent: true
       };
     }),
+    backgroundUrl: bgImgUrl,
     parts: [
       {
         type: 'text',
