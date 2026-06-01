@@ -363,6 +363,14 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-phonics',
     chapterTitle: 'Phonics'
+  },
+  'lkg-english-sight-words-same': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N1',
+    title: 'Choose the two sight words that are the same',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
   }
 };
 
