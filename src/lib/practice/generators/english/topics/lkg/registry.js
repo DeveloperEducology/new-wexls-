@@ -379,6 +379,30 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-sight-words',
     chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set2': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N3',
+    title: 'Read sight words set 2: and, had, is, let, to',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-set3': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N4',
+    title: 'Read sight words set 3: at, for, I, one, said',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
+  },
+  'lkg-english-sight-words-review123': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.N5',
+    title: 'Read sight words: review sets 1, 2, 3',
+    grade: 'LKG',
+    chapterId: 'english-lkg-sight-words',
+    chapterTitle: 'Sight words'
   }
 };
 
