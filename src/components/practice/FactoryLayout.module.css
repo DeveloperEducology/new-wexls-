@@ -2221,6 +2221,17 @@
     }
 }
 
+.hotspotCheckmark {
+    /* We hide this badge on mobile/tablet viewports to prevent it from covering small images */
+}
+
+@media (max-width: 760px) {
+    .hotspotCheckmark {
+        display: none !important;
+    }
+}
+
+
 
 
 

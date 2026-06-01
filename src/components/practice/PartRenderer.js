@@ -6160,26 +6160,29 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                 )
               )}
               {isSelected && (
-                <div style={{
-                  position: 'absolute',
-                  top: hs.borderRadius === '50%' || hs.isCircle || hs.shape === 'circle' ? '12%' : (isPreK ? '-10px' : '8px'),
-                  right: hs.borderRadius === '50%' || hs.isCircle || hs.shape === 'circle' ? '12%' : (isPreK ? '-10px' : '8px'),
-                  width: isPreK ? '34px' : '24px',
-                  height: isPreK ? '34px' : '24px',
-                  borderRadius: '50%',
-                  backgroundColor: isPreK ? '#22c55e' : '#0284c7',
-                  border: isPreK ? '3px solid #ffffff' : '2px solid #ffffff',
-                  boxShadow: isPreK ? '0 6px 14px rgba(34, 197, 94, 0.4)' : '0 2px 6px rgba(0, 0, 0, 0.25)',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  zIndex: 15,
-                  color: '#ffffff',
-                  fontSize: isPreK ? '16px' : '13px',
-                  fontWeight: '950',
-                  animation: `${styles.badgePop} 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
-                  pointerEvents: 'none'
-                }}>
+                <div 
+                  className={styles.hotspotCheckmark}
+                  style={{
+                    position: 'absolute',
+                    top: hs.borderRadius === '50%' || hs.isCircle || hs.shape === 'circle' ? '12%' : (isPreK ? '-10px' : '8px'),
+                    right: hs.borderRadius === '50%' || hs.isCircle || hs.shape === 'circle' ? '12%' : (isPreK ? '-10px' : '8px'),
+                    width: isPreK ? '34px' : '24px',
+                    height: isPreK ? '34px' : '24px',
+                    borderRadius: '50%',
+                    backgroundColor: isPreK ? '#22c55e' : '#0284c7',
+                    border: isPreK ? '3px solid #ffffff' : '2px solid #ffffff',
+                    boxShadow: isPreK ? '0 6px 14px rgba(34, 197, 94, 0.4)' : '0 2px 6px rgba(0, 0, 0, 0.25)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 15,
+                    color: '#ffffff',
+                    fontSize: isPreK ? '16px' : '13px',
+                    fontWeight: '950',
+                    animation: `${styles.badgePop} 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+                    pointerEvents: 'none'
+                  }}
+                >
                   ✓
                 </div>
               )}
