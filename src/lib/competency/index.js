@@ -1426,6 +1426,7 @@ export const competencyGraphs = {
         'lkg-english-letter-lines-combination': 'lkg_english_basics',
         'lkg-which-picture-matches-the-word': 'lkg_english_basics',
         'lkg-english-vocab-use-number-words-1to10': 'lkg_english_basics',
+        'lkg-english-nouns-singular-plural': 'lkg_english_basics',
       }
     }
   }

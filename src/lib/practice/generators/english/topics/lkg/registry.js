@@ -499,6 +499,14 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-colour-number-words',
     chapterTitle: 'Colour and number words'
+  },
+  'lkg-english-nouns-singular-plural': {
+    templateId: 'lkg.english.word_recognition',
+    code: 'EL.S1',
+    title: 'Choose the singular or plural noun that matches the picture',
+    grade: 'LKG',
+    chapterId: 'english-lkg-nouns',
+    chapterTitle: 'Nouns'
   }
 };
 
