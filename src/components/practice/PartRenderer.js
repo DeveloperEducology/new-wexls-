@@ -117,7 +117,7 @@ function InlineMarkdown({ text }) {
   });
 }
 
-function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
+function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
   const pieces = String(text || '').split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
 
   return (
@@ -129,6 +129,43 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
 
         if (!blankId) {
           return <InlineMarkdown key={index} text={piece} />;
+        }
+
+        // Check if this is an MCQ/choice question to render the selected option as text instead of input
+        const isMcq = question?.type === 'mcq' || question?.interaction === 'choice' || question?.interaction === 'option_select';
+        if (isMcq) {
+          const selectedIndex = typeof userAnswer === 'object' && userAnswer !== null
+            ? Number(userAnswer?.selectedIndex ?? userAnswer?.index ?? userAnswer[blankId])
+            : Number(userAnswer);
+
+          let resolvedValue = '';
+          if (Number.isFinite(selectedIndex) && question.options?.[selectedIndex]) {
+            const option = question.options[selectedIndex];
+            resolvedValue = typeof option === 'object'
+              ? option.label ?? option.text ?? option.value ?? option.content
+              : option;
+          } else if (userAnswer && typeof userAnswer === 'object' && userAnswer[blankId] !== undefined) {
+            resolvedValue = userAnswer[blankId];
+          }
+
+          return (
+            <span
+              key={`${blankId}-${index}`}
+              style={{
+                borderBottom: '2.5px solid #3b82f6',
+                color: resolvedValue ? '#2563eb' : '#94a3b8',
+                padding: '0 8px',
+                fontWeight: 700,
+                fontSize: '1.05em',
+                minWidth: '50px',
+                display: 'inline-block',
+                textAlign: 'center',
+                margin: '0 4px',
+              }}
+            >
+              {resolvedValue || '______'}
+            </span>
+          );
         }
 
         return (
@@ -163,7 +200,7 @@ function isMarkdownTable(text) {
   return lines.length >= 2 && lines[0].startsWith('|') && /^\|?\s*:?-{3,}:?\s*\|/.test(lines[1]);
 }
 
-function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
+function MarkdownTable({ text, userAnswer, onAnswer, isAnswered, question }) {
   const lines = String(text || '').trim().split('\n').map((line) => line.trim()).filter(Boolean);
   const rows = lines
     .filter((_, index) => index !== 1)
@@ -176,7 +213,7 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
           <tr>
             {(rows[0] || []).map((cell, index) => (
               <th key={index} style={{ padding: '12px 14px', background: '#eff6ff', color: '#1e3a8a', fontSize: 13, fontWeight: 900, borderBottom: '1px solid #dbeafe', textAlign: 'center' }}>
-                <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />
+                <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />
               </th>
             ))}
           </tr>
@@ -186,7 +223,7 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered }) {
             <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} style={{ padding: '12px 14px', borderTop: rowIndex === 0 ? 'none' : '1px solid #e5eefb', color: '#0f172a', fontSize: 18, fontWeight: 800, textAlign: 'center' }}>
-                  <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />
+                  <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />
                 </td>
               ))}
             </tr>
@@ -206,7 +243,7 @@ function cleanSpeechText(value) {
     .trim();
 }
 
-function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue }) {
+function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue, partIndex }) {
   const content = part.content || part.text || '';
   const spokenRef = useRef(false);
 
@@ -226,13 +263,17 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
   }, [speakTextValue, content]);
 
   useEffect(() => {
-    if (isPreK && !isAnswered && content && !spokenRef.current) {
+    if (isPreK && !isAnswered && content && !spokenRef.current && !part.noAutoplay && (partIndex === undefined || partIndex === 0)) {
       spokenRef.current = true;
       const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
       const isAudioToLetterSkill = skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
                                    skillId === 'lkg-english-word-recognition-same-ending-sound' ||
                                    skillId === 'lkg-english-rhyming-same-ending-single' ||
-                                   skillId === 'lkg-english-rhyming-same-ending-double';
+                                   skillId === 'lkg-english-rhyming-same-ending-double' ||
+                                   skillId === 'lkg-english-assoc-upper-consonant-bdj' ||
+                                   skillId === 'lkg-english-assoc-upper-consonant-flm' ||
+                                   skillId === 'lkg-english-assoc-upper-consonant-cgh' ||
+                                   skillId === 'lkg-english-assoc-upper-consonant-review';
       // Play instruction first
       const t = setTimeout(() => {
         speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl);
@@ -250,9 +291,9 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
 
   const renderSegment = (text) => {
     if (isMarkdownTable(text)) {
-      return <MarkdownTable text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />;
+      return <MarkdownTable text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />;
     }
-    return <TextWithBlanks text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} />;
+    return <TextWithBlanks text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />;
   };
 
   const pieces = useMemo(() => {
@@ -315,12 +356,16 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
     </div>
   );
 
-  if (isPreK) {
+  if (isPreK && !part.noMascot) {
     const subject = question?.metadata?.subject || question?.subject || '';
     const mascotEmoji = subject === 'english' ? '🐻' : '🦉'; 
     const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
     const isAudioToLetter = skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
-                            skillId === 'lkg-english-word-recognition-same-ending-sound';
+                            skillId === 'lkg-english-word-recognition-same-ending-sound' ||
+                            skillId === 'lkg-english-assoc-upper-consonant-bdj' ||
+                            skillId === 'lkg-english-assoc-upper-consonant-flm' ||
+                            skillId === 'lkg-english-assoc-upper-consonant-cgh' ||
+                            skillId === 'lkg-english-assoc-upper-consonant-review';
 
     return (
       <div className={styles.preKMascotSection}>
@@ -349,7 +394,7 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
             {isAudioToLetter && (question?.soundUrl || question?.soundText) && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '14px 0 4px 0', gap: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#7e22ce', letterSpacing: '0.04em', fontFamily: 'var(--font-outfit), sans-serif', opacity: 0.75 }}>
-                  {skillId === 'lkg-english-word-recognition-same-ending-sound' ? 'Tap to hear the sound!' : 'Tap to hear the letter!'}
+                  {skillId === 'lkg-english-word-recognition-same-ending-sound' || skillId === 'lkg-english-assoc-upper-consonant-bdj' || skillId === 'lkg-english-assoc-upper-consonant-flm' || skillId === 'lkg-english-assoc-upper-consonant-cgh' || skillId === 'lkg-english-assoc-upper-consonant-review' ? 'Tap to hear the sound!' : 'Tap to hear the letter!'}
                 </div>
                 <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span className={styles.playSoundPulseRing} />
@@ -631,13 +676,13 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
           display: 'flex', 
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#ffffff',
-          borderRadius: 20,
-          border: cardBorder,
-          boxShadow: cardShadow,
-          padding: '12px',
+          backgroundColor: part.transparent ? 'transparent' : '#ffffff',
+          borderRadius: part.transparent ? undefined : 20,
+          border: part.transparent ? 'none' : cardBorder,
+          boxShadow: part.transparent ? 'none' : cardShadow,
+          padding: part.transparent ? '0' : '12px',
           boxSizing: 'border-box',
-          aspectRatio: '1.15 / 1',
+          aspectRatio: part.transparent ? 'auto' : '1.15 / 1',
           transition: 'border 0.2s ease, box-shadow 0.2s ease',
         }}
       >

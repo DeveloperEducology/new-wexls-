@@ -233,8 +233,8 @@ function Part({ part, inGroup = false }) {
             maxWidth: part.maxWidth || 340,
             maxHeight: part.maxHeight || 280,
             objectFit: 'contain',
-            borderRadius: isTransparent ? undefined : 18,
-            boxShadow: (isPreK && isTransparent) ? 'none' : '0 16px 36px rgba(15, 23, 42, 0.12)',
+            borderRadius: (isTransparent || part.transparent) ? undefined : 18,
+            boxShadow: ((isPreK && isTransparent) || part.transparent) ? 'none' : '0 16px 36px rgba(15, 23, 42, 0.12)',
           }}
         />
       </div>
@@ -337,7 +337,16 @@ export default function MCQRenderer({
 
   const speechText = getQuestionSpeechText(question);
   const firstPartText = (question.parts?.[0]?.content || question.parts?.[0]?.text || '').trim();
-  const hideHeader = question.questionText && firstPartText === question.questionText.trim();
+  const combinedPartsText = (question.parts || [])
+    .filter(part => part.type === 'text' || !part.type)
+    .map(part => (part.content || part.text || '').trim())
+    .filter(Boolean)
+    .join(' ');
+  const cleanString = (str) => String(str || '').replace(/\s+/g, ' ').trim();
+  const hideHeader = question.questionText && (
+    cleanString(firstPartText) === cleanString(question.questionText) ||
+    cleanString(combinedPartsText) === cleanString(question.questionText)
+  );
   const showHeaderSpeaker = question.questionText && !hideHeader;
   const showInlineSpeaker = !showHeaderSpeaker;
 
@@ -428,8 +437,8 @@ export default function MCQRenderer({
                     userAnswer={userAnswer}
                     onAnswer={onAnswer}
                     isAnswered={isAnswered}
-                    showSpeaker={showInlineSpeaker && isFirstTextPart}
-                    speakTextValue={speechText}
+                    showSpeaker={(showInlineSpeaker && isFirstTextPart) || part.showSpeaker}
+                    speakTextValue={isFirstTextPart ? speechText : undefined}
                     partIndex={index}
                   />
                 );
@@ -456,8 +465,8 @@ export default function MCQRenderer({
                   userAnswer={userAnswer}
                   onAnswer={onAnswer}
                   isAnswered={isAnswered}
-                  showSpeaker={showInlineSpeaker && isFirstTextPart}
-                  speakTextValue={speechText}
+                  showSpeaker={(showInlineSpeaker && isFirstTextPart) || part.showSpeaker}
+                  speakTextValue={isFirstTextPart ? speechText : undefined}
                   partIndex={index}
                 />
               );
