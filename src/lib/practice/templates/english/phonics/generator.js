@@ -111,7 +111,8 @@ export function generate(variables = {}, config = {}) {
     throw new Error("Phonics options pool is empty or invalid.");
   }
   
-  const targetLetterObj = pool[Math.floor(prng() * pool.length)];
+  const targetCandidates = pool.filter(o => o.isTarget !== false);
+  const targetLetterObj = targetCandidates[Math.floor(prng() * targetCandidates.length)];
   const targetWords = targetLetterObj.words;
   const targetWordObj = targetWords[Math.floor(prng() * targetWords.length)];
 

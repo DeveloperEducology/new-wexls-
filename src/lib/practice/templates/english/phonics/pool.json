@@ -5,6 +5,7 @@
       "label": "b",
       "phonicsSound": "/b/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "bed",
@@ -38,16 +39,17 @@
       "label": "d",
       "phonicsSound": "/d/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
+        {
+          "word": "dog",
+          "imageUrl": "https://cdn-icons-png.flaticon.com/512/1998/1998627.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-o-dog.wav"
+        },
         {
           "word": "dig",
           "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984500858-dig.png",
           "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-i-dig.wav"
-        },
-        {
-          "word": "log",
-          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984516996-log.png",
-          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-o-log.wav"
         }
       ]
     },
@@ -56,6 +58,7 @@
       "label": "p",
       "phonicsSound": "/p/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "peg",
@@ -63,14 +66,14 @@
           "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-peg.wav"
         },
         {
-          "word": "lap",
-          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984556941-lap.jpg",
-          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-lap.wav"
+          "word": "pear",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/fruits/1779947997202-pear.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-pear.wav"
         },
         {
-          "word": "cap",
-          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png",
-          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-cap.wav"
+          "word": "pencil",
+          "imageUrl": "https://cdn-icons-png.flaticon.com/128/2280/2280532.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-i-pencil.wav"
         }
       ]
     },
@@ -79,19 +82,15 @@
       "label": "q",
       "phonicsSound": "/kw/",
       "difficultyWeight": 3,
-      "words": [
-        {
-          "word": "quick",
-          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png",
-          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-cap.wav"
-        }
-      ]
+      "isTarget": false,
+      "words": []
     },
     {
       "id": "n",
       "label": "n",
       "phonicsSound": "/n/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "net",
@@ -110,6 +109,7 @@
       "label": "m",
       "phonicsSound": "/m/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "mud",
@@ -117,9 +117,9 @@
           "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-u-mud.wav"
         },
         {
-          "word": "jam",
-          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984560524-jam.png",
-          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-jam.wav"
+          "word": "monkey",
+          "imageUrl": "https://cdn-icons-png.flaticon.com/128/8418/8418337.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-o-monkey.wav"
         }
       ]
     },
@@ -128,6 +128,7 @@
       "label": "t",
       "phonicsSound": "/t/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "ten",
@@ -146,6 +147,7 @@
       "label": "v",
       "phonicsSound": "/v/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "vet",
@@ -159,6 +161,7 @@
       "label": "w",
       "phonicsSound": "/w/",
       "difficultyWeight": 1,
+      "isTarget": true,
       "words": [
         {
           "word": "wet",
@@ -169,6 +172,11 @@
           "word": "wig",
           "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984536845-wig.png",
           "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-i-wig.wav"
+        },
+        {
+          "word": "whale",
+          "imageUrl": "https://cdn-icons-png.flaticon.com/128/6575/6575924.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-o-whale.wav"
         }
       ]
     }
