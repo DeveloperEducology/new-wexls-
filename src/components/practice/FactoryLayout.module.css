@@ -2693,7 +2693,7 @@
     margin: 20px auto !important;
 }
 
-.preKHotspotCanvasWrapper img {
+.preKHotspotCanvasWrapper img.hotspotBg {
     object-fit: cover !important;
     width: 100% !important;
     height: 100% !important;

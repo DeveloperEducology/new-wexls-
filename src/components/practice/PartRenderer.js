@@ -5813,7 +5813,33 @@ function CaseMatchShownLetterPart({ part }) {
 }
 
 function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered }) {
+  const containerRef = useRef(null);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(null);
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (!containerRef.current) return;
+      const containerWidth = containerRef.current.offsetWidth;
+      setIsMobileLayout(containerWidth < 768);
+    };
+
+    const observer = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(updateSize)
+      : null;
+
+    if (containerRef.current && observer) {
+      observer.observe(containerRef.current);
+    }
+    updateSize();
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, []);
+
   const isPreK = useMemo(() => {
     const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
     const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
@@ -5825,15 +5851,39 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
     );
   }, [question]);
 
+  // Resolve layouts object
+  const resolvedLayouts = part?.layouts || question?.layouts || question?.metadata?.layouts;
+  
+  // Pick active layout based on viewport layout context
+  const activeLayout = useMemo(() => {
+    if (!resolvedLayouts) return null;
+    if (isMobileLayout && resolvedLayouts.mobile) {
+      return resolvedLayouts.mobile;
+    }
+    return resolvedLayouts.desktop || null;
+  }, [resolvedLayouts, isMobileLayout]);
+
+  const backgroundSvg = activeLayout 
+    ? (activeLayout.backgroundSvg || activeLayout.backgroundImageSvg) 
+    : part?.backgroundSvg;
+
+  const backgroundUrl = activeLayout 
+    ? (activeLayout.backgroundUrl || activeLayout.backgroundImage) 
+    : (part?.backgroundUrl || question?.backgroundImage || question?.backgroundUrl);
+
+  const canvasWidth = activeLayout?.canvasWidth ?? (part?.canvasWidth || 360);
+  const canvasHeight = activeLayout?.canvasHeight ?? (part?.canvasHeight || 300);
+  const hotspots = activeLayout?.hotspots ?? (part?.hotspots || []);
+
   const hasImages = useMemo(() => {
-    return (part?.hotspots || []).some(hs => {
+    return (hotspots || []).some(hs => {
       const qHs = (question?.hotspots || question?.metadata?.hotspots || []).find(
         qh => (qh.id && hs.id && qh.id === hs.id) ||
               (qh.label && hs.label && qh.label.toLowerCase() === hs.label.toLowerCase())
       ) || (question?.hotspots || question?.metadata?.hotspots)?.[hs.optionIndex];
       return Boolean(hs.imageUrl || qHs?.imageUrl || hs.svgContent || qHs?.svgContent);
     });
-  }, [part?.hotspots, question]);
+  }, [hotspots, question]);
 
   const isMultiSelect = question?.interaction === 'hotspot_multi_select' || part?.multiSelect === true;
   const showLabels = Boolean(question?.showHotspotLabels || part?.showHotspotLabels || question?.metadata?.showHotspotLabels);
@@ -5858,14 +5908,6 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
     return [];
   }, [userAnswer, isMultiSelect]);
 
-  const {
-    backgroundSvg,
-    backgroundUrl,
-    canvasWidth = 360,
-    canvasHeight = 300,
-    hotspots = [],
-  } = part;
-
   const handleClick = (optionIndex) => {
     if (isAnswered) return;
     
@@ -5883,10 +5925,13 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
     }
   };
 
-  const isAnyTransparent = Boolean(part.transparent || question?.transparent || (part.hotspots || []).some(hs => hs.transparent));
+  const isAnyTransparent = Boolean(part.transparent || question?.transparent || (hotspots || []).some(hs => hs.transparent));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%' }}>
+    <div 
+      ref={containerRef}
+      style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%' }}
+    >
       <div
         className={`${styles.hotspotCanvasWrapper} ${isPreK ? styles.preKHotspotCanvasWrapper : ''} ${isPreK && hasImages && !isAnyTransparent ? styles.preKHotspotGrid : ''}`}
         style={{
@@ -6097,8 +6142,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
               style={{
                 left:   `${(newX / canvasWidth)      * 100}%`,
                 top:    `${(newY / canvasHeight)     * 100}%`,
-                width:  imageUrl ? 'auto' : `${(newWidth / canvasWidth)  * 100}%`,
-                maxWidth: imageUrl ? `${(newWidth / canvasWidth)  * 100}%` : undefined,
+                width:  `${(newWidth / canvasWidth)  * 100}%`,
                 height: `${(newHeight / canvasHeight) * 100}%`,
                 borderRadius: hs.borderRadius || (hs.isCircle || hs.shape === 'circle' ? '50%' : (imageUrl ? '22px' : undefined)),
                 overflow: 'visible',
@@ -6116,8 +6160,10 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                   src={imageUrl} 
                   alt={hs.label || ''} 
                   style={{ 
-                    height: '90%', 
-                    width: 'auto', 
+                    height: '100%', 
+                    width: '100%', 
+                    padding: '4px',
+                    boxSizing: 'border-box',
                     objectFit: 'contain', 
                     pointerEvents: 'none', 
                     zIndex: 1,

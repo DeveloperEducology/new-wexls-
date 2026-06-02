@@ -531,6 +531,8 @@ export default function AdminConsolePage() {
   const [backgroundSvg, setBackgroundSvg] = useState('');
   const [showHotspotLabels, setShowHotspotLabels] = useState(false);
   const [isHotspotTransparent, setIsHotspotTransparent] = useState(false);
+  const [activePreviewDevice, setActivePreviewDevice] = useState('desktop');
+  const [layouts, setLayouts] = useState({ desktop: null, mobile: null });
   // Preview Answer checking state
   const [previewAnswer, setPreviewAnswer] = useState(null);
   const [previewCheckResult, setPreviewCheckResult] = useState(null); // 'correct', 'incorrect', or null
@@ -2708,6 +2710,119 @@ export default function AdminConsolePage() {
       label: hs.label,
       isCorrect: hs.isCorrect
     })));
+    
+    // Propagate structural changes to other device layout
+    const otherDevice = activePreviewDevice === 'desktop' ? 'mobile' : 'desktop';
+    const otherLayout = layouts?.[otherDevice];
+    
+    const updatedActiveLayout = {
+      backgroundImage: backgroundImage || '',
+      backgroundSvg: backgroundSvg || '',
+      canvasWidth: canvas?.width || (activePreviewDevice === 'mobile' ? 360 : 800),
+      canvasHeight: canvas?.height || (activePreviewDevice === 'mobile' ? 640 : 465),
+      hotspots: nextHotspots
+    };
+    
+    if (otherLayout) {
+      const otherHotspots = otherLayout.hotspots || [];
+      const updatedOtherHotspots = nextHotspots.map((activeHs, idx) => {
+        const matchingHs = otherHotspots.find(h => h.id === activeHs.id || h.optionIndex === activeHs.optionIndex);
+        if (matchingHs) {
+          return {
+            ...matchingHs,
+            label: activeHs.label,
+            isCorrect: activeHs.isCorrect,
+            isCircle: activeHs.isCircle,
+            imageUrl: activeHs.imageUrl,
+            optionIndex: activeHs.optionIndex ?? idx
+          };
+        } else {
+          // Default mobile vs desktop sizing adjustments
+          const otherW = otherDevice === 'mobile' ? Math.min(30, activeHs.width * 2) : Math.max(10, activeHs.width / 2);
+          const otherH = otherDevice === 'mobile' ? Math.min(15, activeHs.height * 2) : Math.max(5, activeHs.height / 2);
+          return {
+            id: activeHs.id,
+            label: activeHs.label,
+            x: activeHs.x,
+            y: activeHs.y,
+            width: otherW,
+            height: otherH,
+            isCircle: activeHs.isCircle,
+            isCorrect: activeHs.isCorrect,
+            imageUrl: activeHs.imageUrl,
+            optionIndex: activeHs.optionIndex ?? idx
+          };
+        }
+      });
+      
+      const filteredOtherHotspots = updatedOtherHotspots.filter(otherHs => 
+        nextHotspots.some(activeHs => activeHs.id === otherHs.id || activeHs.optionIndex === otherHs.optionIndex)
+      );
+      
+      setLayouts(prev => ({
+        ...prev,
+        [activePreviewDevice]: updatedActiveLayout,
+        [otherDevice]: {
+          ...otherLayout,
+          hotspots: filteredOtherHotspots
+        }
+      }));
+    } else {
+      setLayouts(prev => ({
+        ...prev,
+        [activePreviewDevice]: updatedActiveLayout
+      }));
+    }
+  };
+
+  const switchPreviewDevice = (nextDevice) => {
+    if (nextDevice === activePreviewDevice) return;
+    
+    const currentLayoutConfig = {
+      backgroundImage: backgroundImage || '',
+      backgroundSvg: backgroundSvg || '',
+      canvasWidth: canvas?.width || (activePreviewDevice === 'mobile' ? 360 : 800),
+      canvasHeight: canvas?.height || (activePreviewDevice === 'mobile' ? 640 : 465),
+      hotspots: hotspots
+    };
+    
+    const updatedLayouts = {
+      ...layouts,
+      [activePreviewDevice]: currentLayoutConfig
+    };
+    setLayouts(updatedLayouts);
+    
+    const nextConfig = updatedLayouts[nextDevice] || {
+      backgroundImage: '',
+      backgroundSvg: '',
+      canvasWidth: nextDevice === 'mobile' ? 360 : 800,
+      canvasHeight: nextDevice === 'mobile' ? 640 : 465,
+      hotspots: hotspots.map(hs => ({
+        ...hs,
+        width: nextDevice === 'mobile' ? Math.min(30, hs.width * 2) : Math.max(10, hs.width / 2),
+        height: nextDevice === 'mobile' ? Math.min(15, hs.height * 2) : Math.max(5, hs.height / 2)
+      }))
+    };
+    
+    setActivePreviewDevice(nextDevice);
+    setBackgroundImage(nextConfig.backgroundImage || '');
+    setBackgroundSvg(nextConfig.backgroundSvg || '');
+    setCanvas({ width: nextConfig.canvasWidth, height: nextConfig.canvasHeight });
+    
+    if (nextConfig.hotspots && nextConfig.hotspots.length === hotspots.length) {
+      setHotspots(nextConfig.hotspots);
+    } else {
+      const initializedHotspots = hotspots.map((hs, idx) => {
+        const existingHs = nextConfig.hotspots?.find(h => h.id === hs.id || h.optionIndex === hs.optionIndex || h.label === hs.label);
+        if (existingHs) return existingHs;
+        return {
+          ...hs,
+          width: nextDevice === 'mobile' ? Math.min(30, hs.width * 2) : Math.max(10, hs.width / 2),
+          height: nextDevice === 'mobile' ? Math.min(15, hs.height * 2) : Math.max(5, hs.height / 2)
+        };
+      });
+      setHotspots(initializedHotspots);
+    }
   };
 
   const handleHotspotPointerDown = (e, hsId) => {
@@ -3035,6 +3150,8 @@ export default function AdminConsolePage() {
     setHideItemLabels(false);
     setShowHotspotLabels(false);
     setIsHotspotTransparent(false);
+    setActivePreviewDevice('desktop');
+    setLayouts({ desktop: null, mobile: null });
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -3097,6 +3214,8 @@ export default function AdminConsolePage() {
     setHideItemLabels(false);
     setShowHotspotLabels(false);
     setIsHotspotTransparent(false);
+    setActivePreviewDevice('desktop');
+    setLayouts({ desktop: null, mobile: null });
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -3247,36 +3366,135 @@ export default function AdminConsolePage() {
       setType('mcq_hotspot');
       setIsHotspotMultiSelect(q.interaction === 'hotspot_multi_select');
       const hotspotPart = q.parts?.find(p => p.type === 'hotspot_canvas');
-      const canvasW = hotspotPart?.canvasWidth || 800;
-      const canvasH = hotspotPart?.canvasHeight || 465;
       
-      const loadedBgImage = q.backgroundImage || hotspotPart?.backgroundUrl || '';
-      const loadedBgSvg = hotspotPart?.backgroundSvg || '';
-      setBackgroundImage(loadedBgImage);
-      setBackgroundSvg(loadedBgSvg);
-      
-      const rawHotspots = q.hotspots || q.metadata?.hotspots;
-      if (rawHotspots && Array.isArray(rawHotspots)) {
-        setHotspots(rawHotspots);
-      } else if (hotspotPart?.hotspots && Array.isArray(hotspotPart.hotspots)) {
+      const resolvedLayouts = q.layouts || q.metadata?.layouts || hotspotPart?.layouts;
+      if (resolvedLayouts) {
+        // Reconstruct from layouts
+        const desktopLayout = {
+          backgroundImage: resolvedLayouts.desktop?.backgroundImage || resolvedLayouts.desktop?.backgroundUrl || '',
+          backgroundSvg: resolvedLayouts.desktop?.backgroundSvg || '',
+          canvasWidth: resolvedLayouts.desktop?.canvasWidth || 800,
+          canvasHeight: resolvedLayouts.desktop?.canvasHeight || 465,
+          hotspots: []
+        };
+        const mobileLayout = {
+          backgroundImage: resolvedLayouts.mobile?.backgroundImage || resolvedLayouts.mobile?.backgroundUrl || '',
+          backgroundSvg: resolvedLayouts.mobile?.backgroundSvg || '',
+          canvasWidth: resolvedLayouts.mobile?.canvasWidth || 360,
+          canvasHeight: resolvedLayouts.mobile?.canvasHeight || 640,
+          hotspots: []
+        };
+        
         const correctIdx = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.answer;
-        const loadedHotspots = hotspotPart.hotspots.map((hs, idx) => ({
-          id: `hs_${idx}_${Date.now()}`,
-          label: hs.label || `Hotspot ${idx + 1}`,
-          x: parseFloat(((hs.x / canvasW) * 100).toFixed(2)),
-          y: parseFloat(((hs.y / canvasH) * 100).toFixed(2)),
-          width: parseFloat(((hs.width / canvasW) * 100).toFixed(2)),
-          height: parseFloat(((hs.height / canvasH) * 100).toFixed(2)),
-          isCircle: Boolean(hs.isCircle),
-          isCorrect: idx === correctIdx
-        }));
-        setHotspots(loadedHotspots);
+        
+        // 1. Desktop hotspots
+        const dRaw = resolvedLayouts.desktop?.hotspots || [];
+        if (dRaw.length > 0) {
+          desktopLayout.hotspots = dRaw.map((hs, idx) => {
+            const isPixel = hs.x > 100 || hs.y > 100 || hs.width > 100 || hs.height > 100;
+            return {
+              id: hs.id || `hs_${idx}_${Date.now()}`,
+              label: hs.label || `Hotspot ${idx + 1}`,
+              x: isPixel ? parseFloat(((hs.x / desktopLayout.canvasWidth) * 100).toFixed(2)) : hs.x,
+              y: isPixel ? parseFloat(((hs.y / desktopLayout.canvasHeight) * 100).toFixed(2)) : hs.y,
+              width: isPixel ? parseFloat(((hs.width / desktopLayout.canvasWidth) * 100).toFixed(2)) : hs.width,
+              height: isPixel ? parseFloat(((hs.height / desktopLayout.canvasHeight) * 100).toFixed(2)) : hs.height,
+              isCircle: Boolean(hs.isCircle),
+              imageUrl: hs.imageUrl || undefined,
+              optionIndex: hs.optionIndex ?? idx,
+              isCorrect: hs.isCorrect ?? (hs.optionIndex === correctIdx || idx === correctIdx)
+            };
+          });
+        }
+        
+        // 2. Mobile hotspots
+        const mRaw = resolvedLayouts.mobile?.hotspots || [];
+        if (mRaw.length > 0) {
+          mobileLayout.hotspots = mRaw.map((hs, idx) => {
+            const isPixel = hs.x > 100 || hs.y > 100 || hs.width > 100 || hs.height > 100;
+            return {
+              id: hs.id || `hs_${idx}_${Date.now()}`,
+              label: hs.label || `Hotspot ${idx + 1}`,
+              x: isPixel ? parseFloat(((hs.x / mobileLayout.canvasWidth) * 100).toFixed(2)) : hs.x,
+              y: isPixel ? parseFloat(((hs.y / mobileLayout.canvasHeight) * 100).toFixed(2)) : hs.y,
+              width: isPixel ? parseFloat(((hs.width / mobileLayout.canvasWidth) * 100).toFixed(2)) : hs.width,
+              height: isPixel ? parseFloat(((hs.height / mobileLayout.canvasHeight) * 100).toFixed(2)) : hs.height,
+              isCircle: Boolean(hs.isCircle),
+              imageUrl: hs.imageUrl || undefined,
+              optionIndex: hs.optionIndex ?? idx,
+              isCorrect: hs.isCorrect ?? (hs.optionIndex === correctIdx || idx === correctIdx)
+            };
+          });
+        }
+        
+        setLayouts({ desktop: desktopLayout, mobile: mobileLayout });
+        setActivePreviewDevice('desktop');
+        setBackgroundImage(desktopLayout.backgroundImage);
+        setBackgroundSvg(desktopLayout.backgroundSvg);
+        setCanvas({ width: desktopLayout.canvasWidth, height: desktopLayout.canvasHeight });
+        setHotspots(desktopLayout.hotspots);
       } else {
-        setHotspots([]);
+        // Fallback to legacy structure
+        const correctIdx = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.answer;
+        const loadedBgImage = q.backgroundImage || hotspotPart?.backgroundUrl || '';
+        const loadedBgSvg = hotspotPart?.backgroundSvg || '';
+        const canvasW = hotspotPart?.canvasWidth || 800;
+        const canvasH = hotspotPart?.canvasHeight || 465;
+        
+        let loadedHotspots = [];
+        const rawHotspots = q.hotspots || q.metadata?.hotspots;
+        if (rawHotspots && Array.isArray(rawHotspots)) {
+          loadedHotspots = rawHotspots.map((hs, idx) => ({
+            ...hs,
+            isCorrect: hs.isCorrect ?? (hs.optionIndex === correctIdx || idx === correctIdx)
+          }));
+        } else if (hotspotPart?.hotspots && Array.isArray(hotspotPart.hotspots)) {
+          loadedHotspots = hotspotPart.hotspots.map((hs, idx) => ({
+            id: `hs_${idx}_${Date.now()}`,
+            label: hs.label || `Hotspot ${idx + 1}`,
+            x: parseFloat(((hs.x / canvasW) * 100).toFixed(2)),
+            y: parseFloat(((hs.y / canvasH) * 100).toFixed(2)),
+            width: parseFloat(((hs.width / canvasW) * 100).toFixed(2)),
+            height: parseFloat(((hs.height / canvasH) * 100).toFixed(2)),
+            isCircle: Boolean(hs.isCircle),
+            imageUrl: hs.imageUrl || undefined,
+            optionIndex: hs.optionIndex ?? idx,
+            isCorrect: idx === correctIdx
+          }));
+        }
+        
+        const desktopLayout = {
+          backgroundImage: loadedBgImage,
+          backgroundSvg: loadedBgSvg,
+          canvasWidth: canvasW,
+          canvasHeight: canvasH,
+          hotspots: loadedHotspots
+        };
+        
+        const mobileLayout = {
+          backgroundImage: loadedBgImage,
+          backgroundSvg: loadedBgSvg,
+          canvasWidth: 360,
+          canvasHeight: 640,
+          hotspots: loadedHotspots.map(hs => ({
+            ...hs,
+            width: Math.min(30, hs.width * 2),
+            height: Math.min(15, hs.height * 2)
+          }))
+        };
+        
+        setLayouts({ desktop: desktopLayout, mobile: mobileLayout });
+        setActivePreviewDevice('desktop');
+        setBackgroundImage(loadedBgImage);
+        setBackgroundSvg(loadedBgSvg);
+        setCanvas({ width: canvasW, height: canvasH });
+        setHotspots(loadedHotspots);
       }
     } else {
       setHotspots([]);
       setBackgroundSvg('');
+      setLayouts({ desktop: null, mobile: null });
+      setActivePreviewDevice('desktop');
     }
 
     setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
@@ -4225,23 +4443,66 @@ export default function AdminConsolePage() {
     }
 
     if (type === 'mcq_hotspot') {
-      payload.type = 'mcq';
-      payload.interaction = isHotspotMultiSelect ? 'hotspot_multi_select' : 'hotspot_select';
-      
-      const canvasW = canvas?.width || 800;
-      const canvasH = canvas?.height || 465;
-      
-      const serializedHotspots = hotspots.map((hs, idx) => ({
-        optionIndex: idx,
-        x: Math.round((hs.x / 100) * canvasW),
-        y: Math.round((hs.y / 100) * canvasH),
-        width: Math.round((hs.width / 100) * canvasW),
-        height: Math.round((hs.height / 100) * canvasH),
+      const activeConfig = {
+        backgroundImage: backgroundImage || '',
+        backgroundSvg: backgroundSvg || '',
+        canvasWidth: canvas?.width || (activePreviewDevice === 'mobile' ? 360 : 800),
+        canvasHeight: canvas?.height || (activePreviewDevice === 'mobile' ? 640 : 465),
+        hotspots: hotspots
+      };
+
+      const finalLayouts = {
+        desktop: activePreviewDevice === 'desktop' ? activeConfig : (layouts.desktop || {
+          backgroundImage: '',
+          backgroundSvg: '',
+          canvasWidth: 800,
+          canvasHeight: 465,
+          hotspots: []
+        }),
+        mobile: activePreviewDevice === 'mobile' ? activeConfig : (layouts.mobile || {
+          backgroundImage: '',
+          backgroundSvg: '',
+          canvasWidth: 360,
+          canvasHeight: 640,
+          hotspots: []
+        })
+      };
+
+      // Ensure that if mobile hotspots have no items but desktop does, we copy options & correct tags
+      if (finalLayouts.desktop.hotspots.length > 0 && finalLayouts.mobile.hotspots.length === 0) {
+        finalLayouts.mobile.hotspots = finalLayouts.desktop.hotspots.map(hs => ({
+          ...hs,
+          width: Math.min(30, hs.width * 2),
+          height: Math.min(15, hs.height * 2)
+        }));
+      }
+
+      const serializedDesktopHotspots = finalLayouts.desktop.hotspots.map((hs, idx) => ({
+        optionIndex: hs.optionIndex ?? idx,
+        x: Math.round((hs.x / 100) * finalLayouts.desktop.canvasWidth),
+        y: Math.round((hs.y / 100) * finalLayouts.desktop.canvasHeight),
+        width: Math.round((hs.width / 100) * finalLayouts.desktop.canvasWidth),
+        height: Math.round((hs.height / 100) * finalLayouts.desktop.canvasHeight),
         label: hs.label,
         isCircle: hs.isCircle,
         imageUrl: hs.imageUrl || undefined,
         id: hs.id || undefined
       }));
+
+      const serializedMobileHotspots = finalLayouts.mobile.hotspots.map((hs, idx) => ({
+        optionIndex: hs.optionIndex ?? idx,
+        x: Math.round((hs.x / 100) * finalLayouts.mobile.canvasWidth),
+        y: Math.round((hs.y / 100) * finalLayouts.mobile.canvasHeight),
+        width: Math.round((hs.width / 100) * finalLayouts.mobile.canvasWidth),
+        height: Math.round((hs.height / 100) * finalLayouts.mobile.canvasHeight),
+        label: hs.label,
+        isCircle: hs.isCircle,
+        imageUrl: hs.imageUrl || undefined,
+        id: hs.id || undefined
+      }));
+
+      payload.type = 'mcq';
+      payload.interaction = isHotspotMultiSelect ? 'hotspot_multi_select' : 'hotspot_select';
       
       payload.options = hotspots.map((hs, idx) => ({
         id: `opt_${idx}`,
@@ -4252,23 +4513,57 @@ export default function AdminConsolePage() {
       payload.correctAnswerIndex = correctIdx;
       payload.answer = correctIdx;
       
-      payload.hotspots = hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }));
-      payload.metadata.hotspots = hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }));
+      payload.hotspots = finalLayouts.desktop.hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }));
+      payload.metadata.hotspots = finalLayouts.desktop.hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }));
       payload.metadata.layoutMode = 'mcq_hotspot';
       payload.layoutMode = 'mcq_hotspot';
       payload.transparent = isHotspotTransparent;
       payload.metadata.transparent = isHotspotTransparent;
+
+      payload.layouts = {
+        desktop: {
+          backgroundImage: finalLayouts.desktop.backgroundImage || undefined,
+          backgroundSvg: finalLayouts.desktop.backgroundSvg || undefined,
+          canvasWidth: finalLayouts.desktop.canvasWidth,
+          canvasHeight: finalLayouts.desktop.canvasHeight,
+          hotspots: finalLayouts.desktop.hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }))
+        },
+        mobile: {
+          backgroundImage: finalLayouts.mobile.backgroundImage || undefined,
+          backgroundSvg: finalLayouts.mobile.backgroundSvg || undefined,
+          canvasWidth: finalLayouts.mobile.canvasWidth,
+          canvasHeight: finalLayouts.mobile.canvasHeight,
+          hotspots: finalLayouts.mobile.hotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }))
+        }
+      };
+      payload.metadata.layouts = payload.layouts;
       
       const hotspotPart = {
         type: 'hotspot_canvas',
-        canvasWidth: canvasW,
-        canvasHeight: canvasH,
-        hotspots: serializedHotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent })),
+        canvasWidth: finalLayouts.desktop.canvasWidth,
+        canvasHeight: finalLayouts.desktop.canvasHeight,
+        hotspots: serializedDesktopHotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent })),
         showHotspotLabels: showHotspotLabels,
-        transparent: isHotspotTransparent
+        transparent: isHotspotTransparent,
+        layouts: {
+          desktop: {
+            backgroundUrl: finalLayouts.desktop.backgroundImage || undefined,
+            backgroundSvg: finalLayouts.desktop.backgroundSvg || undefined,
+            canvasWidth: finalLayouts.desktop.canvasWidth,
+            canvasHeight: finalLayouts.desktop.canvasHeight,
+            hotspots: serializedDesktopHotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }))
+          },
+          mobile: {
+            backgroundUrl: finalLayouts.mobile.backgroundImage || undefined,
+            backgroundSvg: finalLayouts.mobile.backgroundSvg || undefined,
+            canvasWidth: finalLayouts.mobile.canvasWidth,
+            canvasHeight: finalLayouts.mobile.canvasHeight,
+            hotspots: serializedMobileHotspots.map(hs => ({ ...hs, transparent: isHotspotTransparent }))
+          }
+        }
       };
-      if (backgroundImage) hotspotPart.backgroundUrl = backgroundImage;
-      if (backgroundSvg) hotspotPart.backgroundSvg = backgroundSvg;
+      if (finalLayouts.desktop.backgroundImage) hotspotPart.backgroundUrl = finalLayouts.desktop.backgroundImage;
+      if (finalLayouts.desktop.backgroundSvg) hotspotPart.backgroundSvg = finalLayouts.desktop.backgroundSvg;
       
       payload.parts = [...parts.map(p => ({ ...p })), hotspotPart];
     } else if (type === 'mcq') {
@@ -4717,7 +5012,9 @@ export default function AdminConsolePage() {
       backgroundSvg,
       arrangeImagesRow,
       commonImageWidth,
-      directImageSelect
+      directImageSelect,
+      JSON.stringify(layouts),
+      activePreviewDevice
     ].join('|');
     
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
@@ -4772,15 +5069,49 @@ export default function AdminConsolePage() {
     }
     
     if (type === 'mcq_hotspot') {
-      const canvasW = canvas?.width || 800;
-      const canvasH = canvas?.height || 465;
-      
-      const serializedHotspots = hotspots.map((hs, idx) => ({
-        optionIndex: idx,
-        x: Math.round((hs.x / 100) * canvasW),
-        y: Math.round((hs.y / 100) * canvasH),
-        width: Math.round((hs.width / 100) * canvasW),
-        height: Math.round((hs.height / 100) * canvasH),
+      const activeConfig = {
+        backgroundImage: backgroundImage || '',
+        backgroundSvg: backgroundSvg || '',
+        canvasWidth: canvas?.width || (activePreviewDevice === 'mobile' ? 360 : 800),
+        canvasHeight: canvas?.height || (activePreviewDevice === 'mobile' ? 640 : 465),
+        hotspots: hotspots
+      };
+
+      const finalLayouts = {
+        desktop: activePreviewDevice === 'desktop' ? activeConfig : (layouts.desktop || {
+          backgroundImage: '',
+          backgroundSvg: '',
+          canvasWidth: 800,
+          canvasHeight: 465,
+          hotspots: []
+        }),
+        mobile: activePreviewDevice === 'mobile' ? activeConfig : (layouts.mobile || {
+          backgroundImage: '',
+          backgroundSvg: '',
+          canvasWidth: 360,
+          canvasHeight: 640,
+          hotspots: []
+        })
+      };
+
+      const serializedDesktopHotspots = finalLayouts.desktop.hotspots.map((hs, idx) => ({
+        optionIndex: hs.optionIndex ?? idx,
+        x: Math.round((hs.x / 100) * finalLayouts.desktop.canvasWidth),
+        y: Math.round((hs.y / 100) * finalLayouts.desktop.canvasHeight),
+        width: Math.round((hs.width / 100) * finalLayouts.desktop.canvasWidth),
+        height: Math.round((hs.height / 100) * finalLayouts.desktop.canvasHeight),
+        label: hs.label,
+        isCircle: hs.isCircle,
+        imageUrl: hs.imageUrl || undefined,
+        id: hs.id || undefined
+      }));
+
+      const serializedMobileHotspots = finalLayouts.mobile.hotspots.map((hs, idx) => ({
+        optionIndex: hs.optionIndex ?? idx,
+        x: Math.round((hs.x / 100) * finalLayouts.mobile.canvasWidth),
+        y: Math.round((hs.y / 100) * finalLayouts.mobile.canvasHeight),
+        width: Math.round((hs.width / 100) * finalLayouts.mobile.canvasWidth),
+        height: Math.round((hs.height / 100) * finalLayouts.mobile.canvasHeight),
         label: hs.label,
         isCircle: hs.isCircle,
         imageUrl: hs.imageUrl || undefined,
@@ -4791,18 +5122,34 @@ export default function AdminConsolePage() {
         ...baseParts,
         {
           type: 'hotspot_canvas',
-          backgroundUrl: backgroundImage || undefined,
-          backgroundSvg: backgroundSvg || undefined,
-          canvasWidth: canvasW,
-          canvasHeight: canvasH,
-          hotspots: serializedHotspots
+          backgroundUrl: finalLayouts.desktop.backgroundImage || undefined,
+          backgroundSvg: finalLayouts.desktop.backgroundSvg || undefined,
+          canvasWidth: finalLayouts.desktop.canvasWidth,
+          canvasHeight: finalLayouts.desktop.canvasHeight,
+          hotspots: serializedDesktopHotspots,
+          layouts: {
+            desktop: {
+              backgroundUrl: finalLayouts.desktop.backgroundImage || undefined,
+              backgroundSvg: finalLayouts.desktop.backgroundSvg || undefined,
+              canvasWidth: finalLayouts.desktop.canvasWidth,
+              canvasHeight: finalLayouts.desktop.canvasHeight,
+              hotspots: serializedDesktopHotspots
+            },
+            mobile: {
+              backgroundUrl: finalLayouts.mobile.backgroundImage || undefined,
+              backgroundSvg: finalLayouts.mobile.backgroundSvg || undefined,
+              canvasWidth: finalLayouts.mobile.canvasWidth,
+              canvasHeight: finalLayouts.mobile.canvasHeight,
+              hotspots: serializedMobileHotspots
+            }
+          }
         }
       ];
 
       return {
         id: uniqueId,
         type: 'mcq',
-        interaction: 'hotspot_select',
+        interaction: isHotspotMultiSelect ? 'hotspot_multi_select' : 'hotspot_select',
         questionText: questionText.trim(),
         parts: mockPartsHotspot,
         audioUrl,
@@ -4812,6 +5159,22 @@ export default function AdminConsolePage() {
         options: hotspots.map((hs, idx) => ({ id: `opt_${idx}`, label: hs.label })),
         answer: hotspots.findIndex(hs => hs.isCorrect),
         correctAnswerIndex: hotspots.findIndex(hs => hs.isCorrect),
+        layouts: {
+          desktop: {
+            backgroundImage: finalLayouts.desktop.backgroundImage || undefined,
+            backgroundSvg: finalLayouts.desktop.backgroundSvg || undefined,
+            canvasWidth: finalLayouts.desktop.canvasWidth,
+            canvasHeight: finalLayouts.desktop.canvasHeight,
+            hotspots: finalLayouts.desktop.hotspots
+          },
+          mobile: {
+            backgroundImage: finalLayouts.mobile.backgroundImage || undefined,
+            backgroundSvg: finalLayouts.mobile.backgroundSvg || undefined,
+            canvasWidth: finalLayouts.mobile.canvasWidth,
+            canvasHeight: finalLayouts.mobile.canvasHeight,
+            hotspots: finalLayouts.mobile.hotspots
+          }
+        },
         solution: {
           sections: explanation.trim() ? explanation.trim().split('\n').map(line => ({ type: 'text', content: line })) : []
         },
@@ -7083,6 +7446,58 @@ export default function AdminConsolePage() {
                                   <span>Transparent Hotspots (hides border / cards, supports clean clipart outlines and outlines on hover/select)</span>
                                 </label>
                               </div>
+                              {/* Layout Tabs (Desktop vs Mobile) */}
+                              <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => switchPreviewDevice('desktop')}
+                                  style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: '2px solid',
+                                    borderColor: activePreviewDevice === 'desktop' ? '#0284c7' : '#cbd5e1',
+                                    backgroundColor: activePreviewDevice === 'desktop' ? '#f0f9ff' : '#ffffff',
+                                    color: activePreviewDevice === 'desktop' ? '#0369a1' : '#64748b',
+                                    fontWeight: '700',
+                                    fontSize: '13px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: activePreviewDevice === 'desktop' ? '0 4px 12px rgba(2, 132, 199, 0.15)' : 'none'
+                                  }}
+                                >
+                                  <span>🖥️</span> Desktop Layout (Landscape)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => switchPreviewDevice('mobile')}
+                                  style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: '2px solid',
+                                    borderColor: activePreviewDevice === 'mobile' ? '#0284c7' : '#cbd5e1',
+                                    backgroundColor: activePreviewDevice === 'mobile' ? '#f0f9ff' : '#ffffff',
+                                    color: activePreviewDevice === 'mobile' ? '#0369a1' : '#64748b',
+                                    fontWeight: '700',
+                                    fontSize: '13px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: activePreviewDevice === 'mobile' ? '0 4px 12px rgba(2, 132, 199, 0.15)' : 'none'
+                                  }}
+                                >
+                                  <span>📱</span> Mobile Layout (Portrait 9:16)
+                                </button>
+                              </div>
+
                               {/* Background Options */}
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
                                 <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
@@ -7218,9 +7633,9 @@ export default function AdminConsolePage() {
                                   style={{
                                     position: 'relative',
                                     width: '100%',
-                                    maxWidth: canvas?.width ? `${canvas.width}px` : '800px',
-                                    aspectRatio: backgroundImage || backgroundSvg ? 'auto' : '16/9',
-                                    minHeight: backgroundImage || backgroundSvg ? 'auto' : '300px',
+                                    maxWidth: canvas?.width ? `${canvas.width}px` : (activePreviewDevice === 'mobile' ? '360px' : '800px'),
+                                    aspectRatio: backgroundImage || backgroundSvg ? 'auto' : (activePreviewDevice === 'mobile' ? '360/640' : '16/9'),
+                                    minHeight: backgroundImage || backgroundSvg ? 'auto' : (activePreviewDevice === 'mobile' ? '450px' : '300px'),
                                     backgroundColor: '#f8fafc',
                                     backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
                                     backgroundSize: '16px 16px',
@@ -7228,7 +7643,8 @@ export default function AdminConsolePage() {
                                     borderRadius: 8,
                                     overflow: 'hidden',
                                     cursor: 'crosshair',
-                                    userSelect: 'none'
+                                    userSelect: 'none',
+                                    margin: '0 auto'
                                   }}
                                 >
                                   {/* Custom SVG Background */}
@@ -7283,8 +7699,7 @@ export default function AdminConsolePage() {
                                           position: 'absolute',
                                           left: `${hs.x}%`,
                                           top: `${hs.y}%`,
-                                          width: hs.imageUrl ? 'auto' : `${hs.width}%`,
-                                          maxWidth: hs.imageUrl ? `${hs.width}%` : undefined,
+                                          width: `${hs.width}%`,
                                           height: `${hs.height}%`,
                                           border: isSelected ? '2.5px solid #0284c7' : '1.5px dashed #0284c7',
                                           backgroundColor: hs.isCorrect 
@@ -7310,7 +7725,7 @@ export default function AdminConsolePage() {
                                       >
                                         {hs.imageUrl ? (
                                           <>
-                                            <img src={hs.imageUrl} alt={hs.label || ''} style={{ height: '100%', width: 'auto', objectFit: 'contain', pointerEvents: 'none', borderRadius: hs.isCircle ? '50%' : '8px', zIndex: 1 }} />
+                                            <img src={hs.imageUrl} alt={hs.label || ''} style={{ height: '100%', width: '100%', objectFit: 'contain', pointerEvents: 'none', borderRadius: hs.isCircle ? '50%' : '8px', zIndex: 1 }} />
                                             {showHotspotLabels && hs.label && (
                                               <span style={{
                                                 position: 'absolute',
