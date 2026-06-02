@@ -1,6 +1,11 @@
 .pageContainer {
     min-height: 100vh;
-    background: #f8fafc;
+    background-image: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337770572-kids_practice_bg.webp');
+    background-color: #e0f2fe;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     padding: 24px;
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
     color: #1e293b;
@@ -442,6 +447,8 @@
 @media (max-width: 760px) {
     .pageContainer {
         padding: 10px;
+        background-image: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337898252-kids_practice_bg_mobile.webp') !important;
+        background-attachment: scroll !important;
     }
 
     .header {
