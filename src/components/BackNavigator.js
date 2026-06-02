@@ -22,7 +22,8 @@ export default function BackNavigator() {
 
   /* ── Derive visibility directly — no async state needed ───────── */
   const isRoot  = ROOT_PATHS.has(pathname);
-  const showBtn = !isRoot;                    // show on every non-home page
+  const isPractice = pathname.startsWith('/practice');
+  const showBtn = !isRoot && !isPractice;                    // show on every non-home/non-practice page
 
   /* ── Navigate back ────────────────────────────────────────────── */
   const goBack = () => {
