@@ -11656,12 +11656,12 @@ Explanation: A question must end with a question mark.`}</pre>
                   {imgDragOver ? 'Drop images here!' : 'Drag & drop images here, or click to browse'}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' }}>
-                  JPEG · PNG · WebP · GIF · AVIF &nbsp;|&nbsp; Max 10 MB per file &nbsp;|&nbsp; Unlimited files
+                  JPEG · PNG · WebP · SVG · GIF · AVIF &nbsp;|&nbsp; Max 10 MB per file &nbsp;|&nbsp; Unlimited files
                 </div>
                 <input
                   ref={imgFileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,image/svg+xml"
                   multiple
                   style={{ display: 'none' }}
                   onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
