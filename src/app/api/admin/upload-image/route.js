@@ -10,6 +10,7 @@ const ALLOWED_TYPES = new Set([
   'image/webp',
   'image/gif',
   'image/avif',
+  'image/svg+xml',
 ]);
 
 const EXT_MAP = {
@@ -19,6 +20,7 @@ const EXT_MAP = {
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/avif': 'avif',
+  'image/svg+xml': 'svg',
 };
 
 const MAX_FILE_SIZE_MB = 10;
@@ -98,8 +100,25 @@ export async function POST(request) {
       let aiTags = { singular: 'item', plural: 'items', article: 'an', category: 'general', tags: ['uploaded-asset'] };
 
       try {
-        dimensions = getImageDimensions(buffer);
-        aiTags = await generateIxlMetadata(buffer, mimeType);
+        if (mimeType === 'image/svg+xml') {
+          const svgText = buffer.toString('utf8');
+          const widthMatch = svgText.match(/width=["'](\d+)(px)?["']/i);
+          const heightMatch = svgText.match(/height=["'](\d+)(px)?["']/i);
+          const viewBoxMatch = svgText.match(/viewBox=["']\d+\s+\d+\s+(\d+)\s+(\d+)["']/i);
+          
+          let w = 512, h = 512;
+          if (widthMatch) w = parseInt(widthMatch[1], 10);
+          if (heightMatch) h = parseInt(heightMatch[1], 10);
+          else if (viewBoxMatch) {
+            w = parseInt(viewBoxMatch[1], 10);
+            h = parseInt(viewBoxMatch[2], 10);
+          }
+          dimensions = { width: w, height: h };
+          aiTags = { singular: 'drawing', plural: 'drawings', article: 'a', category: 'illustrations', tags: ['svg', 'vector'] };
+        } else {
+          dimensions = getImageDimensions(buffer);
+          aiTags = await generateIxlMetadata(buffer, mimeType);
+        }
       } catch (err) {
         console.error('[upload-image] Failed to detect dimensions / run AI tagging:', err);
       }
