@@ -146,7 +146,7 @@ function getOptionLayout(question) {
   if (longest <= 12 && options.length <= 7) {
     return {
       mode: 'compact',
-      columns: options.length <= 4 ? options.length : 4,
+      columns: question?.layoutConfig?.columns || (options.length <= 4 ? options.length : 4),
       justify: 'center',
       buttonMinHeight: 58,
       buttonPadding: '14px 22px',
@@ -334,6 +334,7 @@ export default function MCQRenderer({
   const hasMedia = (question.options || []).some((option) => hasVisualContent(option));
   const gridClassName = getGridClassName(question, optionLayout);
   const gridStyle = getGridStyle(optionLayout);
+  const isVisualAnswerSplit = !isPreK && question?.layoutConfig?.workspace === 'visual_answer_split';
 
   const speechText = getQuestionSpeechText(question);
   const firstPartText = (question.parts?.[0]?.content || question.parts?.[0]?.text || '').trim();
@@ -394,8 +395,17 @@ export default function MCQRenderer({
         </div>
       ) : null}
 
+      <div
+        className={isVisualAnswerSplit ? styles.mcqVisualAnswerSplit : undefined}
+        style={isVisualAnswerSplit ? undefined : { display: 'contents' }}
+        data-workspace-layout={isVisualAnswerSplit ? 'visual_answer_split' : undefined}
+      >
       {Array.isArray(question.parts) && question.parts.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isPreK ? 'center' : 'flex-start', gap: 12, width: '100%' }}>
+        <div
+          className={isVisualAnswerSplit ? styles.mcqSplitVisual : undefined}
+          data-workspace-region={isVisualAnswerSplit ? 'visual' : undefined}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: isPreK ? 'center' : 'flex-start', gap: 12, width: '100%' }}
+        >
           {(() => {
             if (question.arrangeImagesRow) {
               const elements = [];
@@ -547,7 +557,8 @@ export default function MCQRenderer({
         </div>
       ) : (
         <div
-          className={isPreK ? styles.preKOptionsContainer : undefined}
+          className={`${isPreK ? styles.preKOptionsContainer : ''} ${isVisualAnswerSplit ? styles.mcqSplitOptions : ''}`.trim() || undefined}
+          data-workspace-region={isVisualAnswerSplit ? 'answers' : undefined}
         >
 
           <div
@@ -765,6 +776,7 @@ export default function MCQRenderer({
           </div>
         </div>
       )}
+      </div>
     </section>
   );
 }

@@ -21,16 +21,19 @@ export default function LabLayout({
     userAnswer,
     autoSubmit = false,
     setAutoSubmit,
+    onClear,
     practiceLevel = 1,
     levelStreak = 0,
     isSubmitting = false,
     isPreK = false,
     isCorrect = false,
     onNext = null,
-    subject = ''
+    subject = '',
+    activeStudent = 'Alex'
 }) {
     const [isMobile, setIsMobile] = useState(false);
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
+    const [isLearningPathOpen, setIsLearningPathOpen] = useState(true);
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -138,40 +141,70 @@ export default function LabLayout({
                         </button>
                     </header>
                 ) : (
-                    <header className={styles.header}>
-                        <div className={styles.headerLeft}>
-                            <div>
-                                <h1 className={styles.title}>{title}</h1>
-                                <p className={styles.subtitle}>{grade}</p>
+                    <header className={styles.wexlsHeader}>
+                        <div className={styles.wexlsHeaderLeft}>
+                            <button
+                                type="button"
+                                className={styles.wexlsMenuButton}
+                                aria-label={isLearningPathOpen ? 'Hide learning path' : 'Show learning path'}
+                                aria-expanded={isLearningPathOpen}
+                                onClick={() => setIsLearningPathOpen((current) => !current)}
+                            >
+                                <span />
+                                <span />
+                                <span />
+                            </button>
+                            <div className={styles.wexlsLogo}>
+                                <span className={styles.wexlsLogoAccent}>K</span>lassChamp
+                            </div>
+                            <div className={styles.subjectDropdownPill}>
+                                <span>{subject ? subject.charAt(0).toUpperCase() + subject.slice(1) : 'Practice'}</span>
+                                <span aria-hidden="true">⌄</span>
                             </div>
                         </div>
 
-                        <div className={styles.headerControls}>
-                            <div className={styles.difficultyTabs}>
-                                {['adaptive', 'easy', 'medium', 'hard'].map((level) => (
-                                    <button
-                                        key={level}
-                                        onClick={() => setDifficulty(level)}
-                                        className={`${styles.difficultyTab} ${difficulty === level ? styles.difficultyTabActive : ''}`}
-                                    >
-                                        {level}
-                                    </button>
-                                ))}
+                        <div className={styles.wexlsHeaderPills}>
+                            <div className={styles.wexlsHeaderPill}>
+                                <span className={styles.wexlsPillIcon}>🔥</span>
+                                <div className={styles.wexlsPillText}>
+                                    <span className={styles.wexlsPillLabel}>7 DAY STREAK</span>
+                                    <span className={styles.wexlsPillValue}>{levelStreak}</span>
+                                </div>
                             </div>
-                            {setAutoSubmit ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setAutoSubmit((current) => !current)}
-                                    className={`${styles.autoSubmitToggle} ${autoSubmit ? styles.autoSubmitToggleActive : ''}`}
-                                    aria-pressed={autoSubmit}
-                                >
-                                    Auto submit
-                                    <span>{autoSubmit ? 'On' : 'Off'}</span>
-                                </button>
-                            ) : null}
-                            <button onClick={onReset} className={styles.resetButton}>
-                                Reset
-                            </button>
+                            <div className={styles.wexlsHeaderPill}>
+                                <span className={styles.wexlsPillIcon}>⭐</span>
+                                <div className={styles.wexlsPillText}>
+                                    <span className={styles.wexlsPillLabel}>XP</span>
+                                    <span className={styles.wexlsPillValue}>{smartScore * 10}</span>
+                                </div>
+                            </div>
+                            <div className={styles.wexlsHeaderPill}>
+                                <span className={styles.wexlsPillIcon}>🏆</span>
+                                <div className={styles.wexlsPillText}>
+                                    <span className={styles.wexlsPillLabel}>LEVEL</span>
+                                    <span className={styles.wexlsPillValue}>Bronze {practiceLevel}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={styles.wexlsHeaderRight}>
+                            <div className={styles.wexlsLives}>
+                                <span>❤️</span>
+                                <strong>3</strong>
+                                <small>Lives</small>
+                            </div>
+                            <div className={styles.wexlsNotificationBell} aria-label="Notifications">
+                                🔔
+                                <span className={styles.wexlsNotificationDot} />
+                            </div>
+                            <div className={styles.wexlsAvatarBlock}>
+                                <div className={styles.wexlsAvatarFrame}>🧑</div>
+                                <div className={styles.wexlsAvatarInfo}>
+                                    <span className={styles.wexlsAvatarName}>{activeStudent}</span>
+                                    <span className={styles.wexlsAvatarGrade}>Level {practiceLevel}</span>
+                                </div>
+                                <span className={styles.wexlsAvatarChevron}>⌄</span>
+                            </div>
                         </div>
 
                         <div className={styles.mobileStatusBar} aria-label="Practice progress">
@@ -246,26 +279,29 @@ export default function LabLayout({
                         </div>
                     </main>
                 ) : (
-                    <main className={styles.mainGrid}>
+                    <main className={`${styles.mainGrid} ${!isLearningPathOpen ? styles.mainGridLearningPathClosed : ''}`}>
                         {/* Left Sidebar */}
-                        <aside className={styles.mobileHiddenPanel} style={{ display: 'flex', flexDirection: 'column', gap: '24px', order: isMobile ? 2 : 1 }}>
+                        <aside className={`${styles.mobileHiddenPanel} ${styles.standardLeftRail} ${!isLearningPathOpen ? styles.learningPathClosed : ''}`} style={{ order: isMobile ? 2 : 1 }}>
                             {leftPanel}
                         </aside>
 
                         {/* Central Question Card */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', order: isMobile ? 1 : 2 }}>
+                        <div className={styles.workspaceColumn} style={{ order: isMobile ? 1 : 2 }}>
                             
-                            {/* Phase & Progress Card */}
-                            <div className={`${styles.panel} ${styles.progressPanel} ${styles.desktopOnlyPanel}`}>
-                                <div className={styles.levelBadge}>
-                                    <span className={styles.levelLabel}>{getPhaseText(smartScore)}</span>
-                                    <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '16px' }}>{smartScore} / 100</span>
+                            <div className={styles.practiceTopicBar}>
+                                <div className={styles.practiceTopicIdentity}>
+                                    <div className={styles.practiceTopicIcon}>
+                                        {subject === 'science' ? '🧪' : subject === 'english' ? '📖' : '▦'}
+                                    </div>
+                                    <div>
+                                        <p className={styles.practiceTopicBreadcrumb}>{title}</p>
+                                    </div>
                                 </div>
-                                <div className={styles.progressBar}>
-                                    <div 
-                                        className={styles.progressFill} 
-                                        style={{ width: `${smartScore}%` }} 
-                                    />
+                                <div className={styles.practiceModeTabs} aria-label="Practice mode">
+                                    <span className={styles.practiceModeTabActive}>▣ Guided</span>
+                                    <span className={styles.practiceModeTab}>▣ Practice</span>
+                                    <span className={styles.practiceModeTab}>☆ Challenge</span>
+                                    <span className={styles.practiceModeTab}>☆ Mastery</span>
                                 </div>
                             </div>
 
@@ -303,7 +339,10 @@ export default function LabLayout({
                                                             opacity: isSubmitting ? 0.65 : 1,
                                                         }}
                                                     >
-                                                        {isSubmitting ? 'Verifying...' : (question?.submitButtonText || 'Verify Logic')} {!question?.submitButtonText && !isSubmitting && <span style={{ fontSize: '18px' }}>→</span>}
+                                                        {isSubmitting ? 'Checking...' : (question?.submitButtonText || 'Check Answer')} {!question?.submitButtonText && !isSubmitting && <span style={{ fontSize: '18px' }}>✓</span>}
+                                                    </button>
+                                                    <button type="button" onClick={onClear || onReset} className={styles.clearButton}>
+                                                        ↻ Clear
                                                     </button>
                                                 </div>
                                             )}
@@ -311,36 +350,25 @@ export default function LabLayout({
                                     )}
                                 </div>
                             </div>
+
+                            <div className={styles.practiceSupportRow}>
+                                <button type="button" className={styles.practiceSupportButton}>
+                                    <span>💡</span>
+                                    <span><strong>Hint</strong><small>Get a small hint</small></span>
+                                </button>
+                                <button type="button" className={styles.practiceSupportButton}>
+                                    <span>📋</span>
+                                    <span><strong>Step-by-Step</strong><small>Show solution steps</small></span>
+                                </button>
+                                <button type="button" className={styles.practiceSupportButton}>
+                                    <span>💬</span>
+                                    <span><strong>Explain</strong><small>Get concept explanation</small></span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Right Sidebar */}
-                        <aside className={styles.mobileHiddenPanel} style={{ display: 'flex', flexDirection: 'column', gap: '24px', order: 3 }}>
-                            
-                            {/* SmartScore Dashboard */}
-                            <div className={styles.panel} style={{ position: 'relative', overflow: 'hidden' }}>
-                                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#10b981' }} />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                    <span className={styles.panelTitle}>SmartScore</span>
-                                    <div style={{ 
-                                        background: smartScore >= 90 ? '#fef3c7' : '#ecfdf5', 
-                                        padding: '6px 12px', 
-                                        borderRadius: '12px', 
-                                        fontSize: '11px', 
-                                        fontWeight: '900', 
-                                        color: smartScore >= 90 ? '#92400e' : '#065f46',
-                                        textTransform: 'uppercase'
-                                    }}>
-                                        {getStatusText(smartScore)}
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: '48px', fontWeight: '950', color: '#0f172a', marginBottom: '8px', letterSpacing: '-0.04em' }}>
-                                    {smartScore}
-                                </div>
-                                <p style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', lineHeight: '1.5' }}>
-                                    {smartScore >= 100 ? 'Mastery reached. Keep practicing to stay sharp.' : smartScore >= 80 ? 'Proficiency reached. Mastery is the next milestone.' : 'Consistency is key to unlocking Proficient status.'}
-                                </p>
-                            </div>
-
+                        <aside className={`${styles.mobileHiddenPanel} ${styles.standardRightRail}`} style={{ order: 3 }}>
                             {rightPanel}
                         </aside>
                     </main>

@@ -793,6 +793,7 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     initialState: question.initialState,
     interaction: question.interaction,
     layoutMode: question.layoutMode,
+    layoutConfig: question.layoutConfig,
     questionText: question.questionText || question.text || '',
     audioUrl: question.audioUrl,
     voice: question.voice,

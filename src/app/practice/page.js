@@ -974,6 +974,7 @@ function PracticePageContent() {
   const initialLogicType = urlSkill
     || resolveSearchValue(searchParams, 'forcedTask')
     || resolveSearchValue(searchParams, 'logic_type');
+  const isDeveloperUnlockEnabled = resolveSearchValue(searchParams, 'dev') === 'true';
 
 
   const [dbConfigs, setDbConfigs] = useState({});
@@ -1310,8 +1311,12 @@ function PracticePageContent() {
       params.set('forcedTask', nextLogicType);
     }
 
+    if (isDeveloperUnlockEnabled) {
+      params.set('dev', 'true');
+    }
+
     router.replace(`/practice?${params.toString()}`, { scroll: false });
-  }, [router, urlSkill, urlSubject, urlTopic, mergedConfigs]);
+  }, [router, urlSkill, urlSubject, urlTopic, mergedConfigs, isDeveloperUnlockEnabled]);
 
   const fetchQuestion = useCallback(async (resetSession = false, sessionOverride = {}) => {
     const requestId = fetchRequestIdRef.current + 1;
@@ -1547,6 +1552,7 @@ function PracticePageContent() {
       type: question.metadata?.skillId || logicType,
       isCorrect: correct,
       scoreChange: nextMastery.smartScore - smartScore,
+      smartScoreAfter: nextMastery.smartScore,
       timestamp: new Date().toLocaleTimeString(),
     }, ...prev].slice(0, 5));
 
@@ -2133,10 +2139,13 @@ function PracticePageContent() {
     const activeIndex = timelineOptions.findIndex(opt => opt.value === logicType);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div className={styles.panel} style={{ padding: '20px', borderRadius: '24px' }}>
+      <div className={styles.standardLeftPanelStack}>
+        <div className={`${styles.panel} ${styles.learningPathPanel}`} style={{ padding: '20px', borderRadius: '24px' }}>
           <div style={{ fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
             Learning Path
+            {isDeveloperUnlockEnabled ? (
+              <span style={{ marginLeft: 8, color: '#16a34a', fontSize: 9 }}>DEV UNLOCKED</span>
+            ) : null}
           </div>
 
           {/* Styled Topic Select Dropdown */}
@@ -2211,7 +2220,7 @@ function PracticePageContent() {
             {timelineOptions.map((opt, idx) => {
               const isActive = logicType === opt.value;
               const isCompleted = idx < activeIndex;
-              const isLocked = idx > activeIndex;
+              const isLocked = !isDeveloperUnlockEnabled && idx > activeIndex;
 
               return (
                 <div key={opt.value} className={styles.wexlsTimelineItem}>
@@ -2351,13 +2360,26 @@ function PracticePageContent() {
     const incorrect = history.filter(h => !h.isCorrect).length;
     const accuracy = total > 0 ? Math.round((correct / total) * 100) : 100;
 
-    const chartPoints = history.slice(-6).map((h, idx) => {
-      const score = Math.min(100, Math.max(0, h.scoreChange || 0));
-      return { x: idx * 40, y: 50 - (score / 2) };
+    const recentAttempts = history.slice(0, 6).reverse();
+    let visualScore = 50;
+    const attemptScores = recentAttempts.map((attempt) => {
+      visualScore = Math.min(92, Math.max(8, visualScore + (attempt.isCorrect ? 14 : -14)));
+      return visualScore;
     });
-    const dPath = chartPoints.length > 0 
-      ? `M ${chartPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`
-      : 'M 0 25 L 40 20 L 80 30 L 120 15 L 160 35 L 200 10';
+    const chartScores = recentAttempts.length
+      ? [50, ...attemptScores]
+      : [42, 48, 58, 54, 66, 74];
+    const chartPoints = chartScores.map((score, idx) => ({
+      x: 8 + (idx * (184 / Math.max(1, chartScores.length - 1))),
+      y: 46 - (score * 0.42),
+    }));
+    const attemptPoints = recentAttempts.map((attempt, idx) => ({
+      ...chartPoints[idx + 1],
+      isCorrect: attempt.isCorrect,
+    }));
+    const dPath = `M ${chartPoints.map((point) => `${point.x} ${point.y}`).join(' L ')}`;
+    const areaPath = `${dPath} L ${chartPoints[chartPoints.length - 1].x} 48 L ${chartPoints[0].x} 48 Z`;
+    const hasSessionTrend = recentAttempts.length > 0;
 
     const scaledScore = smartScore * 10;
     const nextMilestone = Math.min(1000, Math.ceil((scaledScore + 1) / 100) * 100 || 100);
@@ -2394,22 +2416,33 @@ function PracticePageContent() {
 
           {/* Sparkline Chart with Gradient Fill */}
           <div style={{ height: '60px', width: '100%', marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-            <svg width="100%" height="100%" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <svg width="100%" height="100%" viewBox="0 0 200 50" preserveAspectRatio="none" aria-label="Question performance trend">
               <defs>
                 <linearGradient id="sparklineGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#2563eb" stopOpacity="0.35" />
                   <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              {chartPoints.length > 0 && (
-                <path 
-                  d={`${dPath} L ${chartPoints[chartPoints.length - 1].x} 50 L ${chartPoints[0].x} 50 Z`} 
-                  fill="url(#sparklineGrad)" 
+              <path d={areaPath} fill="url(#sparklineGrad)" />
+              <path
+                d={dPath}
+                fill="none"
+                stroke="#2563eb"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={hasSessionTrend ? undefined : '5 5'}
+              />
+              {attemptPoints.map((point, index) => (
+                <circle
+                  key={index}
+                  cx={point.x}
+                  cy={point.y}
+                  r="3.4"
+                  fill="#ffffff"
+                  stroke={point.isCorrect ? '#16a34a' : '#dc2626'}
+                  strokeWidth="2.4"
                 />
-              )}
-              <path d={dPath} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
-              {chartPoints.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1" />
               ))}
             </svg>
           </div>
@@ -2925,11 +2958,13 @@ function PracticePageContent() {
         userAnswer={userAnswer}
         autoSubmit={autoSubmit}
         setAutoSubmit={setAutoSubmit}
+        onClear={() => setUserAnswer(null)}
         practiceLevel={practiceLevel}
         levelStreak={levelStreak}
         isSubmitting={isSubmitting}
         isCorrect={isCorrect}
         onNext={handleNextQuestion}
+        activeStudent={activeStudent}
       >
         {question ? (
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>

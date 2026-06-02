@@ -15,6 +15,7 @@ function buildBulbSvg(value, config) {
   const majorStep = config.majorStep;
   const minorStep = config.minorStep;
   const unit = config.unit;
+  const maxVisualWidth = config.maxVisualWidth || 160;
   
   const width = 120;
   const topPadding = 40;
@@ -65,7 +66,7 @@ function buildBulbSvg(value, config) {
   `;
   
   return `
-    <svg width="100%" height="auto" viewBox="0 0 ${width + 60} ${height}" style="max-width: 160px; margin: 0 auto; display: block;" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100%" height="auto" viewBox="0 0 ${width + 60} ${height}" style="max-width: ${maxVisualWidth}px; margin: 0 auto; display: block;" xmlns="http://www.w3.org/2000/svg">
       ${bgHtml}
       ${fillHtml}
       ${ticksHtml}
@@ -80,6 +81,7 @@ function buildDialSvg(value, config) {
   const majorStep = config.majorStep;
   const minorStep = config.minorStep;
   const unit = config.unit;
+  const maxVisualWidth = config.maxVisualWidth || 180;
   
   const cx = 100;
   const cy = 100;
@@ -145,7 +147,7 @@ function buildDialSvg(value, config) {
   const unitHtml = `<text x="${cx}" y="${cy + 46}" font-size="22" font-family="sans-serif" font-weight="800" text-anchor="middle" fill="#000000">°${unit}</text>`;
   
   return `
-    <svg width="100%" height="auto" viewBox="0 0 200 200" style="max-width: 180px; margin: 0 auto; display: block;" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100%" height="auto" viewBox="0 0 200 200" style="max-width: ${maxVisualWidth}px; margin: 0 auto; display: block;" xmlns="http://www.w3.org/2000/svg">
       ${outerCircle}
       ${arcPath}
       ${ticksHtml}
@@ -304,12 +306,16 @@ export function generateThermometerQuestion(template = {}, variables = {}) {
     id: questionId,
     type: 'mcq',
     questionText,
+    layoutConfig: {
+      workspace: 'visual_answer_split',
+      columns: 2
+    },
     parts: [
       {
         type: 'svg',
-        content: buildThermometerSvg(value, { min, max, majorStep, minorStep, unit, visualStyle }),
+        content: buildThermometerSvg(value, { min, max, majorStep, minorStep, unit, visualStyle, maxVisualWidth: visualStyle === 'dial' ? 215 : 170 }),
         isVertical: true,
-        style: { margin: '0 auto 20px' }
+        style: { margin: '0 auto', maxWidth: visualStyle === 'dial' ? 235 : 190 }
       }
     ],
     options,
