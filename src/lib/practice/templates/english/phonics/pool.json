@@ -1,0 +1,176 @@
+{
+  "options": [
+    {
+      "id": "b",
+      "label": "b",
+      "phonicsSound": "/b/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "bed",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/svgs/1780391357475-bed-illustration.svg",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-bed.wav"
+        },
+        {
+          "word": "bat",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984418831-bat.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-bat.wav"
+        },
+        {
+          "word": "bag",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984564737-bag.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-bag.wav"
+        },
+        {
+          "word": "box",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984495333-box.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-o-box.wav"
+        },
+        {
+          "word": "bus",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984324739-bus.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-u-bus.wav"
+        }
+      ]
+    },
+    {
+      "id": "d",
+      "label": "d",
+      "phonicsSound": "/d/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "dig",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984500858-dig.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-i-dig.wav"
+        },
+        {
+          "word": "log",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984516996-log.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-o-log.wav"
+        }
+      ]
+    },
+    {
+      "id": "p",
+      "label": "p",
+      "phonicsSound": "/p/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "peg",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779985894769-peg.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-peg.wav"
+        },
+        {
+          "word": "lap",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984556941-lap.jpg",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-lap.wav"
+        },
+        {
+          "word": "cap",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-cap.wav"
+        }
+      ]
+    },
+    {
+      "id": "q",
+      "label": "q",
+      "phonicsSound": "/kw/",
+      "difficultyWeight": 3,
+      "words": [
+        {
+          "word": "quick",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984864867-cap.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-cap.wav"
+        }
+      ]
+    },
+    {
+      "id": "n",
+      "label": "n",
+      "phonicsSound": "/n/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "net",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779983562042-net.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-net.wav"
+        },
+        {
+          "word": "nut",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984518571-nut.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-u-nut.wav"
+        }
+      ]
+    },
+    {
+      "id": "m",
+      "label": "m",
+      "phonicsSound": "/m/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "mud",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984516986-mud.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-u-mud.wav"
+        },
+        {
+          "word": "jam",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984560524-jam.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-a-jam.wav"
+        }
+      ]
+    },
+    {
+      "id": "t",
+      "label": "t",
+      "phonicsSound": "/t/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "ten",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780024152714-ten.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-ten.wav"
+        },
+        {
+          "word": "tub",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984537130-tub.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-u-tub.wav"
+        }
+      ]
+    },
+    {
+      "id": "v",
+      "label": "v",
+      "phonicsSound": "/v/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "vet",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779986385133-vet.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-vet.wav"
+        }
+      ]
+    },
+    {
+      "id": "w",
+      "label": "w",
+      "phonicsSound": "/w/",
+      "difficultyWeight": 1,
+      "words": [
+        {
+          "word": "wet",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984739095-wet.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-e-wet.wav"
+        },
+        {
+          "word": "wig",
+          "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984536845-wig.png",
+          "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/phonics/short-i-wig.wav"
+        }
+      ]
+    }
+  ]
+}

@@ -76,6 +76,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'loc_position_multi',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.assoc_lower_word_begins': {
+    title: 'Match picture to lowercase beginning letter',
+    engine: 'assoc_lower_word_begins',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -145,6 +151,14 @@ export const lkgEnglishMicroSkillRegistry = {
     code: 'EL.11',
     title: 'Starting letter of the object (beginning sound: image-to-letter)',
     grade: 'LKG'
+  },
+  'lkg-english-assoc-lower-word-begins': {
+    templateId: 'lkg.english.assoc_lower_word_begins',
+    code: 'EL.G5',
+    title: 'Match picture to lowercase beginning letter',
+    grade: 'LKG',
+    chapterId: 'english-lkg-consonant-sounds',
+    chapterTitle: 'Consonant Sound Associations'
   },
   'lkg-english-letter-recognition-audio-to-letter': {
     templateId: 'lkg.english.letter_recognition',

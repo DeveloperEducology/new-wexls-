@@ -276,7 +276,8 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
                                    skillId === 'lkg-english-assoc-upper-consonant-bdj' ||
                                    skillId === 'lkg-english-assoc-upper-consonant-flm' ||
                                    skillId === 'lkg-english-assoc-upper-consonant-cgh' ||
-                                   skillId === 'lkg-english-assoc-upper-consonant-review';
+                                   skillId === 'lkg-english-assoc-upper-consonant-review' ||
+                                   skillId === 'lkg-english-assoc-lower-word-begins';
       // Play instruction first
       const t = setTimeout(() => {
         speakText(cleanSpokenText, question?.voice || 'Puck', question?.audioUrl);
@@ -368,7 +369,8 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
                             skillId === 'lkg-english-assoc-upper-consonant-bdj' ||
                             skillId === 'lkg-english-assoc-upper-consonant-flm' ||
                             skillId === 'lkg-english-assoc-upper-consonant-cgh' ||
-                            skillId === 'lkg-english-assoc-upper-consonant-review';
+                            skillId === 'lkg-english-assoc-upper-consonant-review' ||
+                            skillId === 'lkg-english-assoc-lower-word-begins';
 
     return (
       <div className={styles.preKMascotSection}>
@@ -402,7 +404,7 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
             {isAudioToLetter && (question?.soundUrl || question?.soundText) && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '14px 0 4px 0', gap: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#7e22ce', letterSpacing: '0.04em', fontFamily: 'var(--font-outfit), sans-serif', opacity: 0.75 }}>
-                  {skillId === 'lkg-english-word-recognition-same-ending-sound' || skillId === 'lkg-english-assoc-upper-consonant-bdj' || skillId === 'lkg-english-assoc-upper-consonant-flm' || skillId === 'lkg-english-assoc-upper-consonant-cgh' || skillId === 'lkg-english-assoc-upper-consonant-review' ? 'Tap to hear the sound!' : 'Tap to hear the letter!'}
+                  {skillId === 'lkg-english-word-recognition-same-ending-sound' || skillId === 'lkg-english-assoc-upper-consonant-bdj' || skillId === 'lkg-english-assoc-upper-consonant-flm' || skillId === 'lkg-english-assoc-upper-consonant-cgh' || skillId === 'lkg-english-assoc-upper-consonant-review' || skillId === 'lkg-english-assoc-lower-word-begins' ? 'Tap to hear the sound!' : 'Tap to hear the letter!'}
                 </div>
                 <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span className={styles.playSoundPulseRing} />

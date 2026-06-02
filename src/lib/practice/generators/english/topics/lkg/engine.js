@@ -3,6 +3,7 @@ import { lkgEnglishTemplateRegistry, lkgEnglishMicroSkillRegistry } from './regi
 import letterAudios from './letterAudios.json' with { type: 'json' };
 import vocabulary from './vocabulary.json' with { type: 'json' };
 import phonicsImages from './phonicsImages.json' with { type: 'json' };
+import { generate as generatePhonicsAssoc } from '../../../../templates/english/phonics/generator.js';
 
 const { wordPool: WORD_POOL, endingFamilies: ENDING_FAMILIES, sentencesPool: SENTENCES_POOL, wordImages: WORD_IMAGES, spottingWordPool: SPOTTING_WORD_POOL } = vocabulary;
 
@@ -2784,6 +2785,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateLocNextBesideQuestion(skillId, seed, r);
       } else if (template.engine === 'loc_position_multi') {
         question = generateLocPositionMultiQuestion(skillId, seed, r);
+      } else if (template.engine === 'assoc_lower_word_begins') {
+        question = generatePhonicsAssoc({ seed, difficulty: config.difficulty }, config);
       }
 
       if (question) {
