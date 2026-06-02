@@ -2124,24 +2124,178 @@ function PracticePageContent() {
     );
   }
 
-  const leftPanel = (
-    <div className={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h4 className={styles.panelTitle} style={{ margin: 0 }}>{sourceConfig.label}</h4>
-        <div style={{ fontSize: 10, fontWeight: 900, color: '#0f766e', background: '#ccfbf1', borderRadius: 999, padding: '4px 8px' }}>
-          {sourceConfig.badge}
-        </div>
-      </div>
-      <p style={{ margin: '0 0 14px', fontSize: 12, color: '#64748b', fontWeight: 700, lineHeight: 1.5 }}>
-        {sourceConfig.description}
-      </p>
+  const leftPanel = (() => {
+    const activeOpt = sourceConfig.options.find(opt => opt.value === logicType);
+    const activeGroup = activeOpt ? activeOpt.group : (sourceConfig.options[0]?.group || '');
+    const activeGroupOptions = sourceConfig.options.filter(opt => opt.group === activeGroup);
+    
+    const timelineOptions = activeGroupOptions.length > 0 ? activeGroupOptions : sourceConfig.options;
+    const activeIndex = timelineOptions.findIndex(opt => opt.value === logicType);
 
-      {/* Student Profile Switcher */}
-      <div style={{ marginBottom: 18, background: '#f8fafc', padding: 12, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-        <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-          👤 Active Student
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className={styles.panel} style={{ padding: '20px', borderRadius: '24px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
+            Learning Path
+          </div>
+
+          {/* Styled Topic Select Dropdown */}
+          <div style={{ position: 'relative', marginBottom: '24px' }}>
+            {/* Left Subject Icon */}
+            <div style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '32px',
+              height: '32px',
+              background: '#6366f1',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontWeight: '900',
+              fontSize: '18px',
+              pointerEvents: 'none',
+              zIndex: 2
+            }}>
+              {urlSubject === 'english' || sourceConfig.subject === 'english' ? '📖' : (urlSubject === 'science' || sourceConfig.subject === 'science' ? '🧪' : '+')}
+            </div>
+            <select
+              value={sourceKey}
+              onChange={(event) => {
+                const nextSource = event.target.value;
+                const nextConfig = mergedConfigs[nextSource] || mergedConfigs['addition-topic'];
+                const nextLogicType = nextConfig.defaultLogicType;
+                setSourceKey(nextSource);
+                setLogicType(nextLogicType);
+                syncRoute(nextSource, nextLogicType);
+              }}
+              style={{
+                width: '100%',
+                height: '52px',
+                padding: '0 36px 0 52px',
+                borderRadius: '16px',
+                border: '2px solid #e2e8f0',
+                background: '#ffffff',
+                color: '#1e1b4b',
+                fontWeight: 900,
+                fontSize: '14px',
+                appearance: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.02)',
+                fontFamily: 'Outfit, sans-serif'
+              }}
+            >
+              {Object.entries(mergedConfigs).map(([key, config]) => (
+                <option key={key} value={key}>{config.label}</option>
+              ))}
+            </select>
+            {/* Chevron Right Indicator */}
+            <span style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none',
+              color: '#94a3b8',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              zIndex: 2
+            }}>▼</span>
+          </div>
+
+          {/* Timeline representation */}
+          <div className={styles.wexlsTimeline}>
+            {timelineOptions.map((opt, idx) => {
+              const isActive = logicType === opt.value;
+              const isCompleted = idx < activeIndex;
+              const isLocked = idx > activeIndex;
+
+              return (
+                <div key={opt.value} className={styles.wexlsTimelineItem}>
+                  {/* Timeline connector line */}
+                  {idx < timelineOptions.length - 1 && (
+                    <div className={`${styles.wexlsTimelineLine} ${isCompleted ? styles.wexlsTimelineLineCompleted : ''}`} />
+                  )}
+                  {/* Timeline bullet icon */}
+                  {isCompleted ? (
+                    <div className={styles.wexlsTimelineIconCompleted}>✓</div>
+                  ) : isActive ? (
+                    <div className={styles.wexlsTimelineIconActive}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5' }} />
+                    </div>
+                  ) : (
+                    <div className={styles.wexlsTimelineIconLocked}>•</div>
+                  )}
+
+                  <div className={styles.wexlsTimelineContent} style={{ flex: 1 }}>
+                    <button
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => {
+                        setLogicType(opt.value);
+                        syncRoute(sourceKey, opt.value);
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 0,
+                        padding: 0,
+                        textAlign: 'left',
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
+                        width: '100%',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div style={{ minWidth: 0, paddingRight: '8px' }}>
+                        <span className={styles.wexlsTimelineTitle} style={{
+                          color: isActive ? '#4f46e5' : (isLocked ? '#94a3b8' : '#0f172a'),
+                          fontWeight: isActive ? 950 : 800,
+                          fontSize: '13px'
+                        }}>
+                          {opt.label.split(' ').slice(0, 3).join(' ')}
+                        </span>
+                        <span className={styles.wexlsTimelineSubtitle} style={{ 
+                          display: 'block', 
+                          marginTop: '2px', 
+                          color: isLocked ? '#cbd5e1' : '#64748b',
+                          fontSize: '10px'
+                        }}>
+                          {opt.label.split(' ').slice(3).join(' ') || 'practice'}
+                        </span>
+                      </div>
+                      {isLocked && (
+                        <span style={{ fontSize: '11px', color: '#cbd5e1', flexShrink: 0 }}>🔒</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+
+        {/* Daily Goal Widget */}
+        <div className={styles.panel} style={{ padding: '16px 20px', borderRadius: '24px', background: '#ffffff', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '20px' }}>🎯</span>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+              <span style={{ fontSize: '12px', fontWeight: '950', color: '#0f172a', fontFamily: 'Outfit, sans-serif' }}>Daily Goal</span>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#16a34a', marginTop: '1px' }}>20 / 30 min</span>
+            </div>
+            <span style={{ marginLeft: 'auto', fontSize: '24px' }}>🏆</span>
+          </div>
+          <div style={{ height: '8px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden' }}>
+            <div style={{ width: '66.6%', height: '100%', borderRadius: '999px', background: '#22c55e' }} />
+          </div>
+        </div>
+
+        {/* Student switcher (Compact) */}
+        <div style={{ padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <span style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Student</span>
           <select
             value={activeStudent}
             onChange={(event) => {
@@ -2170,401 +2324,421 @@ function PracticePageContent() {
               }
             }}
             style={{
-              flex: 1,
-              padding: '8px 10px',
-              borderRadius: 8,
+              padding: '4px 8px',
+              borderRadius: '8px',
               border: '1px solid #cbd5e1',
               background: '#ffffff',
-              color: '#0f172a',
+              color: '#475569',
               fontWeight: 800,
-              fontSize: 13,
+              fontSize: '11px',
+              maxWidth: '120px',
+              cursor: 'pointer'
             }}
           >
             {studentList.map((student) => (
               <option key={student} value={student}>{student}</option>
             ))}
-            <option value="__custom__">+ Add Custom Student...</option>
+            <option value="__custom__">+ Add Custom...</option>
           </select>
         </div>
       </div>
+    );
+  })();
 
-      <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-        📚 Select Topic
-      </div>
-      <select
-        value={sourceKey}
-        onChange={(event) => {
-          const nextSource = event.target.value;
-          const nextConfig = mergedConfigs[nextSource] || mergedConfigs['addition-topic'];
-          const nextLogicType = nextConfig.defaultLogicType;
-          setSourceKey(nextSource);
-          setLogicType(nextLogicType);
-          syncRoute(nextSource, nextLogicType);
-        }}
-        style={{
-          width: '100%',
-          marginBottom: 18,
-          padding: '10px 12px',
-          borderRadius: 12,
-          border: '1px solid #dbeafe',
-          background: '#ffffff',
-          color: '#0f172a',
-          fontWeight: 800,
-        }}
-      >
-        {Object.entries(mergedConfigs).map(([key, config]) => (
-          <option key={key} value={key}>{config.label}</option>
-        ))}
-      </select>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {Array.from(new Set(sourceConfig.options.map((opt) => opt.group))).map((group) => (
-          <div key={group}>
-            <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-              {group}
+  const rightPanel = (() => {
+    const total = history.length;
+    const correct = history.filter(h => h.isCorrect).length;
+    const incorrect = history.filter(h => !h.isCorrect).length;
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 100;
+
+    const chartPoints = history.slice(-6).map((h, idx) => {
+      const score = Math.min(100, Math.max(0, h.scoreChange || 0));
+      return { x: idx * 40, y: 50 - (score / 2) };
+    });
+    const dPath = chartPoints.length > 0 
+      ? `M ${chartPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`
+      : 'M 0 25 L 40 20 L 80 30 L 120 15 L 160 35 L 200 10';
+
+    const scaledScore = smartScore * 10;
+    const nextMilestone = Math.min(1000, Math.ceil((scaledScore + 1) / 100) * 100 || 100);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Your Progress */}
+        <div className={styles.panel} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', borderRadius: '24px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a', fontFamily: 'Outfit, sans-serif' }}>Your Progress</div>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', height: '110px' }}>
+            <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="8" fill="transparent" />
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="40" 
+                stroke="#2563eb" 
+                strokeWidth="8" 
+                fill="transparent" 
+                strokeDasharray="251.2" 
+                strokeDashoffset={251.2 - (smartScore / 100) * 251.2}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.35s ease' }}
+              />
+            </svg>
+            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: '22px', fontWeight: '950', color: '#0f172a', fontFamily: 'Outfit, sans-serif' }}>{smartScore}%</span>
+              <span style={{ fontSize: '9px', fontWeight: '800', color: '#64748b' }}>Mastery</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {sourceConfig.options.filter((opt) => opt.group === group).map((opt) => {
-                const isActive = logicType === opt.value;
+          </div>
+          <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '750', textAlign: 'center' }}>
+            Keep it up! You're doing great!
+          </p>
 
-                return (
+          {/* Sparkline Chart with Gradient Fill */}
+          <div style={{ height: '60px', width: '100%', marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
+            <svg width="100%" height="100%" viewBox="0 0 200 50" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sparklineGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {chartPoints.length > 0 && (
+                <path 
+                  d={`${dPath} L ${chartPoints[chartPoints.length - 1].x} 50 L ${chartPoints[0].x} 50 Z`} 
+                  fill="url(#sparklineGrad)" 
+                />
+              )}
+              <path d={dPath} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+              {chartPoints.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1" />
+              ))}
+            </svg>
+          </div>
+        </div>
+
+        {/* SmartScore Milestone (Scaled 10x) */}
+        <div className={styles.panel} style={{ padding: '20px', borderRadius: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '18px' }}>✨</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a', fontFamily: 'Outfit, sans-serif' }}>SmartScore</span>
+            </div>
+            <span style={{ fontSize: '24px', fontWeight: '950', color: '#6366f1', fontFamily: 'Outfit, sans-serif' }}>{scaledScore}</span>
+          </div>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px' }}>
+            Next milestone: {nextMilestone}
+          </div>
+          <div style={{ height: '8px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden' }}>
+            <div 
+              style={{ 
+                width: `${(scaledScore % 100)}%`, 
+                height: '100%', 
+                borderRadius: '999px', 
+                background: '#6366f1' 
+              }} 
+            />
+          </div>
+        </div>
+
+        {/* Recent Performance Cards */}
+        <div className={styles.panel} style={{ padding: '20px', borderRadius: '24px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a', marginBottom: '16px', fontFamily: 'Outfit, sans-serif' }}>
+            Recent Performance
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', padding: '10px 14px', borderRadius: '12px', border: '1px solid #dcfce7' }}>
+              <span style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>Correct</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: '#16a34a' }}>{correct} ✔</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', padding: '10px 14px', borderRadius: '12px', border: '1px solid #fee2e2' }}>
+              <span style={{ fontSize: '12px', color: '#991b1b', fontWeight: '800' }}>Incorrect</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: '#dc2626' }}>{incorrect} ✘</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#eff6ff', padding: '10px 14px', borderRadius: '12px', border: '1px solid #dbeafe' }}>
+              <span style={{ fontSize: '12px', color: '#1e40af', fontWeight: '800' }}>Accuracy</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: '#2563eb' }}>{accuracy}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Prerequisites */}
+        {prerequisiteLinks.length ? (
+          <div className={styles.panel} style={{ padding: '20px', borderRadius: '24px' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Prerequisites
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {prerequisiteLinks.map((item) => (
+                item.skillId ? (
                   <button
-                    key={opt.value}
+                    key={item.competencyId}
                     type="button"
                     onClick={() => {
-                      setLogicType(opt.value);
-                      syncRoute(sourceKey, opt.value);
+                      setLogicType(item.skillId);
+                      syncRoute(sourceKey, item.skillId);
                     }}
                     style={{
+                      width: '100%',
                       textAlign: 'left',
-                      padding: '10px 14px',
-                      background: isActive ? '#0f172a' : '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: '#2563eb',
                       borderRadius: 12,
-                      border: '1px solid',
-                      borderColor: isActive ? '#0f172a' : '#e2e8f0',
-                      color: isActive ? '#ffffff' : '#1e293b',
+                      padding: '10px 12px',
                       fontSize: 12,
-                      fontWeight: isActive ? 800 : 650,
+                      fontWeight: 850,
+                      lineHeight: 1.25,
                       cursor: 'pointer',
                     }}
                   >
-                    {opt.label}
+                    {item.label}
                   </button>
-                );
-              })}
+                ) : (
+                  <div
+                    key={item.competencyId}
+                    style={{
+                      border: '1px dashed #cbd5e1',
+                      background: '#ffffff',
+                      color: '#64748b',
+                      borderRadius: 12,
+                      padding: '10px 12px',
+                      fontSize: 12,
+                      fontWeight: 800,
+                      lineHeight: 1.25,
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                )
+              ))}
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  );
+        ) : null}
 
-  const rightPanel = (
-    <>
-      <div style={{ background: '#ffffff', padding: 18, borderRadius: 20, border: '1px solid #dbeafe', marginBottom: 20, boxShadow: '0 12px 28px rgba(15, 23, 42, 0.06)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Level
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 950, color: '#0f172a', lineHeight: 1 }}>
-              {practiceLevel}
-              <span style={{ fontSize: 13, color: '#64748b', marginLeft: 4 }}>/5</span>
-            </div>
+        {/* On-Device Neural TTS Settings */}
+        <div style={{ background: '#ffffff', padding: 18, borderRadius: 20, border: '1px solid #dbeafe', boxShadow: '0 12px 28px rgba(15, 23, 42, 0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 11, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Local Neural TTS
+            </h3>
+            <span style={{ 
+              fontSize: '9px', 
+              fontWeight: '900', 
+              padding: '4px 8px', 
+              borderRadius: '999px',
+              background: clientTtsSupported ? '#ecfdf5' : '#fef2f2',
+              color: clientTtsSupported ? '#059669' : '#dc2626'
+            }}>
+              {clientTtsSupported ? 'Supported' : 'Unsupported'}
+            </span>
           </div>
-          <div style={{ minWidth: 72, textAlign: 'right', color: '#16a34a', fontSize: 12, fontWeight: 900 }}>
-            {levelStreak}/{streakThreshold} correct
-          </div>
-        </div>
-        <div style={{ height: 8, borderRadius: 999, background: '#eef2ff', overflow: 'hidden' }}>
-          <div
-            style={{
-              width: `${Math.min(100, (levelStreak / streakThreshold) * 100)}%`,
-              height: '100%',
-              borderRadius: 999,
-              background: '#4ade80',
-              transition: 'width 220ms ease',
-            }}
-          />
-        </div>
-      </div>
+          
+          {clientTtsSupported ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', fontWeight: '800', color: '#1e293b', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={useClientTts}
+                  onChange={(e) => handleToggleClientTts(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                Synthesize On-Device
+              </label>
 
-      {prerequisiteLinks.length ? (
-        <div style={{ background: '#f8fafc', padding: 18, borderRadius: 20, border: '1px solid #dbeafe', marginBottom: 20 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Prerequisites
+              {useClientTts && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+                      Local Voice Override
+                    </span>
+                    <select
+                      value={localVoiceOverride}
+                      onChange={(e) => handleVoiceOverrideChange(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        borderRadius: 10,
+                        border: '1px solid #dbeafe',
+                        background: '#ffffff',
+                        color: '#0f172a',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="none">No override (Question voice)</option>
+                      <option value="en_US-ryan-medium">Ryan Medium (Male)</option>
+                      <option value="en_US-amy-medium">Amy Medium (Female)</option>
+                      <option value="en_US-joe-medium">Joe Medium (Male)</option>
+                      <option value="en_US-lessac-medium">Lessac Medium (Female)</option>
+                      <option value="en_US-ryan-high">Ryan High (HQ Male)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '750', color: '#475569' }}>
+                        Voice: <code style={{ background: '#e2e8f0', padding: '2px 4px', borderRadius: 4, fontFamily: 'monospace' }}>{activeLocalVoice}</code>
+                      </span>
+                      {isModelCached ? (
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#16a34a' }}>✓ Cached</span>
+                      ) : (
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#d97706' }}>Server Run</span>
+                      )}
+                    </div>
+
+                    {downloadingVoice === activeLocalVoice ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>
+                          <span>Downloading Model...</span>
+                          <span>{downloadProgress}%</span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 999, background: '#cbd5e1', overflow: 'hidden' }}>
+                          <div style={{ width: `${downloadProgress}%`, height: '100%', background: '#3b82f6', borderRadius: 999 }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        {!isModelCached ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadModel(activeLocalVoice)}
+                            style={{
+                              flex: 1,
+                              background: '#2563eb',
+                              color: '#ffffff',
+                              border: 0,
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: '11px',
+                              fontWeight: '900',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            Download Voice (~15MB)
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => speakText("Local speech synthesis test is active and running entirely on your browser.", activeLocalVoice)}
+                              style={{
+                                flex: 2,
+                                background: '#ecfdf5',
+                                color: '#059669',
+                                border: '1px solid #a7f3d0',
+                                borderRadius: 8,
+                                padding: '6px 12px',
+                                fontSize: '11px',
+                                fontWeight: '900',
+                                cursor: 'pointer',
+                                textAlign: 'center'
+                              }}
+                            >
+                              🔊 Test Speech
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteModel(activeLocalVoice)}
+                              title="Delete cached model"
+                              style={{
+                                flex: 1,
+                                background: '#fff1f2',
+                                color: '#e11d48',
+                                border: '1px solid #fecdd3',
+                                borderRadius: 8,
+                                padding: '6px 12px',
+                                fontSize: '11px',
+                                fontWeight: '900',
+                                cursor: 'pointer',
+                                textAlign: 'center'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '600', lineHeight: 1.45 }}>
+              Your browser does not support on-device neural speech synthesis. Speech will run via the Gemini Cloud API.
+            </p>
+          )}
+        </div>
+
+        <div style={{ background: '#ecfeff', padding: 20, borderRadius: 20, border: '1px solid #cffafe' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#155e75', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Architecture
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {prerequisiteLinks.map((item) => (
-              item.skillId ? (
-                <button
-                  key={item.competencyId}
-                  type="button"
-                  onClick={() => {
-                    setLogicType(item.skillId);
-                    syncRoute(sourceKey, item.skillId);
-                  }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    border: '1px solid #dbeafe',
-                    background: '#ffffff',
-                    color: '#2563eb',
-                    borderRadius: 12,
-                    padding: '10px 12px',
-                    fontSize: 12,
-                    fontWeight: 850,
-                    lineHeight: 1.25,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {item.label}
-                </button>
-              ) : (
-                <div
-                  key={item.competencyId}
-                  style={{
-                    border: '1px dashed #cbd5e1',
-                    background: '#ffffff',
-                    color: '#64748b',
-                    borderRadius: 12,
-                    padding: '10px 12px',
-                    fontSize: 12,
-                    fontWeight: 800,
-                    lineHeight: 1.25,
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {item.label}
-                </div>
-              )
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {sourceConfig.tips.map((item) => (
+              <div key={item.label} style={{ background: '#ffffff', padding: 12, borderRadius: 12, color: '#155e75' }}>
+                <div style={{ fontSize: 12, fontWeight: 900 }}>{item.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 650, lineHeight: 1.45 }}>{item.text}</div>
+              </div>
             ))}
           </div>
         </div>
-      ) : null}
 
-      {/* On-Device Neural TTS Settings */}
-      <div style={{ background: '#ffffff', padding: 18, borderRadius: 20, border: '1px solid #dbeafe', marginBottom: 20, boxShadow: '0 12px 28px rgba(15, 23, 42, 0.06)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 11, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Local Neural TTS
+        <div className={styles.darkPanel}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 11, fontWeight: 900, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Session History
           </h3>
-          <span style={{ 
-            fontSize: '9px', 
-            fontWeight: '900', 
-            padding: '4px 8px', 
-            borderRadius: '999px',
-            background: clientTtsSupported ? '#ecfdf5' : '#fef2f2',
-            color: clientTtsSupported ? '#059669' : '#dc2626'
-          }}>
-            {clientTtsSupported ? 'Supported' : 'Unsupported'}
-          </span>
-        </div>
-        
-        {clientTtsSupported ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', fontWeight: '800', color: '#1e293b', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={useClientTts}
-                onChange={(e) => handleToggleClientTts(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: 'pointer' }}
-              />
-              Synthesize On-Device
-            </label>
-
-            {useClientTts && (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
-                    Local Voice Override
-                  </span>
-                  <select
-                    value={localVoiceOverride}
-                    onChange={(e) => handleVoiceOverrideChange(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 10,
-                      border: '1px solid #dbeafe',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '12px',
-                      fontWeight: '800',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="none">No override (Question voice)</option>
-                    <option value="en_US-ryan-medium">Ryan Medium (Male)</option>
-                    <option value="en_US-amy-medium">Amy Medium (Female)</option>
-                    <option value="en_US-joe-medium">Joe Medium (Male)</option>
-                    <option value="en_US-lessac-medium">Lessac Medium (Female)</option>
-                    <option value="en_US-ryan-high">Ryan High (HQ Male)</option>
-                  </select>
-                </div>
-
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '750', color: '#475569' }}>
-                      Voice: <code style={{ background: '#e2e8f0', padding: '2px 4px', borderRadius: 4, fontFamily: 'monospace' }}>{activeLocalVoice}</code>
-                    </span>
-                    {isModelCached ? (
-                      <span style={{ fontSize: '10px', fontWeight: '900', color: '#16a34a' }}>✓ Cached</span>
-                    ) : (
-                      <span style={{ fontSize: '10px', fontWeight: '900', color: '#d97706' }}>Server Run</span>
-                    )}
-                  </div>
-
-                  {downloadingVoice === activeLocalVoice ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>
-                        <span>Downloading Model...</span>
-                        <span>{downloadProgress}%</span>
-                      </div>
-                      <div style={{ height: 6, borderRadius: 999, background: '#cbd5e1', overflow: 'hidden' }}>
-                        <div style={{ width: `${downloadProgress}%`, height: '100%', background: '#3b82f6', borderRadius: 999 }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                      {!isModelCached ? (
-                        <button
-                          type="button"
-                          onClick={() => handleDownloadModel(activeLocalVoice)}
-                          style={{
-                            flex: 1,
-                            background: '#2563eb',
-                            color: '#ffffff',
-                            border: 0,
-                            borderRadius: 8,
-                            padding: '6px 12px',
-                            fontSize: '11px',
-                            fontWeight: '900',
-                            cursor: 'pointer',
-                            textAlign: 'center'
-                          }}
-                        >
-                          Download Voice (~15MB)
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => speakText("Local speech synthesis test is active and running entirely on your browser.", activeLocalVoice)}
-                            style={{
-                              flex: 2,
-                              background: '#ecfdf5',
-                              color: '#059669',
-                              border: '1px solid #a7f3d0',
-                              borderRadius: 8,
-                              padding: '6px 12px',
-                              fontSize: '11px',
-                              fontWeight: '900',
-                              cursor: 'pointer',
-                              textAlign: 'center'
-                            }}
-                          >
-                            🔊 Test Speech
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteModel(activeLocalVoice)}
-                            title="Delete cached model"
-                            style={{
-                              flex: 1,
-                              background: '#fff1f2',
-                              color: '#e11d48',
-                              border: '1px solid #fecdd3',
-                              borderRadius: 8,
-                              padding: '6px 12px',
-                              fontSize: '11px',
-                              fontWeight: '900',
-                              cursor: 'pointer',
-                              textAlign: 'center'
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {history.map((h) => (
+              <div key={`${h.timestamp}-${h.type}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '12px 14px', borderRadius: 12, border: '1px solid #334155' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8' }}>{h.type}</span>
+                <span style={{ fontWeight: 900, color: h.isCorrect ? '#4ade80' : '#f87171', fontSize: 14 }}>
+                  {h.isCorrect ? `+${h.scoreChange}` : h.scoreChange}
+                </span>
+              </div>
+            ))}
+            {history.length === 0 ? (
+              <p style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>No answers yet.</p>
+            ) : null}
           </div>
-        ) : (
-          <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '600', lineHeight: 1.45 }}>
-            Your browser does not support on-device neural speech synthesis. Speech will run via the Gemini Cloud API.
-          </p>
-        )}
-      </div>
-
-      <div style={{ background: '#ecfeff', padding: 20, borderRadius: 20, border: '1px solid #cffafe', marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, color: '#155e75', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Architecture
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {sourceConfig.tips.map((item) => (
-            <div key={item.label} style={{ background: '#ffffff', padding: 12, borderRadius: 12, color: '#155e75' }}>
-              <div style={{ fontSize: 12, fontWeight: 900 }}>{item.label}</div>
-              <div style={{ fontSize: 12, fontWeight: 650, lineHeight: 1.45 }}>{item.text}</div>
-            </div>
-          ))}
         </div>
-      </div>
 
-      <div className={styles.darkPanel}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 11, fontWeight: 900, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Session History
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {history.map((h) => (
-            <div key={`${h.timestamp}-${h.type}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '12px 14px', borderRadius: 12, border: '1px solid #334155' }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8' }}>{h.type}</span>
-              <span style={{ fontWeight: 900, color: h.isCorrect ? '#4ade80' : '#f87171', fontSize: 14 }}>
-                {h.isCorrect ? `+${h.scoreChange}` : h.scoreChange}
-              </span>
-            </div>
-          ))}
-          {history.length === 0 ? (
-            <p style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>No answers yet.</p>
-          ) : null}
-        </div>
+        <details style={{ marginTop: 20 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 900, fontSize: 12, color: '#334155' }}>
+            <span>Question JSON</span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                copyQuestionJson();
+              }}
+              style={{
+                float: 'right',
+                marginTop: -3,
+                border: '1px solid rgba(15, 23, 42, 0.12)',
+                background: jsonCopyStatus === 'Copied' ? '#dcfce7' : '#ffffff',
+                color: jsonCopyStatus === 'Copied' ? '#166534' : '#0f172a',
+                borderRadius: 999,
+                padding: '5px 10px',
+                fontSize: 10,
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)',
+              }}
+            >
+              {jsonCopyStatus}
+            </button>
+          </summary>
+          <pre style={{ marginTop: 10, whiteSpace: 'pre-wrap', fontSize: 11, lineHeight: 1.5, background: '#0f172a', color: '#cbd5e1', padding: 12, borderRadius: 12, maxHeight: 360, overflow: 'auto' }}>
+            {questionJson}
+          </pre>
+        </details>
       </div>
-
-      <details style={{ marginTop: 20 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 900, fontSize: 12, color: '#334155' }}>
-          <span>Question JSON</span>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              copyQuestionJson();
-            }}
-            style={{
-              float: 'right',
-              marginTop: -3,
-              border: '1px solid rgba(15, 23, 42, 0.12)',
-              background: jsonCopyStatus === 'Copied' ? '#dcfce7' : '#ffffff',
-              color: jsonCopyStatus === 'Copied' ? '#166534' : '#0f172a',
-              borderRadius: 999,
-              padding: '5px 10px',
-              fontSize: 10,
-              fontWeight: 900,
-              cursor: 'pointer',
-              boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)',
-            }}
-          >
-            {jsonCopyStatus}
-          </button>
-        </summary>
-        <pre style={{ marginTop: 10, whiteSpace: 'pre-wrap', fontSize: 11, lineHeight: 1.5, background: '#0f172a', color: '#cbd5e1', padding: 12, borderRadius: 12, maxHeight: 360, overflow: 'auto' }}>
-          {questionJson}
-        </pre>
-      </details>
-    </>
-  );
+    );
+  })();
 
   // ── Mastered Overlay Component ────────────────────────────────────────────
   const masteredOverlayEl = masteredOverlay ? (
