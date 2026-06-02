@@ -6532,6 +6532,18 @@ export default function AdminConsolePage() {
                                                 Click to Play Sound
                                               </label>
                                             </div>
+                                            <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 16 }}>
+                                              <input
+                                                type="checkbox"
+                                                id={`part_transparent_${idx}`}
+                                                className={styles.checkboxInput}
+                                                checked={!!part.transparent}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { transparent: e.target.checked })}
+                                              />
+                                              <label htmlFor={`part_transparent_${idx}`} style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                                Transparent
+                                              </label>
+                                            </div>
                                             {directImageSelect && (
                                               <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 16 }}>
                                                 <input
