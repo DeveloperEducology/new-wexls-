@@ -345,6 +345,7 @@ export default function MCQRenderer({
     .join(' ');
   const cleanString = (str) => String(str || '').replace(/\s+/g, ' ').trim();
   const hideHeader = question.questionText && (
+    isPreK ||
     cleanString(firstPartText) === cleanString(question.questionText) ||
     cleanString(combinedPartsText) === cleanString(question.questionText)
   );
