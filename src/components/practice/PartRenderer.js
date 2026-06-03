@@ -657,7 +657,10 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   const commonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
   const isFixedWidth = !!commonImageWidth;
   const widthVal = isFixedWidth ? `clamp(100px, 42vw, ${commonImageWidth}px)` : (inGroup ? 'auto' : '100%');
-  const maxWidthVal = isFixedWidth ? `${commonImageWidth}px` : (inGroup ? 220 : 300);
+  const partMaxWidth = part.maxWidth || part.style?.maxWidth;
+  const maxWidthVal = partMaxWidth 
+    ? (typeof partMaxWidth === 'number' ? `${partMaxWidth}px` : partMaxWidth) 
+    : (isFixedWidth ? `${commonImageWidth}px` : (inGroup ? 220 : 300));
 
   const cardBorder = isSelected 
     ? '4px solid #22c55e' 
@@ -714,6 +717,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         padding: part.transparent ? '0' : '12px',
         boxSizing: 'border-box',
         aspectRatio: part.transparent ? 'auto' : '1.15 / 1',
+        maxHeight: part.maxHeight ? (typeof part.maxHeight === 'number' ? `${part.maxHeight}px` : part.maxHeight) : undefined,
         transition: 'border 0.2s ease, box-shadow 0.2s ease',
       }}
     >
