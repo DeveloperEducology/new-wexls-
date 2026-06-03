@@ -546,6 +546,7 @@ export default function AdminConsolePage() {
   
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [generatingSingleAudio, setGeneratingSingleAudio] = useState(false);
+  const [generatingAudioOptionIdx, setGeneratingAudioOptionIdx] = useState(null);
 
   const [authoringMode, setAuthoringMode] = useState('manual'); // 'manual' | 'paste' | 'import' | 'ai_bulk'
   const [questionStatus, setQuestionStatus] = useState('active');
@@ -5188,6 +5189,43 @@ export default function AdminConsolePage() {
     }
   };
 
+  const handleGenerateAndPlayOptionAudio = async (idx) => {
+    const option = options[idx];
+    if (!option || !option.label || !option.label.trim()) {
+      setAlert({ type: 'error', text: 'Enter option label first to generate TTS audio!' });
+      return;
+    }
+
+    setGeneratingAudioOptionIdx(idx);
+    setAlert({ type: 'info', text: `Generating TTS for "${option.label.trim()}"...` });
+    try {
+      const response = await fetch('/api/admin/generate-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: option.label.trim(),
+          voice: voice || 'Puck'
+        })
+      });
+
+      const data = await response.json();
+      if (data.success && data.audioUrl) {
+        const updated = [...options];
+        updated[idx].audioUrl = data.audioUrl;
+        setOptions(updated);
+        setAlert({ type: 'success', text: `Audio generated and saved upfront for "${option.label.trim()}"!` });
+        handlePlayUrlAudio(`opt_preview_${idx}`, data.audioUrl);
+      } else {
+        throw new Error(data.error || 'TTS generation failed');
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', text: `Audio generation failed: ${err.message}` });
+    } finally {
+      setGeneratingAudioOptionIdx(null);
+    }
+  };
+
   // --- PREVIEW RENDER UTILS ---
   const handleTestPreviewSpeak = () => {
     if (audioUrl) {
@@ -7580,7 +7618,7 @@ export default function AdminConsolePage() {
                                                 </div>
                                               )}
 
-                                              {option.audioUrl && (
+                                              {option.audioUrl ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
                                                   <button
                                                     type="button"
@@ -7608,6 +7646,23 @@ export default function AdminConsolePage() {
                                                     ×
                                                   </button>
                                                 </div>
+                                              ) : (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleGenerateAndPlayOptionAudio(idx)}
+                                                  disabled={generatingAudioOptionIdx === idx}
+                                                  className={styles.iconPlayBtn}
+                                                  style={{
+                                                    width: 42, height: 42, borderRadius: 6,
+                                                    border: '2px dashed #cbd5e1', background: '#f8fafc',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 16, cursor: 'pointer', padding: 0,
+                                                    color: '#64748b', marginRight: 8, flexShrink: 0
+                                                  }}
+                                                  title="Generate & Play Audio"
+                                                >
+                                                  {generatingAudioOptionIdx === idx ? '⏳' : '🎙️'}
+                                                </button>
                                               )}
 
                                               <input 
@@ -7711,7 +7766,7 @@ export default function AdminConsolePage() {
                                                 </div>
                                               )}
 
-                                              {option.audioUrl && (
+                                              {option.audioUrl ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
                                                   <button
                                                     type="button"
@@ -7739,6 +7794,23 @@ export default function AdminConsolePage() {
                                                     ×
                                                   </button>
                                                 </div>
+                                              ) : (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleGenerateAndPlayOptionAudio(idx)}
+                                                  disabled={generatingAudioOptionIdx === idx}
+                                                  className={styles.iconPlayBtn}
+                                                  style={{
+                                                    width: 42, height: 42, borderRadius: 6,
+                                                    border: '2px dashed #cbd5e1', background: '#f8fafc',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 16, cursor: 'pointer', padding: 0,
+                                                    color: '#64748b', marginRight: 8, flexShrink: 0
+                                                  }}
+                                                  title="Generate & Play Audio"
+                                                >
+                                                  {generatingAudioOptionIdx === idx ? '⏳' : '🎙️'}
+                                                </button>
                                               )}
 
                                               <input 

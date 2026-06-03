@@ -501,24 +501,6 @@ export default function LabLayout({
                             <span>🚀 Next Question</span>
                         </button>
                     )}
-
-                    {/* Right Navigation Arrow */}
-                    <button
-                        type="button"
-                        disabled={!isAnswered && (userAnswer === null || isSubmitting || loading)}
-                        onClick={() => {
-                            if (!isAnswered) {
-                                handleSubmit();
-                            } else if (onNext) {
-                                onNext();
-                            }
-                        }}
-                        className={styles.preKBottomArrowBtn}
-                        title={isAnswered ? "Next Question" : "Submit Answer"}
-                        aria-label={isAnswered ? "Next Question" : "Submit Answer"}
-                    >
-                        ▶
-                    </button>
                 </div>
             )}
         </div>

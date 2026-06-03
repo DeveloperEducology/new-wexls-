@@ -643,7 +643,7 @@ export default function MCQRenderer({
                       {selected ? '✓' : ''}
                     </div>
                   )}
-                  {(isPreK || question.metaConfig?.readOptions || question.metaConfig?.readable) ? (
+                  {(!isPreK && (question.metaConfig?.readOptions || question.metaConfig?.readable)) ? (
                     <span
                       role="button"
                       tabIndex={0}
