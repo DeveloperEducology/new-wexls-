@@ -61,9 +61,20 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     }
 
     // Filter remaining candidates from distractorPool
-    const remainingCandidates = distractorPool.filter(
+    let remainingCandidates = distractorPool.filter(
       d => d.id !== targetOption.id && !selectedDistractors.some(sel => sel.id === d.id)
     );
+
+    // Fallback: if we don't have enough distractors, pull candidates from correctPool
+    if (remainingCandidates.length + selectedDistractors.length < neededDistractorCount) {
+      const extraCandidates = correctPool
+        .filter(c => c.id !== targetOption.id && !selectedDistractors.some(sel => sel.id === c.id))
+        .map(c => ({
+          ...c,
+          isDistractorOnly: true // Treat as distractor for this dynamic variant
+        }));
+      remainingCandidates = [...remainingCandidates, ...extraCandidates];
+    }
 
     // Filter candidates by similarity if rule is active
     let filteredCandidates = remainingCandidates;
