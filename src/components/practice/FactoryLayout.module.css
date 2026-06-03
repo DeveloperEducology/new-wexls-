@@ -758,7 +758,7 @@
 
     /* Pre-K Mobile Overrides */
     .preKPageContainer {
-        padding: 8px 4px 120px 4px !important;
+        padding: 8px 4px 96px 4px !important;
         background-image: url('https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780337898252-kids_practice_bg_mobile.webp') !important;
         background-attachment: scroll !important;
     }
@@ -1329,7 +1329,7 @@
     background-position: center center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    padding: 0 0 220px 0;
+    padding: 0 0 72px 0;
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
     color: #1e293b;
     position: relative;
@@ -1398,6 +1398,25 @@
     padding: 0 !important;
     position: relative;
     overflow: visible !important;
+}
+
+.preKQuestionCard .questionBody {
+    min-height: 0;
+}
+
+.preKQuestionCard .questionFocus {
+    gap: 0;
+    margin-bottom: 4px;
+    min-height: 0;
+}
+
+.preKQuestionCard .questionFocus > * {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.preKQuestionCard .questionFocus img {
+    display: block;
 }
 
 .preKQuestionCard h2 strong,
@@ -1661,7 +1680,7 @@
     display: flex;
     align-items: center;
     gap: 0px; /* Overlap handles spacing */
-    margin-bottom: 24px;
+    margin-bottom: 8px;
     width: 100%;
     position: relative;
     box-sizing: border-box;
@@ -2378,7 +2397,7 @@
     grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
     gap: 12px;
     width: 100%;
-    margin-top: 10px;
+    margin-top: 6px;
     justify-content: center;
 }
 
@@ -2457,7 +2476,7 @@
     align-items: center;
     gap: 16px;
     max-width: 720px;
-    margin: 10px auto;
+    margin: 6px auto 0;
     width: 100%;
 }
 
@@ -2487,7 +2506,7 @@
     width: calc(100% - 32px);
     max-width: 820px;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     gap: 16px;
     z-index: 110;

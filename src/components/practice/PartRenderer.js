@@ -603,11 +603,16 @@ function drawInteractiveBalanceScaleSVG({ leftWeight, rightWeight, leftLabel = '
 
 
 function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAnswered, partIndex }) {
-  const isPreK = typeof window !== 'undefined' && 
-    (window.location.search.toLowerCase().includes('topic=lkg') || 
-     window.location.search.toLowerCase().includes('topic=ukg') || 
-     window.location.search.toLowerCase().includes('topic=pre-k') || 
-     window.location.search.toLowerCase().includes('topic=prek'));
+  const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
+  const questionTopic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
+  const questionGrade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+  const questionSkillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
+  const isPreK = [routeSearch, questionTopic, questionGrade, questionSkillId].some((value) => (
+    value.includes('lkg') ||
+    value.includes('ukg') ||
+    value.includes('pre-k') ||
+    value.includes('prek')
+  ));
 
   const src = part.imageUrl || part.src || part.content || null;
   if (!src) {
@@ -654,13 +659,27 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
     speakText(spokenText, question?.voice || part.voice || 'Puck', part.audioUrl);
   };
 
-  const commonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
-  const isFixedWidth = !!commonImageWidth;
-  const widthVal = isFixedWidth ? `clamp(100px, 42vw, ${commonImageWidth}px)` : (inGroup ? 'auto' : '100%');
+  const toPixelNumber = (value) => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  };
+
+  const rawCommonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
   const partMaxWidth = part.maxWidth || part.style?.maxWidth;
+  const commonImageWidth = isPreK
+    ? Math.min(Math.max(toPixelNumber(rawCommonImageWidth), toPixelNumber(partMaxWidth), 260), 360)
+    : rawCommonImageWidth;
+  const isFixedWidth = !!commonImageWidth;
+  const widthVal = isFixedWidth
+    ? `clamp(${isPreK ? 180 : 100}px, ${isPreK ? 36 : 42}vw, ${commonImageWidth}px)`
+    : (inGroup ? 'auto' : '100%');
   const maxWidthVal = partMaxWidth 
     ? (typeof partMaxWidth === 'number' ? `${partMaxWidth}px` : partMaxWidth) 
-    : (isFixedWidth ? `${commonImageWidth}px` : (inGroup ? 220 : 300));
+    : (isFixedWidth ? `${commonImageWidth}px` : (inGroup ? 220 : (isPreK ? 320 : 300)));
 
   const cardBorder = isSelected 
     ? '4px solid #22c55e' 
@@ -800,16 +819,18 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
       style={{
         width: widthVal,
         maxWidth: maxWidthVal,
-        flex: isFixedWidth ? `0 1 ${part.commonImageWidth}px` : (inGroup ? '0 0 auto' : 'initial'),
+        flex: isFixedWidth ? `0 1 ${commonImageWidth}px` : (inGroup ? '0 0 auto' : 'initial'),
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: isPreK ? 'flex-start' : 'center',
         cursor: (isDirectSelect && !isAnswered) ? 'pointer' : (canPlaySound ? 'pointer' : 'default'),
         position: 'relative',
+        margin: isPreK ? '0 auto' : undefined,
         transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
         transform: cardTransform,
         ...(part.style || {}),
+        ...(isPreK ? { flex: '0 0 auto', height: 'auto', minHeight: 'auto' } : {}),
       }}
     >
       {showSpeakerOnLeft ? (

@@ -353,7 +353,7 @@ export default function MCQRenderer({
   const showInlineSpeaker = !showHeaderSpeaker;
 
   return (
-    <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: isPreK ? 4 : 14 }}>
       {question.questionText && !hideHeader ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
@@ -405,7 +405,7 @@ export default function MCQRenderer({
         <div
           className={isVisualAnswerSplit ? styles.mcqSplitVisual : undefined}
           data-workspace-region={isVisualAnswerSplit ? 'visual' : undefined}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: isPreK ? 'center' : 'flex-start', gap: 12, width: '100%' }}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: isPreK ? 'center' : 'flex-start', gap: isPreK ? 4 : 12, width: '100%' }}
         >
           {(() => {
             if (question.arrangeImagesRow) {
