@@ -49,6 +49,7 @@ export function buildGroupsFromDbTopic(topicNode) {
   const chapterGroups = children
     .filter((child) => child.type === 'chapter')
     .map((chapter) => ({
+      id: chapter.id,
       title: groupTitleForNode(chapter),
       skills: collectSkillNodes(chapter).map(dbSkillTuple),
     }))
@@ -57,6 +58,7 @@ export function buildGroupsFromDbTopic(topicNode) {
   const directSkills = children.filter((child) => child.type === 'skill');
   if (directSkills.length) {
     chapterGroups.unshift({
+      id: `${topicNode.id}-direct-skills`,
       title: 'Skills',
       skills: directSkills.map(dbSkillTuple),
     });
@@ -142,8 +144,8 @@ export function getStandardizedGrade(title, topicId) {
   const t = title.toLowerCase();
   const id = (topicId || '').toLowerCase();
   
-  if (id === 'lkg' || t.includes('lkg') || t.includes('lower kindergarten')) return 'LKG';
-  if (id === 'ukg' || t.includes('ukg') || t.includes('upper kindergarten')) return 'UKG';
+  if (id === 'lkg' || id.includes('lkg') || t.includes('lkg') || t.includes('lower kindergarten')) return 'LKG';
+  if (id === 'ukg' || id.includes('ukg') || t.includes('ukg') || t.includes('upper kindergarten')) return 'UKG';
   
   if (t.includes('remediation')) return 'Remediation';
   if (t.includes('pre-k') || t.includes('prek') || id === 'prek') return 'Pre-K';

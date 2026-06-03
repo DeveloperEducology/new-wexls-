@@ -205,9 +205,18 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
       $and: [
         buildSkillFilter({ subject, topic, skill }),
         activeStatusFilter(),
-        ...(Object.keys(difficultyFilter).length ? [difficultyFilter] : []),
       ],
     };
+
+    if (Object.keys(difficultyFilter).length > 0) {
+      query.$and.push({
+        $or: [
+          { type: 'dynamic_pool' },
+          { type: 'pool' },
+          difficultyFilter,
+        ],
+      });
+    }
 
     const candidates = await collection
       .find(query)

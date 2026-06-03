@@ -76,8 +76,8 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
         </p>
         <div className="skill-columns">
           {selected.groups?.length ? (
-            selected.groups.map((group) => (
-              <section key={group.title} className="skill-column">
+            selected.groups.map((group, index) => (
+              <section key={group.id || `${group.title}-${index}`} className="skill-column">
                 <h2>{group.title}</h2>
                 <ol>
                   {group.skills.map(([code, name, skill]) => (

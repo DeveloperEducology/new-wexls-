@@ -1,9 +1,11 @@
 import { findStoredPracticeQuestion } from './questionRepository.js';
+import { generateFromDynamicPool } from '../engine/DynamicPoolGenerator.js';
 
 function buildTemplateFromQuestion(question, { skill }) {
+  const resolvedSkill = Array.isArray(skill) ? skill[0] : skill;
   return {
-    logicType: question.metadata?.logicType || question.metadata?.skillId || skill,
-    logic_type: question.metadata?.logicType || question.metadata?.skillId || skill,
+    logicType: question.metadata?.logicType || question.metadata?.skillId || resolvedSkill,
+    logic_type: question.metadata?.logicType || question.metadata?.skillId || resolvedSkill,
     templateId: question.metadata?.templateId,
     engine: question.metadata?.engine,
     resolved: question.resolvedConfig,
@@ -18,6 +20,8 @@ export async function resolveStoredPracticePayload({
   difficulty,
   seed,
   source,
+  history = {},
+  grade = 'lkg',
 }) {
   if (source === 'generator') return null;
 
@@ -31,6 +35,29 @@ export async function resolveStoredPracticePayload({
 
   if (!question) return null;
 
+  if (question.type === 'dynamic_pool') {
+    const resolvedSkill = Array.isArray(skill) ? skill[0] : skill;
+    try {
+      const generatedQuestion = generateFromDynamicPool(
+        question,
+        seed,
+        difficulty,
+        history,
+        grade
+      );
+      return {
+        success: true,
+        source: 'mongodb',
+        question: generatedQuestion,
+        seed,
+        template: buildTemplateFromQuestion(generatedQuestion, { skill: resolvedSkill }),
+      };
+    } catch (err) {
+      console.error(`[DynamicPool] Failed to generate question for skill ${resolvedSkill}:`, err);
+      return null;
+    }
+  }
+
   return {
     success: true,
     source: 'mongodb',
@@ -39,3 +66,4 @@ export async function resolveStoredPracticePayload({
     template: buildTemplateFromQuestion(question, { skill }),
   };
 }
+

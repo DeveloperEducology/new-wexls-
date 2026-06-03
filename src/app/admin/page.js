@@ -439,6 +439,7 @@ export default function AdminConsolePage() {
   const [qSearch, setQSearch] = useState('');
   const [qSubject, setQSubject] = useState('');
   const [qTopic, setQTopic] = useState('');
+  const [qSkillId, setQSkillId] = useState('');
   const [qType, setQType] = useState('all');
   const [qAudioStatus, setQAudioStatus] = useState('all'); // 'all' | 'withAudio' | 'missingAudio'
   const [qPage, setQPage] = useState(1);
@@ -498,6 +499,12 @@ export default function AdminConsolePage() {
   const [arrangeImagesRow, setArrangeImagesRow] = useState(false);
   const [commonImageWidth, setCommonImageWidth] = useState(180);
   const [directImageSelect, setDirectImageSelect] = useState(false);
+  const [hideOptionImages, setHideOptionImages] = useState(false);
+  const [difficultyRules, setDifficultyRules] = useState({
+    easy: { optionCount: 2, distractorSimilarity: 'low', showLabels: true },
+    medium: { optionCount: 4, distractorSimilarity: 'medium', showLabels: true },
+    hard: { optionCount: 6, distractorSimilarity: 'high', showLabels: false }
+  });
 
   // Categorization state
   const [categories, setCategories] = useState([
@@ -1228,6 +1235,7 @@ export default function AdminConsolePage() {
   useEffect(() => {
     setCloneSkillId('');
     setCustomCloneSkillId('');
+    setQSkillId('');
   }, [qSubject, qTopic]);
 
   const [selectedLinkSubject, setSelectedLinkSubject] = useState('');
@@ -1917,6 +1925,7 @@ export default function AdminConsolePage() {
         search: qSearch,
         subject: qSubject,
         topic: qTopic,
+        skillId: qSkillId,
         type: qType === 'all' ? '' : qType,
         audioStatus: qAudioStatus,
         page: qPage.toString(),
@@ -1939,7 +1948,7 @@ export default function AdminConsolePage() {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [qSearch, qSubject, qTopic, qType, qAudioStatus, qPage]);
+  }, [qSearch, qSubject, qTopic, qSkillId, qType, qAudioStatus, qPage]);
 
   const handleCloneRandomQuestions = async () => {
     if (!qSubject || !qTopic) {
@@ -2015,6 +2024,8 @@ export default function AdminConsolePage() {
   useEffect(() => {
     if (activeTab === 'library') {
       fetchQuestions();
+      loadCurrTree();
+      loadTemplatesCatalog();
     } else if (activeTab === 'cache') {
       fetchCacheItems();
     } else if (activeTab === 'curriculum' || activeTab === 'authoring') {
@@ -2047,7 +2058,7 @@ export default function AdminConsolePage() {
   // Reset library page on filter changes
   useEffect(() => {
     setQPage(1);
-  }, [qSearch, qSubject, qTopic, qType, qAudioStatus]);
+  }, [qSearch, qSubject, qTopic, qSkillId, qType, qAudioStatus]);
 
   // Reset cache page on search change
   useEffect(() => {
@@ -2239,7 +2250,8 @@ export default function AdminConsolePage() {
 
   // --- AUTHORING FORM UTILS ---
   const addOption = () => {
-    if (options.length >= 8) return;
+    const maxOptions = type === 'dynamic_pool' ? 100 : 8;
+    if (options.length >= maxOptions) return;
     setOptions([...options, { label: `Option ${options.length + 1}`, isCorrect: false }]);
   };
 
@@ -2263,6 +2275,42 @@ export default function AdminConsolePage() {
   const updateOptionHideLabel = (idx, hide) => {
     const updated = [...options];
     updated[idx].hideLabel = hide;
+    setOptions(updated);
+  };
+
+  const updateOptionDistractors = (idx, val) => {
+    const updated = [...options];
+    updated[idx].distractors = val;
+    setOptions(updated);
+  };
+
+  const addCorrectOption = () => {
+    const maxOptions = type === 'dynamic_pool' ? 100 : 8;
+    if (options.length >= maxOptions) return;
+    setOptions([...options, { label: `Target ${options.filter(o => !o.isDistractorOnly).length + 1}`, isCorrect: false, isDistractorOnly: false, misconceptionType: 'general_confusion', similarity: 'medium', explanation: '' }]);
+  };
+
+  const addDistractorOption = () => {
+    const maxOptions = type === 'dynamic_pool' ? 100 : 8;
+    if (options.length >= maxOptions) return;
+    setOptions([...options, { label: `Distractor ${options.filter(o => o.isDistractorOnly).length + 1}`, isCorrect: false, isDistractorOnly: true, misconceptionType: 'general_confusion', similarity: 'medium', explanation: '' }]);
+  };
+
+  const updateOptionExplanation = (idx, val) => {
+    const updated = [...options];
+    updated[idx].explanation = val;
+    setOptions(updated);
+  };
+
+  const updateOptionMisconception = (idx, val) => {
+    const updated = [...options];
+    updated[idx].misconceptionType = val;
+    setOptions(updated);
+  };
+
+  const updateOptionSimilarity = (idx, val) => {
+    const updated = [...options];
+    updated[idx].similarity = val;
     setOptions(updated);
   };
 
@@ -3120,6 +3168,7 @@ export default function AdminConsolePage() {
     setArrangeImagesRow(false);
     setCommonImageWidth(180);
     setDirectImageSelect(false);
+    setHideOptionImages(false);
     setCategories([
       { id: 'cat_1', label: 'Category 1' },
       { id: 'cat_2', label: 'Category 2' }
@@ -3191,6 +3240,7 @@ export default function AdminConsolePage() {
     setArrangeImagesRow(false);
     setCommonImageWidth(180);
     setDirectImageSelect(false);
+    setHideOptionImages(false);
     setCategories([]);
     setCategorizationItems([]);
     setFibAnswers({});
@@ -3500,6 +3550,7 @@ export default function AdminConsolePage() {
     setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
     setCommonImageWidth(q.commonImageWidth || q.metadata?.commonImageWidth || 180);
     setDirectImageSelect(Boolean(q.directImageSelect || q.interaction === 'direct_image_select' || q.metadata?.directImageSelect));
+    setHideOptionImages(Boolean(q.hideOptionImages || q.metadata?.hideOptionImages));
 
     // Extract parts or default to first question text part
     if (loadedParts.length > 0) {
@@ -3510,15 +3561,70 @@ export default function AdminConsolePage() {
       ]);
     }
 
-    // Parse options
-    if (q.options && Array.isArray(q.options)) {
+    // Parse options & pools
+    if (q.pools) {
+      const correctPool = q.pools.correctPool || [];
+      const distractorPool = q.pools.distractorPool || [];
+      
+      const loadedOptions = [
+        ...correctPool.map(opt => ({
+          label: opt.label || '',
+          isCorrect: false,
+          imageUrl: opt.imageUrl || '',
+          audioUrl: opt.audioUrl || '',
+          explanation: opt.explanation || '',
+          isDistractorOnly: false,
+          misconceptionType: 'general_confusion',
+          similarity: 'medium'
+        })),
+        ...distractorPool.map(opt => ({
+          label: opt.label || '',
+          isCorrect: false,
+          imageUrl: opt.imageUrl || '',
+          audioUrl: opt.audioUrl || '',
+          explanation: '',
+          isDistractorOnly: true,
+          misconceptionType: opt.misconceptionType || 'general_confusion',
+          similarity: opt.similarity || 'medium'
+        }))
+      ];
+      setOptions(loadedOptions.length > 0 ? loadedOptions : [
+        { label: '', isCorrect: false, isDistractorOnly: false },
+        { label: '', isCorrect: false, isDistractorOnly: true }
+      ]);
+      
+      if (q.difficultyRules) {
+        setDifficultyRules({
+          easy: {
+            optionCount: q.difficultyRules.easy?.optionCount || 2,
+            distractorSimilarity: q.difficultyRules.easy?.distractorSimilarity || 'low',
+            showLabels: q.difficultyRules.easy?.showLabels !== false
+          },
+          medium: {
+            optionCount: q.difficultyRules.medium?.optionCount || 4,
+            distractorSimilarity: q.difficultyRules.medium?.distractorSimilarity || 'medium',
+            showLabels: q.difficultyRules.medium?.showLabels !== false
+          },
+          hard: {
+            optionCount: q.difficultyRules.hard?.optionCount || 6,
+            distractorSimilarity: q.difficultyRules.hard?.distractorSimilarity || 'high',
+            showLabels: q.difficultyRules.hard?.showLabels !== false
+          }
+        });
+      }
+    } else if (q.options && Array.isArray(q.options)) {
       const correctIdx = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.answer;
       setOptions(q.options.map((opt, idx) => ({
         label: opt.label || '',
         isCorrect: idx === correctIdx || opt.isCorrect || false,
         imageUrl: opt.imageUrl || '',
         hideLabel: !!opt.hideLabel,
-        audioUrl: opt.audioUrl || ''
+        audioUrl: opt.audioUrl || '',
+        distractors: Array.isArray(opt.distractors) ? opt.distractors.join(', ') : (opt.distractors || ''),
+        isDistractorOnly: Boolean(opt.isDistractorOnly),
+        misconceptionType: opt.misconceptionType || 'general_confusion',
+        similarity: opt.similarity || 'medium',
+        explanation: opt.explanation || ''
       })));
     } else {
       setOptions([
@@ -3702,6 +3808,8 @@ export default function AdminConsolePage() {
     let parsedCorrect = '';
     let parsedExplanation = '';
     let parsedDifficulty = '';
+    let parsedType = '';
+    let hasMarkers = false;
     
     let currentSection = 'question';
     
@@ -3733,12 +3841,18 @@ export default function AdminConsolePage() {
         const offset = lowerLine.indexOf(':') + 1;
         parsedDifficulty = line.substring(offset).trim();
         continue;
+      } else if (lowerLine.startsWith('type:') || lowerLine.startsWith('format:')) {
+        currentSection = 'type';
+        const offset = lowerLine.indexOf(':') + 1;
+        parsedType = line.substring(offset).trim();
+        continue;
       }
       
       if (currentSection === 'question') {
         const optMatch = line.match(/^([A-Da-d0-9])[\.\)\-]\s+(.*)/);
         if (optMatch) {
           currentSection = 'options';
+          hasMarkers = true;
           parsedOptions.push({
             label: optMatch[2].trim(),
             isCorrect: false
@@ -3749,12 +3863,13 @@ export default function AdminConsolePage() {
       } else if (currentSection === 'options') {
         const optMatch = line.match(/^([A-Ha-h0-9])[\.\)\-]\s+(.*)/);
         if (optMatch) {
+          hasMarkers = true;
           parsedOptions.push({
             label: optMatch[2].trim(),
             isCorrect: false
           });
         } else {
-          if (parsedOptions.length > 0) {
+          if (hasMarkers && parsedOptions.length > 0) {
             parsedOptions[parsedOptions.length - 1].label += ' ' + line;
           } else {
             parsedOptions.push({ label: line, isCorrect: false });
@@ -3766,6 +3881,8 @@ export default function AdminConsolePage() {
         parsedExplanation += (parsedExplanation ? '\n' : '') + line;
       } else if (currentSection === 'difficulty') {
         parsedDifficulty += (parsedDifficulty ? ' ' : '') + line;
+      } else if (currentSection === 'type') {
+        parsedType += (parsedType ? ' ' : '') + line;
       }
     }
     
@@ -3802,7 +3919,19 @@ export default function AdminConsolePage() {
       explanation: parsedExplanation.trim(),
       difficulty: normDiff,
       correctAnswerIndex: finalCorrectIndex,
-      type: parsedOptions.length > 0 ? 'mcq' : 'fillInTheBlank'
+      type: (() => {
+        const cleanType = parsedType.trim().toLowerCase();
+        if (cleanType === 'dynamic_pool' || cleanType === 'dynamic-pool' || cleanType === 'pool') {
+          return 'dynamic_pool';
+        }
+        if (cleanType === 'mcq' || cleanType === 'multiplechoice' || cleanType === 'multiple choice') {
+          return 'mcq';
+        }
+        if (cleanType === 'fib' || cleanType === 'fillintheblank' || cleanType === 'fill_in_the_blank') {
+          return 'fillInTheBlank';
+        }
+        return parsedOptions.length > 0 ? 'mcq' : 'fillInTheBlank';
+      })()
     };
   };
 
@@ -3827,7 +3956,7 @@ export default function AdminConsolePage() {
         setDifficulty(result.difficulty);
       }
       
-      if (result.type === 'mcq') {
+      if (result.type === 'mcq' || result.type === 'dynamic_pool') {
         setOptions(result.options);
         if (result.correctAnswerIndex !== -1) {
           setCorrectAnswer(result.options[result.correctAnswerIndex].label);
@@ -4068,7 +4197,8 @@ export default function AdminConsolePage() {
   const handleOptionKeyDown = (e, idx) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (options.length < 8) {
+      const maxOptions = type === 'dynamic_pool' ? 100 : 8;
+      if (options.length < maxOptions) {
         const newOptions = [...options];
         newOptions.splice(idx + 1, 0, { label: '', isCorrect: false });
         setOptions(newOptions);
@@ -4259,6 +4389,7 @@ export default function AdminConsolePage() {
           sourceTray,
           cardStyle,
           hideItemLabels,
+          hideOptionImages,
           timestamp: Date.now()
         };
         localStorage.setItem('curriculum_authoring_draft', JSON.stringify(draft));
@@ -4275,7 +4406,7 @@ export default function AdminConsolePage() {
     options, correctAnswer, fibAnswers, teacherNotes, tags, estimatedGrade, timeEstimate,
     sourceMapping, parts, categories, categorizationItems,
     layoutMode, interaction, targets, backgroundImage, canvas, behavior, sourceTray,
-    cardStyle, hideItemLabels
+    cardStyle, hideItemLabels, hideOptionImages
   ]);
 
   const handleLoadDraft = () => {
@@ -4362,6 +4493,7 @@ export default function AdminConsolePage() {
       setSourceTray(draft.sourceTray || null);
       setCardStyle(draft.cardStyle || '');
       setHideItemLabels(Boolean(draft.hideItemLabels));
+      setHideOptionImages(Boolean(draft.hideOptionImages));
       
       setIsDirty(true);
       setAutosaveStatus('● Draft restored');
@@ -4589,6 +4721,43 @@ export default function AdminConsolePage() {
         payload.answer = correctIdx;
         payload.parts = parts.map(p => ({ ...p }));
       }
+    } else if (type === 'dynamic_pool') {
+      payload.hideOptionImages = hideOptionImages;
+      payload.metadata.hideOptionImages = hideOptionImages;
+      
+      const correctPool = options
+        .filter(opt => !opt.isDistractorOnly)
+        .map((opt, idx) => ({
+          id: opt.id || opt.label.replace(/\s+/g, '_').toLowerCase().trim(),
+          label: opt.label.trim(),
+          imageUrl: opt.imageUrl || undefined,
+          audioUrl: opt.audioUrl || undefined,
+          explanation: opt.explanation?.trim() || undefined
+        }));
+
+      const distractorPool = options
+        .filter(opt => opt.isDistractorOnly)
+        .map((opt, idx) => ({
+          id: opt.id || opt.label.replace(/\s+/g, '_').toLowerCase().trim(),
+          label: opt.label.trim(),
+          imageUrl: opt.imageUrl || undefined,
+          audioUrl: opt.audioUrl || undefined,
+          misconceptionType: opt.misconceptionType || 'general_confusion',
+          similarity: opt.similarity || 'medium'
+        }));
+
+      payload.pools = {
+        correctPool,
+        distractorPool
+      };
+
+      payload.difficultyRules = difficultyRules;
+      payload.metadata.pools = payload.pools;
+      payload.metadata.difficultyRules = difficultyRules;
+
+      payload.correctAnswerIndex = undefined;
+      payload.answer = undefined;
+      payload.parts = parts.map(p => ({ ...p }));
     } else if (type === 'categorizationv2' || type === 'categorization') {
       payload.options = [];
       const itemMapping = {};
@@ -4793,6 +4962,16 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: 'Validation Error: Please select one option as the Correct Answer.' });
         return;
       }
+    } else if (type === 'dynamic_pool') {
+      if (options.length < 2) {
+        setAlert({ type: 'error', text: 'Validation Error: Dynamic Option Pool must have at least 2 options.' });
+        return;
+      }
+      const hasEmptyLabel = options.some(opt => !opt.label.trim());
+      if (hasEmptyLabel) {
+        setAlert({ type: 'error', text: 'Validation Error: All Dynamic Option Pool options must have a text label.' });
+        return;
+      }
     } else if (type === 'mcq_hotspot') {
       if (hotspots.length < 2) {
         setAlert({ type: 'error', text: 'Validation Error: Hotspot MCQ must have at least 2 hotspots.' });
@@ -4891,14 +5070,48 @@ export default function AdminConsolePage() {
         
         setAudioUrl(savedQ.audioUrl || '');
 
-        if (savedQ.options && Array.isArray(savedQ.options)) {
+        if (savedQ.pools) {
+          const correctPool = savedQ.pools.correctPool || [];
+          const distractorPool = savedQ.pools.distractorPool || [];
+          
+          const loadedOptions = [
+            ...correctPool.map(opt => ({
+              label: opt.label || '',
+              isCorrect: false,
+              imageUrl: opt.imageUrl || '',
+              audioUrl: opt.audioUrl || '',
+              explanation: opt.explanation || '',
+              isDistractorOnly: false,
+              misconceptionType: 'general_confusion',
+              similarity: 'medium'
+            })),
+            ...distractorPool.map(opt => ({
+              label: opt.label || '',
+              isCorrect: false,
+              imageUrl: opt.imageUrl || '',
+              audioUrl: opt.audioUrl || '',
+              explanation: '',
+              isDistractorOnly: true,
+              misconceptionType: opt.misconceptionType || 'general_confusion',
+              similarity: opt.similarity || 'medium'
+            }))
+          ];
+          setOptions(loadedOptions.length > 0 ? loadedOptions : [
+            { label: '', isCorrect: false, isDistractorOnly: false },
+            { label: '', isCorrect: false, isDistractorOnly: true }
+          ]);
+        } else if (savedQ.options && Array.isArray(savedQ.options)) {
           const correctIdx = savedQ.correctAnswerIndex !== undefined ? savedQ.correctAnswerIndex : savedQ.answer;
           setOptions(savedQ.options.map((opt, idx) => ({
             label: opt.label || '',
             isCorrect: idx === correctIdx || opt.isCorrect || false,
             imageUrl: opt.imageUrl || '',
             hideLabel: !!opt.hideLabel,
-            audioUrl: opt.audioUrl || ''
+            audioUrl: opt.audioUrl || '',
+            isDistractorOnly: Boolean(opt.isDistractorOnly),
+            misconceptionType: opt.misconceptionType || 'general_confusion',
+            similarity: opt.similarity || 'medium',
+            explanation: opt.explanation || ''
           })));
         }
 
@@ -5014,12 +5227,48 @@ export default function AdminConsolePage() {
       commonImageWidth,
       directImageSelect,
       JSON.stringify(layouts),
-      activePreviewDevice
+      activePreviewDevice,
+      hideOptionImages
     ].join('|');
     
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
     const baseParts = parts.map(p => ({ ...p }));
     let mockParts = baseParts;
+    if (type === 'dynamic_pool') {
+      const extendedParts = baseParts;
+      
+      // Interpolate placeholders using the first valid non-distractor option as a mock target
+      const targetOption = options.find(o => !o.isDistractorOnly) || options[0];
+      const targetWord = targetOption?.label || 'word';
+      const targetPrompt = targetOption?.prompt || targetWord;
+      const targetImage = targetOption?.imageUrl || '';
+      const targetAudio = targetOption?.audioUrl || '';
+
+      mockParts = extendedParts.map(part => {
+        const newPart = { ...part };
+        if (newPart.content) {
+          newPart.content = newPart.content
+            .replace(/\{\{target\}\}/g, targetWord)
+            .replace(/\{\{targetWord\}\}/g, targetWord)
+            .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
+            .replace(/\{\{targetImage\}\}/g, targetImage)
+            .replace(/\{\{targetAudio\}\}/g, targetAudio);
+        }
+        if (newPart.imageUrl) {
+          newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
+        }
+        if (newPart.audioUrl) {
+          newPart.audioUrl = newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetAudio);
+        }
+        if (newPart.label) {
+          newPart.label = newPart.label.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
+        }
+        if (newPart.alt) {
+          newPart.alt = newPart.alt.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
+        }
+        return newPart;
+      });
+    }
 
     const serializedItems = (type === 'categorizationv2' || type === 'categorization') ? categorizationItems.map(item => {
       const mapped = {
@@ -5193,18 +5442,42 @@ export default function AdminConsolePage() {
       voice,
       arrangeImagesRow,
       commonImageWidth: Number(commonImageWidth) || 180,
-      options: directImageSelect ? [] : (type === 'mcq' ? options.map((o, idx) => ({
-        id: `opt_${idx}`,
+      options: directImageSelect ? [] : ((type === 'mcq' || type === 'dynamic_pool') ? options.map((o, idx) => ({
+        id: o.id || `opt_${idx}`,
         label: o.label,
-        imageUrl: o.imageUrl || undefined,
+        imageUrl: (type === 'dynamic_pool' && hideOptionImages) ? undefined : (o.imageUrl || undefined),
         hideLabel: o.hideLabel || undefined,
-        audioUrl: o.audioUrl || undefined
+        audioUrl: o.audioUrl || undefined,
+        isCorrect: !o.isDistractorOnly,
+        isDistractorOnly: o.isDistractorOnly || undefined,
+        misconceptionType: o.misconceptionType || undefined,
+        similarity: o.similarity || undefined,
+        explanation: o.explanation || undefined
       })) : []),
       categories: (type === 'categorizationv2' || type === 'categorization') ? categories.map(c => ({ ...c, id: c.id, label: c.label })) : undefined,
       items: (type === 'categorizationv2' || type === 'categorization') ? serializedItems : undefined,
-      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer))),
-      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer))),
+      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { readable, readOptions },
+      // Advanced Dynamic Pool fields
+      pools: type === 'dynamic_pool' ? {
+        correctPool: options.filter(o => !o.isDistractorOnly).map(o => ({
+          id: o.id || o.label.replace(/\s+/g, '_').toLowerCase().trim(),
+          label: o.label,
+          imageUrl: o.imageUrl || undefined,
+          audioUrl: o.audioUrl || undefined,
+          explanation: o.explanation || undefined
+        })),
+        distractorPool: options.filter(o => o.isDistractorOnly).map(o => ({
+          id: o.id || o.label.replace(/\s+/g, '_').toLowerCase().trim(),
+          label: o.label,
+          imageUrl: o.imageUrl || undefined,
+          audioUrl: o.audioUrl || undefined,
+          misconceptionType: o.misconceptionType || 'general_confusion',
+          similarity: o.similarity || 'medium'
+        }))
+      } : undefined,
+      difficultyRules: type === 'dynamic_pool' ? difficultyRules : undefined,
       // Universal DnD fields
       layoutMode: layoutMode || undefined,
       targets: targets || undefined,
@@ -5239,7 +5512,9 @@ export default function AdminConsolePage() {
     hideItemLabels,
     hotspots,
     backgroundSvg,
-    directImageSelect
+    directImageSelect,
+    hideOptionImages,
+    difficultyRules
   ]);
 
   const handleCheckAnswer = () => {
@@ -5883,10 +6158,30 @@ export default function AdminConsolePage() {
                   value={qTopic} 
                   onChange={(e) => setQTopic(e.target.value)}
                 >
-                  <option value="">All Skills</option>
+                  <option value="">All Topics</option>
                   {stats.topics.map(top => (
                     <option key={top} value={top}>{top}</option>
                   ))}
+                </select>
+              </div>
+
+              <div className={styles.filterGroup}>
+                <label className={styles.filterLabel}>Skill</label>
+                <select 
+                  className={styles.formSelect} 
+                  value={qSkillId} 
+                  onChange={(e) => setQSkillId(e.target.value)}
+                  disabled={!qSubject || !qTopic}
+                >
+                  <option value="">All Skills</option>
+                  {availableSkillsForClone.map(skill => {
+                    const skId = skill.skillId || skill.id;
+                    return (
+                      <option key={skill.id} value={skId}>
+                        {skill.code ? `[${skill.code}] ` : ''}{skill.title || skId}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -6018,7 +6313,7 @@ export default function AdminConsolePage() {
                   <option value="">-- All Skills --</option>
                   {availableSkillsForClone.map(skill => (
                     <option key={skill.id} value={skill.skillId || skill.id}>
-                      {skill.title || skill.skillId || skill.id} ({skill.skillId || skill.id})
+                      {skill.code ? `[${skill.code}] ` : ''}{skill.title || skill.skillId || skill.id} ({skill.skillId || skill.id})
                     </option>
                   ))}
                   <option value="__custom__">-- Custom Skill ID --</option>
@@ -6103,7 +6398,7 @@ export default function AdminConsolePage() {
                           {visibleColumns.type && (
                             <td>
                               <span style={{ fontSize: 11, fontWeight: 800 }}>
-                                {q.type === 'mcq' ? 'MCQ' : 'FIB'}
+                                {q.type === 'mcq' ? 'MCQ' : (q.type === 'dynamic_pool' ? 'POOL' : String(q.type).toUpperCase())}
                               </span>
                             </td>
                           )}
@@ -6558,7 +6853,7 @@ export default function AdminConsolePage() {
                                 <option value="">-- Select Skill --</option>
                                 {filteredLinkSkills.map((skill, index) => (
                                   <option key={skill.id} value={skill.id}>
-                                    {index + 1}. {skill.title || skill.id} ({skill.id})
+                                    {index + 1}. {skill.code ? `[${skill.code}] ` : ''}{skill.title || skill.id} ({skill.id})
                                   </option>
                                 ))}
                               </select>
@@ -6939,6 +7234,20 @@ export default function AdminConsolePage() {
 
                                           <div className={styles.formRow} style={{ marginTop: 8 }}>
                                             <div className={styles.formGroup} style={{ flex: 1 }}>
+                                              <label style={{ fontSize: 11, fontWeight: 700 }}>Audio URL / Placeholder (Optional)</label>
+                                              <input
+                                                type="text"
+                                                className={styles.formInput}
+                                                style={{ padding: '4px', height: 28, fontSize: 11 }}
+                                                value={part.audioUrl || ''}
+                                                onChange={(e) => handleUpdatePartFields(realIdx, { audioUrl: e.target.value })}
+                                                placeholder="e.g. {{targetAudio}} or path to audio file"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          <div className={styles.formRow} style={{ marginTop: 8 }}>
+                                            <div className={styles.formGroup} style={{ flex: 1 }}>
                                               <label style={{ fontSize: 11, fontWeight: 700 }}>Max Width (px)</label>
                                               <input
                                                 type="number"
@@ -7190,6 +7499,7 @@ export default function AdminConsolePage() {
                               }}
                             >
                               <option value="mcq">Multiple Choice Question (MCQ)</option>
+                              <option value="dynamic_pool">Dynamic Option Pool</option>
                               <option value="mcq_hotspot">Multiple Choice (Hotspot Select)</option>
                               <option value="fillInTheBlank">Fill-In-The-Blank (FIB)</option>
                               <option value="trueOrFalse">True / False</option>
@@ -7198,11 +7508,13 @@ export default function AdminConsolePage() {
                             </select>
                           </div>
 
-                          {type === 'mcq' && (
+                          {(type === 'mcq' || type === 'dynamic_pool') && (
                             <div className={styles.formGroup}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                 <label className={styles.filterLabel} style={{ marginBottom: 0 }}>
-                                  MCQ Options (Select correct answer radio, reorder, or edit keyboard shortcuts)
+                                  {type === 'dynamic_pool'
+                                    ? 'Dynamic Option Pool (Manage option pool words, their audio assets, and image mappings)'
+                                    : 'MCQ Options (Select correct answer radio, reorder, or edit keyboard shortcuts)'}
                                 </label>
                                 <button
                                   type="button"
@@ -7216,190 +7528,539 @@ export default function AdminConsolePage() {
                               </div>
                               
                               <div className={styles.optionsList}>
-                                {options.map((option, idx) => (
-                                  <div key={idx} className={styles.optionItemRow}>
-                                    <div className={styles.optionControlsGroup}>
-                                      <input 
-                                        type="radio" 
-                                        name="correctOptionRadio" 
-                                        className={styles.radioInput} 
-                                        checked={option.isCorrect} 
-                                        onChange={() => setCorrectOption(idx)}
-                                        title="Mark option as correct answer"
-                                      />
-                                      <button 
-                                        type="button"
-                                        className={styles.moveBtn} 
-                                        onClick={() => moveOptionUp(idx)}
-                                        disabled={idx === 0}
-                                        title="Move option up"
-                                      >
-                                        ▲
-                                      </button>
-                                      <button 
-                                        type="button"
-                                        className={styles.moveBtn} 
-                                        onClick={() => moveOptionDown(idx)}
-                                        disabled={idx === options.length - 1}
-                                        title="Move option down"
-                                      >
-                                        ▼
-                                      </button>
+                                {type === 'dynamic_pool' ? (
+                                  <>
+                                    <div style={{ marginBottom: 24 }}>
+                                      <h4 style={{ fontSize: 13, fontWeight: 'bold', color: '#0f766e', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        🎯 Target Pool (Correct Words)
+                                      </h4>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        {options.map((option, idx) => {
+                                          if (option.isDistractorOnly) return null;
+                                          return (
+                                            <div key={idx} className={styles.optionItemRow} style={{ borderLeft: '4px solid #10b981', paddingLeft: 8 }}>
+                                              <div className={styles.optionControlsGroup}>
+                                                <button 
+                                                  type="button"
+                                                  className={styles.moveBtn} 
+                                                  onClick={() => moveOptionUp(idx)}
+                                                  disabled={idx === 0}
+                                                >
+                                                  ▲
+                                                </button>
+                                                <button 
+                                                  type="button"
+                                                  className={styles.moveBtn} 
+                                                  onClick={() => moveOptionDown(idx)}
+                                                  disabled={idx === options.length - 1}
+                                                >
+                                                  ▼
+                                                </button>
+                                              </div>
+
+                                              {option.imageUrl && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                                  <img 
+                                                    src={option.imageUrl} 
+                                                    alt="" 
+                                                    style={{ width: 42, height: 42, objectFit: 'contain', borderRadius: 6, border: '2px solid #e2e8f0', background: '#f8fafc' }} 
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateOptionImageUrl(idx, '')}
+                                                    title="Remove image"
+                                                    style={{
+                                                      position: 'absolute', top: -6, right: -6, border: 'none', background: '#ef4444', color: '#ffffff',
+                                                      borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                      fontSize: 9, cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                                    }}
+                                                  >
+                                                    ×
+                                                  </button>
+                                                </div>
+                                              )}
+
+                                              {option.audioUrl && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handlePlayUrlAudio(`opt_preview_${idx}`, option.audioUrl)}
+                                                    className={styles.iconPlayBtn}
+                                                    style={{
+                                                      width: 42, height: 42, borderRadius: 6,
+                                                      border: '2px solid #e2e8f0', background: '#f8fafc',
+                                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                      fontSize: 16, cursor: 'pointer', padding: 0
+                                                    }}
+                                                  >
+                                                    {playingAudioId === `opt_preview_${idx}` ? '⏹' : '🔊'}
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateOptionAudioUrl(idx, '')}
+                                                    title="Remove audio"
+                                                    style={{
+                                                      position: 'absolute', top: -6, right: -6, border: 'none', background: '#ef4444', color: '#ffffff',
+                                                      borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                      fontSize: 9, cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                                    }}
+                                                  >
+                                                    ×
+                                                  </button>
+                                                </div>
+                                              )}
+
+                                              <input 
+                                                type="text" 
+                                                className={styles.optionTextInput} 
+                                                value={option.label} 
+                                                onChange={(e) => updateOptionText(idx, e.target.value)}
+                                                placeholder={`Target word (e.g. cat)`}
+                                              />
+
+                                              <input 
+                                                type="text" 
+                                                className={styles.optionTextInput} 
+                                                value={option.explanation || ''} 
+                                                onChange={(e) => updateOptionExplanation(idx, e.target.value)}
+                                                placeholder="Explanation (Optional)"
+                                                style={{ marginLeft: 8, flex: 1.5 }}
+                                              />
+
+                                              <button 
+                                                type="button"
+                                                className={styles.iconPlayBtn} 
+                                                onClick={() => openImgPickerForOption(idx, 'gallery')}
+                                                title="Add image"
+                                                style={{ marginRight: 4 }}
+                                              >
+                                                🖼️
+                                              </button>
+                                              
+                                              <button 
+                                                type="button"
+                                                className={styles.iconPlayBtn} 
+                                                onClick={() => openAudioGalleryForOption(idx)}
+                                                title="Add audio"
+                                                style={{ marginRight: 4 }}
+                                              >
+                                                🎵
+                                              </button>
+
+                                              <button 
+                                                type="button"
+                                                className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                                onClick={() => removeOption(idx)}
+                                                style={{ padding: '6px 8px' }}
+                                              >
+                                                ×
+                                              </button>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
 
-                                    {option.imageUrl && (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
-                                        <img 
-                                          src={option.imageUrl} 
-                                          alt="" 
-                                          style={{ width: 42, height: 42, objectFit: 'contain', borderRadius: 6, border: '2px solid #e2e8f0', background: '#f8fafc' }} 
+                                    <div>
+                                      <h4 style={{ fontSize: 13, fontWeight: 'bold', color: '#be123c', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        👾 Distractor Pool (Options & Matching Rules)
+                                      </h4>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        {options.map((option, idx) => {
+                                          if (!option.isDistractorOnly) return null;
+                                          return (
+                                            <div key={idx} className={styles.optionItemRow} style={{ borderLeft: '4px solid #ef4444', paddingLeft: 8 }}>
+                                              <div className={styles.optionControlsGroup}>
+                                                <button 
+                                                  type="button"
+                                                  className={styles.moveBtn} 
+                                                  onClick={() => moveOptionUp(idx)}
+                                                  disabled={idx === 0}
+                                                >
+                                                  ▲
+                                                </button>
+                                                <button 
+                                                  type="button"
+                                                  className={styles.moveBtn} 
+                                                  onClick={() => moveOptionDown(idx)}
+                                                  disabled={idx === options.length - 1}
+                                                >
+                                                  ▼
+                                                </button>
+                                              </div>
+
+                                              {option.imageUrl && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                                  <img 
+                                                    src={option.imageUrl} 
+                                                    alt="" 
+                                                    style={{ width: 42, height: 42, objectFit: 'contain', borderRadius: 6, border: '2px solid #e2e8f0', background: '#f8fafc' }} 
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateOptionImageUrl(idx, '')}
+                                                    title="Remove image"
+                                                    style={{
+                                                      position: 'absolute', top: -6, right: -6, border: 'none', background: '#ef4444', color: '#ffffff',
+                                                      borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                      fontSize: 9, cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                                    }}
+                                                  >
+                                                    ×
+                                                  </button>
+                                                </div>
+                                              )}
+
+                                              {option.audioUrl && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handlePlayUrlAudio(`opt_preview_${idx}`, option.audioUrl)}
+                                                    className={styles.iconPlayBtn}
+                                                    style={{
+                                                      width: 42, height: 42, borderRadius: 6,
+                                                      border: '2px solid #e2e8f0', background: '#f8fafc',
+                                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                      fontSize: 16, cursor: 'pointer', padding: 0
+                                                    }}
+                                                  >
+                                                    {playingAudioId === `opt_preview_${idx}` ? '⏹' : '🔊'}
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateOptionAudioUrl(idx, '')}
+                                                    title="Remove audio"
+                                                    style={{
+                                                      position: 'absolute', top: -6, right: -6, border: 'none', background: '#ef4444', color: '#ffffff',
+                                                      borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                      fontSize: 9, cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                                    }}
+                                                  >
+                                                    ×
+                                                  </button>
+                                                </div>
+                                              )}
+
+                                              <input 
+                                                type="text" 
+                                                className={styles.optionTextInput} 
+                                                value={option.label} 
+                                                onChange={(e) => updateOptionText(idx, e.target.value)}
+                                                placeholder={`Distractor (e.g. dog)`}
+                                              />
+
+                                              <select
+                                                value={option.misconceptionType || 'general_confusion'}
+                                                onChange={(e) => updateOptionMisconception(idx, e.target.value)}
+                                                style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', marginLeft: 8, background: '#fff' }}
+                                              >
+                                                <option value="general_confusion">General Confusion</option>
+                                                <option value="movement_confusion">Movement Confusion</option>
+                                                <option value="diet_confusion">Diet Confusion</option>
+                                                <option value="size_confusion">Size Confusion</option>
+                                                <option value="habitat_confusion">Habitat Confusion</option>
+                                                <option value="spelling_mismatch">Spelling Mismatch</option>
+                                                <option value="similar_sound">Similar Sound</option>
+                                              </select>
+
+                                              <select
+                                                value={option.similarity || 'medium'}
+                                                onChange={(e) => updateOptionSimilarity(idx, e.target.value)}
+                                                style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', marginLeft: 8, background: '#fff' }}
+                                              >
+                                                <option value="low">Low Similarity</option>
+                                                <option value="medium">Medium Similarity</option>
+                                                <option value="high">High Similarity</option>
+                                              </select>
+
+                                              <button 
+                                                type="button"
+                                                className={styles.iconPlayBtn} 
+                                                onClick={() => openImgPickerForOption(idx, 'gallery')}
+                                                title="Add image"
+                                                style={{ marginRight: 4 }}
+                                              >
+                                                🖼️
+                                              </button>
+                                              
+                                              <button 
+                                                type="button"
+                                                className={styles.iconPlayBtn} 
+                                                onClick={() => openAudioGalleryForOption(idx)}
+                                                title="Add audio"
+                                                style={{ marginRight: 4 }}
+                                              >
+                                                🎵
+                                              </button>
+
+                                              <button 
+                                                type="button"
+                                                className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                                onClick={() => removeOption(idx)}
+                                                style={{ padding: '6px 8px' }}
+                                              >
+                                                ×
+                                              </button>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  options.map((option, idx) => (
+                                    <div key={idx} className={styles.optionItemRow}>
+                                      <div className={styles.optionControlsGroup}>
+                                        <input 
+                                          type="radio" 
+                                          name="correctOptionRadio" 
+                                          className={styles.radioInput} 
+                                          checked={option.isCorrect} 
+                                          onChange={() => setCorrectOption(idx)}
+                                          title="Mark option as correct answer"
                                         />
-                                        <button
+                                        <button 
                                           type="button"
-                                          onClick={() => updateOptionImageUrl(idx, '')}
-                                          title="Remove image from this option"
-                                          style={{
-                                            position: 'absolute',
-                                            top: -6,
-                                            right: -6,
-                                            border: 'none',
-                                            background: '#ef4444',
-                                            color: '#ffffff',
-                                            borderRadius: '50%',
-                                            width: 16,
-                                            height: 16,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 9,
-                                            cursor: 'pointer',
-                                            fontWeight: 'bold',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                          }}
+                                          className={styles.moveBtn} 
+                                          onClick={() => moveOptionUp(idx)}
+                                          disabled={idx === 0}
+                                          title="Move option up"
                                         >
-                                          ×
+                                          ▲
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          className={styles.moveBtn} 
+                                          onClick={() => moveOptionDown(idx)}
+                                          disabled={idx === options.length - 1}
+                                          title="Move option down"
+                                        >
+                                          ▼
                                         </button>
                                       </div>
-                                    )}
 
-                                    {option.audioUrl && (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
-                                        <button
-                                          type="button"
-                                          onClick={() => handlePlayUrlAudio(`opt_preview_${idx}`, option.audioUrl)}
-                                          className={styles.iconPlayBtn}
-                                          style={{
-                                            width: 42, height: 42, borderRadius: 6,
-                                            border: '2px solid #e2e8f0', background: '#f8fafc',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 16, cursor: 'pointer',
-                                            padding: 0
-                                          }}
-                                          title="Play option audio"
-                                        >
-                                          {playingAudioId === `opt_preview_${idx}` ? '⏹' : '🔊'}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => updateOptionAudioUrl(idx, '')}
-                                          title="Remove audio from this option"
-                                          style={{
-                                            position: 'absolute',
-                                            top: -6,
-                                            right: -6,
-                                            border: 'none',
-                                            background: '#ef4444',
-                                            color: '#ffffff',
-                                            borderRadius: '50%',
-                                            width: 16,
-                                            height: 16,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 9,
-                                            cursor: 'pointer',
-                                            fontWeight: 'bold',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                          }}
-                                        >
-                                          ×
-                                        </button>
-                                      </div>
-                                    )}
+                                      {option.imageUrl && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                          <img 
+                                            src={option.imageUrl} 
+                                            alt="" 
+                                            style={{ width: 42, height: 42, objectFit: 'contain', borderRadius: 6, border: '2px solid #e2e8f0', background: '#f8fafc' }} 
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => updateOptionImageUrl(idx, '')}
+                                            title="Remove image from this option"
+                                            style={{
+                                              position: 'absolute',
+                                              top: -6,
+                                              right: -6,
+                                              border: 'none',
+                                              background: '#ef4444',
+                                              color: '#ffffff',
+                                              borderRadius: '50%',
+                                              width: 16,
+                                              height: 16,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontSize: 9,
+                                              cursor: 'pointer',
+                                              fontWeight: 'bold',
+                                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                            }}
+                                          >
+                                            ×
+                                          </button>
+                                        </div>
+                                      )}
 
-                                    <input 
-                                      type="text" 
-                                      className={styles.optionTextInput} 
-                                      value={option.label} 
-                                      onChange={(e) => updateOptionText(idx, e.target.value)}
-                                      onKeyDown={(e) => handleOptionKeyDown(e, idx)}
-                                      placeholder={option.imageUrl ? "Option Text Label (Optional caption)" : `Option ${idx + 1}`}
-                                    />
-                                    
-                                    {option.imageUrl && (
-                                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, userSelect: 'none', color: '#64748b', cursor: 'pointer', flexShrink: 0, marginLeft: 8, marginRight: 4 }}>
-                                        <input
-                                          type="checkbox"
-                                          checked={!!option.hideLabel}
-                                          onChange={(e) => updateOptionHideLabel(idx, e.target.checked)}
-                                          style={{ width: 14, height: 14, cursor: 'pointer' }}
-                                        />
-                                        Hide Label
-                                      </label>
-                                    )}
-                                    
-                                    <button 
-                                      type="button"
-                                      className={styles.iconPlayBtn} 
-                                      onClick={() => openImgPickerForOption(idx, 'gallery')}
-                                      title="Add/Upload image for this option"
-                                      style={{ marginRight: 4 }}
-                                    >
-                                      🖼️
-                                    </button>
-                                    
-                                    <button 
-                                      type="button"
-                                      className={styles.iconPlayBtn} 
-                                      onClick={() => openAudioGalleryForOption(idx)}
-                                      title="Add/Select audio for this option"
-                                      style={{ marginRight: 4 }}
-                                    >
-                                      🎵
-                                    </button>
-                                    
-                                    <button 
-                                      type="button"
-                                      className={styles.iconPlayBtn} 
-                                      onClick={() => speakText(option.label, voice)}
-                                      title="Preview voice read aloud"
-                                      disabled={!option.label.trim()}
-                                    >
-                                      ▶
-                                    </button>
-                                    <button 
-                                      type="button"
-                                      className={`${styles.btnDanger} ${styles.btnCompact}`}
-                                      onClick={() => removeOption(idx)}
-                                      disabled={options.length <= 2}
-                                      style={{ padding: '6px 8px' }}
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                ))}
+                                      {option.audioUrl && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8, position: 'relative', flexShrink: 0 }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handlePlayUrlAudio(`opt_preview_${idx}`, option.audioUrl)}
+                                            className={styles.iconPlayBtn}
+                                            style={{
+                                              width: 42, height: 42, borderRadius: 6,
+                                              border: '2px solid #e2e8f0', background: '#f8fafc',
+                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                              fontSize: 16, cursor: 'pointer',
+                                              padding: 0
+                                            }}
+                                            title="Play option audio"
+                                          >
+                                            {playingAudioId === `opt_preview_${idx}` ? '⏹' : '🔊'}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateOptionAudioUrl(idx, '')}
+                                            title="Remove audio from this option"
+                                            style={{
+                                              position: 'absolute',
+                                              top: -6,
+                                              right: -6,
+                                              border: 'none',
+                                              background: '#ef4444',
+                                              color: '#ffffff',
+                                              borderRadius: '50%',
+                                              width: 16,
+                                              height: 16,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontSize: 9,
+                                              cursor: 'pointer',
+                                              fontWeight: 'bold',
+                                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                            }}
+                                          >
+                                            ×
+                                          </button>
+                                        </div>
+                                      )}
+
+                                      <input 
+                                        type="text" 
+                                        className={styles.optionTextInput} 
+                                        value={option.label} 
+                                        onChange={(e) => updateOptionText(idx, e.target.value)}
+                                        onKeyDown={(e) => handleOptionKeyDown(e, idx)}
+                                        placeholder={option.imageUrl ? "Option Text Label (Optional caption)" : `Option ${idx + 1}`}
+                                      />
+
+                                      {option.imageUrl && (
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, userSelect: 'none', color: '#64748b', cursor: 'pointer', flexShrink: 0, marginLeft: 8, marginRight: 4 }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={!!option.hideLabel}
+                                            onChange={(e) => updateOptionHideLabel(idx, e.target.checked)}
+                                            style={{ width: 14, height: 14, cursor: 'pointer' }}
+                                          />
+                                          Hide Label
+                                        </label>
+                                      )}
+
+                                      <button 
+                                        type="button"
+                                        className={styles.iconPlayBtn} 
+                                        onClick={() => openImgPickerForOption(idx, 'gallery')}
+                                        title="Add/Upload image for this option"
+                                        style={{ marginRight: 4 }}
+                                      >
+                                        🖼️
+                                      </button>
+                                      
+                                      <button 
+                                        type="button"
+                                        className={styles.iconPlayBtn} 
+                                        onClick={() => openAudioGalleryForOption(idx)}
+                                        title="Add/Select audio for this option"
+                                        style={{ marginRight: 4 }}
+                                      >
+                                        🎵
+                                      </button>
+                                      
+                                      <button 
+                                        type="button"
+                                        className={styles.iconPlayBtn} 
+                                        onClick={() => speakText(option.label, voice)}
+                                        title="Preview voice read aloud"
+                                        disabled={!option.label.trim()}
+                                      >
+                                        ▶
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                        onClick={() => removeOption(idx)}
+                                        disabled={options.length <= 2}
+                                        style={{ padding: '6px 8px' }}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
                               </div>
                               
-                              {options.length < 8 && (
-                                <button 
-                                  type="button" 
-                                  className={styles.btnOutline} 
-                                  onClick={addOption}
-                                  style={{ padding: '6px 12px', marginTop: 10, alignSelf: 'flex-start' }}
+                              <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center' }}>
+                                {type === 'dynamic_pool' ? (
+                                  <>
+                                    <button 
+                                      type="button" 
+                                      className={styles.btnOutline} 
+                                      onClick={addCorrectOption}
+                                      style={{ padding: '6px 12px', borderColor: '#10b981', color: '#10b981', background: '#f0fdf4' }}
+                                    >
+                                      + Add Correct Target Card
+                                    </button>
+                                    <button 
+                                      type="button" 
+                                      className={styles.btnOutline} 
+                                      onClick={addDistractorOption}
+                                      style={{ padding: '6px 12px', borderColor: '#ef4444', color: '#ef4444', background: '#fef2f2' }}
+                                    >
+                                      + Add Distractor Candidate Card
+                                    </button>
+                                  </>
+                                ) : (
+                                  options.length < 8 && (
+                                    <button 
+                                      type="button" 
+                                      className={styles.btnOutline} 
+                                      onClick={addOption}
+                                      style={{ padding: '6px 12px' }}
+                                    >
+                                      + Add Option Row
+                                    </button>
+                                  )
+                                )}
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => {
+                                    const text = prompt("Paste a list of words (space, comma, or newline separated) to add to the options list:");
+                                    if (text) {
+                                      const words = text
+                                        .split(/[\s,\n]+/)
+                                        .map(w => w.trim())
+                                        .filter(w => w.length > 0);
+                                      if (words.length > 0) {
+                                        const newOptions = [...options];
+                                        // Filter out initial empty default options if they are empty
+                                        const filteredOptions = newOptions.filter(o => o.label.trim() !== '');
+                                        const maxLimit = type === 'dynamic_pool' ? 100 : 8;
+                                        words.forEach(word => {
+                                          if (filteredOptions.length < maxLimit) {
+                                            filteredOptions.push({ label: word, isCorrect: false });
+                                          }
+                                        });
+                                        setOptions(filteredOptions);
+                                        setIsDirty(true);
+                                      }
+                                    }
+                                  }}
+                                  style={{ padding: '6px 12px' }}
                                 >
-                                  + Add Option Row
+                                  📋 Bulk Add Words
                                 </button>
-                              )}
+
+                                {type === 'dynamic_pool' && (
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, userSelect: 'none', marginLeft: 'auto', cursor: 'pointer', fontWeight: 650 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={hideOptionImages}
+                                      onChange={(e) => {
+                                        setHideOptionImages(e.target.checked);
+                                        ignoreDirtyChange.current = false;
+                                        setIsDirty(true);
+                                      }}
+                                      style={{ width: 15, height: 15, cursor: 'pointer' }}
+                                    />
+                                    Hide Option Images (Text Only)
+                                  </label>
+                                )}
+                              </div>
                             </div>
                           )}
 
@@ -8927,7 +9588,7 @@ Explanation: A question must end with a question mark.`}</pre>
                               : dbSkills.filter(s => s.subjectId === parseBatchSubject && s.topicId === parseBatchTopic)
                             ).map((skill, index) => (
                               <option key={skill.id} value={skill.id}>
-                                {index + 1}. {skill.title || skill.id} ({skill.skillId || skill.id})
+                                {index + 1}. {skill.code ? `[${skill.code}] ` : ''}{skill.title || skill.id} ({skill.skillId || skill.id})
                               </option>
                             ))}
                           </select>
@@ -9236,7 +9897,7 @@ Explanation: A question must end with a question mark.`}</pre>
                           <option value="">-- Select Skill --</option>
                           {filteredLinkSkills.map((skill, index) => (
                             <option key={skill.id} value={skill.id}>
-                              {index + 1}. {skill.title || skill.id} ({skill.id})
+                              {index + 1}. {skill.code ? `[${skill.code}] ` : ''}{skill.title || skill.id} ({skill.id})
                             </option>
                           ))}
                         </select>
@@ -9399,6 +10060,7 @@ Explanation: A question must end with a question mark.`}</pre>
                 <div className={styles.studentCardBody}>
                   <div className={styles.previewStudentWrapper}>
                     <QuestionRenderer
+                      key={authoringMockQuestion.id}
                       question={authoringMockQuestion}
                       userAnswer={previewAnswer}
                       onAnswer={setPreviewAnswer}

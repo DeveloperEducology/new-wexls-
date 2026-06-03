@@ -635,7 +635,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
 
   const isTransparent = src.match(/\.(png|svg|webp)($|\?)/i);
   const labelText = part.label || part.alt || '';
-  const canPlaySound = part.playLabelSound && labelText;
+  const canPlaySound = part.playLabelSound && (labelText || part.audioUrl);
 
   const isDirectSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
   const isSelected = isDirectSelect && partIndex !== undefined && userAnswer !== null && Number(userAnswer) === partIndex;
@@ -644,8 +644,13 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
     if (isDirectSelect && !isAnswered && onAnswer) {
       onAnswer(partIndex);
     } else if (canPlaySound) {
-      speakText(labelText, question?.voice || part.voice || 'Puck');
+      speakText(labelText || 'Image', question?.voice || part.voice || 'Puck', part.audioUrl);
     }
+  };
+
+  const handleSpeakerClick = (e) => {
+    e.stopPropagation();
+    speakText(labelText || 'Image', question?.voice || part.voice || 'Puck', part.audioUrl);
   };
 
   const commonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
@@ -660,6 +665,129 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
     ? '0 0 0 6px rgba(34, 197, 94, 0.2), 0 16px 40px rgba(34, 197, 94, 0.15)' 
     : '0 12px 28px rgba(15, 23, 42, 0.06), 0 4px 10px rgba(15, 23, 42, 0.03)';
   const cardTransform = isSelected ? 'scale(1.03)' : 'none';
+
+  const showSpeakerOnLeft = canPlaySound && !isDirectSelect;
+  const showSpeakerOnCard = canPlaySound && isDirectSelect;
+
+  const speakerButton = (
+    <button
+      type="button"
+      onClick={handleSpeakerClick}
+      style={{
+        background: '#e0f2fe',
+        border: 'none',
+        borderRadius: '50%',
+        width: isPreK ? '40px' : '36px',
+        height: isPreK ? '40px' : '36px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        color: '#0284c7',
+        boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+        transition: 'transform 0.2s ease, background 0.2s ease',
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+      title="Play sound"
+    >
+      <svg viewBox="0 0 24 24" width={isPreK ? "20" : "18"} height={isPreK ? "20" : "18"} fill="currentColor">
+        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+      </svg>
+    </button>
+  );
+
+  const imageContainer = (
+    <div 
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        display: 'flex', 
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: part.transparent ? 'transparent' : '#ffffff',
+        borderRadius: part.transparent ? undefined : 20,
+        border: part.transparent ? 'none' : cardBorder,
+        boxShadow: part.transparent ? 'none' : cardShadow,
+        padding: part.transparent ? '0' : '12px',
+        boxSizing: 'border-box',
+        aspectRatio: part.transparent ? 'auto' : '1.15 / 1',
+        transition: 'border 0.2s ease, box-shadow 0.2s ease',
+      }}
+    >
+      <img
+        src={src}
+        alt={part.alt || ''}
+        style={{
+          width: '100%',
+          height: '100%',
+          maxHeight: '100%',
+          objectFit: 'contain',
+          borderRadius: isTransparent ? undefined : 14,
+          transition: 'transform 0.2s ease, filter 0.2s ease',
+          filter: (part.transparent && isSelected)
+            ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
+            : 'none',
+        }}
+        onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
+        onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
+      />
+      {showSpeakerOnCard && (
+        <div
+          onClick={(e) => {
+            if (isDirectSelect) {
+              e.stopPropagation();
+              speakText(labelText || 'Image', question?.voice || part.voice || 'Puck', part.audioUrl);
+            }
+          }}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            background: '#e0f2fe',
+            borderRadius: '50%',
+            width: 26,
+            height: 26,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+            color: '#0284c7',
+            cursor: 'pointer',
+            zIndex: 10,
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+          </svg>
+        </div>
+      )}
+      {isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            backgroundColor: '#22c55e',
+            color: '#ffffff',
+            borderRadius: '50%',
+            width: 24,
+            height: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            fontWeight: 'bold',
+            boxShadow: '0 2px 6px rgba(34,197,94,0.3)',
+            zIndex: 10,
+          }}
+        >
+          ✓
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div
@@ -679,94 +807,14 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         ...(part.style || {}),
       }}
     >
-      <div 
-        style={{ 
-          position: 'relative', 
-          width: '100%', 
-          display: 'flex', 
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: part.transparent ? 'transparent' : '#ffffff',
-          borderRadius: part.transparent ? undefined : 20,
-          border: part.transparent ? 'none' : cardBorder,
-          boxShadow: part.transparent ? 'none' : cardShadow,
-          padding: part.transparent ? '0' : '12px',
-          boxSizing: 'border-box',
-          aspectRatio: part.transparent ? 'auto' : '1.15 / 1',
-          transition: 'border 0.2s ease, box-shadow 0.2s ease',
-        }}
-      >
-        <img
-          src={src}
-          alt={part.alt || ''}
-          style={{
-            width: '100%',
-            height: '100%',
-            maxHeight: '100%',
-            objectFit: 'contain',
-            borderRadius: isTransparent ? undefined : 14,
-            transition: 'transform 0.2s ease, filter 0.2s ease',
-            filter: (part.transparent && isSelected)
-              ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
-              : 'none',
-          }}
-          onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
-          onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
-        />
-        {canPlaySound && (
-          <div
-            onClick={(e) => {
-              if (isDirectSelect) {
-                e.stopPropagation();
-                speakText(labelText, question?.voice || part.voice || 'Puck');
-              }
-            }}
-            style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: '#e0f2fe',
-              borderRadius: '50%',
-              width: 26,
-              height: 26,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
-              color: '#0284c7',
-              cursor: 'pointer',
-              zIndex: 10,
-            }}
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-            </svg>
-          </div>
-        )}
-        {isSelected && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 8,
-              right: 8,
-              backgroundColor: '#22c55e',
-              color: '#ffffff',
-              borderRadius: '50%',
-              width: 24,
-              height: 24,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 14,
-              fontWeight: 'bold',
-              boxShadow: '0 2px 6px rgba(34,197,94,0.3)',
-              zIndex: 10,
-            }}
-          >
-            ✓
-          </div>
-        )}
-      </div>
+      {showSpeakerOnLeft ? (
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', gap: 12 }}>
+          {speakerButton}
+          {imageContainer}
+        </div>
+      ) : (
+        imageContainer
+      )}
 
       {part.showLabel && labelText && (
         <div

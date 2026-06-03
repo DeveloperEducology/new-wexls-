@@ -202,8 +202,31 @@ export async function POST(request) {
     }
 
     if (shouldGenerateOptionsAudio) {
-      // 2. Process options audio (if MCQ)
-      if ((payload.type === 'mcq' || payload.type === 'multiplechoice' || payload.type === 'multipleChoice') && Array.isArray(payload.options)) {
+      // 2. Process options audio (if MCQ or dynamic_pool)
+      if (payload.type === 'dynamic_pool' && payload.pools) {
+        const correctPool = payload.pools.correctPool || [];
+        const distractorPool = payload.pools.distractorPool || [];
+
+        for (let i = 0; i < correctPool.length; i++) {
+          const item = correctPool[i];
+          if (item.label && !item.audioUrl) {
+            const optionAudioUrl = await getOrGenerateR2Audio(item.label, voice);
+            if (optionAudioUrl) {
+              item.audioUrl = optionAudioUrl;
+            }
+          }
+        }
+
+        for (let i = 0; i < distractorPool.length; i++) {
+          const item = distractorPool[i];
+          if (item.label && !item.audioUrl) {
+            const optionAudioUrl = await getOrGenerateR2Audio(item.label, voice);
+            if (optionAudioUrl) {
+              item.audioUrl = optionAudioUrl;
+            }
+          }
+        }
+      } else if ((payload.type === 'mcq' || payload.type === 'multiplechoice' || payload.type === 'multipleChoice' || payload.type === 'dynamic_pool') && Array.isArray(payload.options)) {
         const optionsWithAudio = [];
         for (let i = 0; i < payload.options.length; i++) {
           const option = payload.options[i];

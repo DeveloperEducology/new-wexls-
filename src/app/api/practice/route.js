@@ -248,6 +248,15 @@ export async function GET(request) {
         difficulty,
         seed,
         source,
+        history: {
+          correctStreak: Number(searchParams.get('correctStreak') || 0),
+          practiceLevel: Number(searchParams.get('practiceLevel') || 1),
+          levelStreak: Number(searchParams.get('levelStreak') || 0),
+          lastResult: searchParams.get('lastResult') || 'none',
+          remediationActive: searchParams.get('remediationActive') === 'true',
+          remediationStep: Number(searchParams.get('remediationStep') || 0),
+        },
+        grade: skillNode?.grade || skillNode?.metadata?.grade || 'lkg',
       });
 
       if (storedPayload) {

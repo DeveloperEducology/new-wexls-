@@ -29,6 +29,7 @@ const RENDERERS = {
   mcq: MCQRenderer,
   multiplechoice: MCQRenderer,
   multipleChoice: MCQRenderer,
+  dynamic_pool: MCQRenderer,
   fillintheblank: FillInTheBlankRenderer,
   fillInTheBlank: FillInTheBlankRenderer,
   fill_in_the_blank: FillInTheBlankRenderer,
