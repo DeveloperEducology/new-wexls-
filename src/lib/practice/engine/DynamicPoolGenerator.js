@@ -31,7 +31,10 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     const targetImage = targetOption.imageUrl || '';
     
     // 2. Fetch difficulty rules
-    const rules = (poolDoc.difficultyRules && poolDoc.difficultyRules[difficulty]) || 
+    const params = getDifficultyParameters(history, difficulty, grade);
+    const resolvedDifficulty = params.level;
+
+    const rules = (poolDoc.difficultyRules && poolDoc.difficultyRules[resolvedDifficulty]) || 
                   (poolDoc.difficultyRules && poolDoc.difficultyRules.easy) || 
                   { optionCount: 3, correctCount: 1, distractorCount: 2, distractorSimilarity: 'medium', showLabels: true };
 
@@ -195,7 +198,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         subject: poolDoc.subject || 'english',
         topic: poolDoc.topic || 'lkg',
         skillId,
-        difficulty,
+        difficulty: resolvedDifficulty,
         explanation,
         microSkillId: skillId,
         templateId: poolDoc.metadata?.templateId || 'lkg.english.word_recognition',
