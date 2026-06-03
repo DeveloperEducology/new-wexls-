@@ -17,8 +17,14 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
   // If the poolDoc has the new 'pools' property, use the new structure
   if (poolDoc.pools) {
-    const correctPool = poolDoc.pools.correctPool || [];
-    const distractorPool = poolDoc.pools.distractorPool || [];
+    let correctPool = poolDoc.pools.correctPool || [];
+    let distractorPool = poolDoc.pools.distractorPool || [];
+
+    // Filter pools for image-only options (when hideOptionLabel is true and hideOptionImages is not true)
+    if (poolDoc.hideOptionLabel && !poolDoc.hideOptionImages) {
+      correctPool = correctPool.filter(o => o.imageUrl);
+      distractorPool = distractorPool.filter(o => o.imageUrl);
+    }
 
     if (correctPool.length === 0) {
       throw new Error('Correct options pool in dynamic_pool document is empty.');
@@ -212,7 +218,10 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
   // --- LEGACY FALLBACK BLOCK ---
   const params = getDifficultyParameters(history, difficulty, grade);
   
-  const pool = poolDoc.options || poolDoc.pool || [];
+  let pool = poolDoc.options || poolDoc.pool || [];
+  if (poolDoc.hideOptionLabel && !poolDoc.hideOptionImages) {
+    pool = pool.filter(o => o.imageUrl);
+  }
   if (pool.length === 0) {
     throw new Error('Options pool in legacy dynamic_pool document is empty.');
   }

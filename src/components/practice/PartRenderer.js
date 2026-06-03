@@ -7,6 +7,7 @@ import styles from './FactoryLayout.module.css';
 import { speakText } from '@/lib/ttsClient';
 import { resolveToolSvg } from '@/lib/practice/svgTools';
 import InteractiveToolWrapper from './InteractiveToolWrapper';
+import { parseHTMLToJSX } from '@/lib/practice/htmlParser';
 
 const getSafeString = (val) => {
   if (!val) return '';
@@ -110,7 +111,7 @@ function InlineMarkdown({ text }) {
           if (mathMatch) {
             return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
           }
-          return <span key={subIndex}>{subPiece.replace(/^#{1,4}\s*/, '')}</span>;
+          return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
         })}
       </span>
     );

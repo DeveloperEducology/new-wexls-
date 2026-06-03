@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import KaTeXRenderer from './KaTeXRenderer';
 import { speakText } from '../../lib/ttsClient';
 import styles from './FactoryLayout.module.css';
+import { parseHTMLToJSX } from '@/lib/practice/htmlParser';
 
 function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
@@ -22,7 +23,7 @@ function InlineMarkdown({ text }) {
           if (mathMatch) {
             return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
           }
-          return <span key={subIndex}>{subPiece.replace(/^#{1,4}\s*/, '')}</span>;
+          return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
         })}
       </span>
     );
