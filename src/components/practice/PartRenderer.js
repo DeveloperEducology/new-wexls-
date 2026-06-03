@@ -635,7 +635,8 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
 
   const isTransparent = src.match(/\.(png|svg|webp)($|\?)/i);
   const labelText = part.label || part.alt || '';
-  const canPlaySound = part.playLabelSound && (labelText || part.audioUrl);
+  const spokenText = labelText || question?.soundText || 'Image';
+  const canPlaySound = part.playLabelSound && (spokenText || part.audioUrl);
 
   const isDirectSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
   const isSelected = isDirectSelect && partIndex !== undefined && userAnswer !== null && Number(userAnswer) === partIndex;
@@ -644,13 +645,13 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
     if (isDirectSelect && !isAnswered && onAnswer) {
       onAnswer(partIndex);
     } else if (canPlaySound) {
-      speakText(labelText || 'Image', question?.voice || part.voice || 'Puck', part.audioUrl);
+      speakText(spokenText, question?.voice || part.voice || 'Puck', part.audioUrl);
     }
   };
 
   const handleSpeakerClick = (e) => {
     e.stopPropagation();
-    speakText(labelText || 'Image', question?.voice || part.voice || 'Puck', part.audioUrl);
+    speakText(spokenText, question?.voice || part.voice || 'Puck', part.audioUrl);
   };
 
   const commonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
@@ -738,7 +739,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
           onClick={(e) => {
             if (isDirectSelect) {
               e.stopPropagation();
-              speakText(labelText || 'Image', question?.voice || part.voice || 'Puck', part.audioUrl);
+              speakText(spokenText, question?.voice || part.voice || 'Puck', part.audioUrl);
             }
           }}
           style={{
