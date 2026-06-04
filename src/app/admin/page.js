@@ -383,6 +383,14 @@ Explanation: The word dad has the short a sound, like the a in bad.`;
 export default function AdminConsolePage() {
   const [theme, setTheme] = useState('light');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [imageBuster, setImageBuster] = useState(Date.now());
+
+  const getBustedUrl = useCallback((url) => {
+    if (!url || typeof url !== 'string') return url;
+    if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+    const cleanUrl = url.split('?')[0];
+    return `${cleanUrl}?tb=${imageBuster}`;
+  }, [imageBuster]);
   
   useEffect(() => {
     const stored = localStorage.getItem('adminTheme');
@@ -11020,6 +11028,7 @@ Explanation: A question must end with a question mark.`}</pre>
 
                 const url = data.results?.[0]?.url;
                 setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'done', url, outKB, usedOriginal } : e));
+                setImageBuster(Date.now());
               } catch (err) {
                 setImgFiles(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: err.message } : e));
               }
@@ -11930,7 +11939,7 @@ Explanation: A question must end with a question mark.`}</pre>
                               borderBottom: '1px solid #f1f5f9',
                             }}>
                               <img
-                                src={img.url}
+                                src={getBustedUrl(img.url)}
                                 alt=""
                                 style={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain' }}
                                 loading="lazy"
@@ -12274,6 +12283,7 @@ Explanation: A question must end with a question mark.`}</pre>
                       onCancel={() => setGalleryCroppingImg(null)}
                       onSave={() => {
                         setGalleryCroppingImg(null);
+                        setImageBuster(Date.now());
                         fetchGalleryImages();
                       }}
                     />
