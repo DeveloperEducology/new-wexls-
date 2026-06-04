@@ -1178,14 +1178,11 @@ export default function AdminConsolePage() {
   const [editingMetadataImg, setEditingMetadataImg] = useState(null);
   const [editForm, setEditForm] = useState({ singular: '', plural: '', article: '', category: '', tags: '' });
 
-  // Cropper State
-  const [croppingImg, setCroppingImg] = useState(null);
-  const [crop, setCrop] = useState({ x: 5, y: 5, w: 90, h: 90 });
-  const [savingCrop, setSavingCrop] = useState(false);
+  // Cropper State for Gallery
+  const [galleryCroppingImg, setGalleryCroppingImg] = useState(null);
 
-  const startCropper = (img) => {
-    setCroppingImg(img);
-    setCrop({ x: 5, y: 5, w: 90, h: 90 });
+  const startGalleryCropper = (img) => {
+    setGalleryCroppingImg(img);
   };
 
   const startEditMetadata = (img) => {
@@ -12089,7 +12086,7 @@ Explanation: A question must end with a question mark.`}</pre>
                                     }}
                                     onClick={(ev) => {
                                       ev.stopPropagation();
-                                      startCropper(img);
+                                      startGalleryCropper(img);
                                     }}
                                   >
                                     ✂️ Crop Image
@@ -12270,12 +12267,13 @@ Explanation: A question must end with a question mark.`}</pre>
                   )}
 
                   {/* ── Image Cropper Modal ── */}
-                  {croppingImg && (
-                    <ImageCropper
-                      img={croppingImg}
-                      onCancel={() => setCroppingImg(null)}
+                  {galleryCroppingImg && (
+                    <GalleryImageCropper
+                      img={galleryCroppingImg}
+                      styles={styles}
+                      onCancel={() => setGalleryCroppingImg(null)}
                       onSave={() => {
-                        setCroppingImg(null);
+                        setGalleryCroppingImg(null);
                         fetchGalleryImages();
                       }}
                     />
@@ -14501,7 +14499,7 @@ Explanation: A question must end with a question mark.`}</pre>
 }
 
 // ── IMAGE CROPPER COMPONENT ──────────────────────────────────────────────────
-function ImageCropper({ img, styles, onCancel, onSave }) {
+function GalleryImageCropper({ img, styles, onCancel, onSave }) {
   const [crop, setCrop] = useState({ x: 5, y: 5, w: 90, h: 90 });
   const [renderedDims, setRenderedDims] = useState(null);
   const [saving, setSaving] = useState(false);
