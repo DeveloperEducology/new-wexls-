@@ -614,7 +614,7 @@ export default function AdminConsolePage() {
   // ── Image Upload State ──────────────────────────────────────────────────────
   const [imgFiles, setImgFiles] = useState([]);
   const [imgMaxWidth, setImgMaxWidth] = useState(1200);
-  const [imgQuality, setImgQuality] = useState(85);
+  const [imgQuality, setImgQuality] = useState(82);
   const [imgFormat, setImgFormat] = useState('image/webp');
   const [imgFolder, setImgFolder] = useState('images');
   const [imgFolderPreset, setImgFolderPreset] = useState('images');
@@ -11151,7 +11151,7 @@ Explanation: A question must end with a question mark.`}</pre>
                 }));
                 
                 setCropTarget(null);
-              }, cropTarget.file.type || 'image/jpeg');
+              }, cropTarget.file.type || 'image/jpeg', 0.82);
             };
           }
 
@@ -14680,7 +14680,7 @@ function GalleryImageCropper({ img, styles, onCancel, onSave }) {
       } finally {
         setSaving(false);
       }
-    }, mimeType, 0.95);
+    }, mimeType, 0.82);
   };
 
   return (
