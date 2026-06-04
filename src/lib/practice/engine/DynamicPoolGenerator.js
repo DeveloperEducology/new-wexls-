@@ -61,9 +61,21 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     // 4. Select distractors from distractor pool
     let selectedDistractors = [];
 
+    // Prioritize thematic distractors defined on the target option
+    if (Array.isArray(targetOption.distractors) && targetOption.distractors.length > 0) {
+      targetOption.distractors.forEach(lbl => {
+        const matched = distractorPool.find(d => d.label.toLowerCase().trim() === lbl.toLowerCase().trim());
+        if (matched && !selectedDistractors.some(sel => sel.id === matched.id)) {
+          selectedDistractors.push({ ...matched });
+        }
+      });
+    }
+
     // Inject matching misconception distractor if student has a weakness
     if (targetWeakness) {
-      const remediationDistractor = distractorPool.find(d => d.misconceptionType === targetWeakness);
+      const remediationDistractor = distractorPool.find(
+        d => d.misconceptionType === targetWeakness && !selectedDistractors.some(sel => sel.id === d.id)
+      );
       if (remediationDistractor) {
         selectedDistractors.push({ ...remediationDistractor });
       }
