@@ -1178,6 +1178,16 @@ export default function AdminConsolePage() {
   const [editingMetadataImg, setEditingMetadataImg] = useState(null);
   const [editForm, setEditForm] = useState({ singular: '', plural: '', article: '', category: '', tags: '' });
 
+  // Cropper State
+  const [croppingImg, setCroppingImg] = useState(null);
+  const [crop, setCrop] = useState({ x: 5, y: 5, w: 90, h: 90 });
+  const [savingCrop, setSavingCrop] = useState(false);
+
+  const startCropper = (img) => {
+    setCroppingImg(img);
+    setCrop({ x: 5, y: 5, w: 90, h: 90 });
+  };
+
   const startEditMetadata = (img) => {
     setEditingMetadataImg(img);
     setEditForm({
@@ -12053,21 +12063,38 @@ Explanation: A question must end with a question mark.`}</pre>
                                     🔍 Full Size
                                   </a>
                                 </div>
-                                <button
-                                  className={styles.btnOutline}
-                                  style={{
-                                    width: '100%', fontSize: 10, padding: '6px 0', height: 30,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                                    borderColor: 'var(--color-primary)', color: 'var(--color-primary)',
-                                    background: 'rgba(59, 130, 246, 0.04)'
-                                  }}
-                                  onClick={(ev) => {
-                                    ev.stopPropagation();
-                                    startEditMetadata(img);
-                                  }}
-                                >
-                                  ✏️ Edit IXL Metadata
-                                </button>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button
+                                    className={styles.btnOutline}
+                                    style={{
+                                      flex: 1, fontSize: 10, padding: '6px 0', height: 30,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                      borderColor: 'var(--color-primary)', color: 'var(--color-primary)',
+                                      background: 'rgba(59, 130, 246, 0.04)'
+                                    }}
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      startEditMetadata(img);
+                                    }}
+                                  >
+                                    ✏️ Edit Metadata
+                                  </button>
+                                  <button
+                                    className={styles.btnOutline}
+                                    style={{
+                                      flex: 1, fontSize: 10, padding: '6px 0', height: 30,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                      borderColor: '#10b981', color: '#10b981',
+                                      background: 'rgba(16, 185, 129, 0.04)'
+                                    }}
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      startCropper(img);
+                                    }}
+                                  >
+                                    ✂️ Crop Image
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -12240,6 +12267,18 @@ Explanation: A question must end with a question mark.`}</pre>
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  {/* ── Image Cropper Modal ── */}
+                  {croppingImg && (
+                    <ImageCropper
+                      img={croppingImg}
+                      onCancel={() => setCroppingImg(null)}
+                      onSave={() => {
+                        setCroppingImg(null);
+                        fetchGalleryImages();
+                      }}
+                    />
                   )}
 
                 </div>
@@ -14460,3 +14499,458 @@ Explanation: A question must end with a question mark.`}</pre>
     </>
   );
 }
+
+// ── IMAGE CROPPER COMPONENT ──────────────────────────────────────────────────
+function ImageCropper({ img, styles, onCancel, onSave }) {
+  const [crop, setCrop] = useState({ x: 5, y: 5, w: 90, h: 90 });
+  const [renderedDims, setRenderedDims] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMode, setSaveMode] = useState('overwrite'); // 'overwrite' or 'copy'
+  
+  const imgRef = useRef(null);
+  const dragStateRef = useRef(null);
+
+  const proxyUrl = `/api/admin/proxy-image?url=${encodeURIComponent(img.url)}`;
+
+  const handleImageLoad = () => {
+    if (imgRef.current) {
+      setRenderedDims({
+        width: imgRef.current.clientWidth,
+        height: imgRef.current.clientHeight,
+        naturalWidth: imgRef.current.naturalWidth,
+        naturalHeight: imgRef.current.naturalHeight,
+      });
+    }
+  };
+
+  // Adjust coordinates on resize
+  useEffect(() => {
+    const handleResize = () => {
+      handleImageLoad();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleStartDrag = (ev, handle) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    
+    if (!renderedDims) return;
+
+    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    
+    dragStateRef.current = {
+      handle,
+      startX: clientX,
+      startY: clientY,
+      startCrop: { ...crop },
+    };
+    
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchmove', handleDragMove, { passive: false });
+    document.addEventListener('touchend', handleDragEnd);
+  };
+
+  const handleDragMove = (ev) => {
+    if (!dragStateRef.current || !renderedDims) return;
+    
+    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    
+    const deltaX = ((clientX - dragStateRef.current.startX) / renderedDims.width) * 100;
+    const deltaY = ((clientY - dragStateRef.current.startY) / renderedDims.height) * 100;
+    
+    const { handle, startCrop } = dragStateRef.current;
+    let newCrop = { ...startCrop };
+    
+    if (handle === 'move') {
+      newCrop.x = Math.max(0, Math.min(100 - startCrop.w, startCrop.x + deltaX));
+      newCrop.y = Math.max(0, Math.min(100 - startCrop.h, startCrop.y + deltaY));
+    } else {
+      // East (right resize)
+      if (handle.includes('e')) {
+        newCrop.w = Math.max(5, Math.min(100 - startCrop.x, startCrop.w + deltaX));
+      }
+      // West (left resize)
+      if (handle.includes('w')) {
+        const maxW = startCrop.x + startCrop.w;
+        const proposedW = Math.max(5, startCrop.w - deltaX);
+        newCrop.x = Math.max(0, Math.min(maxW - 5, maxW - proposedW));
+        newCrop.w = maxW - newCrop.x;
+      }
+      // South (bottom resize)
+      if (handle.includes('s')) {
+        newCrop.h = Math.max(5, Math.min(100 - startCrop.y, startCrop.h + deltaY));
+      }
+      // North (top resize)
+      if (handle.includes('n')) {
+        const maxH = startCrop.y + startCrop.h;
+        const proposedH = Math.max(5, startCrop.h - deltaY);
+        newCrop.y = Math.max(0, Math.min(maxH - 5, maxH - proposedH));
+        newCrop.h = maxH - newCrop.y;
+      }
+    }
+    
+    setCrop(newCrop);
+  };
+
+  const handleDragEnd = () => {
+    dragStateRef.current = null;
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.removeEventListener('touchmove', handleDragMove);
+    document.removeEventListener('touchend', handleDragEnd);
+  };
+
+  const executeCrop = () => {
+    if (!renderedDims || !imgRef.current) return;
+    setSaving(true);
+
+    const naturalWidth = renderedDims.naturalWidth;
+    const naturalHeight = renderedDims.naturalHeight;
+
+    const sourceX = (crop.x / 100) * naturalWidth;
+    const sourceY = (crop.y / 100) * naturalHeight;
+    const sourceWidth = (crop.w / 100) * naturalWidth;
+    const sourceHeight = (crop.h / 100) * naturalHeight;
+
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      alert('Canvas context could not be created.');
+      setSaving(false);
+      return;
+    }
+
+    // Draw cropped image
+    ctx.drawImage(
+      imgRef.current,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      sourceWidth,
+      sourceHeight
+    );
+
+    // Determine type (use original type or fallback to image/jpeg)
+    const ext = img.url.split('.').pop().toLowerCase().split('?')[0];
+    const mimeType = ext === 'png' ? 'image/png' : (ext === 'webp' ? 'image/webp' : 'image/jpeg');
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        alert('Failed to generate image blob.');
+        setSaving(false);
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        const cleanName = img.name || 'cropped';
+        const file = new File([blob], `${cleanName}.${ext}`, { type: mimeType });
+        
+        formData.append('file', file);
+        formData.append('folder', img.folder || 'images');
+
+        if (saveMode === 'overwrite') {
+          formData.append('key', img.key);
+        }
+
+        const response = await fetch('/api/admin/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to save cropped image.');
+        }
+
+        alert(saveMode === 'overwrite' ? 'Cropped image overwritten successfully!' : 'Cropped image saved as copy successfully!');
+        onSave();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      } finally {
+        setSaving(false);
+      }
+    }, mimeType, 0.95);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(15, 23, 42, 0.85)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      padding: 24,
+    }}
+    onClick={onCancel}
+    >
+      <div style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 16,
+        width: 'min(700px, 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04)',
+        overflow: 'hidden',
+        maxHeight: '90vh'
+      }}
+      onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--color-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0
+        }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>✂️ Crop Image: {img.name}</h3>
+          <button
+            onClick={onCancel}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 18, color: 'var(--color-text-muted)',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body (Image + Interactive crop zone) */}
+        <div style={{
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0f172a',
+          overflowY: 'auto',
+          flex: 1,
+          minHeight: 200,
+          position: 'relative'
+        }}>
+          <div style={{
+            position: 'relative',
+            maxHeight: '55vh',
+            maxWidth: '100%',
+            display: 'inline-block'
+          }}>
+            <img
+              ref={imgRef}
+              src={proxyUrl}
+              alt="crop preview"
+              onLoad={handleImageLoad}
+              crossOrigin="anonymous"
+              style={{
+                maxHeight: '55vh',
+                maxWidth: '100%',
+                display: 'block',
+                userSelect: 'none',
+                WebkitUserDrag: 'none'
+              }}
+            />
+
+            {renderedDims && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                pointerEvents: 'auto'
+              }}>
+                {/* 4 Mask backdrops (semi-transparent overlays) */}
+                <div style={{
+                  position: 'absolute',
+                  left: 0, top: 0, right: 0,
+                  height: `${crop.y}%`,
+                  background: 'rgba(0, 0, 0, 0.65)'
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  left: 0, top: `${crop.y + crop.h}%`, right: 0, bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.65)'
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  left: 0, top: `${crop.y}%`,
+                  width: `${crop.x}%`,
+                  height: `${crop.h}%`,
+                  background: 'rgba(0, 0, 0, 0.65)'
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  left: `${crop.x + crop.w}%`, top: `${crop.y}%`, right: 0,
+                  height: `${crop.h}%`,
+                  background: 'rgba(0, 0, 0, 0.65)'
+                }} />
+
+                {/* Bounding box outline & drag surface */}
+                <div
+                  onMouseDown={(e) => handleStartDrag(e, 'move')}
+                  onTouchStart={(e) => handleStartDrag(e, 'move')}
+                  style={{
+                    position: 'absolute',
+                    left: `${crop.x}%`,
+                    top: `${crop.y}%`,
+                    width: `${crop.w}%`,
+                    height: `${crop.h}%`,
+                    border: '2px dashed #10b981',
+                    cursor: 'move',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {/* Grid Lines */}
+                  <div style={{ position: 'absolute', top: '33.3%', left: 0, right: 0, height: 1, borderTop: '1px dashed rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', top: '66.6%', left: 0, right: 0, height: 1, borderTop: '1px dashed rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', left: '33.3%', top: 0, bottom: 0, width: 1, borderLeft: '1px dashed rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', left: '66.6%', top: 0, bottom: 0, width: 1, borderLeft: '1px dashed rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
+
+                  {/* Handles */}
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'nw')}
+                    onTouchStart={(e) => handleStartDrag(e, 'nw')}
+                    style={{ position: 'absolute', top: -5, left: -5, width: 12, height: 12, background: '#10b981', border: '1.5px solid #fff', borderRadius: '50%', cursor: 'nwse-resize', zIndex: 10 }}
+                  />
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'ne')}
+                    onTouchStart={(e) => handleStartDrag(e, 'ne')}
+                    style={{ position: 'absolute', top: -5, right: -5, width: 12, height: 12, background: '#10b981', border: '1.5px solid #fff', borderRadius: '50%', cursor: 'nesw-resize', zIndex: 10 }}
+                  />
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'sw')}
+                    onTouchStart={(e) => handleStartDrag(e, 'sw')}
+                    style={{ position: 'absolute', bottom: -5, left: -5, width: 12, height: 12, background: '#10b981', border: '1.5px solid #fff', borderRadius: '50%', cursor: 'nesw-resize', zIndex: 10 }}
+                  />
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'se')}
+                    onTouchStart={(e) => handleStartDrag(e, 'se')}
+                    style={{ position: 'absolute', bottom: -5, right: -5, width: 12, height: 12, background: '#10b981', border: '1.5px solid #fff', borderRadius: '50%', cursor: 'nwse-resize', zIndex: 10 }}
+                  />
+                  
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'n')}
+                    onTouchStart={(e) => handleStartDrag(e, 'n')}
+                    style={{ position: 'absolute', top: -4, left: 10, right: 10, height: 8, cursor: 'ns-resize', zIndex: 9 }}
+                  />
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 's')}
+                    onTouchStart={(e) => handleStartDrag(e, 's')}
+                    style={{ position: 'absolute', bottom: -4, left: 10, right: 10, height: 8, cursor: 'ns-resize', zIndex: 9 }}
+                  />
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'w')}
+                    onTouchStart={(e) => handleStartDrag(e, 'w')}
+                    style={{ position: 'absolute', left: -4, top: 10, bottom: 10, width: 8, cursor: 'ew-resize', zIndex: 9 }}
+                  />
+                  <div
+                    onMouseDown={(e) => handleStartDrag(e, 'e')}
+                    onTouchStart={(e) => handleStartDrag(e, 'e')}
+                    style={{ position: 'absolute', right: -4, top: 10, bottom: 10, width: 8, cursor: 'ew-resize', zIndex: 9 }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 14, textAlign: 'center', pointerEvents: 'none' }}>
+            {renderedDims ? (
+              <>
+                Original: {renderedDims.naturalWidth} x {renderedDims.naturalHeight} &bull;{' '}
+                Cropped Selection:{' '}
+                {Math.round((crop.w / 100) * renderedDims.naturalWidth)} x{' '}
+                {Math.round((crop.h / 100) * renderedDims.naturalHeight)}
+              </>
+            ) : (
+              'Loading image data...'
+            )}
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div style={{
+          padding: '16px 20px',
+          borderTop: '1px solid var(--color-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'var(--bg-primary)',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' }}>Save option:</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-main)' }}>
+              <input
+                type="radio"
+                name="saveMode"
+                checked={saveMode === 'overwrite'}
+                onChange={() => setSaveMode('overwrite')}
+                style={{ cursor: 'pointer' }}
+              />
+              Overwrite Original
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-main)' }}>
+              <input
+                type="radio"
+                name="saveMode"
+                checked={saveMode === 'copy'}
+                onChange={() => setSaveMode('copy')}
+                style={{ cursor: 'pointer' }}
+              />
+              Save as Copy
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={onCancel}
+              className={styles.btnOutline}
+              style={{ padding: '8px 16px', fontSize: 12, height: 36 }}
+            >
+              Cancel
+            </button>
+            <button
+              disabled={saving || !renderedDims}
+              onClick={executeCrop}
+              style={{
+                padding: '0 20px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#10b981',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: 12,
+                height: 36,
+                cursor: (saving || !renderedDims) ? 'not-allowed' : 'pointer',
+                opacity: (saving || !renderedDims) ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              {saving ? 'Saving...' : '💾 Apply & Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

@@ -79,14 +79,24 @@ export async function POST(request) {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Build a unique key: folder/timestamp-sanitizedName.ext
-      const ext = EXT_MAP[mimeType] || 'jpg';
-      const safeName = originalName
-        .replace(/\.[^.]+$/, '')           // strip existing extension
-        .replace(/[^a-zA-Z0-9_-]/g, '-')  // sanitize
-        .slice(0, 80);
-      const timestamp = Date.now();
-      const key = `${folder}/${timestamp}-${safeName}.${ext}`;
+      // Build a unique key: folder/timestamp-sanitizedName.ext or use passed key for overwrites
+      const passedKey = formData.get('key');
+      let key = '';
+      let safeName = '';
+      let ext = EXT_MAP[mimeType] || 'jpg';
+
+      if (passedKey) {
+        key = passedKey;
+        const base = passedKey.split('/').pop() || '';
+        safeName = base.replace(/\.[^.]+$/, '').replace(/^[0-9]+-/, '') || 'cropped';
+      } else {
+        safeName = originalName
+          .replace(/\.[^.]+$/, '')           // strip existing extension
+          .replace(/[^a-zA-Z0-9_-]/g, '-')  // sanitize
+          .slice(0, 80);
+        const timestamp = Date.now();
+        key = `${folder}/${timestamp}-${safeName}.${ext}`;
+      }
 
       const url = await uploadImageToR2(buffer, key, mimeType);
 
