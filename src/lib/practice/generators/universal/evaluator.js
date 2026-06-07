@@ -611,6 +611,50 @@ export function evaluateTemplate(template, seed) {
     }
   }
 
+  // 4.5. Resolve Solution sections
+  let solutionSections = [];
+  if (template.solution && Array.isArray(template.solution.sections)) {
+    solutionSections = template.solution.sections.map(part => {
+      let resolvedPart;
+      if (typeof part === 'string') {
+        resolvedPart = interpolateString(part, resolvedVariables);
+      } else {
+        resolvedPart = { ...part };
+        if (typeof resolvedPart.content === 'string') {
+          resolvedPart.content = interpolateString(resolvedPart.content, resolvedVariables);
+        }
+        if (typeof resolvedPart.text === 'string') {
+          resolvedPart.text = interpolateString(resolvedPart.text, resolvedVariables);
+        }
+        if (typeof resolvedPart.label === 'string') {
+          resolvedPart.label = interpolateString(resolvedPart.label, resolvedVariables);
+        }
+        if (resolvedPart.type === 'arithmeticLayout' && resolvedPart.layout && Array.isArray(resolvedPart.layout.rows)) {
+          resolvedPart.layout = {
+            ...resolvedPart.layout,
+            rows: resolvedPart.layout.rows.map(row => {
+              const resRow = { ...row };
+              if (typeof resRow.text === 'string') {
+                resRow.text = interpolateString(resRow.text, resolvedVariables);
+              }
+              if (Array.isArray(resRow.cells)) {
+                resRow.cells = resRow.cells.map(cell => {
+                  const resCell = { ...cell };
+                  if (resCell.expected !== undefined) {
+                    resCell.expected = interpolateString(String(resCell.expected), resolvedVariables);
+                  }
+                  return resCell;
+                });
+              }
+              return resRow;
+            })
+          };
+        }
+      }
+      return resolvedPart;
+    });
+  }
+
   // 5. Build final question structure
   const isVisualChoice = template.optionsType === 'visual_choice';
 
@@ -675,6 +719,12 @@ export function evaluateTemplate(template, seed) {
     questionPayload.answer = resolvedAnswer;
     questionPayload.correctAnswer = resolvedAnswer;
     questionPayload.correctAnswerText = typeof resolvedAnswer === 'object' ? JSON.stringify(resolvedAnswer) : String(resolvedAnswer);
+  }
+
+  if (solutionSections.length > 0) {
+    questionPayload.solution = {
+      sections: solutionSections
+    };
   }
 
   return questionPayload;

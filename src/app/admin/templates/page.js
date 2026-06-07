@@ -4393,6 +4393,126 @@ export default function VisualTemplateBuilderPage() {
                         {!isVisualChoice && !isCategorization && Array.isArray(q.parts) && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', margin: '12px 0' }}>
                             {q.parts.map((p, idx) => {
+                              if (p.type === 'arithmeticLayout' && p.layout) {
+                                const layout = p.layout;
+                                const isVertical = layout.variant === 'verticalAdditionReplica' || layout.variant === 'verticalSubtractionReplica' || layout.variant === 'verticalMultiplicationReplica';
+                                const answerRow = layout.rows?.find(r => r.kind === 'answer');
+                                const digitCount = Math.max(
+                                  2,
+                                  answerRow?.cells?.length || 0,
+                                  ...(layout.rows || []).map(r => String(r.text || '').replace(/[+×x−\-]/gi, '').trim().length)
+                                );
+                                const cellSize = isVertical ? 32 : 44;
+                                const operatorWidth = isVertical ? 28 : 0;
+                                const digitGridWidth = digitCount * cellSize;
+                                const fullGridWidth = operatorWidth + digitGridWidth;
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      display: 'flex',
+                                      justifyContent: 'center',
+                                      width: '100%',
+                                      margin: '18px 0'
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-end',
+                                        gap: isVertical ? '3px' : '6px',
+                                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                                        fontSize: isVertical ? '28px' : '38px',
+                                        fontWeight: isVertical ? 500 : 800,
+                                        color: '#0f172a',
+                                      }}
+                                    >
+                                      {(layout.rows || []).map((row, rIdx) => {
+                                        if (row.kind === 'divider') {
+                                          return (
+                                            <div
+                                              key={rIdx}
+                                              style={{
+                                                width: isVertical ? `${fullGridWidth}px` : '100%',
+                                                height: isVertical ? '2px' : '3px',
+                                                background: '#0f172a',
+                                              }}
+                                            />
+                                          );
+                                        }
+                                        if (row.kind === 'answer') {
+                                          return (
+                                            <div
+                                              key={rIdx}
+                                              style={{
+                                                display: 'flex',
+                                                gap: isVertical ? 0 : '6px',
+                                                width: isVertical ? `${digitGridWidth}px` : 'auto',
+                                                marginLeft: isVertical ? `${operatorWidth}px` : 0,
+                                              }}
+                                            >
+                                              {(answerRow.cells || []).map((cell) => {
+                                                const val = q.answer?.[cell.id] || q.correctAnswer?.[cell.id] || '';
+                                                return (
+                                                  <input
+                                                    key={cell.id}
+                                                    type="text"
+                                                    value={val}
+                                                    disabled
+                                                    style={{
+                                                      width: `${cellSize}px`,
+                                                      height: isVertical ? '30px' : '54px',
+                                                      border: '2px solid #22c55e',
+                                                      borderLeftStyle: isVertical && cell.id !== answerRow.cells[0]?.id ? 'dashed' : 'solid',
+                                                      borderLeftWidth: isVertical && cell.id !== answerRow.cells[0]?.id ? 1 : 2,
+                                                      marginLeft: isVertical && cell.id !== answerRow.cells[0]?.id ? -1 : 0,
+                                                      textAlign: 'center',
+                                                      font: 'inherit',
+                                                      fontSize: isVertical ? '22px' : 'inherit',
+                                                      padding: 0,
+                                                      background: '#f0fdf4',
+                                                      color: '#15803d',
+                                                      outline: 'none',
+                                                    }}
+                                                  />
+                                                );
+                                              })}
+                                            </div>
+                                          );
+                                        }
+                                        if (isVertical) {
+                                          const rawText = String(row.text || '');
+                                          const operator = rawText.trimStart().match(/^[+×x−\-]/i)?.[0] || '';
+                                          const digits = rawText.replace(/^[\s+×x−\-]+/i, '').trim().padStart(digitCount, ' ').split('');
+
+                                          return (
+                                            <div
+                                              key={rIdx}
+                                              style={{
+                                                width: `${fullGridWidth}px`,
+                                                display: 'grid',
+                                                gridTemplateColumns: `${operatorWidth}px repeat(${digitCount}, ${cellSize}px)`,
+                                                alignItems: 'center',
+                                                whiteSpace: 'pre',
+                                              }}
+                                            >
+                                              <span style={{ textAlign: 'center' }}>{operator.toLowerCase() === 'x' ? '×' : operator}</span>
+                                              {digits.map((digit, digitIdx) => (
+                                                <span key={`${rIdx}-${digitIdx}`} style={{ textAlign: 'center' }}>
+                                                  {digit === ' ' ? '\u00A0' : digit}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          );
+                                        }
+                                        return <div key={rIdx}>{row.text}</div>;
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              }
                               if (p.type === 'text') {
                                 return (
                                   <div key={idx} style={{ fontSize: '16px', color: '#1e293b', lineHeight: '1.6' }}>

@@ -30,6 +30,116 @@ function InlineMarkdown({ text }) {
   });
 }
 
+function ArithmeticLayoutSolution({ layout }) {
+  const isVertical = layout?.variant === 'verticalAdditionReplica' || layout?.variant === 'verticalSubtractionReplica' || layout?.variant === 'verticalMultiplicationReplica';
+  const answerRow = layout?.rows?.find((row) => row.kind === 'answer');
+  const digitCount = Math.max(
+    2,
+    answerRow?.cells?.length || 0,
+    ...(layout?.rows || []).map((row) => String(row.text || '').replace(/[+×x−\-]/gi, '').trim().length)
+  );
+  const cellSize = isVertical ? 32 : 44;
+  const operatorWidth = isVertical ? 28 : 0;
+  const digitGridWidth = digitCount * cellSize;
+  const fullGridWidth = operatorWidth + digitGridWidth;
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: isVertical ? 3 : 6,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontSize: isVertical ? '28px' : '38px',
+        fontWeight: isVertical ? 500 : 800,
+        color: '#0f172a',
+      }}
+    >
+      {(layout?.rows || []).map((row, rowIndex) => {
+        if (row.kind === 'divider') {
+          return (
+            <div
+              key={rowIndex}
+              style={{
+                width: isVertical ? fullGridWidth : '100%',
+                height: isVertical ? 2 : 3,
+                background: '#0f172a',
+              }}
+            />
+          );
+        }
+
+        if (row.kind === 'answer') {
+          return (
+            <div
+              key={rowIndex}
+              style={{
+                display: 'flex',
+                gap: isVertical ? 0 : 6,
+                width: isVertical ? digitGridWidth : 'auto',
+                marginLeft: isVertical ? operatorWidth : 0,
+              }}
+            >
+              {(answerRow?.cells || []).map((cell) => (
+                <span
+                  key={cell.id}
+                  style={{
+                    width: cellSize,
+                    height: isVertical ? 30 : 54,
+                    border: '2px solid #22c55e',
+                    borderLeftStyle: isVertical && cell.id !== answerRow.cells[0]?.id ? 'dashed' : 'solid',
+                    borderLeftWidth: isVertical && cell.id !== answerRow.cells[0]?.id ? 1 : 2,
+                    marginLeft: isVertical && cell.id !== answerRow.cells[0]?.id ? -1 : 0,
+                    textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    font: 'inherit',
+                    fontSize: isVertical ? 22 : 'inherit',
+                    background: '#f0fdf4',
+                    color: '#15803d',
+                  }}
+                >
+                  {cell.expected}
+                </span>
+              ))}
+            </div>
+          );
+        }
+
+        if (isVertical) {
+          const rawText = String(row.text || '');
+          const operator = rawText.trimStart().match(/^[+×x−\-]/i)?.[0] || '';
+          const digits = rawText.replace(/^[\s+×x−\-]+/i, '').trim().padStart(digitCount, ' ').split('');
+
+          return (
+            <div
+              key={rowIndex}
+              style={{
+                width: fullGridWidth,
+                display: 'grid',
+                gridTemplateColumns: `${operatorWidth}px repeat(${digitCount}, ${cellSize}px)`,
+                alignItems: 'center',
+                whiteSpace: 'pre',
+              }}
+            >
+              <span style={{ textAlign: 'center' }}>{operator.toLowerCase() === 'x' ? '×' : operator}</span>
+              {digits.map((digit, digitIndex) => (
+                <span key={`${rowIndex}-${digitIndex}`} style={{ textAlign: 'center' }}>
+                  {digit === ' ' ? '\u00A0' : digit}
+                </span>
+              ))}
+            </div>
+          );
+        }
+
+        return <div key={rowIndex}>{row.text}</div>;
+      })}
+    </div>
+  );
+}
+
 function renderSolutionPart(part, index, context = {}) {
   if (part == null) return null;
 
@@ -109,6 +219,14 @@ function renderSolutionPart(part, index, context = {}) {
         }}
       >
         <KaTeXRenderer math={part.content} displayMode={true} />
+      </div>
+    );
+  }
+
+  if (part.type === 'arithmeticLayout' && part.layout) {
+    return (
+      <div key={index} style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', width: '100%' }}>
+        <ArithmeticLayoutSolution layout={part.layout} />
       </div>
     );
   }
