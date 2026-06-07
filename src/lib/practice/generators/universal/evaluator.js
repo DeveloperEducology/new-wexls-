@@ -510,6 +510,28 @@ export function evaluateTemplate(template, seed) {
         });
       }
       
+      if (resolvedPart.type === 'arithmeticLayout' && resolvedPart.layout && Array.isArray(resolvedPart.layout.rows)) {
+        resolvedPart.layout = {
+          ...resolvedPart.layout,
+          rows: resolvedPart.layout.rows.map(row => {
+            const resRow = { ...row };
+            if (typeof resRow.text === 'string') {
+              resRow.text = interpolateString(resRow.text, resolvedVariables);
+            }
+            if (Array.isArray(resRow.cells)) {
+              resRow.cells = resRow.cells.map(cell => {
+                const resCell = { ...cell };
+                if (resCell.expected !== undefined) {
+                  resCell.expected = interpolateString(String(resCell.expected), resolvedVariables);
+                }
+                return resCell;
+              });
+            }
+            return resRow;
+          })
+        };
+      }
+      
       if (resolvedPart.type === 'number_line' && (resolvedPart.interactive === true || resolvedPart.interactive === 'true' || resolvedPart.clickToFill === true || resolvedPart.clickToFill === 'true')) {
         hasClickToFill = true;
       }
