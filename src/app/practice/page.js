@@ -5,6 +5,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionRenderer from '../../components/practice/QuestionRenderer';
+import SticksBuilderWorkspace from '../../components/practice/SticksBuilderWorkspace';
 import LabLayout from '../../components/practice/LabLayout';
 import PracticeFeedback from '../../components/practice/PracticeFeedback';
 import styles from '../../components/practice/FactoryLayout.module.css';
@@ -42,6 +43,7 @@ import { dataGraphsCatalogOptions } from '../../lib/practice/clientCatalogs/data
 import { storyMathCatalogOptions } from '../../lib/practice/clientCatalogs/storyMathCatalog.js';
 import { interactiveToolsCatalogOptions } from '../../lib/practice/clientCatalogs/interactiveToolsCatalog.js';
 import { cubeToolsCatalogOptions } from '../../lib/practice/clientCatalogs/cubeToolsCatalog.js';
+import { ukgNumbersCountingCatalogOptions } from '../../lib/practice/clientCatalogs/ukgNumbersCountingCatalog.js';
 import DraggableToolOverlay from '../../components/practice/DraggableToolOverlay';
 import OverlayToolbar from '../../components/practice/OverlayToolbar';
 
@@ -56,6 +58,14 @@ const UNITS_MEASUREMENT_OPTIONS = Object.entries(unitsMeasurementSkillsByGrade).
 const SOLAR_SYSTEM_OPTIONS = [
   { group: 'Grade 3', label: 'SS.1 Identify planets in the solar system', value: 'science-g3-solar-system-planets-hotspot' },
   { group: 'Grade 3', label: 'SS.2 Measure and compare heights', value: 'science-g3-solar-system-height-measure' }
+];
+
+const UKG_SCIENCE_OPTIONS = [
+  { group: 'UKG', label: 'SC.1 Classify objects by two-dimensional shape', value: 'ukg-science-classify-2d-shapes' },
+  { group: 'UKG', label: 'SC.2 Sort objects by two-dimensional shape', value: 'ukg-science-sort-objects-by-two-dimensional-shape' },
+  { group: 'UKG', label: 'SC.3 Identify triangles', value: 'ukg-science-identify-triangles' },
+  { group: 'UKG', label: 'SC.4 Identify squares', value: 'ukg-science-identify-squares' },
+  { group: 'UKG', label: 'SC.5 Identify rectangles', value: 'ukg-science-identify-rectangles' }
 ];
 
 const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([grade, skills]) =>
@@ -305,6 +315,20 @@ const LKG_OPTIONS = [
 ];
 
 const SOURCE_CONFIGS = {
+  'ukg-numbers-counting': {
+    label: 'UKG Numbers & Counting',
+    api: '/api/practice',
+    badge: 'UKG',
+    description: 'Interactive UKG counting, number sense, sequences, tallies, and number lines.',
+    defaultLogicType: 'ukg-count3-learn',
+    subject: 'math',
+    topic: 'ukg-numbers-counting',
+    options: ukgNumbersCountingCatalogOptions,
+    tips: [
+      { label: 'Interactive foundation', text: 'Counting and ten-frame skills reuse the proven LKG interaction engine.' },
+      { label: 'UKG progression', text: 'More, less, sequences, tallies, and number lines extend number sense to 10.' },
+    ],
+  },
   lkg: {
     label: 'LKG Practice',
     api: '/api/practice',
@@ -529,6 +553,20 @@ const SOURCE_CONFIGS = {
       { label: 'Interactive Orbits', text: 'Stunning space background with responsive elliptical orbits.' },
       { label: 'Hotspot Canvas', text: 'Click directly on the animated planets to answer.' },
     ],
+  },
+  'ukg-science': {
+    label: 'UKG Science Practice',
+    api: '/api/practice',
+    badge: 'SCI',
+    description: 'Classify shapes and identify circles, triangles, squares, and rectangles.',
+    defaultLogicType: 'ukg-science-classify-2d-shapes',
+    subject: 'science',
+    topic: 'ukg-science',
+    options: UKG_SCIENCE_OPTIONS,
+    tips: [
+      { label: 'Option Pooling', text: 'Questions dynamically pull objects from a single centralized shapes pool.' },
+      { label: 'Visual Matching', text: 'Students match shapes based on their visual profiles.' }
+    ]
   },
   'english-grammar': {
     label: 'Grammar Practice',
@@ -1008,10 +1046,15 @@ function PracticePageContent() {
   const [logicType, setLogicType] = useState(initialLogicType || 'addition-g1-e3-model-match-to-10');
   const [question, setQuestion] = useState(null);
   const isPreK = useMemo(() => {
-    if (urlTopic === 'lkg' || urlTopic === 'prek' || urlTopic === 'ukg') return true;
-    if (logicType && (logicType.includes('lkg') || logicType.includes('prek') || logicType.includes('ukg'))) return true;
+    const t = String(urlTopic || '').toLowerCase().trim();
+    if (t === 'lkg' || t === 'prek' || t === 'ukg' || t.includes('ukg') || t.includes('lkg') || t.includes('prek')) return true;
+    
+    if (logicType && (logicType.toLowerCase().includes('lkg') || logicType.toLowerCase().includes('prek') || logicType.toLowerCase().includes('ukg'))) return true;
+    
     const skillGrade = question?.metadata?.grade || question?.grade;
-    if (skillGrade && (skillGrade === 'lkg' || skillGrade === 'prek' || skillGrade === 'ukg')) return true;
+    const g = String(skillGrade || '').toLowerCase().trim();
+    if (g === 'lkg' || g === 'prek' || g === 'ukg' || g.includes('lkg') || g.includes('prek') || g.includes('ukg')) return true;
+    
     return false;
   }, [urlTopic, logicType, question]);
   const [templateJson, setTemplateJson] = useState(null);
@@ -1045,6 +1088,8 @@ function PracticePageContent() {
   // Student Profile states
   const [activeStudent, setActiveStudent] = useState('Alex');
   const [studentList, setStudentList] = useState(['Alex', 'Sam', 'Charlie', 'Taylor']);
+
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1342,6 +1387,26 @@ function PracticePageContent() {
       setLevelStreak(0);
       setLevelModal(null);
       setHistory([]);
+    }
+
+    if (logicType === 'meas-k-build-shapes-sticks') {
+      const mockQuestion = {
+        id: 'meas-k-build-shapes-sticks',
+        type: 'interactive_sticks_builder',
+        title: 'Build shapes with sticks',
+        questionText: 'Use the sticks to build a shape.',
+        showSubmitButton: false,
+        metadata: {
+          subject: 'math',
+          topic: 'measurement',
+          grade: 'Kindergarten',
+          skillId: 'meas-k-build-shapes-sticks'
+        }
+      };
+      setQuestion(mockQuestion);
+      setLoading(false);
+      loadingRef.current = false;
+      return;
     }
 
     try {
@@ -2970,6 +3035,18 @@ function PracticePageContent() {
           <div className={transitionState === 'slideIn' ? styles.questionSlideIn : undefined} style={{ width: '100%' }}>
             {transitionState === 'praise' ? (
               <CorrectPraiseCard praiseMessage={praiseMessage} isPreK={isPreK} />
+            ) : question?.type === 'interactive_sticks_builder' ? (
+              <SticksBuilderWorkspace
+                smartScore={smartScore}
+                setSmartScore={setSmartScore}
+                questionsAnswered={0}
+                setQuestionsAnswered={() => {}}
+                levelStreak={levelStreak}
+                setLevelStreak={setLevelStreak}
+                setTransitionState={setTransitionState}
+                setPraiseMessage={setPraiseMessage}
+                fetchQuestion={fetchQuestion}
+              />
             ) : (
               <>
                 <QuestionRenderer
