@@ -1,8 +1,10 @@
 import { shapesRemediationSkills } from './remediation.js';
 import { shapesGrade2Skills } from './grade2.js';
 import { shapesGrade3Skills } from './grade3.js';
+import { shapesUkgSkills } from './ukg.js';
 
 export const shapesMicroSkills = [
+  ...shapesUkgSkills,
   {
     id: 'shapes-g1-identify-visual-text-opts',
     code: 'SH.1',
@@ -30,6 +32,7 @@ export const shapesMicroSkills = [
 
 export const shapesSkillsByGrade = {
   remediation: shapesRemediationSkills,
+  UKG: shapesUkgSkills,
   1: shapesMicroSkills.filter(s => s.grade === '1'),
   2: shapesGrade2Skills,
   3: shapesGrade3Skills
@@ -38,3 +41,4 @@ export const shapesSkillsByGrade = {
 export function getShapesSkill(skillId) {
   return shapesMicroSkills.find((skill) => skill.id === skillId || skill.code === skillId) || null;
 }
+

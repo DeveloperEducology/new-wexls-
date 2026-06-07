@@ -1,0 +1,642 @@
+.container {
+  min-height: 100vh;
+  background: #f0fdf4; /* Soft mint/light green background to differentiate from first demo */
+  color: #1e293b;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* IXL Green Navigation Bar */
+.ixlNavBar {
+  background: #7ecb00; /* Distinct IXL Green */
+  height: 60px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.ixlBrand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ixlLogo {
+  height: 32px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #4b0082;
+  font-size: 20px;
+  letter-spacing: -0.05em;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ixlLogo span {
+  color: #ff8c00;
+}
+
+.searchIcon {
+  width: 28px;
+  height: 28px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.navLinks {
+  display: flex;
+  gap: 24px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.navLinks span {
+  cursor: pointer;
+  opacity: 0.95;
+  transition: opacity 0.2s;
+}
+
+.navLinks span:hover {
+  opacity: 1;
+}
+
+.authButtons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.signInBtn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.joinBtn {
+  background: #ffffff;
+  color: #0284c7;
+  border: 1px solid #0284c7;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Breadcrumb Sub-Header */
+.subHeader {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modeToggleGroup {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Mode toggles */
+.modeBtn {
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modeBtnActive {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #ffffff;
+  box-shadow: 0 4px 6px rgba(14, 165, 233, 0.15);
+}
+
+/* Main Layout Grid */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 32px;
+  max-width: 1080px;
+  width: 100%;
+  margin: 32px auto;
+  padding: 0 20px;
+  align-items: start;
+}
+
+/* Practice Card Container */
+.practiceCard {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(15,23,42,0.06);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.learnExample {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  background: #f0f9ff;
+  border: 1px dashed #0ea5e9;
+  color: #0369a1;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.learnExample:hover {
+  background: #e0f2fe;
+}
+
+/* Question prompt layout */
+.promptRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.speakerBtn {
+  background: #0ea5e9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);
+  transition: transform 0.1s;
+}
+
+.speakerBtn:active {
+  transform: scale(0.92);
+}
+
+/* Blueprint Canvas Frame */
+.canvasFrame {
+  position: relative;
+  aspect-ratio: 800 / 400;
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid #cbd5e1;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+  touch-action: none;
+  background-color: #1e3a8a; /* Blueprint blue background */
+}
+
+/* Blueprint Grid Lines */
+.blueprintGrid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  pointer-events: none;
+}
+
+/* Wooden stick styling */
+.stickHorizontal {
+  width: 70px;
+  height: 12px;
+  background: linear-gradient(to bottom, #d97706, #b45309 60%, #78350f);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    0 3px 6px rgba(0,0,0,0.25);
+  border-radius: 6px;
+}
+
+.stickVertical {
+  width: 12px;
+  height: 70px;
+  background: linear-gradient(to right, #d97706, #b45309 60%, #78350f);
+  box-shadow: 
+    inset 1px 0 1px rgba(255, 255, 255, 0.35),
+    0 3px 6px rgba(0,0,0,0.25);
+  border-radius: 6px;
+}
+
+/* Draggable placed sticks on canvas */
+.placedStick {
+  position: absolute;
+  cursor: grab;
+  z-index: 10;
+  transition: transform 0.1s ease;
+}
+
+.placedStickHorizontal {
+  background: linear-gradient(to bottom, #f59e0b, #d97706 60%, #92400e);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    0 4px 8px rgba(0,0,0,0.3);
+  border-radius: 8px;
+}
+
+.placedStickVertical {
+  background: linear-gradient(to right, #f59e0b, #d97706 60%, #92400e);
+  box-shadow: 
+    inset 1px 0 1px rgba(255, 255, 255, 0.45),
+    0 4px 8px rgba(0,0,0,0.3);
+  border-radius: 8px;
+}
+
+.placedStickActive {
+  cursor: grabbing !important;
+  transform: scale(1.03) !important;
+  z-index: 12;
+}
+
+/* Stick Dock slots */
+.dockPanel {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px 12px 0 0;
+  padding: 24px 24px 8px 24px;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  min-height: 120px;
+}
+
+.dockSlotWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dockSlot {
+  width: 90px;
+  height: 90px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+}
+
+.slotNumber {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  background: #f1f5f9;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+}
+
+.dockCount {
+  display: flex;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  margin-top: -21px;
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.dockCount strong {
+  color: #7ecb00;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+/* Active Dock Stick item styles */
+.sticker {
+  cursor: grab;
+  z-index: 5;
+  transition: transform 0.2s;
+  user-select: none;
+}
+
+.sticker:hover {
+  transform: scale(1.08) rotate(1deg);
+}
+
+.stickerDragging {
+  opacity: 0.4;
+}
+
+.silhouettePlaceholder {
+  opacity: 0.15;
+  filter: grayscale(1) brightness(0.2);
+  pointer-events: none;
+}
+
+/* Canvas Targets */
+.shadowTarget {
+  position: absolute;
+  opacity: 0.25;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+
+.shadowHorizontal {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.shadowVertical {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.shadowTargetActive {
+  opacity: 0.95;
+  border: 2px solid #22c55e;
+  background-color: rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+}
+
+.shadowTargetLabel {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ffffff;
+  background: rgba(30, 41, 59, 0.85);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  z-index: 5;
+}
+
+.shadowHorizontal .shadowTargetLabel {
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.shadowVertical .shadowTargetLabel {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.shadowTargetActive .shadowTargetLabel {
+  color: #ffffff;
+  background: #15803d;
+  border-color: #22c55e;
+}
+
+/* Action button controls */
+.actionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.submitBtn {
+  background: #7ecb00;
+  color: #ffffff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #5fa300;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.submitBtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #5fa300;
+}
+
+.navControls {
+  display: flex;
+  gap: 12px;
+}
+
+.navBtn {
+  background: rgba(30, 41, 59, 0.05);
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  color: #475569;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.navBtn:hover {
+  background: rgba(30, 41, 59, 0.08);
+}
+
+/* Right Panel Scoreboard Widgets (IXL Mirror) */
+.widgetsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.widget {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.widgetHeader {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.questionsHeader {
+  background: #7ecb00;
+}
+
+.timeHeader {
+  background: #0ea5e9;
+}
+
+.scoreHeader {
+  background: #f97316;
+}
+
+.widgetBody {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.widgetValue {
+  font-size: 28px;
+  font-weight: 900;
+  color: #334155;
+}
+
+.widgetSubtext {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.scratchpadWidget {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.scratchpadIcon {
+  font-size: 24px;
+  color: #0ea5e9;
+}
+
+.scratchpadText {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* Feedback alerts */
+.feedbackAlert {
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.successAlert {
+  background: #ecfdf5;
+  border: 1.5px solid #10b981;
+  color: #047857;
+}
+
+.errorAlert {
+  background: #fef2f2;
+  border: 1.5px solid #ef4444;
+  color: #b91c1c;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .widgetsPanel {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .widget {
+    flex: 1;
+  }
+}
+
+@media (max-width: 500px) {
+  .ixlNavBar {
+    padding: 0 16px;
+  }
+  .navLinks {
+    display: none;
+  }
+  .practiceCard {
+    padding: 16px;
+  }
+  .promptRow {
+    font-size: 16px;
+  }
+}

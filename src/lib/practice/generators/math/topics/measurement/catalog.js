@@ -176,6 +176,23 @@ export const MEASUREMENT_CATALOG = [
     templateName: 'meas.compare.size',
     engineName: 'compareSize'
   },
+  {
+    skillId: 'meas-k-build-shapes-sticks',
+    grade: 'Kindergarten',
+    code: 'M.K7',
+    title: 'Build shapes with sticks (interactive)',
+    description: 'Drag and drop horizontal, vertical, and sloped sticks onto outlines to construct squares, rectangles, and triangles.',
+    prerequisiteSkills: [],
+    relatedSkills: [],
+    crossTopicLinks: [],
+    questionTypes: ['interactive'],
+    visualType: 'blueprint layout',
+    difficultyLevels: [1],
+    misconceptions: [],
+    remediationPrompt: 'Drag the sticks onto the dotted lines to complete the shape.',
+    templateName: 'meas.sticks.interactive',
+    engineName: 'sticksMeasurement'
+  },
 
   // --- Grade 1 ---
   {

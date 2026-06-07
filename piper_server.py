@@ -26,14 +26,8 @@ class PiperHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Missing text parameter")
             return
             
-        # Map Puck/Charon/Kore/Fenrir names to standard Piper model filenames
-        voice_mapping = {
-            'Puck': 'en_US-ryan-medium',
-            'Charon': 'en_US-joe-medium',
-            'Kore': 'en_US-amy-medium',
-            'Fenrir': 'en_US-lessac-medium'
-        }
-        model_name = voice_mapping.get(voice, voice)
+        # Force using the Amy medium female voice as requested
+        model_name = 'en_US-amy-medium'
         
         # Look for model.onnx in the voices directory
         model_path = os.path.join(MODEL_DIR, f"{model_name}.onnx")

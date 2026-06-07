@@ -147,6 +147,64 @@ function generateSingleShapeFocus(rng, target, shapeNames, seed) {
   }
 }
 
+function generateSingle3DShapeFocus(rng, target, shapeNames, seed) {
+  const isIdentifyType = rng.next() > 0.5;
+  const colorKey = rng.pick(['green', 'blue', 'yellow', 'pink', 'purple']);
+  
+  if (isIdentifyType) {
+    const distractors = shapeNames.filter(s => s !== target);
+    const shuffledDistractors = shuffle(distractors, rng);
+    
+    const choices = [
+      { id: 'correct', label: target, svg: DRAW_3D[target](colorKey), isCorrect: true },
+      { id: 'dist1', label: shuffledDistractors[0], svg: DRAW_3D[shuffledDistractors[0]](colorKey), isCorrect: false },
+      { id: 'dist2', label: shuffledDistractors[1], svg: DRAW_3D[shuffledDistractors[1]](colorKey), isCorrect: false }
+    ];
+    
+    const shuffledChoices = shuffle(choices, rng);
+    const correctAnswerIndex = shuffledChoices.findIndex(c => c.isCorrect);
+    
+    const questionText = `Which shape is a **${target}**?`;
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [{ type: 'text', content: questionText }],
+      options: shuffledChoices.map((c, idx) => ({
+        id: `opt_${idx}`,
+        label: c.label.charAt(0).toUpperCase() + c.label.slice(1),
+        svg: c.svg,
+        hideLabel: true
+      })),
+      correctAnswerIndex,
+      layoutConfig: { columns: 3 },
+      solution: { sections: [{ type: 'text', content: `The correct option displays a **${target}**.` }] }
+    };
+  } else {
+    const displayShape = rng.next() > 0.5 ? target : rng.pick(shapeNames.filter(s => s !== target));
+    const svg = DRAW_3D[displayShape](colorKey);
+    
+    const questionText = `Is this a **${target}**?`;
+    const isCorrect = displayShape === target;
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'svg', content: svg }
+      ],
+      options: [
+        { id: 'yes', label: 'Yes' },
+        { id: 'no', label: 'No' }
+      ],
+      correctAnswerIndex: isCorrect ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: isCorrect ? `Yes! This is indeed a ${target}.` : `No! This is a ${displayShape}.` }] }
+    };
+  }
+}
+
+
 export function generateUkgShapesQuestion(template, variables) {
   const seed = variables.seed || String(Date.now());
   const rng = new SeededRandom(seed);
@@ -155,6 +213,7 @@ export function generateUkgShapesQuestion(template, variables) {
   
   const colorsList = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
   const shapeNames = ['circle', 'triangle', 'square', 'rectangle', 'hexagon'];
+  const shapeNames3D = ['cube', 'cylinder', 'sphere', 'cone'];
 
   // Q.1 Name the two-dimensional shape
   if (mode === 'shapes_name') {
@@ -455,6 +514,226 @@ export function generateUkgShapesQuestion(template, variables) {
           content: isSymmetric
             ? `Yes! The left and right sides of this ${pic.name} are mirror images and match perfectly.`
             : `No! The left and right sides of this ${pic.name} do not match. One side is different.`
+        }]
+      }
+    };
+  }
+
+  // R.1 Two-dimensional and three-dimensional shapes
+  if (mode === 'two_three_3d') {
+    const is3D = rng.next() > 0.5;
+    const target = is3D ? rng.pick(shapeNames3D) : rng.pick(shapeNames);
+    const colorKey = rng.pick(['green', 'blue', 'yellow', 'pink', 'purple']);
+    const svg = is3D ? DRAW_3D[target](colorKey) : buildShapeSvg(target, 'plain', colorKey);
+    
+    const questionText = "Is this shape a **2D shape (flat)** or a **3D shape (solid)**?";
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'svg', content: svg }
+      ],
+      options: [
+        { id: '2d', label: '2D shape (flat)' },
+        { id: '3d', label: '3D shape (solid)' }
+      ],
+      correctAnswerIndex: is3D ? 1 : 0,
+      solution: {
+        sections: [{
+          type: 'text',
+          content: `A **${target}** is a **${is3D ? '3D shape (solid)' : '2D shape (flat)'}**.`
+        }]
+      }
+    };
+  }
+
+  // R.2 Name the three-dimensional shape
+  if (mode === 'name_3d') {
+    const target = rng.pick(shapeNames3D);
+    const colorKey = rng.pick(['green', 'blue', 'yellow', 'pink', 'purple']);
+    const svg = DRAW_3D[target](colorKey);
+    
+    const questionText = "What 3D shape is this?";
+    
+    const rawOptions = ['cube', 'cylinder', 'sphere', 'cone'];
+    const optionsList = shuffle(rawOptions, rng);
+    const correctAnswerIndex = optionsList.indexOf(target);
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'svg', content: svg }
+      ],
+      options: optionsList.map((name, idx) => ({ id: `opt_${idx}`, label: name.charAt(0).toUpperCase() + name.slice(1) })),
+      correctAnswerIndex,
+      solution: {
+        sections: [{
+          type: 'text',
+          content: `This shape is a **${target}**.`
+        }]
+      }
+    };
+  }
+
+  // R.3 Spheres
+  if (mode === 'spheres') {
+    return generateSingle3DShapeFocus(rng, 'sphere', shapeNames3D, seed);
+  }
+
+  // R.4 Cubes
+  if (mode === 'cubes') {
+    return generateSingle3DShapeFocus(rng, 'cube', shapeNames3D, seed);
+  }
+
+  // R.5 Cones
+  if (mode === 'cones') {
+    return generateSingle3DShapeFocus(rng, 'cone', shapeNames3D, seed);
+  }
+
+  // R.6 Cylinders
+  if (mode === 'cylinders') {
+    return generateSingle3DShapeFocus(rng, 'cylinder', shapeNames3D, seed);
+  }
+
+  // R.7 Select three-dimensional shapes
+  if (mode === 'select_3d') {
+    const target = rng.pick(shapeNames3D);
+    const colorKey = rng.pick(['green', 'blue', 'yellow', 'pink', 'purple']);
+    const correctSvg = DRAW_3D[target](colorKey);
+    
+    const shuffled2D = shuffle(shapeNames, rng);
+    const dist1 = shuffled2D[0];
+    const dist1Svg = buildShapeSvg(dist1, 'plain', colorKey);
+    const dist2 = shuffled2D[1];
+    const dist2Svg = buildShapeSvg(dist2, 'plain', colorKey);
+    
+    const choices = [
+      { id: 'correct', label: target, svg: correctSvg, isCorrect: true },
+      { id: 'dist1', label: dist1, svg: dist1Svg, isCorrect: false },
+      { id: 'dist2', label: dist2, svg: dist2Svg, isCorrect: false }
+    ];
+    
+    const shuffledChoices = shuffle(choices, rng);
+    const correctAnswerIndex = shuffledChoices.findIndex(c => c.isCorrect);
+    
+    const questionText = "Which of these is a solid 3D shape?";
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [{ type: 'text', content: questionText }],
+      options: shuffledChoices.map((c, idx) => ({
+        id: `opt_${idx}`,
+        label: c.label.charAt(0).toUpperCase() + c.label.slice(1),
+        svg: c.svg,
+        hideLabel: true
+      })),
+      correctAnswerIndex,
+      layoutConfig: { columns: 3 },
+      solution: {
+        sections: [{
+          type: 'text',
+          content: `A **${target}** is a solid (3D) shape. Flat shapes like **${dist1}** and **${dist2}** are 2D.`
+        }]
+      }
+    };
+  }
+
+  // R.8 Identify shapes traced from solids
+  if (mode === 'traced_solids') {
+    const traceCases = [
+      { solid: 'cube', flat: 'square', desc: 'any face of a cube', svg: DRAW_3D.cube('purple') },
+      { solid: 'cone', flat: 'circle', desc: 'the bottom flat face of a cone', svg: DRAW_3D.cone('orange') },
+      { solid: 'cylinder', flat: 'circle', desc: 'the bottom flat face of a cylinder', svg: DRAW_3D.cylinder('green') }
+    ];
+    const picked = rng.pick(traceCases);
+    const questionText = `If you place a **${picked.solid}** flat on a piece of paper and trace around ${picked.desc}, what flat shape do you draw?`;
+    
+    const rawOptions = ['square', 'circle', 'triangle', 'rectangle'];
+    const uniqueOptions = new Set([picked.flat]);
+    while (uniqueOptions.size < 3) {
+      uniqueOptions.add(rng.pick(rawOptions));
+    }
+    const optionsList = shuffle(Array.from(uniqueOptions), rng);
+    const correctAnswerIndex = optionsList.indexOf(picked.flat);
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [
+        { type: 'text', content: questionText },
+        { type: 'svg', content: picked.svg }
+      ],
+      options: optionsList.map((name, idx) => ({ id: `opt_${idx}`, label: name.charAt(0).toUpperCase() + name.slice(1) })),
+      correctAnswerIndex,
+      solution: {
+        sections: [{
+          type: 'text',
+          content: `Tracing ${picked.desc} yields a **${picked.flat}**.`
+        }]
+      }
+    };
+  }
+
+  // R.9 Shapes of everyday objects I
+  if (mode === 'everyday_objects_1') {
+    const objects = [
+      { name: 'soccer ball', shape: 'sphere' },
+      { name: 'playing die', shape: 'cube' },
+      { name: 'ice cream cone', shape: 'cone' },
+      { name: 'soda can', shape: 'cylinder' }
+    ];
+    const picked = rng.pick(objects);
+    const questionText = `A **${picked.name}** is shaped like which 3D shape?`;
+    
+    const rawOptions = ['sphere', 'cube', 'cone', 'cylinder'];
+    const optionsList = shuffle(rawOptions, rng);
+    const correctAnswerIndex = optionsList.indexOf(picked.shape);
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [{ type: 'text', content: questionText }],
+      options: optionsList.map((name, idx) => ({ id: `opt_${idx}`, label: name.charAt(0).toUpperCase() + name.slice(1) })),
+      correctAnswerIndex,
+      solution: {
+        sections: [{
+          type: 'text',
+          content: `A **${picked.name}** is shaped like a **${picked.shape}**.`
+        }]
+      }
+    };
+  }
+
+  // R.10 Shapes of everyday objects II
+  if (mode === 'everyday_objects_2') {
+    const objects = [
+      { name: 'globe of the Earth', shape: 'sphere' },
+      { name: 'wooden toy block', shape: 'cube' },
+      { name: 'party hat', shape: 'cone' },
+      { name: 'soup can', shape: 'cylinder' }
+    ];
+    const picked = rng.pick(objects);
+    const questionText = `A **${picked.name}** is shaped like which 3D shape?`;
+    
+    const rawOptions = ['sphere', 'cube', 'cone', 'cylinder'];
+    const optionsList = shuffle(rawOptions, rng);
+    const correctAnswerIndex = optionsList.indexOf(picked.shape);
+    
+    return {
+      type: 'mcq',
+      questionText,
+      parts: [{ type: 'text', content: questionText }],
+      options: optionsList.map((name, idx) => ({ id: `opt_${idx}`, label: name.charAt(0).toUpperCase() + name.slice(1) })),
+      correctAnswerIndex,
+      solution: {
+        sections: [{
+          type: 'text',
+          content: `A **${picked.name}** is shaped like a **${picked.shape}**.`
         }]
       }
     };

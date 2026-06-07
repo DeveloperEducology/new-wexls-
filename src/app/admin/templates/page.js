@@ -375,6 +375,460 @@ const REFERENCE_EXAMPLES = [
   }
 ];
 
+// ─── Math Starter Templates ───────────────────────────────────────────────────
+// Ready-made configs for common math concepts. Load any in one click, then
+// customise the variables, visual, and options as needed.
+const MATH_STARTERS = [
+  // ── Odd / Even ──────────────────────────────────────────────────────────────
+  {
+    id: "starter-odd-even-mcq",
+    title: "Odd / Even — MCQ",
+    emoji: "🔢",
+    subject: "math",
+    topic: "ukg-numbers-counting",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "N", type: "integer", min: "1", max: "20" },
+      { name: "IsEven", type: "expression", formula: "N % 2 === 0 ? 1 : 0" }
+    ],
+    visuals: [],
+    questionText: "Is [N] odd or even?",
+    optionsType: "mcq",
+    shuffleOptions: false,
+    options: [
+      { label: "Even", isCorrect: "N % 2 === 0" },
+      { label: "Odd",  isCorrect: "N % 2 !== 0" }
+    ],
+    explanation: {
+      sections: [{
+        type: "text",
+        content: "[N] divided by 2 leaves a remainder of [N % 2]. So [N] is [N % 2 === 0 ? 'even' : 'odd']."
+      }]
+    }
+  },
+  {
+    id: "starter-odd-even-sort",
+    title: "Odd / Even — Sort (Drag & Drop)",
+    emoji: "🔢",
+    subject: "math",
+    topic: "ukg-numbers-counting",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "N", type: "integer", min: "1", max: "20" }
+    ],
+    visuals: [],
+    questionText: "Sort these numbers into Even and Odd.",
+    optionsType: "categorizationv2",
+    parts: [
+      {
+        type: "categorizationv2",
+        categories: [
+          { id: "even", label: "Even" },
+          { id: "odd",  label: "Odd" }
+        ],
+        items: [
+          { id: "n2", content: "2" },
+          { id: "n3", content: "3" },
+          { id: "n6", content: "6" },
+          { id: "n7", content: "7" },
+          { id: "n10", content: "10" },
+          { id: "n11", content: "11" }
+        ],
+        answerKey: {
+          n2: "even", n3: "odd", n6: "even",
+          n7: "odd", n10: "even", n11: "odd"
+        }
+      }
+    ],
+    answer: { n2: "even", n3: "odd", n6: "even", n7: "odd", n10: "even", n11: "odd" },
+    explanation: {
+      sections: [{ type: "text", content: "Even numbers end in 0, 2, 4, 6, 8. Odd numbers end in 1, 3, 5, 7, 9." }]
+    }
+  },
+  {
+    id: "starter-shape-sorting-clipart",
+    title: "Shape Sorting — SVG Drag & Drop",
+    emoji: "📐",
+    subject: "math",
+    topic: "ukg-numbers-counting",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [],
+    visuals: [],
+    questionText: "Sort the shapes into the correct columns.",
+    optionsType: "categorizationv2",
+    parts: [
+      {
+        type: "categorizationv2",
+        layoutMode: "category_sort",
+        htmlLayout: "category_sort",
+        cardStyle: "transparent",
+        categories: [
+          { id: "circles", label: "Circles" },
+          { id: "triangles", label: "Triangles" }
+        ],
+        items: [
+          { id: "c1", content: "Circle", svg: "<svg viewBox=\"0 0 100 100\" width=\"100%\" height=\"auto\"><circle cx=\"50\" cy=\"50\" r=\"35\" fill=\"#fbbf24\" stroke=\"#d97706\" stroke-width=\"4\"/></svg>", imageWidth: "80" },
+          { id: "c2", content: "Circle", svg: "<svg viewBox=\"0 0 100 100\" width=\"100%\" height=\"auto\"><circle cx=\"50\" cy=\"50\" r=\"35\" fill=\"#ef4444\" stroke=\"#b91c1c\" stroke-width=\"4\"/></svg>", imageWidth: "80" },
+          { id: "t1", content: "Triangle", svg: "<svg viewBox=\"0 0 100 100\" width=\"100%\" height=\"auto\"><polygon points=\"50,15 85,85 15,85\" fill=\"#3b82f6\" stroke=\"#1d4ed8\" stroke-width=\"4\"/></svg>", imageWidth: "80" },
+          { id: "t2", content: "Triangle", svg: "<svg viewBox=\"0 0 100 100\" width=\"100%\" height=\"auto\"><polygon points=\"50,15 85,85 15,85\" fill=\"#10b981\" stroke=\"#047857\" stroke-width=\"4\"/></svg>", imageWidth: "80" }
+        ],
+        answerKey: {
+          c1: "circles", c2: "circles", t1: "triangles", t2: "triangles"
+        }
+      }
+    ],
+    answer: { c1: "circles", c2: "circles", t1: "triangles", t2: "triangles" },
+    explanation: {
+      sections: [{ type: "text", content: "Circles go under 'Circles' and triangles go under 'Triangles'!" }]
+    }
+  },
+  // ── Addition ─────────────────────────────────────────────────────────────────
+  {
+    id: "starter-addition-basic",
+    title: "Addition — Basic MCQ",
+    emoji: "➕",
+    subject: "math",
+    topic: "grade1-addition-basics",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "1", max: "20" },
+      { name: "B", type: "integer", min: "1", max: "20" },
+      { name: "Result", type: "expression", formula: "A + B" }
+    ],
+    visuals: [],
+    questionText: "What is [A] + [B]?",
+    optionsType: "mcq",
+    options: [
+      { label: "[Result]",     isCorrect: true },
+      { label: "[Result] + 1", isCorrect: false },
+      { label: "[Result] - 1", isCorrect: false },
+      { label: "[A]",          isCorrect: false }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "[A] + [B] = [Result]." }]
+    }
+  },
+  {
+    id: "starter-addition-carry",
+    title: "Addition — With Carry (2-digit)",
+    emoji: "➕",
+    subject: "math",
+    topic: "grade2-addition-carry",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "15", max: "99" },
+      { name: "B", type: "integer", min: "15", max: "99" },
+      { name: "Result",   type: "expression", formula: "A + B" },
+      { name: "HasCarry", type: "expression", formula: "(A % 10 + B % 10) >= 10 ? 1 : 0" },
+      { name: "CarryOut", type: "expression", formula: "Math.floor((A % 10 + B % 10) / 10)" }
+    ],
+    visuals: [],
+    questionText: "What is [A] + [B]?",
+    optionsType: "fillInTheBlank",
+    metaConfig: { hasCarry: true },
+    parts: [
+      { type: "text", content: "  [A]\n+ [B]\n——\n[[ans]]" }
+    ],
+    answer: { ans: "[Result]" },
+    explanation: {
+      sections: [{ type: "text", content: "Add the ones: [A % 10] + [B % 10] = [A % 10 + B % 10]. [HasCarry === 1 ? 'Carry the 1 to tens.' : 'No carry needed.'] Add the tens: [Math.floor(A/10)] + [Math.floor(B/10)] + [CarryOut] = [Math.floor(A/10) + Math.floor(B/10) + CarryOut]. Answer: [Result]." }]
+    }
+  },
+  // ── Subtraction ──────────────────────────────────────────────────────────────
+  {
+    id: "starter-subtraction-basic",
+    title: "Subtraction — Basic MCQ",
+    emoji: "➖",
+    subject: "math",
+    topic: "grade1-subtraction-basics",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "5", max: "20" },
+      { name: "B", type: "integer", min: "1", max: "A - 1" },
+      { name: "Result", type: "expression", formula: "A - B" }
+    ],
+    visuals: [
+      { component: "TenFrame", props: { filledCount: "A", crossedOutCount: "B", color: "red" } }
+    ],
+    questionText: "What is [A] - [B]?",
+    optionsType: "mcq",
+    options: [
+      { label: "[Result]",     isCorrect: true },
+      { label: "[Result] + 1", isCorrect: false },
+      { label: "[Result] - 1", isCorrect: false },
+      { label: "[A]",          isCorrect: false }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "Start with [A], take away [B]. [A] - [B] = [Result]." }]
+    }
+  },
+  {
+    id: "starter-subtraction-borrow",
+    title: "Subtraction — With Borrowing (2-digit)",
+    emoji: "➖",
+    subject: "math",
+    topic: "grade2-subtraction-borrow",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "20", max: "99" },
+      { name: "B", type: "integer", min: "10", max: "A - 1" },
+      { name: "Result",    type: "expression", formula: "A - B" },
+      { name: "NeedsBorrow", type: "expression", formula: "A % 10 < B % 10 ? 1 : 0" }
+    ],
+    visuals: [],
+    questionText: "What is [A] - [B]?",
+    optionsType: "fillInTheBlank",
+    metaConfig: { hasBorrow: true },
+    parts: [
+      { type: "text", content: "  [A]\n- [B]\n——\n[[ans]]" }
+    ],
+    answer: { ans: "[Result]" },
+    explanation: {
+      sections: [{ type: "text", content: "[NeedsBorrow === 1 ? 'Borrow 10 from the tens place. ' : '']Subtract ones: [A % 10 < B % 10 ? A % 10 + 10 : A % 10] - [B % 10] = [A % 10 < B % 10 ? A % 10 + 10 - B % 10 : A % 10 - B % 10]. Subtract tens: [Math.floor(A/10) - (A % 10 < B % 10 ? 1 : 0)] - [Math.floor(B/10)] = [Math.floor(A/10) - (A % 10 < B % 10 ? 1 : 0) - Math.floor(B/10)]. Answer: [Result]." }]
+    }
+  },
+  // ── Multiplication ───────────────────────────────────────────────────────────
+  {
+    id: "starter-multiplication-basic",
+    title: "Multiplication — Basic MCQ",
+    emoji: "✖️",
+    subject: "math",
+    topic: "grade2-multiplication",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "2", max: "12" },
+      { name: "B", type: "integer", min: "2", max: "12" },
+      { name: "Result", type: "expression", formula: "A * B" }
+    ],
+    visuals: [],
+    questionText: "What is [A] × [B]?",
+    optionsType: "mcq",
+    options: [
+      { label: "[Result]",         isCorrect: true },
+      { label: "[Result] + [B]",   isCorrect: false },
+      { label: "[Result] - [B]",   isCorrect: false },
+      { label: "[A] + [B]",        isCorrect: false }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "[A] groups of [B] = [A] × [B] = [Result]." }]
+    }
+  },
+  {
+    id: "starter-multiplication-fib",
+    title: "Multiplication — Fill In The Blank",
+    emoji: "✖️",
+    subject: "math",
+    topic: "grade2-multiplication",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "2", max: "12" },
+      { name: "B", type: "integer", min: "2", max: "12" },
+      { name: "Result", type: "expression", formula: "A * B" }
+    ],
+    visuals: [],
+    questionText: "Complete the multiplication sentence.",
+    optionsType: "fillInTheBlank",
+    parts: [
+      { type: "text", content: "[A] × [B] = [[ans]]" }
+    ],
+    answer: { ans: "[Result]" },
+    explanation: {
+      sections: [{ type: "text", content: "[A] × [B] = [Result]. Think of it as [A] groups of [B]." }]
+    }
+  },
+  {
+    id: "starter-times-table",
+    title: "Times Table Quiz — MCQ",
+    emoji: "✖️",
+    subject: "math",
+    topic: "grade3-times-tables",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "Table", type: "integer", min: "2", max: "12" },
+      { name: "N",     type: "integer", min: "1", max: "12" },
+      { name: "Result", type: "expression", formula: "Table * N" }
+    ],
+    visuals: [],
+    questionText: "[Table] × [N] = ?",
+    optionsType: "mcq",
+    options: [
+      { label: "[Result]",         isCorrect: true },
+      { label: "[Result] + [Table]",isCorrect: false },
+      { label: "[Result] - [Table]",isCorrect: false },
+      { label: "[Table] + [N]",     isCorrect: false }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "[Table] × [N] = [Result]. (Table of [Table]: [Table]×[N] = [Result])" }]
+    }
+  },
+  // ── Division ─────────────────────────────────────────────────────────────────
+  {
+    id: "starter-division-exact",
+    title: "Division — Exact (No Remainder)",
+    emoji: "➗",
+    subject: "math",
+    topic: "grade3-division",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "Divisor",  type: "integer", min: "2", max: "10" },
+      { name: "Quotient", type: "integer", min: "2", max: "12" },
+      { name: "Dividend", type: "expression", formula: "Divisor * Quotient" }
+    ],
+    visuals: [],
+    questionText: "What is [Dividend] ÷ [Divisor]?",
+    optionsType: "mcq",
+    options: [
+      { label: "[Quotient]",       isCorrect: true },
+      { label: "[Quotient] + 1",   isCorrect: false },
+      { label: "[Quotient] - 1",   isCorrect: false },
+      { label: "[Divisor]",        isCorrect: false }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "[Dividend] ÷ [Divisor] = [Quotient] because [Divisor] × [Quotient] = [Dividend]." }]
+    }
+  },
+  {
+    id: "starter-division-remainder",
+    title: "Division — With Remainder",
+    emoji: "➗",
+    subject: "math",
+    topic: "grade3-division",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "Dividend", type: "integer", min: "10", max: "99" },
+      { name: "Divisor",  type: "integer", min: "2",  max: "9" },
+      { name: "Quotient",   type: "expression", formula: "Math.floor(Dividend / Divisor)" },
+      { name: "Remainder",  type: "expression", formula: "Dividend % Divisor" },
+      { name: "HasRemainder", type: "expression", formula: "Dividend % Divisor !== 0 ? 1 : 0" }
+    ],
+    visuals: [],
+    questionText: "What is [Dividend] ÷ [Divisor]?",
+    optionsType: "fillInTheBlank",
+    metaConfig: { hasRemainder: true },
+    parts: [
+      { type: "text", content: "[Dividend] ÷ [Divisor] = [[q]] remainder [[r]]" }
+    ],
+    answer: { q: "[Quotient]", r: "[Remainder]" },
+    explanation: {
+      sections: [{ type: "text", content: "[Divisor] × [Quotient] = [Divisor * Quotient]. [Dividend] − [Divisor * Quotient] = [Remainder]. So [Dividend] ÷ [Divisor] = [Quotient] remainder [Remainder]." }]
+    }
+  },
+  // ── Numbers & Comparison ───────────────────────────────────────────────────
+  {
+    id: "starter-number-comparison",
+    title: "Number Comparison — MCQ",
+    emoji: "🔢",
+    subject: "math",
+    topic: "ukg-numbers-counting",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "A", type: "integer", min: "1", max: "50" },
+      { name: "B", type: "integer", min: "1", max: "50" },
+      { name: "Rel", type: "expression", formula: "A > B ? '>' : (A < B ? '<' : '=')" }
+    ],
+    visuals: [],
+    questionText: "Compare [A] and [B]. Which sign makes the statement true? \n [A] ___ [B]",
+    optionsType: "mcq",
+    options: [
+      { label: "[A] > [B]", isCorrect: "A > B" },
+      { label: "[A] < [B]", isCorrect: "A < B" },
+      { label: "[A] = [B]", isCorrect: "A === B" }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "[A] is [A > B ? 'greater than' : (A < B ? 'less than' : 'equal to')] [B]. So, the correct symbol is [Rel]." }]
+    }
+  },
+  // ── Multiplication Array Model ──────────────────────────────────────────────
+  {
+    id: "starter-multiplication-array",
+    title: "Multiplication — Array Model MCQ",
+    emoji: "✖️",
+    subject: "math",
+    topic: "grade2-multiplication",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "Rows", type: "integer", min: "2", max: "5" },
+      { name: "Cols", type: "integer", min: "2", max: "6" },
+      { name: "Total", type: "expression", formula: "Rows * Cols" }
+    ],
+    visuals: [
+      {
+        component: "ItemCounter",
+        props: {
+          count: "Total",
+          itemType: "apple",
+          width: "90"
+        }
+      }
+    ],
+    questionText: "Look at the array of apples. It has [Rows] rows and [Cols] columns. Which multiplication sentence shows the total number of apples?",
+    optionsType: "mcq",
+    options: [
+      { label: "[Rows] × [Cols] = [Total]", isCorrect: true },
+      { label: "[Rows] + [Cols] = [Rows + Cols]", isCorrect: false },
+      { label: "[Rows] × [Rows] = [Rows * Rows]", isCorrect: false },
+      { label: "[Cols] × [Cols] = [Cols * Cols]", isCorrect: false }
+    ],
+    explanation: {
+      sections: [{ type: "text", content: "There are [Rows] rows of apples, with [Cols] apples in each row. [Rows] groups of [Cols] is written as [Rows] × [Cols] = [Total]." }]
+    }
+  }
+];
+
+const cleanSvgContent = (svgStr) => {
+  if (!svgStr) return '';
+  let cleaned = svgStr
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\t/g, ' ')
+    .replace(/\\\\/g, '\\');
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  return cleaned;
+};
+
+const isInlineSvg = (value) => {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return trimmed.startsWith('<svg') || trimmed.startsWith('<?xml') || trimmed.includes('<svg');
+};
+
+const getImageUrlPreview = (value) => {
+  if (!value || typeof value !== 'string') return null;
+  let cleanValue = value.trim();
+  
+  // Handle prefix like button::https://...
+  if (cleanValue.includes('::')) {
+    const parts = cleanValue.split('::');
+    const urlPart = parts.find(p => p.trim().startsWith('http'));
+    if (urlPart) {
+      cleanValue = urlPart.trim();
+    } else {
+      cleanValue = parts[parts.length - 1].trim();
+    }
+  }
+  
+  // Handle comma-separated list of URLs
+  if (cleanValue.includes(',')) {
+    const urls = cleanValue.split(',');
+    const firstUrl = urls.find(u => u.trim().startsWith('http'));
+    if (firstUrl) {
+      cleanValue = firstUrl.trim();
+    } else {
+      cleanValue = urls[0].trim();
+    }
+  }
+
+  // Only return if it starts with http, / (relative path), or data: (data URI)
+  if (cleanValue.startsWith('http') || cleanValue.startsWith('/') || cleanValue.startsWith('data:')) {
+    return cleanValue;
+  }
+  
+  return null;
+};
 
 export default function VisualTemplateBuilderPage() {
   // Database templates state
@@ -393,8 +847,20 @@ export default function VisualTemplateBuilderPage() {
   const [saving, setSaving] = useState(false);
 
   // Simulator State
+  const [currentStep, setCurrentStep] = useState(1);
   const [seed, setSeed] = useState('12345');
   const [showJson, setShowJson] = useState(false);
+  
+  // Advanced Live Preview State
+  const [previewDevice, setPreviewDevice] = useState('desktop'); // 'desktop', 'tablet', 'mobile'
+  const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false);
+  const [previewControls, setPreviewControls] = useState({
+    randomizeItems: false,
+    randomizeOrder: false,
+    showCorrectAnswer: false,
+    previewAsStudent: true
+  });
+  const [sampleSet, setSampleSet] = useState('Sample Set 1');
 
   // Code editor state
   const [editorMode, setEditorMode] = useState('form'); // 'form' or 'json'
@@ -419,6 +885,31 @@ export default function VisualTemplateBuilderPage() {
   const [webSearching, setWebSearching] = useState(false);
   const [importingUrl, setImportingUrl] = useState(null);
   const [importedWebUrls, setImportedWebUrls] = useState({}); // { [remoteUrl]: localR2Url }
+
+  // AI Template Builder states
+  const [aiTemplatePrompt, setAiTemplatePrompt] = useState('');
+  const [aiTemplateGenerating, setAiTemplateGenerating] = useState(false);
+  const [aiTemplateSuccessMsg, setAiTemplateSuccessMsg] = useState('');
+
+  // Upgraded Gallery states
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTag, setSelectedTag] = useState(null);
+  
+  // Metadata Editor states
+  const [editingMetaItem, setEditingMetaItem] = useState(null); // img object
+  const [metaEditSingular, setMetaEditSingular] = useState('');
+  const [metaEditPlural, setMetaEditPlural] = useState('');
+  const [metaEditArticle, setMetaEditArticle] = useState('a');
+  const [metaEditCategory, setMetaEditCategory] = useState('general');
+  const [metaEditTags, setMetaEditTags] = useState('');
+  const [isSavingMeta, setIsSavingMeta] = useState(false);
+
+  // Gallery Direct Upload states
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryDragOver, setGalleryDragOver] = useState(false);
+  
+  // Gallery zoom lightbox
+  const [galleryZoomImg, setGalleryZoomImg] = useState(null);
   const [activeHsIdx, setActiveHsIdx] = useState(0);
 
   // Curriculum skill linking states
@@ -438,6 +929,147 @@ export default function VisualTemplateBuilderPage() {
   const [skillIdInput, setSkillIdInput] = useState('');
   const [skillCode, setSkillCode] = useState('');
   const [skillOrder, setSkillOrder] = useState('0');
+  // Difficulty scaling state
+  const [skillDifficultyScaling, setSkillDifficultyScaling] = useState(false);
+  const [skillTemplateLevels, setSkillTemplateLevels] = useState([
+    { level: 1, templateIds: [] },
+    { level: 2, templateIds: [] },
+    { level: 3, templateIds: [] },
+  ]);
+  const [levelAddInputs, setLevelAddInputs] = useState({ 1: '', 2: '', 3: '' });
+  const [expandedLevel, setExpandedLevel] = useState(1);
+
+
+  const handleAiTemplateGenerate = async () => {
+    if (!aiTemplatePrompt.trim()) return;
+    setAiTemplateGenerating(true);
+    setAiTemplateSuccessMsg('');
+    try {
+      const res = await fetch('/api/admin/templates/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiTemplatePrompt,
+          subject: template.subject || 'math',
+          topic: template.topic || 'general'
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.template) {
+        const generated = data.template;
+        setTemplate({
+          ...generated,
+          variables: generated.variables || [],
+          visuals: generated.visuals || [],
+          options: generated.options || [],
+          explanation: generated.explanation || { sections: [{ type: 'text', content: '' }] }
+        });
+        setJsonText(JSON.stringify(generated, null, 2));
+        setAiTemplateSuccessMsg('✨ AI successfully generated the template! Check it out below.');
+        setTimeout(() => setAiTemplateSuccessMsg(''), 5000);
+      } else {
+        alert(`Failed to generate template: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('AI template generation failed:', err);
+      alert(`AI template generation failed: ${err.message}`);
+    } finally {
+      setAiTemplateGenerating(false);
+    }
+  };
+
+  const handleGalleryUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    setGalleryUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('folder', 'images');
+      fd.append('maxWidth', '1200');
+      fd.append('quality', '85');
+      fd.append('format', 'image/webp');
+      Array.from(files).forEach(file => {
+        fd.append('files[]', file);
+      });
+      
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      
+      if (data.results && data.results.length > 0) {
+        const listRes = await fetch('/api/admin/list-images?prefix=images/');
+        const listData = await listRes.json();
+        setGalleryImages(listData.images || []);
+        
+        // Auto-select the first uploaded image
+        const firstUploadedUrl = data.results[0].url;
+        setSelectedGalleryUrls(prev => {
+          if (!prev.includes(firstUploadedUrl)) {
+            return [...prev, firstUploadedUrl];
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.error('Direct upload failed:', err);
+      alert(`Upload failed: ${err.message}`);
+    } finally {
+      setGalleryUploading(false);
+    }
+  };
+
+  const handleOpenEditMetadata = (img) => {
+    setEditingMetaItem(img);
+    setMetaEditSingular(img.linguistics?.singular || '');
+    setMetaEditPlural(img.linguistics?.plural || '');
+    setMetaEditArticle(img.linguistics?.article || 'a');
+    setMetaEditCategory(img.classification?.category || 'general');
+    setMetaEditTags(Array.isArray(img.classification?.tags) ? img.classification.tags.join(', ') : '');
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!editingMetaItem) return;
+    setIsSavingMeta(true);
+    try {
+      const tagsArray = metaEditTags.split(',').map(t => t.trim()).filter(Boolean);
+      const res = await fetch('/api/admin/update-image-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: editingMetaItem.key,
+          linguistics: {
+            singular: metaEditSingular,
+            plural: metaEditPlural,
+            article: metaEditArticle
+          },
+          classification: {
+            category: metaEditCategory,
+            tags: tagsArray
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGalleryImages(prev => prev.map(img => {
+          if (img.key === editingMetaItem.key) {
+            return {
+              ...img,
+              linguistics: { singular: metaEditSingular, plural: metaEditPlural, article: metaEditArticle },
+              classification: { category: metaEditCategory, tags: tagsArray }
+            };
+          }
+          return img;
+        }));
+        setEditingMetaItem(null);
+      } else {
+        alert(`Failed to save metadata: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed saving metadata:', err);
+      alert(`Failed saving metadata: ${err.message}`);
+    } finally {
+      setIsSavingMeta(false);
+    }
+  };
 
 
   const openGallery = async (targetProp, currentVal = '') => {
@@ -520,6 +1152,28 @@ export default function VisualTemplateBuilderPage() {
         };
         updateField('parts', newParts);
       }
+    } else if (galleryTargetProp.startsWith('dnd_category_prefillImageUrl_')) {
+      const catIdx = parseInt(galleryTargetProp.replace('dnd_category_prefillImageUrl_', ''), 10);
+      const newParts = [...template.parts];
+      const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+      if (partIdx >= 0 && newParts[partIdx].categories?.[catIdx]) {
+        newParts[partIdx].categories[catIdx] = {
+          ...newParts[partIdx].categories[catIdx],
+          prefillImageUrl: valueStr
+        };
+        updateField('parts', newParts);
+      }
+    } else if (galleryTargetProp.startsWith('dnd_item_imageUrl_')) {
+      const itemIdx = parseInt(galleryTargetProp.replace('dnd_item_imageUrl_', ''), 10);
+      const newParts = [...template.parts];
+      const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+      if (partIdx >= 0 && newParts[partIdx].items?.[itemIdx]) {
+        newParts[partIdx].items[itemIdx] = {
+          ...newParts[partIdx].items[itemIdx],
+          imageUrl: valueStr
+        };
+        updateField('parts', newParts);
+      }
     } else if (galleryTargetProp.startsWith('variable_items_')) {
       const varIdx = parseInt(galleryTargetProp.replace('variable_items_', ''), 10);
       updateVariable(varIdx, 'items', entries);
@@ -534,18 +1188,63 @@ export default function VisualTemplateBuilderPage() {
     setShowGallery(false);
   };
 
+  // Extracted list of all categories dynamically
+  const availableCategories = useMemo(() => {
+    const cats = new Set();
+    galleryImages.forEach(img => {
+      const cat = img.classification?.category || 'general';
+      cats.add(cat.toLowerCase().trim());
+    });
+    return ['all', ...Array.from(cats)];
+  }, [galleryImages]);
+
+  // Extracted list of popular tags dynamically
+  const popularTags = useMemo(() => {
+    const tagsMap = {};
+    galleryImages.forEach(img => {
+      if (img.classification?.tags) {
+        img.classification.tags.forEach(t => {
+          const clean = t.toLowerCase().trim();
+          if (clean && clean !== 'imported-asset') {
+            tagsMap[clean] = (tagsMap[clean] || 0) + 1;
+          }
+        });
+      }
+    });
+    return Object.entries(tagsMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(entry => entry[0]);
+  }, [galleryImages]);
+
   // Local image list filter
   const filteredLocalImages = useMemo(() => {
-    if (!gallerySearch.trim()) return galleryImages;
-    const q = gallerySearch.toLowerCase();
-    return galleryImages.filter(img => {
-      const nameMatch = (img.name || '').toLowerCase().includes(q);
-      const keyMatch = (img.key || '').toLowerCase().includes(q);
-      const tagMatch = img.classification?.tags?.some(t => t.toLowerCase().includes(q));
-      const categoryMatch = (img.classification?.category || '').toLowerCase().includes(q);
-      return nameMatch || keyMatch || tagMatch || categoryMatch;
-    });
-  }, [galleryImages, gallerySearch]);
+    let list = galleryImages;
+    
+    // Category filter
+    if (selectedCategory && selectedCategory !== 'all') {
+      list = list.filter(img => (img.classification?.category || 'general').toLowerCase().trim() === selectedCategory);
+    }
+    
+    // Tag chip filter
+    if (selectedTag) {
+      list = list.filter(img => img.classification?.tags?.some(t => t.toLowerCase().trim() === selectedTag));
+    }
+    
+    // Query search filter
+    if (gallerySearch.trim()) {
+      const q = gallerySearch.toLowerCase();
+      list = list.filter(img => {
+        const nameMatch = (img.name || '').toLowerCase().includes(q);
+        const keyMatch = (img.key || '').toLowerCase().includes(q);
+        const tagMatch = img.classification?.tags?.some(t => t.toLowerCase().includes(q));
+        const categoryMatch = (img.classification?.category || '').toLowerCase().includes(q);
+        return nameMatch || keyMatch || tagMatch || categoryMatch;
+      });
+    }
+    
+    return list;
+  }, [galleryImages, gallerySearch, selectedCategory, selectedTag]);
 
   // Handle DuckDuckGo web image search
   const handleWebSearch = async (e) => {
@@ -793,6 +1492,149 @@ export default function VisualTemplateBuilderPage() {
     });
   };
 
+  const updateMetaConfigProp = (propName, propVal) => {
+    setTemplate(prev => {
+      const next = { ...prev };
+      next.metaConfig = {
+        ...(prev.metaConfig || {}),
+        [propName]: propVal
+      };
+      return next;
+    });
+  };
+
+  const updateDndPartProp = (propName, propVal) => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      newParts[partIdx] = {
+        ...newParts[partIdx],
+        [propName]: propVal
+      };
+      // Keep htmlLayout in sync with layoutMode
+      if (propName === 'layoutMode') {
+        newParts[partIdx].htmlLayout = propVal;
+      }
+      updateField('parts', newParts);
+    }
+  };
+
+  const initDndPart = () => {
+    updateField('parts', [
+      {
+        type: 'categorizationv2',
+        layoutMode: 'category_sort',
+        htmlLayout: 'category_sort',
+        cardStyle: 'standard',
+        categories: [
+          { id: 'cat_1', label: 'Category 1' },
+          { id: 'cat_2', label: 'Category 2' }
+        ],
+        items: [
+          { id: 'item_1', content: 'Item 1' },
+          { id: 'item_2', content: 'Item 2' }
+        ],
+        answerKey: {
+          'item_1': 'cat_1',
+          'item_2': 'cat_2'
+        }
+      }
+    ]);
+  };
+
+  const updateDndCategory = (catIdx, field, val) => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const categories = [...(part.categories || [])];
+      if (categories[catIdx]) {
+        categories[catIdx] = {
+          ...categories[catIdx],
+          [field]: val
+        };
+        newParts[partIdx] = { ...part, categories };
+        updateField('parts', newParts);
+      }
+    }
+  };
+
+  const addDndCategory = () => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const categories = [...(part.categories || [])];
+      const newId = `cat_${categories.length + 1}`;
+      categories.push({ id: newId, label: `Category ${categories.length + 1}` });
+      newParts[partIdx] = { ...part, categories };
+      updateField('parts', newParts);
+    }
+  };
+
+  const removeDndCategory = (catIdx) => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const categories = (part.categories || []).filter((_, i) => i !== catIdx);
+      newParts[partIdx] = { ...part, categories };
+      updateField('parts', newParts);
+    }
+  };
+
+  const updateDndItem = (itemIdx, field, val) => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const items = [...(part.items || [])];
+      if (items[itemIdx]) {
+        items[itemIdx] = {
+          ...items[itemIdx],
+          [field]: val
+        };
+        newParts[partIdx] = { ...part, items };
+        updateField('parts', newParts);
+      }
+    }
+  };
+
+  const addDndItem = () => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const items = [...(part.items || [])];
+      const newId = `item_${items.length + 1}`;
+      items.push({ id: newId, content: `Item ${items.length + 1}` });
+      newParts[partIdx] = { ...part, items };
+      updateField('parts', newParts);
+    }
+  };
+
+  const removeDndItem = (itemIdx) => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const items = (part.items || []).filter((_, i) => i !== itemIdx);
+      newParts[partIdx] = { ...part, items };
+      updateField('parts', newParts);
+    }
+  };
+
+  const updateDndAnswerKey = (itemId, categoryId) => {
+    const newParts = [...(template.parts || [])];
+    const partIdx = newParts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization');
+    if (partIdx >= 0) {
+      const part = newParts[partIdx];
+      const answerKey = { ...(part.answerKey || {}), [itemId]: categoryId };
+      newParts[partIdx] = { ...part, answerKey };
+      updateField('parts', newParts);
+    }
+  };
+
   // Variable Management
   const addVariable = () => {
     updateField('variables', [
@@ -969,7 +1811,14 @@ export default function VisualTemplateBuilderPage() {
           order: Number(skillOrder) || 0,
           templateId: template.id,
           engine: 'universal-template',
-          questionType: template.optionsType || 'mcq'
+          questionType: template.optionsType || 'mcq',
+          metadata: skillDifficultyScaling ? {
+            difficultyScaling: true,
+            templateLevels: skillTemplateLevels.map(l => ({
+              level: l.level,
+              templateIds: l.templateIds.filter(Boolean)
+            })).filter(l => l.templateIds.length > 0)
+          } : {}
         };
 
         const curriculumRes = await fetch('/api/admin/curriculum', {
@@ -1249,6 +2098,154 @@ export default function VisualTemplateBuilderPage() {
                   />
                 </div>
               </div>
+
+              {/* ─── Difficulty Scaling ─── */}
+              <div style={{ marginTop: '4px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#92400e', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkboxInput}
+                    checked={skillDifficultyScaling}
+                    onChange={e => {
+                      setSkillDifficultyScaling(e.target.checked);
+                      if (e.target.checked) {
+                        // Auto-seed Level 1 with the current template
+                        setSkillTemplateLevels(prev => prev.map(l =>
+                          l.level === 1 && !l.templateIds.includes(template.id)
+                            ? { ...l, templateIds: [template.id, ...l.templateIds] }
+                            : l
+                        ));
+                      }
+                    }}
+                  />
+                  ⚡ Enable Difficulty Scaling (multiple templates per level)
+                </label>
+
+                {skillDifficultyScaling && (
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      { level: 1, label: 'Level 1 — Easy', color: '#dcfce7', border: '#86efac', badge: '#16a34a' },
+                      { level: 2, label: 'Level 2 — Medium', color: '#fef9c3', border: '#fde047', badge: '#ca8a04' },
+                      { level: 3, label: 'Level 3 — Hard', color: '#fee2e2', border: '#fca5a5', badge: '#dc2626' },
+                    ].map(({ level, label, color, border, badge }) => {
+                      const levelData = skillTemplateLevels.find(l => l.level === level) || { level, templateIds: [] };
+                      const isOpen = expandedLevel === level;
+                      return (
+                        <div key={level} style={{ border: `1px solid ${border}`, borderRadius: '8px', overflow: 'hidden' }}>
+                          {/* Accordion header */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedLevel(isOpen ? 0 : level)}
+                            style={{
+                              width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              padding: '8px 12px', background: color, border: 'none', cursor: 'pointer',
+                              fontWeight: 700, fontSize: '12px', color: '#1e293b'
+                            }}
+                          >
+                            <span>{label}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ background: badge, color: '#fff', borderRadius: '999px', padding: '1px 8px', fontSize: '11px' }}>
+                                {levelData.templateIds.length} template{levelData.templateIds.length !== 1 ? 's' : ''}
+                              </span>
+                              <span>{isOpen ? '▲' : '▼'}</span>
+                            </span>
+                          </button>
+
+                          {/* Accordion body */}
+                          {isOpen && (
+                            <div style={{ padding: '10px 12px', background: '#fff', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {/* Hint */}
+                              <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+                                {level === 1 ? 'Triggered when correctStreak < 3 or difficulty=easy'
+                                  : level === 2 ? 'Triggered when correctStreak 3–5 or difficulty=medium'
+                                  : 'Triggered when correctStreak ≥ 6 or difficulty=hard'}
+                                . Templates are picked randomly by seed.
+                              </p>
+
+                              {/* Chips */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minHeight: '28px' }}>
+                                {levelData.templateIds.length === 0 && (
+                                  <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No templates — add below</span>
+                                )}
+                                {levelData.templateIds.map((tid, ti) => (
+                                  <span key={ti} style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    background: color, border: `1px solid ${border}`, borderRadius: '6px',
+                                    padding: '2px 8px', fontSize: '11px', fontWeight: 600
+                                  }}>
+                                    {tid === template.id ? `★ ${tid}` : tid}
+                                    <button
+                                      type="button"
+                                      onClick={() => setSkillTemplateLevels(prev => prev.map(l =>
+                                        l.level === level
+                                          ? { ...l, templateIds: l.templateIds.filter((_, i) => i !== ti) }
+                                          : l
+                                      ))}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 900, padding: '0 2px', fontSize: '13px', lineHeight: 1 }}
+                                    >×</button>
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* Add row */}
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <input
+                                  type="text"
+                                  className={styles.input}
+                                  style={{ flex: 1, fontSize: '12px', padding: '5px 8px' }}
+                                  placeholder="Template ID (e.g. addition-mcq-tenframe)"
+                                  value={levelAddInputs[level] || ''}
+                                  onChange={e => setLevelAddInputs(prev => ({ ...prev, [level]: e.target.value }))}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const val = (levelAddInputs[level] || '').trim();
+                                      if (val && !levelData.templateIds.includes(val)) {
+                                        setSkillTemplateLevels(prev => prev.map(l =>
+                                          l.level === level ? { ...l, templateIds: [...l.templateIds, val] } : l
+                                        ));
+                                        setLevelAddInputs(prev => ({ ...prev, [level]: '' }));
+                                      }
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.btn}
+                                  style={{ fontSize: '11px', padding: '4px 10px', background: badge, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                  onClick={() => {
+                                    const val = (levelAddInputs[level] || '').trim();
+                                    if (val && !levelData.templateIds.includes(val)) {
+                                      setSkillTemplateLevels(prev => prev.map(l =>
+                                        l.level === level ? { ...l, templateIds: [...l.templateIds, val] } : l
+                                      ));
+                                      setLevelAddInputs(prev => ({ ...prev, [level]: '' }));
+                                    }
+                                  }}
+                                >+ Add</button>
+                                <button
+                                  type="button"
+                                  className={styles.btn}
+                                  style={{ fontSize: '11px', padding: '4px 10px', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                  onClick={() => {
+                                    if (!levelData.templateIds.includes(template.id)) {
+                                      setSkillTemplateLevels(prev => prev.map(l =>
+                                        l.level === level ? { ...l, templateIds: [...l.templateIds, template.id] } : l
+                                      ));
+                                    }
+                                  }}
+                                >★ Add current</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* ─── End Difficulty Scaling ─── */}
+
             </div>
 
           </div>
@@ -1259,6 +2256,15 @@ export default function VisualTemplateBuilderPage() {
 
   return (
     <main className={styles.container}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .svg-preview-container svg {
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 18px !important;
+          max-height: 18px !important;
+          display: block !important;
+        }
+      ` }} />
       <header className={styles.header}>
         <div className={styles.titleArea}>
           <h1>Visual Template Builder</h1>
@@ -1322,7 +2328,23 @@ export default function VisualTemplateBuilderPage() {
                 </button>
               ))}
 
-              <div className={styles.sectionTitle}>
+              {/* ── Math Starters ── */}
+              <div className={styles.sectionTitle} style={{ marginTop: '16px' }}>
+                <span>⚡ Math Starters</span>
+              </div>
+              {MATH_STARTERS.map(tpl => (
+                <button
+                  key={`starter-${tpl.id}`}
+                  className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                  onClick={() => handleSelectTemplate(tpl)}
+                  style={{ borderLeft: '3px solid #f59e0b' }}
+                >
+                  <div className={styles.templateItemTitle}>{tpl.emoji} {tpl.title}</div>
+                  <div className={styles.templateItemMeta}>{tpl.topic} • Starter</div>
+                </button>
+              ))}
+
+              <div className={styles.sectionTitle} style={{ marginTop: '16px' }}>
                 <span>Static Catalog</span>
               </div>
               {staticList.filter(tpl => !REFERENCE_EXAMPLES.some(r => r.id === tpl.id)).map(tpl => (
@@ -1340,9 +2362,30 @@ export default function VisualTemplateBuilderPage() {
         </aside>
 
         {/* Right columns: Editor Form & Live Simulator */}
-        <div className={styles.builderArea}>
+        <div className={styles.builderAreaFull}>
+          {/* Top Navigation Tabs */}
+          <div className={styles.stepTabsContainer}>
+            {[
+              { id: 1, label: 'Template Info' },
+              { id: 2, label: 'Question Setup' },
+              { id: 3, label: 'Categories' },
+              { id: 4, label: 'Drag Items' },
+              { id: 5, label: 'Preview & Test' },
+              { id: 6, label: 'Publish' }
+            ].map(step => (
+              <div 
+                key={step.id}
+                className={`${styles.stepTab} ${currentStep === step.id ? styles.stepTabActive : ''} ${currentStep > step.id ? styles.stepTabCompleted : ''}`}
+                onClick={() => setCurrentStep(step.id)}
+              >
+                <div className={styles.stepNumber}>{currentStep > step.id ? '✓' : step.id}</div>
+                <span>{step.label}</span>
+              </div>
+            ))}
+          </div>
+
           {/* Builder Editor Card */}
-          <section className={styles.panel}>
+          <section className={styles.panel} style={{ display: currentStep === 5 ? 'none' : 'block' }}>
             <div className={styles.panelHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h2>Template Editor</h2>
@@ -1389,6 +2432,48 @@ export default function VisualTemplateBuilderPage() {
             </div>
 
             <div className={styles.panelBody}>
+              {/* ✨ AI Template Assistant Card */}
+              <div className={styles.aiAssistantCard}>
+                <h3 className={styles.aiTitle}>
+                  ✨ AI Template Builder Assistant
+                </h3>
+                <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#4f46e5', fontWeight: 600 }}>
+                  Describe the question template you want to generate. Gemini will write the logic, variables, option choices, and visuals, then load it into both the Form and JSON editors.
+                </p>
+                <div className={styles.aiPromptArea}>
+                  <textarea
+                    className={styles.aiPromptTextarea}
+                    placeholder="Describe your question, e.g. 'A math subtraction ten frame question where A is between 5 and 10, B is between 1 and A-1, and B counters are crossed out. Give 4 multiple choice options with the correct result.'"
+                    value={aiTemplatePrompt}
+                    onChange={(e) => setAiTemplatePrompt(e.target.value)}
+                    disabled={aiTemplateGenerating}
+                  />
+                  <button
+                    type="button"
+                    className={styles.aiBtnGenerate}
+                    onClick={handleAiTemplateGenerate}
+                    disabled={aiTemplateGenerating || !aiTemplatePrompt.trim()}
+                  >
+                    {aiTemplateGenerating ? (
+                      <>
+                        <div className={styles.loadingSpinner} style={{ borderTopColor: '#ffffff' }} />
+                        <span style={{ fontSize: '10px' }}>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🪄 Build</span>
+                        <span style={{ fontSize: '10px' }}>Template</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                {aiTemplateSuccessMsg && (
+                  <div style={{ fontSize: '12px', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
+                    {aiTemplateSuccessMsg}
+                  </div>
+                )}
+              </div>
+
               {editorMode === 'json' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', minHeight: '520px' }}>
                   <div className={styles.formGroup} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -1465,7 +2550,9 @@ export default function VisualTemplateBuilderPage() {
                   )}
                 </div>
               ) : (
-                <>
+              <>
+              {currentStep === 1 && (
+                <div className={styles.wizardStepContent}>
               {/* Metadata */}
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
@@ -1627,7 +2714,11 @@ export default function VisualTemplateBuilderPage() {
                   <p className={styles.emptyStateText} style={{ padding: '12px' }}>No variables declared. Constants will be evaluated.</p>
                 )}
               </div>
+                </div>
+              )}
 
+              {currentStep === 2 && (
+                <div className={styles.wizardStepContent}>
               {/* Visual Binding */}
               <div className={styles.sectionTitle}>
                 <span>Visual SVG Model Binding</span>
@@ -2105,6 +3196,31 @@ export default function VisualTemplateBuilderPage() {
                       const vc = VISUAL_COMPONENTS.find(c => c.value === 'VisualChoice');
                       if (vc) updateField('visuals', [{ component: 'VisualChoice', props: { ...vc.props } }]);
                     }
+                    if (val === 'categorizationv2') {
+                      const hasDndPart = Array.isArray(template.parts) && template.parts.some(p => p.type === 'categorizationv2' || p.type === 'categorization');
+                      if (!hasDndPart) {
+                        updateField('parts', [
+                          {
+                            type: 'categorizationv2',
+                            layoutMode: 'category_sort',
+                            htmlLayout: 'category_sort',
+                            cardStyle: 'standard',
+                            categories: [
+                              { id: 'cat_1', label: 'Category 1' },
+                              { id: 'cat_2', label: 'Category 2' }
+                            ],
+                            items: [
+                              { id: 'item_1', content: 'Item 1' },
+                              { id: 'item_2', content: 'Item 2' }
+                            ],
+                            answerKey: {
+                              'item_1': 'cat_1',
+                              'item_2': 'cat_2'
+                            }
+                          }
+                        ]);
+                      }
+                    }
                   }}
                 >
                   <option value="mcq">Multiple Choice (MCQ)</option>
@@ -2532,7 +3648,372 @@ export default function VisualTemplateBuilderPage() {
                 </button>
               </div>
               )}
+                </div>
+              )}
 
+              {/* Drag & Drop (Categorization) Editor */}
+              {template.optionsType === 'categorizationv2' && (() => {
+                const partIdx = Array.isArray(template.parts) ? template.parts.findIndex(p => p.type === 'categorizationv2' || p.type === 'categorization') : -1;
+                const part = partIdx >= 0 ? template.parts[partIdx] : null;
+
+                if (!part) {
+                  return (
+                    <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '20px', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b' }}>
+                        Drag & Drop part structure is not initialized for this template yet.
+                      </p>
+                      <button
+                        type="button"
+                        className={styles.btn + ' ' + styles.btnPrimary}
+                        onClick={initDndPart}
+                      >
+                        Initialize Drag & Drop Part
+                      </button>
+                    </div>
+                  );
+                }
+
+                const categories = part.categories || [];
+                const items = part.items || [];
+                const answerKey = part.answerKey || {};
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                    {currentStep === 3 && (
+                      <div className={styles.wizardStepContent}>
+                    {/* Layout Configuration */}
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <div className={styles.formGroup} style={{ flex: 1, minWidth: '180px', marginBottom: 0 }}>
+                        <label>DND Layout Mode</label>
+                        <select
+                          className={styles.select}
+                          value={part.layoutMode || 'category_sort'}
+                          onChange={e => updateDndPartProp('layoutMode', e.target.value)}
+                        >
+                          <option value="category_sort">Category Sort (Standard Columns)</option>
+                          <option value="ordering">Ordering (Sequential sorting)</option>
+                          <option value="grid_fill">Grid Fill (Column Grid)</option>
+                          <option value="table_fill">Table Fill (Matrix Grid)</option>
+                        </select>
+                      </div>
+
+                      <div className={styles.formGroup} style={{ flex: 1, minWidth: '180px', marginBottom: 0 }}>
+                        <label>Card Visual Style</label>
+                        <select
+                          className={styles.select}
+                          value={part.cardStyle || 'standard'}
+                          onChange={e => updateDndPartProp('cardStyle', e.target.value)}
+                        >
+                          <option value="standard">Standard Bordered Card</option>
+                          <option value="transparent">Transparent Clipart Card</option>
+                          <option value="compact">Compact Small Card</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Dynamic Counts Configuration */}
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <div className={styles.formGroup} style={{ flex: 1, minWidth: '180px', marginBottom: 0 }}>
+                        <label>Dynamic Categories Display Count</label>
+                        <input
+                          type="text"
+                          className={styles.input}
+                          style={{ padding: '8px 12px' }}
+                          value={part.categoryCount || ''}
+                          placeholder="e.g. 2, or [var] (leave blank for all)"
+                          onChange={e => updateDndPartProp('categoryCount', e.target.value)}
+                        />
+                      </div>
+
+                      <div className={styles.formGroup} style={{ flex: 1, minWidth: '180px', marginBottom: 0 }}>
+                        <label>Dynamic Drag Items Display Count</label>
+                        <input
+                          type="text"
+                          className={styles.input}
+                          style={{ padding: '8px 12px' }}
+                          value={part.itemCount || ''}
+                          placeholder="e.g. 4, or [var] (leave blank for all)"
+                          onChange={e => updateDndPartProp('itemCount', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Categories Management */}
+                    <div style={{ padding: '16px', background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0d9488' }}>
+                          📁 Columns / Categories ({categories.length})
+                        </h4>
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          style={{ padding: '4px 10px', fontSize: '11px', background: '#0d9488', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                          onClick={addDndCategory}
+                        >
+                          + Add Category
+                        </button>
+                      </div>
+
+                      <div className={styles.dndGrid}>
+                        {categories.map((cat, catIdx) => (
+                          <div key={catIdx} className={styles.dndCard}>
+                            <button
+                              type="button"
+                              className={styles.dndDeleteBtn}
+                              onClick={() => removeDndCategory(catIdx)}
+                              disabled={categories.length <= 1}
+                              title="Remove Category"
+                            >
+                              ✕
+                            </button>
+
+                            <div className={styles.dndPreviewBox}>
+                              {(() => {
+                                const urlStr = cat.prefillImageUrl || '';
+                                const previewUrl = getImageUrlPreview(urlStr);
+                                if (previewUrl) {
+                                  return <img src={previewUrl} alt="Preview" className={styles.dndPreviewImage} />;
+                                }
+                                return <div className={styles.dndPreviewText}>{cat.label || 'Empty'}</div>;
+                              })()}
+                            </div>
+
+                            <div className={styles.dndFormControls}>
+                              <div>
+                                <label>Category ID</label>
+                                <input
+                                  type="text"
+                                  value={cat.id || ''}
+                                  onChange={e => updateDndCategory(catIdx, 'id', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label>Label Text</label>
+                                <input
+                                  type="text"
+                                  value={cat.label || ''}
+                                  onChange={e => updateDndCategory(catIdx, 'label', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label>Prefill Image / Icon</label>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <input
+                                    type="text"
+                                    value={cat.prefillImageUrl || ''}
+                                    placeholder="URL or [var]"
+                                    onChange={e => updateDndCategory(catIdx, 'prefillImageUrl', e.target.value)}
+                                  />
+                                  <button
+                                    type="button"
+                                    className={styles.btn + ' ' + styles.btnSecondary}
+                                    style={{ padding: '0 8px' }}
+                                    onClick={() => openGallery('dnd_category_prefillImageUrl_' + catIdx, cat.prefillImageUrl || '')}
+                                  >
+                                    🖼️
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                      </div>
+                    )}
+
+                    {currentStep === 4 && (
+                      <div className={styles.wizardStepContent}>
+                    {/* Drag Items Management */}
+                    <div style={{ padding: '16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#1d4ed8' }}>
+                          🏷️ Drag Items ({items.length})
+                        </h4>
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          style={{ padding: '4px 10px', fontSize: '11px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                          onClick={addDndItem}
+                        >
+                          + Add Drag Item
+                        </button>
+                      </div>
+
+                      {(() => {
+                        const groupedItems = {};
+                        const unassignedItems = [];
+
+                        categories.forEach(c => {
+                          groupedItems[c.id] = { category: c, items: [] };
+                        });
+
+                        items.forEach((item, originalIndex) => {
+                          const targetCat = answerKey[item.id];
+                          if (targetCat && groupedItems[targetCat]) {
+                            groupedItems[targetCat].items.push({ item, index: originalIndex });
+                          } else {
+                            unassignedItems.push({ item, index: originalIndex });
+                          }
+                        });
+
+                        const renderCard = ({ item, index }) => (
+                          <div key={index} className={styles.dndCard}>
+                            <button
+                              type="button"
+                              className={styles.dndDeleteBtn}
+                              onClick={() => removeDndItem(index)}
+                              disabled={items.length <= 1}
+                              title="Remove Item"
+                            >
+                              ✕
+                            </button>
+
+                            <div className={styles.dndPreviewBox}>
+                              {(() => {
+                                const urlStr = item.imageUrl || '';
+                                if (isInlineSvg(urlStr)) {
+                                  return (
+                                    <span 
+                                      style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                                      dangerouslySetInnerHTML={{ __html: cleanSvgContent(urlStr) }} 
+                                    />
+                                  );
+                                }
+                                if (isInlineSvg(item.svg)) {
+                                  return (
+                                    <span 
+                                      className="svg-preview-container"
+                                      style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                                      dangerouslySetInnerHTML={{ __html: cleanSvgContent(item.svg) }} 
+                                    />
+                                  );
+                                }
+                                const previewUrl = getImageUrlPreview(urlStr);
+                                if (previewUrl) {
+                                  return <img src={previewUrl} alt="Preview" className={styles.dndPreviewImage} />;
+                                }
+                                return <div className={styles.dndPreviewText}>{item.content || 'Empty'}</div>;
+                              })()}
+                            </div>
+
+                            <div className={styles.dndFormControls}>
+                              <div>
+                                <label>Item ID</label>
+                                <input
+                                  type="text"
+                                  value={item.id || ''}
+                                  onChange={e => updateDndItem(index, 'id', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label>Card Text / Content</label>
+                                <input
+                                  type="text"
+                                  value={item.content || ''}
+                                  placeholder="Text label"
+                                  onChange={e => updateDndItem(index, 'content', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label>Target Category</label>
+                                <select
+                                  value={answerKey[item.id] || ''}
+                                  onChange={e => updateDndAnswerKey(item.id, e.target.value)}
+                                >
+                                  <option value="">-- Unassigned --</option>
+                                  {categories.map(c => (
+                                    <option key={c.id} value={c.id}>{c.label} ({c.id})</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <label>Image URL</label>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <input
+                                      type="text"
+                                      value={item.imageUrl || ''}
+                                      placeholder="URL or [var]"
+                                      onChange={e => updateDndItem(index, 'imageUrl', e.target.value)}
+                                    />
+                                    <button
+                                      type="button"
+                                      className={styles.btn + ' ' + styles.btnSecondary}
+                                      style={{ padding: '0 8px' }}
+                                      onClick={() => openGallery('dnd_item_imageUrl_' + index, item.imageUrl || '')}
+                                    >
+                                      🖼️
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{ width: '60px' }}>
+                                  <label>Width</label>
+                                  <input
+                                    type="text"
+                                    value={item.imageWidth || ''}
+                                    placeholder="e.g. 80"
+                                    onChange={e => updateDndItem(index, 'imageWidth', e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label>Inline SVG Markup</label>
+                                <input
+                                  type="text"
+                                  value={item.svg || ''}
+                                  placeholder="<svg>...</svg> or [var]"
+                                  onChange={e => updateDndItem(index, 'svg', e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+
+                        return (
+                          <div>
+                            {unassignedItems.length > 0 && (
+                              <div className={styles.dndCategoryGroup}>
+                                <div className={styles.dndCategoryHeader} style={{ color: '#64748b' }}>
+                                  Unassigned Items ({unassignedItems.length})
+                                </div>
+                                <div className={styles.dndGrid}>
+                                  {unassignedItems.map(renderCard)}
+                                </div>
+                              </div>
+                            )}
+
+                            {Object.values(groupedItems).map(group => {
+                              if (group.items.length === 0) return null;
+                              return (
+                                <div key={group.category.id} className={styles.dndCategoryGroup}>
+                                  <div className={styles.dndCategoryHeader} style={{ color: '#1d4ed8' }}>
+                                    {group.category.label} ({group.category.id}) - {group.items.length} item(s)
+                                  </div>
+                                  <div className={styles.dndGrid}>
+                                    {group.items.map(renderCard)}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {Object.values(groupedItems).every(g => g.items.length === 0) && unassignedItems.length === 0 && (
+                              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                No items added yet. Click "+ Add Drag Item" to begin.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {currentStep === 2 && (
+                <div className={styles.wizardStepContent}>
               {/* Explanation */}
               <div className={styles.formGroup}>
                 <label htmlFor="tpl-explanation">Step-by-step Solution Explanation</label>
@@ -2549,65 +4030,194 @@ export default function VisualTemplateBuilderPage() {
                 />
               </div>
 
-              {renderCurriculumLinkerCard()}
-
-              {/* Save Button */}
-              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className={styles.btn + ' ' + styles.btnPrimary}
-                  style={{ flex: 1, padding: '12px' }}
-                  onClick={handleSave}
-                  disabled={saving || (!!selectedId && staticList.some(s => s.id === selectedId))}
-                >
-                  {saving ? 'Saving to Database...' : 'Save Template to MongoDB'}
-                </button>
+              {/* Concept & Meta Configuration */}
+              <div className={styles.sectionTitle}>
+                <span>Concept & Meta Config Flags</span>
               </div>
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginBottom: '20px'
+              }}>
+                <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+                  Enable specialized conceptual and audio options for practice sessions.
+                </p>
 
-              {saveStatus && (
-                <div className={`${styles.statusBar} ${saveStatus.type === 'success' ? styles.statusSuccess : styles.statusError}`}>
-                  {saveStatus.text}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(template.metaConfig?.hasCarry)}
+                      onChange={(e) => updateMetaConfigProp('hasCarry', e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    ➕ Carry Over (Addition)
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(template.metaConfig?.hasBorrow)}
+                      onChange={(e) => updateMetaConfigProp('hasBorrow', e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    ➖ Borrowing (Subtraction)
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(template.metaConfig?.hasRemainder)}
+                      onChange={(e) => updateMetaConfigProp('hasRemainder', e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    ➗ Remainder (Division)
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(template.metaConfig?.oddEven)}
+                      onChange={(e) => updateMetaConfigProp('oddEven', e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    🔢 Odd / Even Config
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(template.metaConfig?.readable)}
+                      onChange={(e) => updateMetaConfigProp('readable', e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    🗣️ Readable (TTS Enabled)
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(template.metaConfig?.readOptions)}
+                      onChange={(e) => updateMetaConfigProp('readOptions', e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    🎙️ Read Options (TTS Choices)
+                  </label>
+                </div>
+                  </div>
                 </div>
               )}
-              {selectedId && staticList.some(s => s.id === selectedId) && (
-                <p style={{ fontSize: '11px', color: '#b91c1c', marginTop: '6px', textAlign: 'center' }}>
-                  ⚠️ Static catalogs are read-only. Click "Create New Template" or change the Template ID to save a custom copy.
-                </p>
-              )}
+
+                {currentStep === 6 && (
+                  <div className={styles.wizardStepContent}>
+                {renderCurriculumLinkerCard()}
+
+                {/* Save Button */}
+                <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className={styles.btn + ' ' + styles.btnPrimary}
+                    style={{ flex: 1, padding: '12px' }}
+                    onClick={handleSave}
+                    disabled={saving || (!!selectedId && staticList.some(s => s.id === selectedId))}
+                  >
+                    {saving ? 'Saving to Database...' : 'Save Template to MongoDB'}
+                  </button>
+                </div>
+
+                {saveStatus && (
+                  <div className={`${styles.statusBar} ${saveStatus.type === 'success' ? styles.statusSuccess : styles.statusError}`}>
+                    {saveStatus.text}
+                  </div>
+                )}
+                {selectedId && staticList.some(s => s.id === selectedId) && (
+                  <p style={{ fontSize: '11px', color: '#b91c1c', marginTop: '6px', textAlign: 'center' }}>
+                    ⚠️ Static catalogs are read-only. Click "Create New Template" or change the Template ID to save a custom copy.
+                  </p>
+                )}
+                  </div>
+                )}
+
               </>
             )}
             </div>
           </section>
 
           {/* Simulator Preview Card */}
-          <section className={`${styles.panel} ${styles.simulator}`}>
-            <div className={styles.panelHeader}>
+          <section className={`${styles.panel} ${styles.simulator}`} style={{ display: (currentStep >= 5) ? 'block' : 'none' }}>
+            <div className={styles.panelHeader} style={{ display: currentStep === 5 ? 'flex' : 'none' }}>
               <div className={styles.simulatorHeader}>
-                <h2>Live Simulator Preview</h2>
-                <div className={styles.seedSelector}>
-                  <label htmlFor="sim-seed" style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Seed</label>
-                  <input
-                    id="sim-seed"
-                    type="number"
-                    value={seed}
-                    onChange={(e) => setSeed(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className={styles.btn + ' ' + styles.btnSecondary}
-                    style={{ padding: '4px 8px', fontSize: '11px' }}
-                    onClick={() => setSeed(String(Math.floor(Math.random() * 100000)))}
+                <h2>Live Preview</h2>
+                <div className={styles.deviceToggles}>
+                  <button 
+                    className={`${styles.deviceToggleBtn} ${previewDevice === 'desktop' ? styles.deviceToggleBtnActive : ''}`}
+                    onClick={() => setPreviewDevice('desktop')}
+                    title="Desktop View"
                   >
-                    🎲 New Seed
+                    🖥️
+                  </button>
+                  <button 
+                    className={`${styles.deviceToggleBtn} ${previewDevice === 'tablet' ? styles.deviceToggleBtnActive : ''}`}
+                    onClick={() => setPreviewDevice('tablet')}
+                    title="Tablet View"
+                  >
+                    📱
+                  </button>
+                  <button 
+                    className={`${styles.deviceToggleBtn} ${previewDevice === 'mobile' ? styles.deviceToggleBtnActive : ''}`}
+                    onClick={() => setPreviewDevice('mobile')}
+                    title="Mobile View"
+                  >
+                    📱
                   </button>
                 </div>
+                <button
+                  type="button"
+                  className={styles.btn + ' ' + styles.btnSecondary}
+                  style={{ padding: '4px 12px', fontSize: '12px' }}
+                  onClick={() => setIsPreviewFullscreen(!isPreviewFullscreen)}
+                >
+                  {isPreviewFullscreen ? '↙️ Exit Full Screen' : '↗️ Full Screen'}
+                </button>
               </div>
             </div>
 
             <div className={styles.panelBody}>
+              {currentStep === 5 && (
+                <>
               {evaluatedQuestion.ok ? (
-                <div className={styles.previewContainer}>
-                  <div className={styles.practicePrompt}>
+                <div className={styles.previewWrapper} style={isPreviewFullscreen ? { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, background: '#f8fafc', padding: '24px', overflowY: 'auto', margin: 0 } : {}}>
+                  {isPreviewFullscreen && (
+                    <button
+                      type="button"
+                      onClick={() => setIsPreviewFullscreen(false)}
+                      style={{
+                        position: 'fixed',
+                        top: '16px',
+                        right: '16px',
+                        zIndex: 10000,
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      ↙️ Exit Full Screen
+                    </button>
+                  )}
+                  <div className={`${styles.deviceContainer} ${styles[previewDevice] || ''}`}>
+                    <div className={styles.previewContainer}>
+                      <div className={styles.practicePrompt}>
                     {evaluatedQuestion.question.questionText}
                   </div>
 
@@ -2618,6 +4228,47 @@ export default function VisualTemplateBuilderPage() {
                     const isCategorization = q.type === 'categorizationv2' || q.type === 'categorization';
                     const panels = q.parts.filter(p => p.type === 'visual_panel');
 
+                    const renderItemVisual = (item) => {
+                      const imageWidth = Number(item.imageWidth) || 60;
+                      const svgContent = item.svg ? cleanSvgContent(item.svg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
+                      const imageUrl = item.imageUrl;
+                      const label = item.content || item.label;
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%' }}>
+                          {svgContent ? (
+                            <span
+                              aria-hidden="true"
+                              style={{
+                                width: `${imageWidth}px`,
+                                height: `${imageWidth}px`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              dangerouslySetInnerHTML={{ __html: svgContent }}
+                            />
+                          ) : imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt=""
+                              style={{
+                                maxWidth: `${imageWidth}px`,
+                                maxHeight: `${imageWidth}px`,
+                                objectFit: 'contain',
+                                display: 'block'
+                              }}
+                            />
+                          ) : null}
+                          {label && (
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155', textAlign: 'center' }}>
+                              {label}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    };
+
                     return (
                       <>
                         {/* Categorization (Drag & Drop) Preview */}
@@ -2626,10 +4277,12 @@ export default function VisualTemplateBuilderPage() {
                             {/* Categories Columns */}
                             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
                               {(q.categories || []).map((cat, idx) => {
-                                const catItems = (q.items || []).filter(item => {
-                                  const ansKey = q.answer || q.answerKey || {};
-                                  return ansKey[item.id] === cat.id || item.target === cat.id;
-                                });
+                                const catItems = previewControls.showCorrectAnswer
+                                  ? (q.items || []).filter(item => {
+                                      const ansKey = q.answer || q.answerKey || q.parts?.[0]?.answerKey || {};
+                                      return ansKey[item.id] === cat.id || item.target === cat.id;
+                                    })
+                                  : [];
 
                                 return (
                                   <div
@@ -2648,9 +4301,22 @@ export default function VisualTemplateBuilderPage() {
                                       alignItems: 'center'
                                     }}
                                   >
-                                    <div style={{ fontWeight: 800, color: '#1e293b', marginBottom: '12px', fontSize: '14px' }}>
+                                    <div style={{ fontWeight: 800, color: '#1e293b', marginBottom: '8px', fontSize: '14px' }}>
                                       {cat.label}
                                     </div>
+                                    {(cat.prefillImageUrl || cat.imageUrl) && (
+                                      <img
+                                        src={cat.prefillImageUrl || cat.imageUrl}
+                                        alt=""
+                                        style={{
+                                          maxWidth: '80px',
+                                          maxHeight: '80px',
+                                          objectFit: 'contain',
+                                          marginBottom: '12px',
+                                          borderRadius: '8px'
+                                        }}
+                                      />
+                                    )}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', minHeight: '80px', justifyContent: 'center' }}>
                                       {catItems.map((item, itemIdx) => (
                                         <div
@@ -2663,10 +4329,16 @@ export default function VisualTemplateBuilderPage() {
                                             fontSize: '13px',
                                             color: '#334155',
                                             boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                                            fontWeight: 600
+                                            fontWeight: 600,
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                           }}
                                         >
-                                          {item.content || item.label}
+                                          {renderItemVisual(item)}
                                         </div>
                                       ))}
                                       {catItems.length === 0 && (
@@ -2684,7 +4356,12 @@ export default function VisualTemplateBuilderPage() {
                                 Drag Items (Correct assignments shown above)
                               </div>
                               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                {(q.items || []).map((item, idx) => (
+                                {(q.items || []).filter(item => {
+                                  if (!previewControls.showCorrectAnswer) return true;
+                                  const ansKey = q.answer || q.answerKey || q.parts?.[0]?.answerKey || {};
+                                  const targetCat = ansKey[item.id] || item.target;
+                                  return !targetCat || !(q.categories || []).some(c => c.id === targetCat);
+                                }).map((item, idx) => (
                                   <div
                                     key={item.id || idx}
                                     style={{
@@ -2696,10 +4373,15 @@ export default function VisualTemplateBuilderPage() {
                                       fontWeight: 600,
                                       color: '#1e293b',
                                       boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      cursor: 'grab'
+                                      cursor: 'grab',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      minWidth: '80px'
                                     }}
                                   >
-                                    {item.content || item.label}
+                                    {renderItemVisual(item)}
                                   </div>
                                 ))}
                               </div>
@@ -2787,10 +4469,12 @@ export default function VisualTemplateBuilderPage() {
                                   <div key={idx} style={{ marginTop: '10px', width: '100%' }}>
                                     <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
                                       {(p.categories || []).map((cat, catIdx) => {
-                                        const catItems = (p.items || []).filter(item => {
-                                          const ansKey = p.answer || p.answerKey || {};
-                                          return ansKey[item.id] === cat.id || item.target === cat.id;
-                                        });
+                                        const catItems = previewControls.showCorrectAnswer
+                                          ? (p.items || []).filter(item => {
+                                              const ansKey = p.answer || p.answerKey || {};
+                                              return ansKey[item.id] === cat.id || item.target === cat.id;
+                                            })
+                                          : [];
                                         return (
                                           <div
                                             key={cat.id || catIdx}
@@ -2831,7 +4515,12 @@ export default function VisualTemplateBuilderPage() {
                                     </div>
                                     <div style={{ background: '#f1f5f9', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
                                       <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                        {(p.items || []).map((item, itemIdx) => (
+                                        {(p.items || []).filter(item => {
+                                          if (!previewControls.showCorrectAnswer) return true;
+                                          const ansKey = p.answer || p.answerKey || {};
+                                          const targetCat = ansKey[item.id] || item.target;
+                                          return !targetCat || !(p.categories || []).some(c => c.id === targetCat);
+                                        }).map((item, itemIdx) => (
                                           <div
                                             key={item.id || itemIdx}
                                             style={{
@@ -3012,6 +4701,8 @@ export default function VisualTemplateBuilderPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
               ) : (
                 <div className={`${styles.statusBar} ${styles.statusError}`} style={{ marginTop: 0 }}>
                   <p style={{ margin: 0, fontWeight: 700 }}>Evaluation Error:</p>
@@ -3041,6 +4732,146 @@ export default function VisualTemplateBuilderPage() {
                   </pre>
                 )}
               </div>
+                  </>
+                )}
+              
+              {currentStep === 5 && (
+              <div className={styles.controlsPanel}>
+                {/* Controls and Sample Set */}
+                <div>
+                  <div className={styles.controlSectionTitle}>Preview Controls</div>
+                  <div className={styles.toggleRow}>
+                    <label>Randomize Items</label>
+                    <div 
+                      className={styles.toggleSwitch} 
+                      data-active={previewControls.randomizeItems}
+                      onClick={() => setPreviewControls(prev => ({ ...prev, randomizeItems: !prev.randomizeItems }))}
+                    >
+                      <div className={styles.toggleKnob}></div>
+                    </div>
+                  </div>
+                  <div className={styles.toggleRow}>
+                    <label>Randomize Order</label>
+                    <div 
+                      className={styles.toggleSwitch} 
+                      data-active={previewControls.randomizeOrder}
+                      onClick={() => setPreviewControls(prev => ({ ...prev, randomizeOrder: !prev.randomizeOrder }))}
+                    >
+                      <div className={styles.toggleKnob}></div>
+                    </div>
+                  </div>
+                  <div className={styles.toggleRow}>
+                    <label>Show Correct Answer</label>
+                    <div 
+                      className={styles.toggleSwitch} 
+                      data-active={previewControls.showCorrectAnswer}
+                      onClick={() => setPreviewControls(prev => ({ ...prev, showCorrectAnswer: !prev.showCorrectAnswer }))}
+                    >
+                      <div className={styles.toggleKnob}></div>
+                    </div>
+                  </div>
+                  <div className={styles.toggleRow}>
+                    <label style={{ color: '#4f46e5', fontWeight: 600 }}>Preview as Student</label>
+                    <div 
+                      className={styles.toggleSwitch} 
+                      data-active={previewControls.previewAsStudent}
+                      onClick={() => setPreviewControls(prev => ({ ...prev, previewAsStudent: !prev.previewAsStudent }))}
+                    >
+                      <div className={styles.toggleKnob}></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className={styles.controlSectionTitle}>Sample Set</div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <select 
+                      className={styles.select} 
+                      value={sampleSet} 
+                      onChange={(e) => setSampleSet(e.target.value)}
+                      style={{ flex: 1, marginBottom: 0 }}
+                    >
+                      <option value="Sample Set 1">Sample Set 1</option>
+                      <option value="Sample Set 2">Sample Set 2</option>
+                    </select>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnSecondary}`}
+                      onClick={() => setSeed(Math.floor(Math.random() * 100000).toString())}
+                      style={{ padding: '0 12px', whiteSpace: 'nowrap' }}
+                      title={`Current Seed: ${seed}`}
+                    >
+                      🎲 New Seed
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '40px', marginTop: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>Items</div>
+                      <div style={{ fontSize: '16px', fontWeight: 800 }}>{template.parts?.[0]?.items?.length || 0}</div>
+                    </div>
+                    <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '40px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>Categories</div>
+                      <div style={{ fontSize: '16px', fontWeight: 800 }}>{template.parts?.[0]?.categories?.length || 0}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {currentStep >= 5 && (
+              <div className={styles.validationPanel}>
+                {/* Validation and Status */}
+                <div>
+                  <div className={styles.controlSectionTitle}>Validation</div>
+                  {[
+                    { label: 'Template information is complete', passed: !!(template.id && template.title) },
+                    { label: 'At least 2 categories added', passed: (template.parts?.[0]?.categories?.length || 0) >= 2 },
+                    { label: 'At least 2 items in total', passed: (template.parts?.[0]?.items?.length || 0) >= 2 },
+                    { label: 'All items assigned to categories', passed: (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id]) },
+                    { label: 'Preview generated successfully', passed: !!evaluatedQuestion?.ok }
+                  ].map((check, idx) => (
+                    <div key={idx} className={styles.validationItem}>
+                      <span className={styles.validationLabel}>{check.label}</span>
+                      <div className={`${styles.statusIcon} ${check.passed ? styles.passed : styles.failed}`}>
+                        {check.passed ? '✓' : '✓'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className={styles.overallStatusBox}>
+                  <div className={styles.controlSectionTitle} style={{ marginBottom: 0 }}>Overall Status</div>
+                  {(() => {
+                    const allPassed = [
+                      !!(template.id && template.title),
+                      (template.parts?.[0]?.categories?.length || 0) >= 2,
+                      (template.parts?.[0]?.items?.length || 0) >= 2,
+                      (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id]),
+                      !!evaluatedQuestion?.ok
+                    ].every(Boolean);
+
+                    return allPassed ? (
+                      <>
+                        <div className={styles.badgeReady}>✓ Ready to Publish</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
+                          All good!<br/>Your template is ready<br/>to be published.
+                        </div>
+                        <div style={{ marginTop: 'auto', alignSelf: 'flex-end', fontSize: '32px' }}>🎉</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.badgeNotReady}>⚠️ Not Ready</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
+                          Please resolve the missing validation checks to publish.
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+              )}
+
             </div>
           </section>
         </div>
@@ -3055,8 +4886,8 @@ export default function VisualTemplateBuilderPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(12px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -3067,41 +4898,57 @@ export default function VisualTemplateBuilderPage() {
           <div
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: '16px',
+              borderRadius: '20px',
               width: '100%',
-              maxWidth: '800px',
-              maxHeight: '90vh',
+              maxWidth: '920px',
+              maxHeight: '92vh',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
               border: '1px solid #e2e8f0',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              position: 'relative'
             }}
           >
             {/* Modal Header */}
             <div
               style={{
-                padding: '16px 24px',
-                borderBottom: '1px solid #e2e8f0',
+                padding: '18px 24px',
+                borderBottom: '1px solid #f1f5f9',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                background: '#f8fafc'
+                background: '#ffffff'
               }}
             >
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#1e293b' }}>
-                Select Gallery Assets (Multi-Select for Randomization)
-              </h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                  🖼️ Media Assets Manager
+                </h3>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
+                  Select one or more items to include in this question template.
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowGallery(false)}
                 style={{
-                  background: 'none',
+                  background: '#f1f5f9',
                   border: 'none',
-                  fontSize: '18px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
                   cursor: 'pointer',
-                  color: '#94a3b8'
+                  color: '#64748b',
+                  transition: 'all 0.15s ease'
                 }}
+                onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
               >
                 ✕
               </button>
@@ -3110,337 +4957,698 @@ export default function VisualTemplateBuilderPage() {
             {/* Modal Body */}
             <div
               style={{
-                padding: '24px',
+                padding: '20px 24px',
                 overflowY: 'auto',
-                flex: 1
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
               {/* Tab Header */}
-              <div className={styles.galleryTabs}>
+              <div className={styles.galleryTabs} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
                 <button
                   type="button"
                   className={`${styles.galleryTabBtn} ${!isWebSearch ? styles.galleryTabBtnActive : ''}`}
                   onClick={() => setIsWebSearch(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  📁 Local Gallery Assets
+                  📁 Local Assets Gallery
                 </button>
                 <button
                   type="button"
                   className={`${styles.galleryTabBtn} ${isWebSearch ? styles.galleryTabBtnActive : ''}`}
                   onClick={() => setIsWebSearch(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  🔍 DuckDuckGo Web Clipart
+                  🔍 Web Clipart (DuckDuckGo)
                 </button>
               </div>
 
-              {/* Local Search Controls */}
+              {/* Local Assets Tab Contents */}
               {!isWebSearch && (
-                <div className={styles.searchBarContainer}>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    placeholder="Search local assets by name, tags, or category..."
-                    value={gallerySearch}
-                    onChange={(e) => setGallerySearch(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  {gallerySearch && (
-                    <button
-                      type="button"
-                      className={styles.btn + ' ' + styles.btnSecondary}
-                      onClick={() => setGallerySearch('')}
-                      style={{ padding: '8px 12px' }}
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Web Search Controls */}
-              {isWebSearch && (
-                <form onSubmit={handleWebSearch} className={styles.searchBarContainer}>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    placeholder="Search transparent clipart on the web (e.g. apple, dog, tree)..."
-                    value={webSearchQuery}
-                    onChange={(e) => setWebSearchQuery(e.target.value)}
-                    style={{ flex: 1, minWidth: '200px' }}
-                  />
-                  <select
-                    className={styles.webSearchSelect}
-                    value={webSearchType}
-                    onChange={(e) => setWebSearchType(e.target.value)}
-                  >
-                    <option value="clipart">🎨 Clipart</option>
-                    <option value="photo">📷 Photo</option>
-                    <option value="any">🌐 Any</option>
-                  </select>
-                  <button
-                    type="submit"
-                    className={styles.btn + ' ' + styles.btnPrimary}
-                    disabled={webSearching || !webSearchQuery.trim()}
-                  >
-                    {webSearching ? 'Searching...' : 'Search Web'}
-                  </button>
-                </form>
-              )}
-
-              {/* Content Grid */}
-              {!isWebSearch ? (
-                // Local Gallery View
-                galleryLoading ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#475569', fontWeight: 600 }}>
-                    Loading gallery images...
-                  </div>
-                ) : galleryImages.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
-                    No uploaded images found in the gallery. Use the Main Admin Console to upload image assets.
-                  </div>
-                ) : filteredLocalImages.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
-                    No matching local assets found for "{gallerySearch}".
-                  </div>
-                ) : (
+                <>
+                  {/* Upload Dropzone */}
                   <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                      gap: '16px'
+                    className={`${styles.uploadZone} ${galleryDragOver ? styles.uploadZoneDrag : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setGalleryDragOver(true); }}
+                    onDragLeave={() => setGalleryDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setGalleryDragOver(false);
+                      handleGalleryUpload(e.dataTransfer.files);
+                    }}
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.multiple = true;
+                      input.accept = 'image/*';
+                      input.onchange = (e) => handleGalleryUpload(e.target.files);
+                      input.click();
                     }}
                   >
-                    {filteredLocalImages.map((img) => {
-                      const isSelected = selectedGalleryUrls.includes(img.url);
-                      const selIdx = selectedGalleryUrls.indexOf(img.url);
-                      const currentLabel = galleryImageLabels[img.url] || '';
-                      return (
-                        <div
-                          key={img.key}
-                          style={{
-                            border: isSelected ? '3px solid #4f46e5' : '1px solid #e2e8f0',
-                            borderRadius: '12px',
-                            overflow: 'hidden',
-                            background: isSelected ? '#f5f3ff' : '#ffffff',
-                            transition: 'all 0.15s ease',
-                            position: 'relative',
-                            boxShadow: isSelected ? '0 4px 12px rgba(79, 70, 229, 0.15)' : 'none'
-                          }}
+                    {galleryUploading ? (
+                      <>
+                        <div className={styles.loadingSpinner} style={{ marginBottom: '8px' }} />
+                        <p className={styles.uploadZoneTitle}>Uploading image assets to Cloud Storage...</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className={styles.uploadZoneTitle}>📤 Drag & drop images here, or click to upload</p>
+                        <p className={styles.uploadZoneDesc}>WebP, PNG, JPG, or SVG. Direct upload to R2 bucket.</p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Search and Category/Tag Filters */}
+                  <div className={styles.searchBarContainer} style={{ marginBottom: '12px' }}>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      placeholder="Search assets by name, category, or tags..."
+                      value={gallerySearch}
+                      onChange={(e) => setGallerySearch(e.target.value)}
+                      style={{ flex: 1, minWidth: '240px' }}
+                    />
+                    {(gallerySearch || selectedCategory !== 'all' || selectedTag) && (
+                      <button
+                        type="button"
+                        className={styles.btn + ' ' + styles.btnSecondary}
+                        onClick={() => {
+                          setGallerySearch('');
+                          setSelectedCategory('all');
+                          setSelectedTag(null);
+                        }}
+                        style={{ padding: '8px 16px', borderRadius: '8px' }}
+                      >
+                        Reset Filters
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dynamic Category Pill Bar */}
+                  <div className={styles.categoryBar}>
+                    {availableCategories.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        className={`${styles.categoryPill} ${selectedCategory === cat ? styles.categoryPillActive : ''}`}
+                        onClick={() => setSelectedCategory(cat)}
+                      >
+                        {cat === 'all' ? '🌐 All Categories' : cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Dynamic Tag Chips */}
+                  {popularTags.length > 0 && (
+                    <div className={styles.tagChipsContainer}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', alignSelf: 'center', marginRight: '4px' }}>
+                        Popular Tags:
+                      </span>
+                      {popularTags.map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          className={`${styles.tagChip} ${selectedTag === tag ? styles.tagChipActive : ''}`}
+                          onClick={() => setSelectedTag(prev => prev === tag ? null : tag)}
                         >
-                          {/* Clickable image area */}
+                          #{tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Local Grid View */}
+                  {galleryLoading ? (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#475569', fontWeight: 600 }}>
+                      <div className={styles.loadingSpinner} style={{ margin: '0 auto 12px auto' }} />
+                      Loading gallery assets...
+                    </div>
+                  ) : galleryImages.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+                      No uploaded images found in the gallery. Use the dropzone above to upload new images.
+                    </div>
+                  ) : filteredLocalImages.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+                      No matching local assets found for active filters.
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                        gap: '12px'
+                      }}
+                    >
+                      {filteredLocalImages.map((img) => {
+                        const isSelected = selectedGalleryUrls.includes(img.url);
+                        const selIdx = selectedGalleryUrls.indexOf(img.url);
+                        
+                        return (
                           <div
-                            onClick={() => handleSelectGalleryImage(img.url)}
-                            style={{ cursor: 'pointer' }}
+                            key={img.key}
+                            style={{
+                              border: isSelected ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+                              borderRadius: '12px',
+                              overflow: 'hidden',
+                              background: '#ffffff',
+                              transition: 'all 0.15s ease',
+                              position: 'relative',
+                              boxShadow: isSelected ? '0 4px 12px rgba(79, 70, 229, 0.12)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column'
+                            }}
                           >
-                            <div style={{ width: '100%', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '8px' }}>
+                            {/* Clickable Image Thumbnail Box */}
+                            <div
+                              onClick={() => handleSelectGalleryImage(img.url)}
+                              className={styles.checkeredBg}
+                              style={{
+                                width: '100%',
+                                height: '100px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                position: 'relative'
+                              }}
+                            >
                               <img
                                 src={img.url}
                                 alt={img.key}
+                                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transition: 'all 0.2s ease' }}
+                              />
+
+                              {/* Hover Details Badges */}
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  bottom: '4px',
+                                  left: '4px',
+                                  background: 'rgba(15, 23, 42, 0.75)',
+                                  color: '#ffffff',
+                                  padding: '2px 4px',
+                                  borderRadius: '4px',
+                                  fontSize: '8px',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {img.dimensions ? `${img.dimensions.width}×${img.dimensions.height}` : '512×512'}
+                              </div>
+                            </div>
+
+                            {/* Label, Metadata Edit and Zoom Controls */}
+                            <div
+                              style={{
+                                padding: '8px',
+                                borderTop: '1px solid #f1f5f9',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px',
+                                background: isSelected ? '#f5f3ff' : '#ffffff'
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  color: '#1e293b',
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {img.name || img.key.split('/').pop().replace(/\.[^/.]+$/, '').replace(/^\d+[-_]/, '').replace(/[-_]/g, ' ')}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 600, color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', textTransform: 'capitalize' }}>
+                                  {img.classification?.category || 'general'}
+                                </span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleOpenEditMetadata(img); }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '2px' }}
+                                    title="Edit Metadata (Linguistics / Tags)"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setGalleryZoomImg(img.url); }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '2px' }}
+                                    title="View Full Size"
+                                  >
+                                    🔍
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Top Selected Badge Order */}
+                            {isSelected && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: '6px',
+                                  right: '6px',
+                                  background: '#4f46e5',
+                                  color: '#ffffff',
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}
+                              >
+                                {selIdx + 1}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Web Search Tab Contents */}
+              {isWebSearch && (
+                <>
+                  <form onSubmit={handleWebSearch} className={styles.searchBarContainer} style={{ marginBottom: '16px' }}>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      placeholder="Search transparent clipart on the web (e.g. apple, dog, tree)..."
+                      value={webSearchQuery}
+                      onChange={(e) => setWebSearchQuery(e.target.value)}
+                      style={{ flex: 1, minWidth: '200px' }}
+                    />
+                    <select
+                      className={styles.webSearchSelect}
+                      value={webSearchType}
+                      onChange={(e) => setWebSearchType(e.target.value)}
+                    >
+                      <option value="clipart">🎨 Clipart</option>
+                      <option value="photo">📷 Photo</option>
+                      <option value="any">🌐 Any</option>
+                    </select>
+                    <button
+                      type="submit"
+                      className={styles.btn + ' ' + styles.btnPrimary}
+                      disabled={webSearching || !webSearchQuery.trim()}
+                    >
+                      {webSearching ? 'Searching...' : 'Search Web'}
+                    </button>
+                  </form>
+
+                  {webSearching ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: '12px' }}>
+                      <div className={styles.loadingSpinner} />
+                      <div style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Searching DuckDuckGo...</div>
+                    </div>
+                  ) : webResults.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8', fontSize: '14px' }}>
+                      Enter a query above to search DuckDuckGo for clipart.
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                        gap: '12px'
+                      }}
+                    >
+                      {webResults.map((item) => {
+                        const localUrl = importedWebUrls[item.image];
+                        const isImported = !!localUrl;
+                        const isSelected = isImported && selectedGalleryUrls.includes(localUrl);
+                        const selIdx = isSelected ? selectedGalleryUrls.indexOf(localUrl) : -1;
+                        const isImporting = importingUrl === item.image;
+                        
+                        return (
+                          <div
+                            key={item.image}
+                            onClick={() => !isImporting && handleImportWebImage(item.image)}
+                            style={{
+                              border: isSelected ? '2px solid #4f46e5' : isImported ? '2px solid #10b981' : '1px solid #e2e8f0',
+                              borderRadius: '12px',
+                              overflow: 'hidden',
+                              background: '#ffffff',
+                              transition: 'all 0.15s ease',
+                              position: 'relative',
+                              opacity: isImporting ? 0.6 : 1,
+                              cursor: isImporting ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <div className={styles.checkeredBg} style={{ width: '100%', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
+                              <img
+                                src={item.thumbnail || item.image}
+                                alt={item.title}
                                 style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                               />
                             </div>
-                            <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: 600, color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', borderTop: '1px solid #f1f5f9' }}>
-                              {img.classification?.tags?.[0] || img.key.split('/').pop().replace(/\.[^/.]+$/, '').replace(/^\d+[-_]/, '').replace(/[-_]/g, ' ')}
+                            <div style={{ padding: '8px', fontSize: '11px', fontWeight: 700, color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', borderTop: '1px solid #f1f5f9' }}>
+                              {item.title || 'Web Asset'}
                             </div>
-                          </div>
+                            
+                            {isImporting && (
+                              <div style={{
+                                position: 'absolute',
+                                top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'rgba(255, 255, 255, 0.85)',
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center',
+                                zIndex: 10
+                              }}>
+                                <div className={styles.loadingSpinner} />
+                                <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: 700, marginTop: '6px' }}>
+                                  Importing...
+                                </span>
+                              </div>
+                            )}
 
-                          {/* Label input — only shown when selected */}
-                          {isSelected && (
-                            <div style={{ padding: '6px 8px', borderTop: '1px solid #ede9fe', background: '#f5f3ff' }}>
-                              <input
-                                type="text"
-                                value={currentLabel}
-                                placeholder="Enter label…"
-                                onClick={e => e.stopPropagation()}
-                                onChange={e => {
-                                  const val = e.target.value;
-                                  setGalleryImageLabels(prev => ({ ...prev, [img.url]: val }));
-                                }}
+                            {isImported && !isSelected && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '6px',
+                                right: '6px',
+                                background: '#10b981',
+                                color: '#ffffff',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '8px',
+                                fontWeight: 'bold',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+                              }}>
+                                Saved
+                              </div>
+                            )}
+
+                            {isSelected && (
+                              <div
                                 style={{
-                                  width: '100%',
-                                  boxSizing: 'border-box',
-                                  border: '1px solid #c4b5fd',
-                                  borderRadius: '6px',
-                                  padding: '4px 6px',
-                                  fontSize: '11px',
-                                  color: '#3730a3',
-                                  fontWeight: 600,
-                                  background: '#ffffff',
-                                  outline: 'none'
+                                  position: 'absolute',
+                                  top: '6px',
+                                  right: '6px',
+                                  background: '#4f46e5',
+                                  color: '#ffffff',
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                 }}
-                              />
-                            </div>
-                          )}
-
-                          {/* Selection order badge */}
-                          {isSelected && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '6px',
-                                right: '6px',
-                                background: '#4f46e5',
-                                color: '#ffffff',
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                              }}
-                            >
-                              {selIdx + 1}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              ) : (
-                // Web Search View
-                webSearching ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: '12px' }}>
-                    <div className={styles.loadingSpinner} />
-                    <div style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Searching DuckDuckGo...</div>
-                  </div>
-                ) : webResults.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8', fontSize: '14px' }}>
-                    Enter a query above to search DuckDuckGo for clipart.
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                      gap: '16px'
-                    }}
-                  >
-                    {webResults.map((item) => {
-                      const localUrl = importedWebUrls[item.image];
-                      const isImported = !!localUrl;
-                      const isSelected = isImported && selectedGalleryUrls.includes(localUrl);
-                      const selIdx = isSelected ? selectedGalleryUrls.indexOf(localUrl) : -1;
-                      const isImporting = importingUrl === item.image;
-                      
-                      return (
-                        <div
-                          key={item.image}
-                          className={`${styles.webResultCard} ${isImported ? styles.webResultCardImported : ''}`}
-                          onClick={() => !isImporting && handleImportWebImage(item.image)}
-                          style={{
-                            border: isSelected ? '3px solid #4f46e5' : isImported ? '3px solid #10b981' : '1px solid #e2e8f0',
-                            opacity: isImporting ? 0.6 : 1,
-                            position: 'relative'
-                          }}
-                        >
-                          <div style={{ width: '100%', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '8px' }}>
-                            <img
-                              src={item.thumbnail || item.image}
-                              alt={item.title}
-                              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                            />
+                              >
+                                {selIdx + 1}
+                              </div>
+                            )}
                           </div>
-                          <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: 600, color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', borderTop: '1px solid #f1f5f9' }}>
-                            {item.title || 'Clipart'}
-                          </div>
-                          
-                          {isImporting && (
-                            <div style={{
-                              position: 'absolute',
-                              top: 0, left: 0, right: 0, bottom: 0,
-                              background: 'rgba(255, 255, 255, 0.8)',
-                              display: 'flex', flexDirection: 'column',
-                              alignItems: 'center', justifyContent: 'center',
-                              zIndex: 10
-                            }}>
-                              <div className={styles.loadingSpinner} />
-                              <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: 700, marginTop: '6px', textAlign: 'center', padding: '0 4px' }}>
-                                Importing...
-                              </span>
-                            </div>
-                          )}
-
-                          {isImported && !isSelected && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '6px',
-                              right: '6px',
-                              background: '#10b981',
-                              color: '#ffffff',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '9px',
-                              fontWeight: 'bold',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
-                            }}>
-                              Saved
-                            </div>
-                          )}
-
-                          {isSelected && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '6px',
-                                right: '6px',
-                                background: '#4f46e5',
-                                color: '#ffffff',
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                              }}
-                            >
-                              {selIdx + 1}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            
-            {/* Modal Footer */}
-            <div
-              style={{
-                padding: '16px 24px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: '#f8fafc'
-              }}
+
+            {/* Bottom Selection Queue & Re-ordering panel */}
+            {selectedGalleryUrls.length > 0 && (
+              <div className={styles.selectedDrawer}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b' }}>
+                    Selection Queue ({selectedGalleryUrls.length})
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedGalleryUrls([]); setGalleryImageLabels({}); }}
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: '10px', fontWeight: 700, color: '#ef4444', textAlign: 'left', cursor: 'pointer' }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                <div className={styles.selectedItemsList}>
+                  {selectedGalleryUrls.map((url, idx) => {
+                    const labelVal = galleryImageLabels[url] || '';
+                    return (
+                      <div
+                        key={url}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          alignItems: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        <div className={styles.selectedItemThumb}>
+                          <img src={url} alt="selected" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                          <div
+                            className={styles.selectedItemRemove}
+                            onClick={() => {
+                              setSelectedGalleryUrls(prev => prev.filter(u => u !== url));
+                              setGalleryImageLabels(prev => {
+                                const copy = { ...prev };
+                                delete copy[url];
+                                return copy;
+                              });
+                            }}
+                          >
+                            ✕
+                          </div>
+                          <div className={styles.selectedItemBadge}>{idx + 1}</div>
+                        </div>
+
+                        {/* Reordering Controls & Label input */}
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => {
+                              setSelectedGalleryUrls(prev => {
+                                const copy = [...prev];
+                                const tmp = copy[idx - 1];
+                                copy[idx - 1] = copy[idx];
+                                copy[idx] = tmp;
+                                return copy;
+                              });
+                            }}
+                            style={{ background: '#f1f5f9', border: 'none', borderRadius: '4px', padding: '1px 4px', fontSize: '8px', cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
+                          >
+                            ◀
+                          </button>
+                          <input
+                            type="text"
+                            value={labelVal}
+                            placeholder="Label..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setGalleryImageLabels(prev => ({ ...prev, [url]: val }));
+                            }}
+                            style={{
+                              width: '50px',
+                              fontSize: '8px',
+                              padding: '2px',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '4px',
+                              textAlign: 'center'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            disabled={idx === selectedGalleryUrls.length - 1}
+                            onClick={() => {
+                              setSelectedGalleryUrls(prev => {
+                                const copy = [...prev];
+                                const tmp = copy[idx + 1];
+                                copy[idx + 1] = copy[idx];
+                                copy[idx] = tmp;
+                                return copy;
+                              });
+                            }}
+                            style={{ background: '#f1f5f9', border: 'none', borderRadius: '4px', padding: '1px 4px', fontSize: '8px', cursor: idx === selectedGalleryUrls.length - 1 ? 'not-allowed' : 'pointer' }}
+                          >
+                            ▶
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={styles.btn + ' ' + styles.btnSecondary}
+                    onClick={() => setShowGallery(false)}
+                    style={{ fontSize: '12px', padding: '8px 16px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btn + ' ' + styles.btnPrimary}
+                    onClick={applyGallerySelection}
+                    style={{ fontSize: '12px', padding: '8px 16px' }}
+                  >
+                    Apply Selection
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox / Zoom Overlay */}
+      {galleryZoomImg && (
+        <div
+          className={styles.detailPanelOverlay}
+          onClick={() => setGalleryZoomImg(null)}
+          style={{ zIndex: 10001 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              padding: '12px',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              maxWidth: '90vw',
+              maxHeight: '90vh'
+            }}
+          >
+            <div className={styles.checkeredBg} style={{ padding: '24px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src={galleryZoomImg} alt="Zoom" style={{ maxWidth: '80vw', maxHeight: '70vh', objectFit: 'contain' }} />
+            </div>
+            <button
+              type="button"
+              className={styles.btn + ' ' + styles.btnSecondary}
+              onClick={() => setGalleryZoomImg(null)}
+              style={{ marginTop: '12px', width: '100%' }}
             >
-              <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-                Selected: <strong style={{ color: '#4f46e5' }}>{selectedGalleryUrls.length}</strong> asset(s)
+              Close Preview
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Metadata Editor Popup Dialog */}
+      {editingMetaItem && (
+        <div className={styles.detailPanelOverlay} style={{ zIndex: 10002 }}>
+          <div className={styles.detailPanel}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                ✏️ Edit Image Asset Metadata
+              </h4>
+              <button
+                type="button"
+                onClick={() => setEditingMetaItem(null)}
+                style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
+              <div className={styles.checkeredBg} style={{ width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+                <img src={editingMetaItem.url} alt="editing" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="button"
-                  className={styles.btn + ' ' + styles.btnSecondary}
-                  onClick={() => setShowGallery(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className={styles.btn + ' ' + styles.btnPrimary}
-                  onClick={applyGallerySelection}
-                >
-                  Add Selected
-                </button>
+              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: '#64748b' }}>
+                <strong>Key:</strong> {editingMetaItem.key}
               </div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Singular Word Form</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={metaEditSingular}
+                placeholder="e.g. apple, frog, balloon"
+                onChange={e => setMetaEditSingular(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Plural Word Form</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={metaEditPlural}
+                placeholder="e.g. apples, frogs, balloons"
+                onChange={e => setMetaEditPlural(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Grammar Article</label>
+              <select
+                className={styles.select}
+                value={metaEditArticle}
+                onChange={e => setMetaEditArticle(e.target.value)}
+              >
+                <option value="a">a (consonants, e.g. a frog)</option>
+                <option value="an">an (vowels, e.g. an apple)</option>
+                <option value="some">some (uncountable, e.g. some ice)</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Classification Category</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={metaEditCategory}
+                placeholder="e.g. food, animal, shapes, vehicles"
+                onChange={e => setMetaEditCategory(e.target.value)}
+                style={{ textTransform: 'lowercase' }}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Classification Tags (comma separated)</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={metaEditTags}
+                placeholder="e.g. fruit, green, counter, flat"
+                onChange={e => setMetaEditTags(e.target.value)}
+                style={{ textTransform: 'lowercase' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+              <button
+                type="button"
+                className={styles.btn + ' ' + styles.btnSecondary}
+                onClick={() => setEditingMetaItem(null)}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.btn + ' ' + styles.btnPrimary}
+                onClick={handleSaveMetadata}
+                disabled={isSavingMeta}
+                style={{ flex: 1 }}
+              >
+                {isSavingMeta ? 'Saving...' : 'Save Metadata'}
+              </button>
             </div>
           </div>
         </div>

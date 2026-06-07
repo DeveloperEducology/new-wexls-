@@ -1,6 +1,6 @@
 import { generateShapesQuestion } from './engine.js';
 import { getShapesSkill, shapesMicroSkills } from './skills/index.js';
-import { getShapesTemplate } from './templates/index.js';
+import { getShapesTemplate, shapesTemplates } from './templates/index.js';
 
 const skillRegistry = Object.fromEntries(
   shapesMicroSkills.map((skill) => {
@@ -19,8 +19,22 @@ const skillRegistry = Object.fromEntries(
   }),
 );
 
+const templateRegistry = Object.fromEntries(
+  Object.values(shapesTemplates).map((template) => {
+    return [
+      template.id,
+      {
+        params: template.defaultConfig || {},
+        skill: null,
+        template
+      }
+    ];
+  })
+);
+
 export const shapesRawRegistry = {
   ...skillRegistry,
+  ...templateRegistry
 };
 
 export const shapesGenerator = (config) => {

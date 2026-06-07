@@ -141,6 +141,90 @@ export const TEMPLATES_CATALOG = {
         "title": "English Phonics Images",
         "engine": "phonics_images",
         "questionType": "mcq"
+      },
+      {
+        "id": "lkg.english.balloon_tap",
+        "title": "English Balloon Tap",
+        "engine": "balloon_tap",
+        "questionType": "mcq"
+      },
+      {
+        "id": "lkg.english.loc_next_beside",
+        "title": "English Loc Next Beside",
+        "engine": "loc_next_beside",
+        "questionType": "mcq"
+      },
+      {
+        "id": "lkg.english.loc_position_multi",
+        "title": "English Loc Position Multi",
+        "engine": "loc_position_multi",
+        "questionType": "mcq"
+      },
+      {
+        "id": "lkg.english.assoc_lower_word_begins",
+        "title": "English Assoc Lower Word Begins",
+        "engine": "assoc_lower_word_begins",
+        "questionType": "mcq"
+      },
+      {
+        "id": "lkg.english.parts_of_speech",
+        "title": "English Parts Of Speech",
+        "engine": "parts_of_speech",
+        "questionType": "mcq"
+      },
+      {
+        "id": "ukg-english-find-action-verb-text",
+        "title": "Ukg English Find Action Verb Text",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-find-action-verb-images",
+        "title": "Ukg English Find Action Verb Images",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-find-verb-in-sentence",
+        "title": "Ukg English Find Verb In Sentence",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-match-verb-to-picture",
+        "title": "Ukg English Match Verb To Picture",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-choose-verb-for-noun",
+        "title": "Ukg English Choose Verb For Noun",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-find-not-a-verb",
+        "title": "Ukg English Find Not A Verb",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-find-two-action-verbs",
+        "title": "Ukg English Find Two Action Verbs",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-verbs-and-nouns-review",
+        "title": "Ukg English Verbs And Nouns Review",
+        "engine": "",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "ukg-english-verbs-mixed-review",
+        "title": "Ukg English Verbs Mixed Review",
+        "engine": "",
+        "questionType": "fillInTheBlank"
       }
     ]
   },
@@ -1051,6 +1135,44 @@ export const TEMPLATES_CATALOG = {
         "questionType": "fillInTheBlank"
       }
     ],
+    "money": [
+      {
+        "id": "money.coin_values",
+        "title": "Coin Values",
+        "engine": "money",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "money.count",
+        "title": "Count",
+        "engine": "money",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "money.equivalent_groups",
+        "title": "Equivalent Groups",
+        "engine": "money",
+        "questionType": "mcq"
+      },
+      {
+        "id": "money.compare_groups",
+        "title": "Compare Groups",
+        "engine": "money",
+        "questionType": "mcq"
+      },
+      {
+        "id": "money.making_change",
+        "title": "Making Change",
+        "engine": "money",
+        "questionType": "fillInTheBlank"
+      },
+      {
+        "id": "money.word_problems",
+        "title": "Word Problems",
+        "engine": "money",
+        "questionType": "fillInTheBlank"
+      }
+    ],
     "multiplication": [
       {
         "id": "multiplication.facts.basic",
@@ -1395,6 +1517,66 @@ export const TEMPLATES_CATALOG = {
       {
         "id": "shapes.symmetry.check",
         "title": "Symmetry Check",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.name",
+        "title": "Ukg Name",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.circles",
+        "title": "Ukg Circles",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.triangles",
+        "title": "Ukg Triangles",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.squares_rectangles",
+        "title": "Ukg Squares Rectangles",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.hexagons",
+        "title": "Ukg Hexagons",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.select_2d",
+        "title": "Ukg Select 2d",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.count_sides_corners",
+        "title": "Ukg Count Sides Corners",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.compare_sides_corners",
+        "title": "Ukg Compare Sides Corners",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.intro_symmetry",
+        "title": "Ukg Intro Symmetry",
+        "engine": "shapes",
+        "questionType": "mcq"
+      },
+      {
+        "id": "shapes.ukg.pictures_symmetry",
+        "title": "Ukg Pictures Symmetry",
         "engine": "shapes",
         "questionType": "mcq"
       }

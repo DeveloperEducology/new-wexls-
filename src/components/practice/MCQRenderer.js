@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import PartRenderer from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
@@ -8,10 +8,47 @@ import { speakText, getQuestionSpeechText } from '@/lib/ttsClient';
 import { resolveToolSvg } from '@/lib/practice/svgTools';
 import { parseHTMLToJSX } from '@/lib/practice/htmlParser';
 
+/**
+ * ClickToFillBridge renders a hidden <input id="ans"> that the TenFrame SVG
+ * inline onclick handler can find via document.getElementById('ans').
+ *
+ * We use a native DOM 'input' event listener (not React onChange) because the
+ * TenFrame sets input.value imperatively THEN dispatches the event, which
+ * bypasses React's controlled-input tracking.
+ *
+ * When the value changes, we find the matching MCQ option index so that
+ * isAnswerCorrect() (index-based) evaluates correctly.
+ */
+function ClickToFillBridge({ question, onAnswer }) {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+
+    const handleInput = (event) => {
+      const val = event.target.value;
+      const opts = Array.isArray(question.options) ? question.options : [];
+      const matchedIdx = opts.findIndex(
+        (opt, i) => String(getOptionLabel(opt, i)).trim() === String(val).trim()
+      );
+      onAnswer(matchedIdx >= 0 ? matchedIdx : val);
+    };
+
+    el.addEventListener('input', handleInput);
+    return () => el.removeEventListener('input', handleInput);
+  }, [question.options, onAnswer]);
+
+  return <input ref={inputRef} id="ans" type="text" style={{ display: 'none' }} />;
+}
 
 function getOptionLabel(option, index) {
   if (typeof option === 'string' || typeof option === 'number') return String(option);
-  return option?.label || option?.text || option?.value || option?.content || `Option ${index + 1}`;
+  if (option?.label !== undefined && option?.label !== null && option?.label !== '') return String(option.label);
+  if (option?.text !== undefined && option?.text !== null && option?.text !== '') return String(option.text);
+  if (option?.value !== undefined && option?.value !== null && option?.value !== '') return String(option.value);
+  if (option?.content !== undefined && option?.content !== null && option?.content !== '') return String(option.content);
+  return `Option ${index + 1}`;
 }
 
 function isSvgString(value) {
@@ -203,8 +240,8 @@ function getGridStyle(optionLayout) {
 function Part({ part, inGroup = false }) {
   if (part?.type === 'svg') {
     const svgContent = resolveToolSvg(part) || part.content || part.svg || '';
-    const widthMatch = svgContent.match(/<svg[^>]*\bwidth=["']?(\d+)/i);
-    const nativeWidth = widthMatch ? parseInt(widthMatch[1], 10) : null;
+    const widthMatch = svgContent.match(/<svg[^>]*\bwidth=["']?(\d+)(px|%)?/i);
+    const nativeWidth = widthMatch && widthMatch[2] !== '%' ? parseInt(widthMatch[1], 10) : null;
     const style = part.style || {};
     const resolvedMaxWidth = style.maxWidth || (nativeWidth && nativeWidth < 500 ? `${nativeWidth}px` : '100%');
 
@@ -294,6 +331,88 @@ function Part({ part, inGroup = false }) {
   );
 }
 
+// ── Pictograph Table Option ──────────────────────────────────────────────────
+function PictographTableOption({ option, index, selected, isAnswered, onSelect }) {
+  const rows = option?.pictograph?.rows || [];
+  return (
+    <button
+      type="button"
+      disabled={isAnswered}
+      onClick={onSelect}
+      aria-pressed={selected}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        padding: 0,
+        border: `3px solid ${selected ? '#38a5e8' : '#cbd5e1'}`,
+        borderRadius: 16,
+        background: selected ? '#f0f9ff' : '#ffffff',
+        cursor: isAnswered ? 'default' : 'pointer',
+        boxShadow: selected
+          ? '0 0 0 4px rgba(56, 165, 232, 0.18), 0 4px 16px rgba(15, 23, 42, 0.08)'
+          : '0 2px 8px rgba(15, 23, 42, 0.08)',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease, background 160ms ease',
+        minWidth: 140,
+        maxWidth: 220,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Option label header */}
+      <div style={{
+        background: selected ? '#e0f2fe' : '#f1f5f9',
+        padding: '6px 12px',
+        borderBottom: `2px solid ${selected ? '#bae6fd' : '#e2e8f0'}`,
+        fontSize: 13,
+        fontWeight: 700,
+        color: selected ? '#0369a1' : '#64748b',
+        textAlign: 'center',
+        letterSpacing: '0.04em',
+        transition: 'background 160ms ease, color 160ms ease',
+      }}>
+        Option {index + 1}
+      </div>
+
+      {/* Rows: emoji col + count col */}
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Fruit</th>
+            <th style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx} style={{ background: rIdx % 2 === 0 ? 'transparent' : 'rgba(241,245,249,0.7)' }}>
+              <td style={{ padding: '6px 10px', fontSize: 22, lineHeight: 1 }}>{row.emoji}</td>
+              <td style={{ padding: '6px 10px', fontSize: 17, fontWeight: 800, color: '#0f172a', textAlign: 'center' }}>{row.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Selected tick */}
+      {selected && (
+        <div style={{
+          position: 'absolute',
+          top: 6, right: 8,
+          width: 22, height: 22,
+          borderRadius: '50%',
+          background: '#38a5e8',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff',
+          fontSize: 13,
+          fontWeight: 900,
+          boxShadow: '0 2px 6px rgba(56,165,232,0.35)',
+        }}>
+          ✓
+        </div>
+      )}
+    </button>
+  );
+}
+
 export default function MCQRenderer({
   question,
   userAnswer,
@@ -319,6 +438,9 @@ export default function MCQRenderer({
   }, [question]);
 
   const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+  const visualPanels = useMemo(() => {
+    return (question.parts || []).filter(p => p.type === 'visual_panel');
+  }, [question.parts]);
 
   const selectedIndices = useMemo(() => {
     if (!isMultiSelect) return [];
@@ -347,6 +469,7 @@ export default function MCQRenderer({
   const gridClassName = getGridClassName(question, optionLayout);
   const gridStyle = getGridStyle(optionLayout);
   const isVisualAnswerSplit = !isPreK && question?.layoutConfig?.workspace === 'visual_answer_split';
+  const useNumberButtons = question?.layoutConfig?.variant === 'numbers' || question?.numberOptions === true;
 
   const speechText = getQuestionSpeechText(question);
   const firstPartText = (question.parts?.[0]?.content || question.parts?.[0]?.text || '').trim();
@@ -364,8 +487,49 @@ export default function MCQRenderer({
   const showHeaderSpeaker = question.questionText && !hideHeader;
   const showInlineSpeaker = !showHeaderSpeaker;
 
+  // Merge consecutive text parts for Pre-K to avoid duplicate mascot speech bubbles
+  const displayParts = useMemo(() => {
+    const parts = (Array.isArray(question.parts) ? question.parts : [])
+      .filter(p => p?.type !== 'visual_panel');
+    if (!isPreK) return parts;
+
+    const merged = [];
+    let currentTextPart = null;
+
+    parts.forEach((part) => {
+      const isText = part.type === 'text' || !part.type;
+      if (isText) {
+        if (!currentTextPart) {
+          currentTextPart = { ...part, type: 'text' };
+        } else {
+          currentTextPart.content = ((currentTextPart.content || currentTextPart.text || '').trim() + ' ' + (part.content || part.text || '').trim()).trim();
+          if (part.showSpeaker) currentTextPart.showSpeaker = true;
+          currentTextPart.style = { ...(currentTextPart.style || {}), ...(part.style || {}) };
+        }
+      } else {
+        if (currentTextPart) {
+          merged.push(currentTextPart);
+          currentTextPart = null;
+        }
+        merged.push(part);
+      }
+    });
+
+    if (currentTextPart) {
+      merged.push(currentTextPart);
+    }
+
+    return merged;
+  }, [question.parts, isPreK]);
+
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: isPreK ? 4 : 14 }}>
+      {question.metaConfig?.hasClickToFill && (
+        <ClickToFillBridge
+          question={question}
+          onAnswer={onAnswer}
+        />
+      )}
       {question.questionText && !hideHeader ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
@@ -413,7 +577,7 @@ export default function MCQRenderer({
         style={isVisualAnswerSplit ? undefined : { display: 'contents' }}
         data-workspace-layout={isVisualAnswerSplit ? 'visual_answer_split' : undefined}
       >
-      {Array.isArray(question.parts) && question.parts.length > 0 ? (
+      {Array.isArray(displayParts) && displayParts.length > 0 ? (
         <div
           className={isVisualAnswerSplit ? styles.mcqSplitVisual : undefined}
           data-workspace-region={isVisualAnswerSplit ? 'visual' : undefined}
@@ -447,7 +611,7 @@ export default function MCQRenderer({
                 }
               };
 
-              question.parts.forEach((part, index) => {
+              displayParts.forEach((part, index) => {
                 const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
                 const partElement = (
                   <PartRenderer
@@ -478,7 +642,7 @@ export default function MCQRenderer({
               return elements;
             }
 
-            return question.parts.map((part, index) => {
+            return displayParts.map((part, index) => {
               const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
               return (
                 <PartRenderer
@@ -498,7 +662,98 @@ export default function MCQRenderer({
         </div>
       ) : null}
 
-      {['interactive_svg', 'hotspot_select', 'hotspot_multi_select', 'balloon_tap', 'direct_image_select'].includes(question.interaction) || question.directImageSelect ? null : question.layoutConfig?.variant === 'capsule' ? (
+      {question.metaConfig?.hasClickToFill ? null : question.interaction === 'pictograph_mcq' ? (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'clamp(16px, 3vw, 28px)',
+            justifyContent: 'center',
+            width: '100%',
+            padding: '8px 0',
+          }}
+        >
+          {(question.options || []).map((option, index) => {
+            const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
+            return (
+              <PictographTableOption
+                key={option?.id || index}
+                option={option}
+                index={index}
+                selected={selected}
+                isAnswered={isAnswered}
+                onSelect={() => onAnswer(index)}
+              />
+            );
+          })}
+        </div>
+      ) : ['interactive_svg', 'interactive_stickers', 'hotspot_select', 'hotspot_multi_select', 'balloon_tap', 'direct_image_select'].includes(question.interaction) || question.directImageSelect ? null : useNumberButtons ? (
+        <div
+          aria-label="Number choices"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'clamp(8px, 1.8vw, 14px)',
+            width: 'fit-content',
+            maxWidth: 'min(100%, 680px)',
+            margin: 'clamp(8px, 2vh, 18px) auto',
+            padding: 'clamp(9px, 1.7vw, 14px)',
+            borderRadius: 22,
+            background: '#eef1f5',
+            boxShadow: 'inset 0 2px 5px rgba(15, 23, 42, 0.08)',
+          }}
+        >
+          {(question.options || []).map((option, index) => {
+            const selected = isMultiSelect
+              ? selectedIndices.includes(index)
+              : Number.isFinite(selectedIndex) && selectedIndex === index;
+            const value = getOptionLabel(option, index);
+
+            return (
+              <button
+                key={option?.id || index}
+                type="button"
+                disabled={isAnswered}
+                onClick={() => {
+                  if (isMultiSelect) {
+                    const nextSelected = selectedIndices.includes(index)
+                      ? selectedIndices.filter((item) => item !== index)
+                      : [...selectedIndices, index].sort((a, b) => a - b);
+                    onAnswer(nextSelected);
+                  } else {
+                    onAnswer(index);
+                  }
+                  if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
+                    speakText(value, question.voice || 'Puck', option?.audioUrl);
+                  }
+                }}
+                style={{
+                  width: 'clamp(58px, 8vw, 78px)',
+                  height: 'clamp(56px, 7.5vw, 74px)',
+                  flex: '0 0 auto',
+                  borderRadius: 22,
+                  border: selected ? '3px solid #bfdbfe' : '2px solid #1d4ed8',
+                  background: selected ? '#1d4ed8' : '#3b82f6',
+                  color: '#ffffff',
+                  fontSize: 'clamp(24px, 4vw, 34px)',
+                  lineHeight: 1,
+                  fontWeight: 900,
+                  cursor: isAnswered ? 'default' : 'pointer',
+                  boxShadow: selected
+                    ? '0 3px 0 #1e3a8a, 0 0 0 4px rgba(147, 197, 253, 0.75)'
+                    : '0 5px 0 #075aa7, 0 8px 12px rgba(30, 64, 175, 0.18)',
+                  transform: selected ? 'translateY(2px) scale(1.04)' : 'none',
+                  transition: 'transform 150ms ease, box-shadow 150ms ease, background 150ms ease',
+                }}
+              >
+                {value}
+              </button>
+            );
+          })}
+        </div>
+      ) : question.layoutConfig?.variant === 'capsule' ? (
         <div 
           style={{
             display: 'flex',
@@ -573,89 +828,187 @@ export default function MCQRenderer({
           className={`${isPreK ? styles.preKOptionsContainer : ''} ${isVisualAnswerSplit ? styles.mcqSplitOptions : ''}`.trim() || undefined}
           data-workspace-region={isVisualAnswerSplit ? 'answers' : undefined}
         >
-
           <div
             className={isPreK ? styles.preKOptionsGrid : gridClassName}
-            style={isPreK ? undefined : gridStyle}
+            style={isPreK ? (optionLayout.columns === 1 ? { gridTemplateColumns: '1fr' } : undefined) : gridStyle}
             data-option-layout={optionLayout.mode}
           >
-            {(question.options || []).map((option, index) => {
-              const selected = isMultiSelect
-                ? selectedIndices.includes(index)
-                : Number.isFinite(selectedIndex) && selectedIndex === index;
-              const content = getOptionContent(option);
-              const isSvgOption = hasSvgContent(option);
-              const isImageOption = isImageUrl(content);
-   
-               return (
-                <button
-                  key={option?.id || index}
-                  type="button"
-                  disabled={isAnswered}
-                  onClick={() => {
-                    if (isMultiSelect) {
-                      const nextSelected = selectedIndices.includes(index)
-                        ? selectedIndices.filter((i) => i !== index)
-                        : [...selectedIndices, index].sort((a, b) => a - b);
-                      onAnswer(nextSelected);
-                    } else {
+            {question.type === 'visual_choice' ? (
+              // Visual Choice Panels rendering
+              visualPanels.map((panel, index) => {
+                const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
+                const isCorrectChoice = index === question.correctAnswerIndex;
+                
+                let borderStyle = '3px solid #cbd5e1';
+                let shadowStyle = '0 2px 8px rgba(15, 23, 42, 0.08)';
+                let bgStyle = '#ffffff';
+
+                if (selected) {
+                  borderStyle = '3px solid #3b82f6';
+                  shadowStyle = '0 0 0 4px rgba(59, 130, 246, 0.2), 0 4px 16px rgba(15, 23, 42, 0.08)';
+                  bgStyle = '#eff6ff';
+                }
+
+                if (isAnswered) {
+                  if (isCorrectChoice) {
+                    borderStyle = '3px solid #22c55e';
+                    bgStyle = '#f0fdf4';
+                    shadowStyle = '0 4px 16px rgba(34, 197, 94, 0.2)';
+                  } else if (selected) {
+                    borderStyle = '3px solid #ef4444';
+                    bgStyle = '#fef2f2';
+                    shadowStyle = '0 4px 16px rgba(239, 68, 68, 0.2)';
+                  }
+                }
+
+                return (
+                  <button
+                    key={`panel_${index}`}
+                    type="button"
+                    disabled={isAnswered}
+                    onClick={() => {
                       onAnswer(index);
-                    }
-                    if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
-                      speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
-                    }
-                  }}
-                  className={(() => {
-                    if (!isPreK) {
-                      return `${styles.optionButton} ${selected ? styles.optionButtonActive : ''}`;
-                    }
-                    const themes = [
-                      { base: styles.preKOptionYellow, active: styles.preKOptionYellowActive },
-                      { base: styles.preKOptionPink, active: styles.preKOptionPinkActive },
-                      { base: styles.preKOptionBlue, active: styles.preKOptionBlueActive },
-                      { base: styles.preKOptionGreen, active: styles.preKOptionGreenActive },
-                    ];
-                    const theme = themes[index % themes.length];
-                    const mediaClass = hasMedia ? styles.preKOptionButtonWithMedia : styles.preKOptionButtonTextOnly;
-                    return `${styles.preKOptionButton} ${mediaClass} ${theme.base} ${selected ? `${styles.preKOptionButtonActive} ${theme.active}` : ''}`;
-                  })()}
-                  style={{
-                    position: 'relative',
-                    minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
-                    cursor: isAnswered ? 'default' : 'pointer',
-                    ...(optionLayout.mode === 'compact' ? { borderRadius: 4, minHeight: 44 } : {}),
-                    ...(isPreK ? {
-                      transform: selected
-                        ? `scale(1.02) rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`
-                        : `rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`,
-                      transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
-                      zIndex: selected ? 30 : 10,
-                      ...(isMultiSelect ? { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' } : {})
-                    } : {})
-                  }}
-                >
-                  {isPreK && isMultiSelect && (
-                    <div style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      border: '3px solid #38bdf8',
-                      backgroundColor: selected ? '#38bdf8' : '#ffffff',
+                      if (isPreK || question.metaConfig?.readable) {
+                        speakText(`Option ${index + 1}`, question.voice || 'Puck');
+                      }
+                    }}
+                    style={{
                       display: 'flex',
-                      justifyContent: 'center',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      marginRight: '12px',
-                      color: '#ffffff',
-                      fontSize: '16px',
-                      fontWeight: '950',
-                      flexShrink: 0,
-                      boxShadow: selected ? '0 4px 10px rgba(56, 189, 248, 0.3)' : 'none',
-                      transition: 'all 0.2s ease',
-                    }}>
-                      {selected ? '✓' : ''}
-                    </div>
-                  )}
-                  {(!isPreK && (question.metaConfig?.readOptions || question.metaConfig?.readable)) ? (
+                      padding: 12,
+                      border: borderStyle,
+                      borderRadius: 20,
+                      background: bgStyle,
+                      boxShadow: shadowStyle,
+                      cursor: isAnswered ? 'default' : 'pointer',
+                      transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      minWidth: '160px',
+                      maxWidth: '260px',
+                      outline: 'none',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div
+                      dangerouslySetInnerHTML={{ __html: panel.svg }}
+                      style={{ width: '100%', display: 'block' }}
+                    />
+                    
+                    {isAnswered && isCorrectChoice && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        background: '#22c55e',
+                        color: '#ffffff',
+                        borderRadius: 99,
+                        padding: '2px 8px',
+                        fontSize: 10,
+                        fontWeight: 900,
+                        boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)'
+                      }}>
+                        ✓ Correct
+                      </div>
+                    )}
+                    {isAnswered && selected && !isCorrectChoice && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        borderRadius: 99,
+                        padding: '2px 8px',
+                        fontSize: 10,
+                        fontWeight: 900,
+                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)'
+                      }}>
+                        ✗ Incorrect
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+            ) : (
+              // Standard MCQ Options rendering
+              (question.options || []).map((option, index) => {
+                const selected = isMultiSelect
+                  ? selectedIndices.includes(index)
+                  : Number.isFinite(selectedIndex) && selectedIndex === index;
+                const content = getOptionContent(option);
+                const isSvgOption = hasSvgContent(option);
+                const isImageOption = isImageUrl(content);
+   
+                 return (
+                  <button
+                    key={option?.id || index}
+                    type="button"
+                    disabled={isAnswered}
+                    onClick={() => {
+                      if (isMultiSelect) {
+                        const nextSelected = selectedIndices.includes(index)
+                          ? selectedIndices.filter((i) => i !== index)
+                          : [...selectedIndices, index].sort((a, b) => a - b);
+                        onAnswer(nextSelected);
+                      } else {
+                        onAnswer(index);
+                      }
+                      if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
+                        speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
+                      }
+                    }}
+                    className={(() => {
+                      if (!isPreK) {
+                        return `${styles.optionButton} ${selected ? styles.optionButtonActive : ''}`;
+                      }
+                      const themes = [
+                        { base: styles.preKOptionYellow, active: styles.preKOptionYellowActive },
+                        { base: styles.preKOptionPink, active: styles.preKOptionPinkActive },
+                        { base: styles.preKOptionBlue, active: styles.preKOptionBlueActive },
+                        { base: styles.preKOptionGreen, active: styles.preKOptionGreenActive },
+                      ];
+                      const theme = themes[index % themes.length];
+                      const mediaClass = hasMedia ? styles.preKOptionButtonWithMedia : styles.preKOptionButtonTextOnly;
+                      return `${styles.preKOptionButton} ${mediaClass} ${theme.base} ${selected ? `${styles.preKOptionButtonActive} ${theme.active}` : ''}`;
+                    })()}
+                    style={{
+                      position: 'relative',
+                      minHeight: hasMedia ? (optionLayout.buttonMinHeight || 150) : undefined,
+                      cursor: isAnswered ? 'default' : 'pointer',
+                      ...(optionLayout.mode === 'compact' ? { borderRadius: 4, minHeight: 44 } : {}),
+                      ...(isPreK ? {
+                        transform: selected
+                          ? `scale(1.02) rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`
+                          : `rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`,
+                        transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+                        zIndex: selected ? 30 : 10,
+                        ...(isMultiSelect ? { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' } : {})
+                      } : {})
+                    }}
+                  >
+                    {isPreK && isMultiSelect && (
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        border: '3px solid #38bdf8',
+                        backgroundColor: selected ? '#38bdf8' : '#ffffff',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: '12px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        fontWeight: '950',
+                        flexShrink: 0,
+                        boxShadow: selected ? '0 4px 10px rgba(56, 189, 248, 0.3)' : 'none',
+                        transition: 'all 0.2s ease',
+                      }}>
+                        {selected ? '✓' : ''}
+                      </div>
+                    )}
+                    {(!isPreK && (question.metaConfig?.readOptions || question.metaConfig?.readable)) ? (
                     <span
                       role="button"
                       tabIndex={0}
@@ -721,10 +1074,11 @@ export default function MCQRenderer({
                         width: option.width || optionLayout.mediaWidth || '100%',
                         maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 360),
                         minHeight: option.height || optionLayout.mediaMinHeight || 0,
-                        marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (optionLayout.mediaMarginBottom ?? 10),
+                        marginBottom: (option.hideLabel || question.layoutConfig?.hideOptionLabel) ? 0 : (isPreK ? 4 : (optionLayout.mediaMarginBottom ?? 10)),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        ...(isPreK ? { flex: '1 1 auto', overflow: 'hidden' } : {}),
                       }}
                     >
                         <img
@@ -734,7 +1088,7 @@ export default function MCQRenderer({
                             width: option.width || '100%',
                             maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 260),
                             height: option.height || 'auto',
-                            maxHeight: option.height ? undefined : 220,
+                            maxHeight: option.height ? undefined : (isPreK ? 'clamp(96px, 15vh, 150px)' : 220),
                             objectFit: 'contain',
                             borderRadius: 14,
                           }}
@@ -774,7 +1128,10 @@ export default function MCQRenderer({
                     </div>
                   ) : null}
                   {(isImageOption || (option && option.emoji)) && getOptionLabel(option, index) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
-                    <div style={{ fontSize: 'clamp(12px, 3.4vw, 14px)', fontWeight: 500, lineHeight: 1.25, color: '#334155' }}>
+                    <div
+                      className={isPreK ? styles.preKOptionLabel : undefined}
+                      style={{ fontSize: isPreK ? 'clamp(14px, 2vw, 17px)' : 'clamp(12px, 3.4vw, 14px)', fontWeight: isPreK ? 900 : 500, lineHeight: 1.25, color: '#334155' }}
+                    >
                       <InlineMarkdown text={getOptionLabel(option, index)} />
                     </div>
                   ) : null}
@@ -785,7 +1142,7 @@ export default function MCQRenderer({
                   )}
                 </button>
               );
-            })}
+            }))}
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import { dataGraphsHomeGroups } from '../practice/clientCatalogs/dataGraphsCatal
 import { storyMathHomeGroups } from '../practice/clientCatalogs/storyMathCatalog.js';
 import { interactiveToolsHomeGroups } from '../practice/clientCatalogs/interactiveToolsCatalog.js';
 import { cubeToolsHomeGroups } from '../practice/clientCatalogs/cubeToolsCatalog.js';
+import { ukgNumbersCountingHomeGroups } from '../practice/clientCatalogs/ukgNumbersCountingCatalog.js';
 
 const gradeOrdinal = (grade) => {
   if (grade === 'remediation') return 'Remediation skills';
@@ -41,6 +42,20 @@ const solarSystemHomeGroups = [
     ]
   }
 ];
+
+const ukgScienceHomeGroups = [
+  {
+    title: 'Shapes and colors',
+    skills: [
+      ['SC.1', 'Classify objects by two-dimensional shape', 'ukg-science-classify-2d-shapes'],
+      ['SC.2', 'Sort objects by two-dimensional shape', 'ukg-science-sort-objects-by-two-dimensional-shape'],
+      ['SC.3', 'Identify triangles', 'ukg-science-identify-triangles'],
+      ['SC.4', 'Identify squares', 'ukg-science-identify-squares'],
+      ['SC.5', 'Identify rectangles', 'ukg-science-identify-rectangles'],
+    ],
+  },
+];
+
 
 const grammarHomeGroups = Object.entries(grammarSkillsByGrade).map(([grade, skills]) => ({
   title: gradeOrdinal(grade),
@@ -330,6 +345,15 @@ export const TOPICS = [
     groups: solarSystemHomeGroups,
   },
   {
+    id: 'ukg-science',
+    title: 'UKG Science',
+    color: '#10b981',
+    subject: 'science',
+    topic: 'ukg-science',
+    includes: ['Classify shapes', 'circles', 'triangles', 'squares', 'rectangles'],
+    groups: ukgScienceHomeGroups,
+  },
+  {
     id: 'ratio',
     title: 'Ratios',
     color: '#ea580c',
@@ -580,6 +604,25 @@ export const TOPICS = [
         ],
       },
     ],
+  },
+  {
+    id: 'ukg-numbers-counting',
+    title: 'UKG Numbers & Counting',
+    color: '#16a34a',
+    subject: 'math',
+    topic: 'ukg-numbers-counting',
+    includes: [
+      'Count up to 10',
+      'Ten frames',
+      'One more and one less',
+      'Tally marks',
+      'Number lines',
+      'Sequences',
+      'Pictographs',
+      'Measurement',
+      'Money'
+    ],
+    groups: ukgNumbersCountingHomeGroups,
   },
   {
     id: 'standard-object-measurement',

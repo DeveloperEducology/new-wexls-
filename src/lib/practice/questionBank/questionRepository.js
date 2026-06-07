@@ -125,15 +125,38 @@ function stripMongoFields(document) {
   };
 }
 
+function scrubBrowserTts(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map(scrubBrowserTts);
+  }
+
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'audioUrl' && typeof value === 'string' && value.startsWith('/api/tts')) {
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      result[key] = scrubBrowserTts(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 function normalizeQuestionInput(input) {
   if (!input || typeof input !== 'object') {
     throw new Error('Question JSON must be an object.');
   }
 
-  const source = input.question && typeof input.question === 'object' ? input.question : input;
-  if (!source || typeof source !== 'object') {
+  const rawSource = input.question && typeof input.question === 'object' ? input.question : input;
+  if (!rawSource || typeof rawSource !== 'object') {
     throw new Error('Question payload must contain a question object.');
   }
+
+  const source = scrubBrowserTts(rawSource);
 
   const metadata = source.metadata || {};
   const subject = metadata.subject || source.subject || input.subject;
@@ -276,14 +299,21 @@ export async function saveStoredPracticeQuestion(input, { mode = 'upsert' } = {}
 
   const { createdAt, ...questionWithoutCreatedAt } = question;
 
+  const updateObj = {
+    $set: questionWithoutCreatedAt,
+    $setOnInsert: {
+      createdAt: createdAt || new Date(),
+    },
+  };
+
+  if (question.poolId) {
+    updateObj.$unset = { pools: "" };
+    delete questionWithoutCreatedAt.pools;
+  }
+
   const result = await collection.updateOne(
     { id: question.id },
-    {
-      $set: questionWithoutCreatedAt,
-      $setOnInsert: {
-        createdAt: createdAt || new Date(),
-      },
-    },
+    updateObj,
     { upsert: true }
   );
 
@@ -295,4 +325,36 @@ export async function saveStoredPracticeQuestion(input, { mode = 'upsert' } = {}
     upsertedId: result.upsertedId ? String(result.upsertedId) : null,
     question,
   };
+}
+
+const poolCache = new Map();
+
+export function clearVocabularyPoolCache(poolId) {
+  if (poolId) {
+    poolCache.delete(poolId);
+    return;
+  }
+  poolCache.clear();
+}
+
+export async function findVocabularyPool(poolId) {
+  if (!poolId) return null;
+  if (poolCache.has(poolId)) {
+    return poolCache.get(poolId);
+  }
+  if (!hasMongoConfig()) return null;
+  try {
+    const db = await getMongoDb();
+    if (!db) return null;
+    const collection = db.collection('vocabulary_pools');
+    const doc = await collection.findOne({ poolId });
+    if (!doc) return null;
+
+    // Cache the pool
+    poolCache.set(poolId, doc);
+    return doc;
+  } catch (error) {
+    console.warn(`Mongo vocabulary pool lookup for ${poolId} failed:`, error.message);
+    return null;
+  }
 }

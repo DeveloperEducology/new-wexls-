@@ -120,6 +120,8 @@ function CategorySortLayout({
   userAnswer,
   onAnswer,
   isAnswered,
+  showItemBorders,
+  borderlessItems,
 }) {
   const [zones, setZones] = useState({});
   const [copyZones, setCopyZones] = useState({});
@@ -176,7 +178,9 @@ function CategorySortLayout({
       itemBorder === 'none' ||
       item.transparent === true ||
       item.showCard === false ||
-      item.borderless === true
+      item.borderless === true ||
+      showItemBorders === false ||
+      borderlessItems === true
     );
   };
   const shouldHideImageLabel = (item) => {
@@ -1494,6 +1498,7 @@ function CategorySortLayout({
     <div
       key={item.id}
       data-card-id={item.id}
+      draggable="false"
       onPointerDown={(event) => beginPointerDrag(item, event)}
       onClick={(event) => {
         if (!isV2) return;
@@ -1512,7 +1517,7 @@ function CategorySortLayout({
         background: transparentImageCard ? 'transparent' : '#ffffff',
         boxShadow: options.isDragLayer
           ? transparentImageCard
-            ? '0 18px 34px rgba(15, 23, 42, 0.18)'
+            ? 'none'
             : '0 24px 48px rgba(15, 23, 42, 0.22)'
           : isSelected
             ? transparentImageCard
@@ -1585,6 +1590,7 @@ function CategorySortLayout({
               <img
                 src={item.imageUrl}
                 alt={item.content || item.id}
+                draggable="false"
                 style={{
                   maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
                   maxHeight: '100%',
@@ -1697,7 +1703,7 @@ function CategorySortLayout({
               boxSizing: 'border-box',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18, width: '100%' }}>
               <button
                 type="button"
                 onClick={() => speakText(category.label)}
@@ -1724,7 +1730,20 @@ function CategorySortLayout({
                   <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                 </svg>
               </button>
-              <span>{category.label}</span>
+              <span style={{ flexGrow: 1 }}>{category.label}</span>
+              {(category.prefillImageUrl || category.imageUrl) && (
+                <img
+                  src={category.prefillImageUrl || category.imageUrl}
+                  alt=""
+                  style={{
+                    height: '36px',
+                    maxWidth: '80px',
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                    flexShrink: 0
+                  }}
+                />
+              )}
             </div>
             <div
               data-zone-grid
@@ -1963,6 +1982,8 @@ export default function CatV2HtmlRenderer({
             userAnswer={userAnswer}
             onAnswer={onAnswer}
             isAnswered={isAnswered}
+            showItemBorders={question.showItemBorders}
+            borderlessItems={question.borderlessItems}
           />
         )}
       </div>

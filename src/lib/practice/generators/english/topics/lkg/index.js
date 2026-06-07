@@ -11,3 +11,5 @@ export {
   getTemplatesForSkill,
   getSkillByTemplate
 } from './registry.js';
+export { generatePartsOfSpeechQuestion } from './partsOfSpeech.engine.js';
+export { ukgPartsOfSpeechPool, ukgVerbScenarios } from './partsOfSpeech.pool.js';

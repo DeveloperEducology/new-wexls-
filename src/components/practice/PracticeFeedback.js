@@ -131,7 +131,21 @@ export default function PracticeFeedback({
   const spokenRef = useRef(false);
 
   // Clean explanation text
-  const cleanExp = question?.explanation ? cleanText(question.explanation) : '';
+  const getExplanationText = (exp) => {
+    if (!exp) return '';
+    if (typeof exp === 'string') return exp;
+    if (typeof exp === 'object') {
+      if (Array.isArray(exp.sections)) {
+        return exp.sections
+          .map(s => typeof s === 'string' ? s : (s?.content || s?.text || ''))
+          .filter(Boolean)
+          .join('\n');
+      }
+      return exp.content || exp.text || '';
+    }
+    return String(exp);
+  };
+  const cleanExp = question?.explanation ? cleanText(getExplanationText(question.explanation)) : '';
   
   // Resolve correct label and image
   let correctLabel = '';
@@ -256,6 +270,25 @@ export default function PracticeFeedback({
             lineHeight: 1.55,
           }}>
             <InlineMarkdown text={cleanExp} />
+          </div>
+        )}
+
+        {solutionSections.length > 0 && (
+          <div style={{
+            marginTop: 14,
+            padding: 14,
+            background: '#ffffff',
+            borderRadius: 18,
+            border: '2px solid rgba(251, 146, 60, 0.15)',
+            color: '#1e293b',
+            fontSize: 14,
+            lineHeight: 1.55,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            overflow: 'hidden',
+          }}>
+            {solutionSections.map((section, index) => renderSolutionPart(section, index))}
           </div>
         )}
 

@@ -32,8 +32,8 @@ export function SvgPart({ part, question, userAnswer, onAnswer, isAnswered, inGr
     );
   }
   const svgContent = resolveToolSvg(part) || part.content || part.svg || '';
-  const widthMatch = svgContent.match(/<svg[^>]*\bwidth=["']?(\d+)/i);
-  const nativeWidth = widthMatch ? parseInt(widthMatch[1], 10) : null;
+  const widthMatch = svgContent.match(/<svg[^>]*\bwidth=["']?(\d+)(px|%)?/i);
+  const nativeWidth = widthMatch && widthMatch[2] !== '%' ? parseInt(widthMatch[1], 10) : null;
   const style = part.style || {};
   const resolvedMaxWidth = style.maxWidth || (nativeWidth && nativeWidth < 500 ? `${nativeWidth}px` : '100%');
 
@@ -46,6 +46,7 @@ export function SvgPart({ part, question, userAnswer, onAnswer, isAnswered, inGr
         flex: inGroup ? '0 0 auto' : 'initial',
         display: 'flex',
         justifyContent: 'flex-start',
+        pointerEvents: isAnswered ? 'none' : 'auto',
         ...style,
       }}
       dangerouslySetInnerHTML={{ __html: svgContent }}
@@ -190,6 +191,7 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
               color: '#0f172a',
               background: isAnswered ? '#f8fafc' : '#ffffff',
               outline: 'none',
+              ...(question?.metaConfig?.hasClickToFill ? { display: 'none' } : {})
             }}
           />
         );
@@ -862,7 +864,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   );
 }
 
-function InputPart({ part, userAnswer, onAnswer, isAnswered }) {
+function InputPart({ part, userAnswer, onAnswer, isAnswered, question }) {
   const id = part.id || part.answerId || 'ans';
   return (
     <input
@@ -882,6 +884,7 @@ function InputPart({ part, userAnswer, onAnswer, isAnswered }) {
         outline: 'none',
         transition: 'border-color 0.15s ease',
         ...part.style,
+        ...(question?.metaConfig?.hasClickToFill ? { display: 'none' } : {})
       }}
     />
   );
@@ -1096,9 +1099,23 @@ function NumberLinePart({ part }) {
   const y = 88;
   const markerX = startX + ((marker - min) / Math.max(max - min, 1)) * (endX - startX);
 
-  const jumpSize = Number(part.jumpSize || 0);
-  const numJumps = Number(part.numJumps || 0);
-  const isMultiplication = jumpSize > 0 && numJumps > 0;
+  const numJumps = Number(part.numJumps || part.jumpCount || 0);
+  const jumpSize = Number(part.jumpSize || 1);
+  const absJumpSize = Math.abs(jumpSize);
+  const startPoint = part.startPoint !== undefined ? Number(part.startPoint) : min;
+  const jumpDirection = part.jumpDirection || (part.jumpSize < 0 ? 'backward' : 'forward');
+  const isJumping = numJumps > 0;
+
+  const visitedTicks = new Set();
+  if (isJumping) {
+    for (let i = 0; i <= numJumps; i++) {
+      if (jumpDirection === 'backward') {
+        visitedTicks.add(startPoint - i * absJumpSize);
+      } else {
+        visitedTicks.add(startPoint + i * absJumpSize);
+      }
+    }
+  }
 
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center', ...(part.style || {}) }}>
@@ -1110,7 +1127,7 @@ function NumberLinePart({ part }) {
               to { stroke-dashoffset: 0; }
             }
           ` }} />
-          {isMultiplication && (
+          {isJumping && (
             <marker
               id="jump-arrow"
               viewBox="0 0 10 10"
@@ -1130,9 +1147,9 @@ function NumberLinePart({ part }) {
         
         {ticks.map((tick) => {
           const x = startX + ((tick - min) / Math.max(max - min, 1)) * (endX - startX);
-          const isLanding = isMultiplication && (tick % jumpSize === 0) && (tick <= numJumps * jumpSize);
+          const isLanding = isJumping && visitedTicks.has(tick);
           const isMissing = part.missingTicks?.includes(tick);
-          const shouldShowLabel = !isMultiplication || isLanding || tick === min || tick === max;
+          const shouldShowLabel = !isJumping || isLanding || tick === min || tick === max;
 
           if (!shouldShowLabel) {
             return (
@@ -1158,17 +1175,25 @@ function NumberLinePart({ part }) {
           );
         })}
 
-        {isMultiplication && (
+        {isJumping && (
           <g>
             {Array.from({ length: numJumps }).map((_, i) => {
-              const fromVal = i * jumpSize;
-              const toVal = (i + 1) * jumpSize;
+              let fromVal, toVal;
+              if (jumpDirection === 'backward') {
+                fromVal = startPoint - i * absJumpSize;
+                toVal = startPoint - (i + 1) * absJumpSize;
+              } else {
+                fromVal = startPoint + i * absJumpSize;
+                toVal = startPoint + (i + 1) * absJumpSize;
+              }
               const x1 = startX + ((fromVal - min) / Math.max(max - min, 1)) * (endX - startX);
               const x2 = startX + ((toVal - min) / Math.max(max - min, 1)) * (endX - startX);
-              const h = Math.min(65, (x2 - x1) * 0.38);
+              const h = Math.min(65, Math.abs(x2 - x1) * 0.38);
               const controlX = (x1 + x2) / 2;
               const controlY = y - h * 2;
               const pathD = `M ${x1} ${y} Q ${controlX} ${controlY} ${x2} ${y}`;
+
+              const labelText = jumpDirection === 'backward' ? `-${absJumpSize}` : `+${absJumpSize}`;
 
               return (
                 <g key={i}>
@@ -1193,7 +1218,7 @@ function NumberLinePart({ part }) {
                     fontWeight="900"
                     fill={part.color || '#4f46e5'}
                   >
-                    +{jumpSize}
+                    {labelText}
                   </text>
                 </g>
               );
@@ -1201,7 +1226,7 @@ function NumberLinePart({ part }) {
           </g>
         )}
 
-        {!isMultiplication && (
+        {part.marker !== undefined && (
           <g>
             <circle cx={markerX} cy={y} r="11" fill="#22c55e" stroke="#15803d" strokeWidth="4" />
             {part.label ? (
@@ -2349,6 +2374,9 @@ function ToolCategorizationPart({ part, userAnswer, onAnswer, isAnswered }) {
     renderer: part.renderer,
     poolPosition: part.poolPosition,
     answer: answerKey,
+    showItemBorders: part.showItemBorders,
+    borderlessItems: part.borderlessItems,
+    cardStyle: part.cardStyle,
   };
   const answerKeys = Object.keys(answerKey);
 
@@ -2790,6 +2818,601 @@ function InteractiveCountingPart({ part, isAnswered }) {
           </span>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
+  const isShadowMatch = part.mode === 'shadow_match';
+  const capacity = isShadowMatch
+    ? (part.stickers?.length || 3)
+    : Math.max(Number(part.capacity || 5), Number(part.targetCount || 1));
+
+  const sceneRef = useRef(null);
+  const trayRef = useRef(null);
+  const dragRef = useRef(null);
+  const placementsRef = useRef([]);
+  const [draggingId, setDraggingId] = useState(null);
+  const [selectedTrayId, setSelectedTrayId] = useState(null);
+
+  const draggedSticker = part.stickers?.find(s => s.id === draggingId);
+  const isOutsideDragged = part.isVenn && draggedSticker?.type === 'outside';
+
+  const stickerConfig = typeof part.sticker === 'object' && part.sticker !== null
+    ? part.sticker
+    : {};
+  const stickerImageUrl = part.stickerImageUrl || stickerConfig.imageUrl || '';
+  const stickerContent = stickerConfig.content || part.sticker || '🦋';
+  const stickerWidth = Number(stickerConfig.widthPercent || part.stickerWidthPercent || 10);
+  const stickerHeight = Number(stickerConfig.heightPercent || part.stickerHeightPercent || 15);
+
+  const initialPositions = [
+    { x: 24, y: 58 }, { x: 43, y: 42 }, { x: 68, y: 58 }, { x: 78, y: 30 },
+    { x: 54, y: 70 }, { x: 30, y: 28 }, { x: 84, y: 68 }, { x: 60, y: 27 },
+    { x: 14, y: 36 }, { x: 38, y: 72 },
+  ];
+
+  const getVennRegion = (xPercent, yPercent) => {
+    const xPx = (xPercent / 100) * 550;
+    const yPx = (yPercent / 100) * 240;
+
+    const LEFT_CENTER = { x: 215, y: 120 };
+    const RIGHT_CENTER = { x: 335, y: 120 };
+    const RADIUS = 90;
+
+    const d1 = Math.hypot(xPx - LEFT_CENTER.x, yPx - LEFT_CENTER.y);
+    const d2 = Math.hypot(xPx - RIGHT_CENTER.x, yPx - RIGHT_CENTER.y);
+
+    const inLeft = d1 <= RADIUS;
+    const inRight = d2 <= RADIUS;
+
+    if (inLeft && inRight) return 'middle';
+    if (inLeft) return 'left';
+    if (inRight) return 'right';
+    return 'outside';
+  };
+
+  const checkSnap = (id, x, y) => {
+    if (!isShadowMatch) return { x, y, isSnapped: false };
+    const mascot = part.stickers?.find(s => s.id === id);
+    if (!mascot) return { x, y, isSnapped: false };
+
+    if (part.isVenn) {
+      const region = getVennRegion(x, y);
+      if (region === mascot.type) {
+        if (region === 'outside') {
+          return { x, y, isSnapped: true, type: 'outside' };
+        } else {
+          const target = part.targets?.find(t => t.type === region);
+          if (target) {
+            return { x: target.x, y: target.y, isSnapped: true, type: region };
+          }
+        }
+      }
+      return { x, y, isSnapped: false, type: mascot.type };
+    }
+    
+    const matchingTargets = part.targets?.filter(t => t.type === mascot.type) || [];
+    if (matchingTargets.length === 0) return { x, y, isSnapped: false, type: mascot.type };
+    
+    // Find the matching target closest to the current pointer position (x, y)
+    let closestTarget = matchingTargets[0];
+    let minDistance = Infinity;
+    for (const targetItem of matchingTargets) {
+      const dx = x - targetItem.x;
+      const dy = y - targetItem.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestTarget = targetItem;
+      }
+    }
+    const target = closestTarget;
+
+    const dx = x - target.x;
+    const dy = y - target.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const snapThreshold = 8.5; // Snap threshold percentage
+    if (distance < snapThreshold) {
+      return { x: target.x, y: target.y, isSnapped: true, type: mascot.type };
+    }
+    return { x, y, isSnapped: false, type: mascot.type };
+  };
+
+  const placementsFromAnswer = () => {
+    if (userAnswer && typeof userAnswer === 'object' && Array.isArray(userAnswer.placements)) {
+      return userAnswer.placements;
+    }
+    if (part.initialPlacements && Array.isArray(part.initialPlacements)) {
+      return part.initialPlacements;
+    }
+    if (isShadowMatch) {
+      return [];
+    }
+    const count = Math.max(0, Math.min(capacity, Number(userAnswer || 0)));
+    return Array.from({ length: count }, (_, index) => ({
+      id: index,
+      ...initialPositions[index % initialPositions.length],
+    }));
+  };
+
+  const [placements, setPlacements] = useState(placementsFromAnswer);
+
+  useEffect(() => {
+    const nextPlacements = placementsFromAnswer();
+    placementsRef.current = nextPlacements;
+    setPlacements(nextPlacements);
+  }, [userAnswer, capacity]);
+
+  const emitPlacements = (nextPlacements) => {
+    if (isAnswered || !onAnswer) return;
+    onAnswer({ count: nextPlacements.length, placements: nextPlacements });
+  };
+
+  const positionFromPointer = (clientX, clientY, offsetX = 0, offsetY = 0, sWidth = stickerWidth, sHeight = stickerHeight) => {
+    const rect = sceneRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const x = ((clientX - rect.left - offsetX) / rect.width) * 100;
+    const y = ((clientY - rect.top - offsetY) / rect.height) * 100;
+    return {
+      x: Math.max(sWidth / 2, Math.min(100 - sWidth / 2, x)),
+      y: Math.max(sHeight / 2, Math.min(100 - sHeight / 2, y)),
+    };
+  };
+
+  const startDrag = (event, id, source) => {
+    if (isAnswered) return;
+    event.preventDefault();
+    const sceneRect = sceneRef.current?.getBoundingClientRect();
+    const existing = placements.find((placement) => placement.id === id);
+    const centerX = existing && sceneRect ? sceneRect.left + (existing.x / 100) * sceneRect.width : event.clientX;
+    const centerY = existing && sceneRect ? sceneRect.top + (existing.y / 100) * sceneRect.height : event.clientY;
+    dragRef.current = {
+      id,
+      source,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: event.clientX - centerX,
+      offsetY: event.clientY - centerY,
+      moved: false,
+    };
+    setDraggingId(id);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const moveDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || isAnswered) return;
+    event.preventDefault();
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.moved && distance < 5) return;
+    drag.moved = true;
+
+    const stickerInfo = isShadowMatch ? part.stickers?.find(s => s.id === drag.id) : null;
+    const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width) : stickerWidth;
+    const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height) : stickerHeight;
+
+    const position = positionFromPointer(event.clientX, event.clientY, drag.offsetX, drag.offsetY, sWidth, sHeight);
+    if (!position) return;
+    setPlacements((current) => {
+      const exists = current.some((placement) => placement.id === drag.id);
+      const nextPlacements = exists
+        ? current.map((placement) => placement.id === drag.id ? { ...placement, ...position } : placement)
+        : [...current, { id: drag.id, ...position }];
+      placementsRef.current = nextPlacements;
+      return nextPlacements;
+    });
+  };
+
+  const endDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || isAnswered) return;
+    event.preventDefault();
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    const trayRect = trayRef.current?.getBoundingClientRect();
+    const overTray = trayRect
+      && event.clientX >= trayRect.left && event.clientX <= trayRect.right
+      && event.clientY >= trayRect.top && event.clientY <= trayRect.bottom;
+    let nextPlacements = placementsRef.current;
+
+    if (overTray && drag.source === 'scene') {
+      nextPlacements = nextPlacements.filter((placement) => placement.id !== drag.id);
+    } else if (!drag.moved) {
+      if (drag.source === 'scene') {
+        nextPlacements = nextPlacements.filter((placement) => placement.id !== drag.id);
+      } else {
+        const exists = nextPlacements.some((placement) => placement.id === drag.id);
+        if (!exists) {
+          const fallback = initialPositions[drag.id % initialPositions.length];
+          const snapResult = checkSnap(drag.id, fallback.x, fallback.y);
+          nextPlacements = [...nextPlacements, { id: drag.id, ...snapResult }];
+        }
+      }
+    } else {
+      nextPlacements = nextPlacements.map((placement) => {
+        if (placement.id === drag.id) {
+          const snapResult = checkSnap(placement.id, placement.x, placement.y);
+          return { ...placement, ...snapResult };
+        }
+        return placement;
+      });
+    }
+
+    placementsRef.current = nextPlacements;
+    setPlacements(nextPlacements);
+    emitPlacements(nextPlacements);
+    setSelectedTrayId(null);
+    setDraggingId(null);
+    dragRef.current = null;
+  };
+
+  useEffect(() => {
+    if (draggingId === null || isAnswered) return undefined;
+
+    const handleMove = (event) => moveDrag(event);
+    const handleEnd = (event) => endDrag(event);
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+    };
+  }, [draggingId, isAnswered]);
+
+  const placeSelected = (event) => {
+    if (selectedTrayId === null || isAnswered) return;
+
+    const stickerInfo = isShadowMatch ? part.stickers?.find(s => s.id === selectedTrayId) : null;
+    const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width) : stickerWidth;
+    const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height) : stickerHeight;
+
+    const position = positionFromPointer(event.clientX, event.clientY, 0, 0, sWidth, sHeight);
+    if (!position) return;
+
+    const snapResult = checkSnap(selectedTrayId, position.x, position.y);
+    const nextPlacements = [...placements, { id: selectedTrayId, ...snapResult }];
+    placementsRef.current = nextPlacements;
+    setPlacements(nextPlacements);
+    emitPlacements(nextPlacements);
+    setSelectedTrayId(null);
+  };
+
+  const startNativeDrag = (event, id, source) => {
+    if (isAnswered) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    dragRef.current = {
+      id,
+      source,
+      moved: true,
+      offsetX: source === 'scene' ? event.clientX - (rect.left + rect.width / 2) : 0,
+      offsetY: source === 'scene' ? event.clientY - (rect.top + rect.height / 2) : 0,
+    };
+    setDraggingId(id);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(id));
+  };
+
+  const dropOnScene = (event) => {
+    event.preventDefault();
+    const drag = dragRef.current;
+    if (!drag || isAnswered) return;
+
+    const stickerInfo = isShadowMatch ? part.stickers?.find(s => s.id === drag.id) : null;
+    const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width) : stickerWidth;
+    const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height) : stickerHeight;
+
+    const position = positionFromPointer(event.clientX, event.clientY, drag.offsetX, drag.offsetY, sWidth, sHeight);
+    if (!position) return;
+
+    const snapResult = checkSnap(drag.id, position.x, position.y);
+    const current = placementsRef.current;
+    const exists = current.some((placement) => placement.id === drag.id);
+    const nextPlacements = exists
+      ? current.map((placement) => placement.id === drag.id ? { ...placement, ...snapResult } : placement)
+      : [...current, { id: drag.id, ...snapResult }];
+    placementsRef.current = nextPlacements;
+    setPlacements(nextPlacements);
+    emitPlacements(nextPlacements);
+    dragRef.current = null;
+    setDraggingId(null);
+  };
+
+  const dropOnTray = (event) => {
+    event.preventDefault();
+    const drag = dragRef.current;
+    if (!drag || drag.source !== 'scene' || isAnswered) return;
+    const nextPlacements = placementsRef.current.filter((placement) => placement.id !== drag.id);
+    placementsRef.current = nextPlacements;
+    setPlacements(nextPlacements);
+    emitPlacements(nextPlacements);
+    dragRef.current = null;
+    setDraggingId(null);
+  };
+
+  const renderSticker = (label, stickerInfo) => {
+    const imgUrl = stickerInfo?.imageUrl || stickerImageUrl;
+    const content = stickerInfo?.content || stickerContent;
+    return imgUrl ? (
+      <img src={imgUrl} alt={label} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} />
+    ) : (
+      <span aria-hidden="true" style={{ fontSize: 'clamp(38px, 7vw, 68px)', lineHeight: 1 }}>{content}</span>
+    );
+  };
+
+  return (
+    <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', display: 'grid', gap: 0 }}>
+      <div
+        ref={sceneRef}
+        aria-label={`${placements.length} ${part.itemLabel || 'stickers'} placed`}
+        onPointerDown={placeSelected}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={dropOnScene}
+        style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: '16 / 7',
+          minHeight: 230,
+          overflow: 'hidden',
+          border: isOutsideDragged ? '3px dashed #fb8c00' : '2px solid #93c5fd',
+          borderRadius: '18px 18px 0 0',
+          background: part.sceneImageUrl
+            ? `url("${part.sceneImageUrl}") center / cover no-repeat`
+            : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
+          boxShadow: isOutsideDragged ? '0 0 15px rgba(251, 140, 0, 0.5), inset 0 0 20px rgba(251, 140, 0, 0.2)' : 'inset 0 -18px 0 rgba(32, 108, 43, 0.13)',
+          touchAction: 'none',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {isOutsideDragged ? (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(251, 140, 0, 0.04)',
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          />
+        ) : null}
+        {!part.sceneImageUrl ? (
+          <>
+            <div style={{ position: 'absolute', width: 86, height: 86, borderRadius: '50%', background: '#fff4a8', right: '8%', top: '8%', opacity: 0.9 }} />
+            <div style={{ position: 'absolute', fontSize: 'clamp(58px, 10vw, 105px)', left: '5%', bottom: '10%' }}>🌳</div>
+            <div style={{ position: 'absolute', fontSize: 'clamp(36px, 6vw, 64px)', right: '7%', bottom: '3%' }}>🌼</div>
+          </>
+        ) : null}
+
+        {/* Render target shadows behind stickers */}
+        {isShadowMatch && part.targets?.map((target) => {
+          const matchedItem = placements.find(item => item.type === target.type && item.isSnapped && Math.abs(item.x - target.x) < 0.1 && Math.abs(item.y - target.y) < 0.1);
+          const isSnapped = !!matchedItem;
+          const mascot = part.stickers?.find(s => s.type === target.type);
+
+          return (
+            <div
+              key={target.id}
+              style={{
+                position: 'absolute',
+                left: `${target.x}%`,
+                top: `${target.y}%`,
+                width: `${target.widthPercent || target.width || 15}%`,
+                height: `${target.heightPercent || target.height || 15}%`,
+                transform: 'translate(-50%, -50%)',
+                backgroundImage: mascot?.imageUrl ? `url(${mascot.imageUrl})` : 'none',
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                filter: isSnapped
+                  ? 'brightness(1.1) contrast(1.1) drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))'
+                  : (part.hideTargetShadows ? 'opacity(0)' : 'brightness(0) opacity(0.25)'), // Silhouette shadow
+                transition: 'filter 0.3s ease',
+                pointerEvents: 'none',
+              }}
+            />
+          );
+        })}
+
+        {placements.map((placement) => {
+          const stickerInfo = isShadowMatch && part.stickers
+            ? part.stickers.find(s => s.id === placement.id)
+            : null;
+          const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width) : stickerWidth;
+          const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height) : stickerHeight;
+
+          return (
+            <button
+              key={placement.id}
+              type="button"
+              disabled={isAnswered}
+              draggable={false}
+              aria-label={`Move ${part.itemLabel || 'sticker'} ${placement.id + 1}`}
+              onPointerDown={(event) => startDrag(event, placement.id, 'scene')}
+              onPointerMove={moveDrag}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              style={{
+                position: 'absolute',
+                left: `${placement.x}%`,
+                top: `${placement.y}%`,
+                width: `${sWidth}%`,
+                height: `${sHeight}%`,
+                transform: `translate(-50%, -50%) scale(${draggingId === placement.id ? 1.08 : 1})`,
+                border: 0,
+                background: 'transparent',
+                padding: 0,
+                cursor: isAnswered ? 'default' : 'grab',
+                filter: 'drop-shadow(0 5px 3px rgba(15, 23, 42, 0.22))',
+                transition: draggingId === placement.id ? 'none' : 'transform 150ms ease',
+                touchAction: 'none',
+                zIndex: draggingId === placement.id ? 3 : 1,
+              }}
+            >
+              {renderSticker(`${part.itemLabel || 'sticker'} ${placement.id + 1}`, stickerInfo)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        ref={trayRef}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={dropOnTray}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 'clamp(12px, 4vw, 36px)',
+          minHeight: 116,
+          padding: '14px 18px',
+          border: '2px solid #dbeafe',
+          borderTop: 0,
+          borderRadius: '0 0 18px 18px',
+          background: '#ffffff',
+        }}
+      >
+        {Array.from({ length: capacity }, (_, index) => {
+          const used = placements.some((placement) => placement.id === index);
+          const selected = selectedTrayId === index;
+          const stickerInfo = isShadowMatch && part.stickers
+            ? part.stickers[index]
+            : null;
+
+          return (
+            <button
+              key={index}
+              type="button"
+              disabled={isAnswered}
+              draggable={false}
+              aria-label={used ? `${part.itemLabel || 'sticker'} placed` : `Drag ${part.itemLabel || 'sticker'} into picture`}
+              onPointerDown={(event) => {
+                if (used) return;
+                setSelectedTrayId(selected ? null : index);
+                startDrag(event, index, 'tray');
+              }}
+              onPointerMove={moveDrag}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              style={{
+                width: 'clamp(58px, 11vw, 86px)', // Larger Pre-K sizing
+                height: 'clamp(58px, 11vw, 86px)',
+                border: selected ? '3px solid #2563eb' : '2px solid transparent',
+                borderRadius: 12,
+                background: selected ? '#eff6ff' : 'transparent',
+                padding: 4,
+                cursor: isAnswered || used ? 'default' : 'grab',
+                filter: used
+                  ? 'grayscale(1) opacity(.2)'
+                  : 'drop-shadow(0 4px 3px rgba(15, 23, 42, 0.18))',
+                transform: used ? 'scale(.92)' : 'scale(1)',
+                transition: 'filter 160ms ease, transform 160ms ease',
+                touchAction: 'none',
+              }}
+            >
+              {renderSticker(part.itemLabel || 'sticker', stickerInfo)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OneMoreRowsPart({ part }) {
+  const startCount = Math.max(0, Number(part.startCount || 0));
+  const comparisonCount = Math.max(0, Number(part.comparisonCount ?? startCount + 1));
+  const capacity = Math.max(Number(part.capacity || 5), startCount, comparisonCount);
+  const object = part.object || {};
+  const imageUrl = object.imageUrl || part.imageUrl || '';
+  const emoji = object.emoji || part.emoji || '⭐';
+  const label = object.plural || object.label || part.itemLabel || 'objects';
+  const rows = [
+    { count: startCount, value: startCount, answer: false },
+    { count: comparisonCount, value: comparisonCount, answer: part.hideComparisonValue !== false },
+  ];
+
+  return (
+    <div
+      aria-label={`${startCount} ${label} in the top row and ${comparisonCount} ${label} in the bottom row`}
+      style={{
+        width: 'min(100%, 680px)',
+        margin: '4px auto 2px',
+        display: 'grid',
+        gap: 12,
+      }}
+    >
+      {rows.map((row, rowIndex) => (
+        <div
+          key={rowIndex}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, minWidth: 0 }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${capacity}, minmax(38px, 64px))`,
+              border: '3px solid #bae6fd',
+              background: '#f8fcff',
+              maxWidth: '100%',
+              overflow: 'hidden',
+            }}
+          >
+            {Array.from({ length: capacity }, (_, index) => (
+              <div
+                key={index}
+                style={{
+                  aspectRatio: '1 / 1',
+                  minWidth: 0,
+                  borderRight: index === capacity - 1 ? 0 : '3px solid #bae6fd',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 4,
+                }}
+              >
+                {index < row.count ? (
+                  imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt=""
+                      style={{ width: '92%', height: '92%', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <span aria-hidden="true" style={{ fontSize: 'clamp(24px, 5vw, 42px)', lineHeight: 1 }}>{emoji}</span>
+                  )
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div
+            aria-label={row.answer ? 'Find this number' : String(row.value)}
+            style={{
+              width: 48,
+              height: 48,
+              flex: '0 0 48px',
+              borderRadius: row.answer ? 6 : '50%',
+              border: row.answer ? '3px solid #7dd3fc' : 0,
+              background: row.answer ? '#ffffff' : '#38a9e8',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 24,
+              fontWeight: 900,
+              boxShadow: row.answer ? 'none' : '0 4px 0 #0284c7',
+            }}
+          >
+            {row.answer ? '' : row.value}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -5751,7 +6374,60 @@ function AudioPart({ part }) {
   );
 }
 
+
+// ── Pictograph Scene Part ────────────────────────────────────────────────────
+function PictographScenePart({ part }) {
+  const items = part.items || [];
+  const svgWidth = part.svgWidth || 460;
+  const svgHeight = part.svgHeight || 320;
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        maxWidth: svgWidth,
+        borderRadius: 16,
+        border: '2px solid #e2e8f0',
+        background: 'linear-gradient(135deg, #fefce8 0%, #fff7ed 100%)',
+        overflow: 'hidden',
+        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.07)',
+        margin: '4px auto',
+      }}
+    >
+      <svg
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        width="100%"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-label="Scattered fruits scene"
+        role="img"
+      >
+        <defs>
+          <pattern id="pictoGrid" width="70" height="70" patternUnits="userSpaceOnUse">
+            <path d="M 70 0 L 0 0 0 70" fill="none" stroke="#e2e8f0" strokeWidth="0.5" />
+          </pattern>
+        </defs>
+        <rect width={svgWidth} height={svgHeight} fill="url(#pictoGrid)" />
+        {items.map((item, idx) => (
+          <text
+            key={idx}
+            x={item.x}
+            y={item.y}
+            fontSize={Math.round(28 * (item.scale || 1))}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            transform={`rotate(${item.rotate || 0}, ${item.x}, ${item.y})`}
+            style={{ userSelect: 'none', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.12))' }}
+          >
+            {item.emoji}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
+
   text: TextPart,
   play_sound_card: PlaySoundCard,
   svg: SvgPart,
@@ -5800,12 +6476,15 @@ const PART_RENDERERS = {
   interactive_fraction_cutter: InteractiveFractionCutterPart,
   fraction: FractionPart,
   interactive_counting: InteractiveCountingPart,
+  interactive_stickers: InteractiveStickersPart,
+  one_more_rows: OneMoreRowsPart,
   side_by_side_display: SideBySideDisplayPart,
   interactive_svg: InteractiveSvgPart,
   hotspot_canvas: HotspotCanvasPart,
   case_match_shown_letter: CaseMatchShownLetterPart,
   balloon_tap: BalloonTapPart,
   audio: AudioPart,
+  pictograph_scene: PictographScenePart,
 };
 
 function InteractiveSvgPart({ part, question, userAnswer, onAnswer, isAnswered }) {

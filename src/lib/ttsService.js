@@ -81,16 +81,8 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
 
   if (provider === 'piper') {
     const piperUrlStr = process.env.PIPER_TTS_URL || 'http://localhost:5000/api/tts';
-    let piperVoice = targetVoice;
+    let piperVoice = 'en_US-amy-medium';
     try {
-      const voiceMapping = {
-        Puck: 'en_US-ryan-medium',
-        Charon: 'en_US-joe-medium',
-        Kore: 'en_US-amy-medium',
-        Fenrir: 'en_US-lessac-medium',
-      };
-      piperVoice = voiceMapping[targetVoice] || targetVoice;
-      
       const url = new URL(piperUrlStr);
       url.searchParams.append('text', cleanText);
       url.searchParams.append('voice', piperVoice);

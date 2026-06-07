@@ -81,6 +81,11 @@ function extractBlankIds(parts, questionText) {
   return Array.from(ids);
 }
 
+function parseCategoryList(value) {
+  if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
+  return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
+}
+
 
 function hashCode(str) {
   let hash = 0;
@@ -454,6 +459,7 @@ export default function AdminConsolePage() {
   const [qTotalPages, setQTotalPages] = useState(1);
   const [qTotalCount, setQTotalCount] = useState(0);
   const [playingAudioId, setPlayingAudioId] = useState(null);
+  const [libraryMode, setLibraryMode] = useState('questions'); // 'questions' | 'templates'
 
   // 3. Authoring Center State
   const [editMode, setEditMode] = useState(false);
@@ -480,6 +486,29 @@ export default function AdminConsolePage() {
     }
   };
   const [type, setType] = useState('mcq');
+  const [poolId, setPoolId] = useState('');
+  const [targetCategory, setTargetCategory] = useState('');
+  const [distractorCategories, setDistractorCategories] = useState('');
+  const [vocabularyPools, setVocabularyPools] = useState([]);
+  const [vocabularyPoolsLoading, setVocabularyPoolsLoading] = useState(false);
+  const [vocabularyPoolsError, setVocabularyPoolsError] = useState('');
+  const [poolWordManagerOpen, setPoolWordManagerOpen] = useState(false);
+  const [poolWordManagerData, setPoolWordManagerData] = useState(null);
+  const [poolWordCategory, setPoolWordCategory] = useState('');
+  const [poolWordInput, setPoolWordInput] = useState('');
+  const [poolWordManagerStatus, setPoolWordManagerStatus] = useState('');
+  const [poolWordManagerSaving, setPoolWordManagerSaving] = useState(false);
+  const [poolManagerModalOpen, setPoolManagerModalOpen] = useState(false);
+  const [createPoolModalOpen, setCreatePoolModalOpen] = useState(false);
+  const [newPoolId, setNewPoolId] = useState('');
+  const [newPoolCategories, setNewPoolCategories] = useState('');
+  const [createPoolStatus, setCreatePoolStatus] = useState('');
+  const [createPoolSaving, setCreatePoolSaving] = useState(false);
+  const [poolManagerSearch, setPoolManagerSearch] = useState('');
+  const [poolManagerGeneratingId, setPoolManagerGeneratingId] = useState('');
+  const [imgPickerPoolItem, setImgPickerPoolItem] = useState(null);
+  const [poolAssetAudit, setPoolAssetAudit] = useState(null);
+  const [poolAssetAuditLoading, setPoolAssetAuditLoading] = useState(false);
   const [questionText, setQuestionText] = useState('Is the word **frog** a person, place, animal, or thing?');
   const [voice, setVoice] = useState('Puck');
   const [explanation, setExplanation] = useState('');
@@ -508,11 +537,338 @@ export default function AdminConsolePage() {
   const [commonImageWidth, setCommonImageWidth] = useState(180);
   const [directImageSelect, setDirectImageSelect] = useState(false);
   const [hideOptionImages, setHideOptionImages] = useState(false);
+  const [hideOptionLabel, setHideOptionLabel] = useState(false);
   const [difficultyRules, setDifficultyRules] = useState({
     easy: { optionCount: 2, distractorSimilarity: 'low', showLabels: true },
     medium: { optionCount: 4, distractorSimilarity: 'medium', showLabels: true },
     hard: { optionCount: 6, distractorSimilarity: 'high', showLabels: false }
   });
+  const selectedVocabularyPool = useMemo(
+    () => vocabularyPools.find(pool => pool.poolId === poolId.trim()) || null,
+    [poolId, vocabularyPools]
+  );
+  const selectedPoolCategories = useMemo(
+    () => Object.keys(selectedVocabularyPool?.categoryCounts || selectedVocabularyPool?.pools || {}),
+    [selectedVocabularyPool]
+  );
+
+  const openPoolWordManager = async () => {
+    if (!poolId.trim()) return;
+    setPoolWordManagerOpen(true);
+    setPoolWordManagerStatus('Loading full pool…');
+    try {
+      const response = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId.trim())}`);
+      const data = await response.json();
+      if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
+      setPoolWordManagerData(data.pool);
+      const categories = Object.keys(data.pool.pools || {});
+      setPoolWordCategory(current => categories.includes(current) ? current : (targetCategory || categories[0] || ''));
+      setPoolWordManagerStatus('');
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Unable to load pool.');
+    }
+  };
+
+  const openPoolManagerModal = async () => {
+    setPoolManagerModalOpen(true);
+    setPoolManagerSearch('');
+    await openPoolWordManager();
+  };
+
+  const openCreatePoolModal = () => {
+    setNewPoolId(`${subject || 'science'}-${topic || 'general'}-options-v1`);
+    setNewPoolCategories(subject === 'science' ? 'solids, liquids, gases' : 'targets, distractors');
+    setCreatePoolStatus('');
+    setCreatePoolModalOpen(true);
+  };
+
+  const createCentralizedPool = async () => {
+    const nextPoolId = newPoolId.trim();
+    const categoryNames = [...new Set(
+      newPoolCategories
+        .split(/[\n,]+/)
+        .map(category => slugify(category.trim()).replace(/-/g, '_'))
+        .filter(Boolean)
+    )];
+    if (!nextPoolId || categoryNames.length < 2) {
+      setCreatePoolStatus('Enter a unique Pool ID and at least two categories.');
+      return;
+    }
+    if (vocabularyPools.some(pool => pool.poolId === nextPoolId)) {
+      setCreatePoolStatus('That Pool ID already exists. Choose a different Pool ID.');
+      return;
+    }
+
+    const nextPool = {
+      poolId: nextPoolId,
+      subject: subject || 'science',
+      topic: topic || 'general',
+      status: 'draft',
+      version: 1,
+      pools: Object.fromEntries(categoryNames.map(category => [category, []]))
+    };
+
+    setCreatePoolSaving(true);
+    setCreatePoolStatus('Creating reusable pool…');
+    try {
+      const response = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextPool)
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Unable to create pool.');
+      const summary = {
+        poolId: nextPoolId,
+        status: 'draft',
+        version: 1,
+        categoryCounts: Object.fromEntries(categoryNames.map(category => [category, 0]))
+      };
+      setVocabularyPools(current => [...current.filter(pool => pool.poolId !== nextPoolId), summary]);
+      setPoolId(nextPoolId);
+      setTargetCategory(categoryNames[0]);
+      setDistractorCategories(categoryNames.slice(1).join(', '));
+      setPoolWordManagerData(nextPool);
+      setPoolWordCategory(categoryNames[0]);
+      setCreatePoolModalOpen(false);
+      setPoolManagerModalOpen(true);
+      setPoolManagerSearch('');
+      setPoolWordManagerStatus('Pool created. Add options to each category, then save pool changes.');
+      setIsDirty(true);
+    } catch (error) {
+      setCreatePoolStatus(error.message || 'Unable to create pool.');
+    } finally {
+      setCreatePoolSaving(false);
+    }
+  };
+
+  const updatePoolManagerItem = (category, index, changes) => {
+    setPoolWordManagerData(current => {
+      if (!current) return current;
+      const categoryItems = [...(current.pools?.[category] || [])];
+      categoryItems[index] = { ...categoryItems[index], ...changes };
+      return { ...current, pools: { ...(current.pools || {}), [category]: categoryItems } };
+    });
+    setPoolWordManagerStatus('Unsaved pool changes.');
+  };
+
+  const savePoolManagerChanges = async () => {
+    if (!poolWordManagerData) return;
+    setPoolWordManagerSaving(true);
+    setPoolWordManagerStatus('Saving pool changes…');
+    try {
+      const response = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(poolWordManagerData)
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Unable to save pool.');
+      setPoolWordManagerStatus('Pool changes saved.');
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Unable to save pool.');
+    } finally {
+      setPoolWordManagerSaving(false);
+    }
+  };
+
+  const generatePoolItemAudio = async (category, index, item) => {
+    if (!item?.label?.trim()) return;
+    setPoolManagerGeneratingId(`${category}:${index}`);
+    try {
+      const response = await fetch('/api/admin/generate-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck' })
+      });
+      const data = await response.json();
+      if (!data.success || !data.audioUrl) throw new Error(data.error || 'Audio generation failed.');
+      updatePoolManagerItem(category, index, { audioUrl: data.audioUrl });
+      handlePlayUrlAudio(`pool_${category}_${index}`, data.audioUrl);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Audio generation failed.');
+    } finally {
+      setPoolManagerGeneratingId('');
+    }
+  };
+
+  const generateMissingAudiosForCategory = async () => {
+    if (!poolWordManagerData || !poolWordCategory) return;
+    const category = poolWordCategory;
+    const items = poolWordManagerData.pools[category] || [];
+
+    const missingItems = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.audioUrl);
+
+    if (missingItems.length === 0) {
+      setPoolWordManagerStatus(`No missing audios in category "${category}"!`);
+      return;
+    }
+
+    setPoolWordManagerStatus(`Preparing to generate ${missingItems.length} missing audios...`);
+    setPoolWordManagerSaving(true);
+
+    let generatedCount = 0;
+    let failedCount = 0;
+
+    try {
+      for (let i = 0; i < missingItems.length; i++) {
+        const { item, index } = missingItems[i];
+        if (!item.label?.trim()) continue;
+
+        setPoolWordManagerStatus(`Generating audio for "${item.label}" (${i + 1}/${missingItems.length})...`);
+
+        try {
+          const response = await fetch('/api/admin/generate-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck' })
+          });
+          const data = await response.json();
+          if (!data.success || !data.audioUrl) throw new Error(data.error || 'Failed');
+
+          updatePoolManagerItem(category, index, { audioUrl: data.audioUrl });
+          generatedCount++;
+        } catch (err) {
+          console.error(`Failed to generate audio for "${item.label}":`, err);
+          failedCount++;
+        }
+      }
+      setPoolWordManagerStatus(`Done! Successfully generated ${generatedCount} audios. Failed: ${failedCount}. Click "Save Pool Changes" to save.`);
+    } catch (error) {
+      setPoolWordManagerStatus(`Bulk audio process failed: ${error.message}`);
+    } finally {
+      setPoolWordManagerSaving(false);
+    }
+  };
+
+  const openImgPickerForPoolItem = (category, index) => {
+    setImgPickerPoolItem({ category, index });
+    setImgPickerOptionIdx(null);
+    setImgPickerPartIdx(null);
+    setImgPickerHotspotId(null);
+    setImgPickerTab('gallery');
+    setImgPickerSearch('');
+    setImgPickerOpen(true);
+    fetchImgPickerGallery('images');
+  };
+
+  const addWordsToCentralizedPool = async () => {
+    const category = poolWordCategory.trim();
+    const words = poolWordInput
+      .split(/[\n,]+/)
+      .map(word => word.trim())
+      .filter(Boolean);
+    if (!poolWordManagerData || !category || words.length === 0) {
+      setPoolWordManagerStatus('Choose a category and enter at least one word.');
+      return;
+    }
+
+    const existingItems = Array.isArray(poolWordManagerData.pools?.[category])
+      ? poolWordManagerData.pools[category]
+      : [];
+    const existingLabels = new Set(existingItems.map(item => String(item.label || '').trim().toLowerCase()));
+    const additions = words
+      .filter(word => !existingLabels.has(word.toLowerCase()))
+      .map(word => ({
+        id: `${category.replace(/s$/, '')}_${slugify(word).replace(/-/g, '_')}`,
+        label: word,
+        active: true
+      }));
+
+    if (additions.length === 0) {
+      setPoolWordManagerStatus('No new words to add. Those words already exist in this category.');
+      return;
+    }
+
+    const nextPool = {
+      ...poolWordManagerData,
+      pools: {
+        ...(poolWordManagerData.pools || {}),
+        [category]: [...existingItems, ...additions]
+      }
+    };
+
+    setPoolWordManagerSaving(true);
+    setPoolWordManagerStatus('Saving words…');
+    try {
+      const response = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextPool)
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Unable to save pool.');
+      setPoolWordManagerData(nextPool);
+      setVocabularyPools(current => current.map(pool => (
+        pool.poolId === nextPool.poolId
+          ? {
+              ...pool,
+              categoryCounts: Object.fromEntries(
+                Object.entries(nextPool.pools || {}).map(([name, items]) => [name, Array.isArray(items) ? items.length : 0])
+              )
+            }
+          : pool
+      )));
+      setPoolWordInput('');
+      setPoolWordManagerStatus(`Added ${additions.length} word${additions.length === 1 ? '' : 's'} to ${category}.`);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Unable to save pool.');
+    } finally {
+      setPoolWordManagerSaving(false);
+    }
+  };
+
+  const auditDynamicPoolAssets = async () => {
+    setPoolAssetAuditLoading(true);
+    try {
+      let auditItems = options;
+      if (poolId.trim()) {
+        const response = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId.trim())}`);
+        const data = await response.json();
+        if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
+        const categories = [targetCategory.trim(), ...parseCategoryList(distractorCategories)].filter(Boolean);
+        auditItems = categories.flatMap(category => data.pool.pools?.[category] || []);
+      }
+
+      const activeItems = auditItems.filter(item => item?.active !== false);
+      setPoolAssetAudit({
+        total: activeItems.length,
+        missingImages: activeItems.filter(item => !item.imageUrl).map(item => item.label || item.id || 'Unnamed'),
+        missingAudio: activeItems.filter(item => !item.audioUrl).map(item => item.label || item.id || 'Unnamed')
+      });
+    } catch (error) {
+      setPoolAssetAudit({ error: error.message || 'Unable to audit pool assets.' });
+    } finally {
+      setPoolAssetAuditLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (type !== 'dynamic_pool' || vocabularyPools.length > 0 || vocabularyPoolsLoading || vocabularyPoolsError) return;
+
+    let cancelled = false;
+    setVocabularyPoolsLoading(true);
+    setVocabularyPoolsError('');
+    fetch('/api/admin/vocabulary-pools')
+      .then(response => response.json())
+      .then(data => {
+        if (cancelled) return;
+        if (!data.success) throw new Error(data.error || 'Unable to load vocabulary pools.');
+        setVocabularyPools(Array.isArray(data.pools) ? data.pools : []);
+      })
+      .catch(error => {
+        if (!cancelled) setVocabularyPoolsError(error.message || 'Unable to load vocabulary pools.');
+      })
+      .finally(() => {
+        if (!cancelled) setVocabularyPoolsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, vocabularyPools.length, vocabularyPoolsError]);
 
   // Categorization state
   const [categories, setCategories] = useState([
@@ -548,6 +904,13 @@ export default function AdminConsolePage() {
   const [isHotspotTransparent, setIsHotspotTransparent] = useState(false);
   const [activePreviewDevice, setActivePreviewDevice] = useState('desktop');
   const [layouts, setLayouts] = useState({ desktop: null, mobile: null });
+
+  // Shadow Match states
+  const [shadowStickers, setShadowStickers] = useState([]);
+  const [shadowTargets, setShadowTargets] = useState([]);
+  const [shadowSceneImageUrl, setShadowSceneImageUrl] = useState('');
+  const [selectedShadowTargetId, setSelectedShadowTargetId] = useState(null);
+  const [shadowTargetDragging, setShadowTargetDragging] = useState(null); // {id, offsetX, offsetY}
   // Preview Answer checking state
   const [previewAnswer, setPreviewAnswer] = useState(null);
   const [previewCheckResult, setPreviewCheckResult] = useState(null); // 'correct', 'incorrect', or null
@@ -671,7 +1034,13 @@ export default function AdminConsolePage() {
   const [webSearchLoading, setWebSearchLoading]   = useState(false);
   const [webSearchSelectedUrl, setWebSearchSelectedUrl] = useState(''); // track downloading image URL
 
+  const closeImgPicker = () => {
+    setImgPickerOpen(false);
+    setImgPickerPoolItem(null);
+  };
+
   const openImgPicker = (partIdx, tab = 'gallery') => {
+    setImgPickerPoolItem(null);
     setImgPickerPartIdx(partIdx);
     setImgPickerOptionIdx(null);
     setImgPickerHotspotId(null);
@@ -698,6 +1067,7 @@ export default function AdminConsolePage() {
   };
 
   const openImgPickerForOption = (optionIdx, tab = 'gallery') => {
+    setImgPickerPoolItem(null);
     setImgPickerOptionIdx(optionIdx);
     setImgPickerPartIdx(null);
     setImgPickerHotspotId(null);
@@ -711,6 +1081,7 @@ export default function AdminConsolePage() {
   };
 
   const openImgPickerForHotspot = (hotspotId, tab = 'gallery') => {
+    setImgPickerPoolItem(null);
     setImgPickerHotspotId(hotspotId);
     setImgPickerOptionIdx(null);
     setImgPickerPartIdx(null);
@@ -809,7 +1180,18 @@ export default function AdminConsolePage() {
   };
 
   const handleImgPickerSelect = (url) => {
-    if (imgPickerHotspotId !== null) {
+    if (imgPickerPoolItem) {
+      updatePoolManagerItem(imgPickerPoolItem.category, imgPickerPoolItem.index, { imageUrl: url });
+      setImgPickerPoolItem(null);
+      setImgPickerOpen(false);
+    } else if (typeof imgPickerHotspotId === 'string' && imgPickerHotspotId.startsWith('shadow_sticker_')) {
+      // Shadow match sticker image picker
+      const stickerId = parseInt(imgPickerHotspotId.replace('shadow_sticker_', ''), 10);
+      setShadowStickers(prev => prev.map(s => s.id === stickerId ? { ...s, imageUrl: url } : s));
+      setImgPickerHotspotId(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
+    } else if (imgPickerHotspotId !== null) {
       const updated = hotspots.map(h => {
         if (h.id === imgPickerHotspotId) {
           const newLabel = (!h.label || h.label.startsWith('Hotspot ') || h.label === '')
@@ -832,6 +1214,12 @@ export default function AdminConsolePage() {
       }
       setImgPickerOptionIdx(null);
       setImgPickerOpen(false);
+    } else if (imgPickerPartIdx === -99) {
+      // Special sentinel: shadow match scene / background image
+      setShadowSceneImageUrl(url);
+      setImgPickerPartIdx(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
     } else if (imgPickerPartIdx !== null) {
       handleUpdatePartFields(imgPickerPartIdx, { imageUrl: url, src: url, content: url });
       setImgPickerPartIdx(null);
@@ -1315,6 +1703,7 @@ export default function AdminConsolePage() {
   const [useCustomChapterId, setUseCustomChapterId] = useState(false);
   const [useCustomParentId, setUseCustomParentId] = useState(false);
   const [templatesCatalog, setTemplatesCatalog] = useState(null);
+  const [dynamicTemplates, setDynamicTemplates] = useState([]);
   const [useCustomTemplateId, setUseCustomTemplateId] = useState(false);
 
   const uniqueSubjects = useMemo(() => {
@@ -1342,18 +1731,30 @@ export default function AdminConsolePage() {
   }, [currForm.type, availableSubjects, availableTopics, availableChapters]);
 
   const groupedOptions = useMemo(() => {
-    if (!templatesCatalog) return [];
     const groups = [];
-    for (const [subject, topics] of Object.entries(templatesCatalog)) {
-      for (const [topic, templates] of Object.entries(topics)) {
-        groups.push({
-          label: `${subject.toUpperCase()} - ${topic.charAt(0).toUpperCase() + topic.slice(1)}`,
-          templates: templates
-        });
+    if (templatesCatalog) {
+      for (const [subject, topics] of Object.entries(templatesCatalog)) {
+        for (const [topic, templates] of Object.entries(topics)) {
+          groups.push({
+            label: `${subject.toUpperCase()} - ${topic.charAt(0).toUpperCase() + topic.slice(1)}`,
+            templates: templates
+          });
+        }
       }
     }
+    if (dynamicTemplates && dynamicTemplates.length > 0) {
+      groups.push({
+        label: 'CUSTOM DYNAMIC TEMPLATES (MONGODB)',
+        templates: dynamicTemplates.map(t => ({
+          id: t.id,
+          title: t.title || t.id,
+          engine: t.engine || 'universal-template',
+          questionType: t.questionType || t.optionsType || 'fillInTheBlank'
+        }))
+      });
+    }
     return groups;
-  }, [templatesCatalog]);
+  }, [templatesCatalog, dynamicTemplates]);
 
   const filteredTree = useMemo(() => {
     if (!currTreeSearch && currTreeSubjectFilter === 'all') {
@@ -1413,6 +1814,7 @@ export default function AdminConsolePage() {
       const data = await response.json();
       if (data.success) {
         setTemplatesCatalog(data.templates);
+        setDynamicTemplates(data.dynamicTemplates || []);
       }
     } catch (err) {
       console.error('Error loading templates catalog:', err);
@@ -1423,17 +1825,30 @@ export default function AdminConsolePage() {
     const val = event.target.value;
     setCurrForm((current) => {
       const updated = { ...current, templateId: val };
-      if (val && templatesCatalog) {
+      if (val) {
         let foundTpl = null;
-        for (const subject of Object.values(templatesCatalog)) {
-          for (const topicTemplates of Object.values(subject)) {
-            const found = topicTemplates.find(t => t.id === val);
-            if (found) {
-              foundTpl = found;
-              break;
+        if (templatesCatalog) {
+          for (const subject of Object.values(templatesCatalog)) {
+            for (const topicTemplates of Object.values(subject)) {
+              const found = topicTemplates.find(t => t.id === val);
+              if (found) {
+                foundTpl = found;
+                break;
+              }
             }
+            if (foundTpl) break;
           }
-          if (foundTpl) break;
+        }
+        if (!foundTpl && dynamicTemplates) {
+          const found = dynamicTemplates.find(t => t.id === val);
+          if (found) {
+            foundTpl = {
+              id: found.id,
+              title: found.title || found.id,
+              engine: found.engine || 'universal-template',
+              questionType: found.questionType || found.optionsType || 'fillInTheBlank'
+            };
+          }
         }
         if (foundTpl) {
           updated.engine = foundTpl.engine || '';
@@ -1966,6 +2381,104 @@ export default function AdminConsolePage() {
     }
   }, [qSearch, qSubject, qTopic, qSkillId, qType, qAudioStatus, qPage]);
 
+  // Reset page when libraryMode changes
+  useEffect(() => {
+    setQPage(1);
+  }, [libraryMode]);
+
+  // Flatten templates catalog and dynamic templates for listing/filtering
+  const allTemplates = useMemo(() => {
+    const list = [];
+    if (templatesCatalog) {
+      for (const [subjectKey, subjectVal] of Object.entries(templatesCatalog)) {
+        for (const [topicKey, topicTemplates] of Object.entries(subjectVal)) {
+          if (Array.isArray(topicTemplates)) {
+            topicTemplates.forEach(tpl => {
+              list.push({
+                ...tpl,
+                subject: subjectKey,
+                topic: topicKey,
+                isStatic: true
+              });
+            });
+          }
+        }
+      }
+    }
+    if (Array.isArray(dynamicTemplates)) {
+      dynamicTemplates.forEach(tpl => {
+        list.push({
+          ...tpl,
+          subject: tpl.subject || '',
+          topic: tpl.topic || '',
+          isStatic: false
+        });
+      });
+    }
+    return list;
+  }, [templatesCatalog, dynamicTemplates]);
+
+  const filteredTemplates = useMemo(() => {
+    return allTemplates.filter(tpl => {
+      // 1. Search phrase filter
+      if (qSearch) {
+        const searchLower = qSearch.toLowerCase();
+        const matchesId = String(tpl.id || '').toLowerCase().includes(searchLower);
+        const matchesTitle = String(tpl.title || '').toLowerCase().includes(searchLower);
+        const matchesText = String(tpl.questionText || '').toLowerCase().includes(searchLower);
+        if (!matchesId && !matchesTitle && !matchesText) return false;
+      }
+      
+      // 2. Subject filter
+      if (qSubject && String(tpl.subject || '').toLowerCase() !== qSubject.toLowerCase()) {
+        return false;
+      }
+      
+      // 3. Topic filter
+      if (qTopic && String(tpl.topic || '').toLowerCase() !== qTopic.toLowerCase()) {
+        return false;
+      }
+      
+      // 4. Format Type filter
+      if (qType && qType !== 'all') {
+        const tplType = tpl.optionsType || tpl.type || 'mcq';
+        if (String(tplType).toLowerCase() !== qType.toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [allTemplates, qSearch, qSubject, qTopic, qType]);
+
+  const paginatedTemplates = useMemo(() => {
+    return filteredTemplates.slice((qPage - 1) * 15, qPage * 15);
+  }, [filteredTemplates, qPage]);
+
+  const tTotalTemplates = filteredTemplates.length;
+  const tTotalPages = Math.ceil(tTotalTemplates / 15) || 1;
+
+  const handleDeleteTemplate = async (templateId) => {
+    if (!window.confirm(`Are you sure you want to delete the template "${templateId}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/templates?id=${encodeURIComponent(templateId)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAlert({ type: 'success', text: `Successfully deleted template "${templateId}".` });
+        loadTemplatesCatalog(); // Refresh
+      } else {
+        throw new Error(data.error || 'Failed to delete template');
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', text: `Could not delete template: ${err.message}` });
+    }
+  };
+
   const handleCloneRandomQuestions = async () => {
     if (!qSubject || !qTopic) {
       setAlert({ type: 'error', text: 'Please select a specific Subject and Topic/Skill in the filters to clone from.' });
@@ -2051,25 +2564,30 @@ export default function AdminConsolePage() {
   }, [activeTab, fetchQuestions, fetchCacheItems, loadCurrTree, loadTemplatesCatalog]);
 
   useEffect(() => {
-    if (currForm.type === 'skill' && templatesCatalog) {
+    if (currForm.type === 'skill' && (templatesCatalog || dynamicTemplates.length > 0)) {
       const templateId = currSelected?.templateId || '';
       if (templateId) {
         let isKnown = false;
-        for (const subject of Object.values(templatesCatalog)) {
-          for (const topicTemplates of Object.values(subject)) {
-            if (topicTemplates.some(t => t.id === templateId)) {
-              isKnown = true;
-              break;
+        if (templatesCatalog) {
+          for (const subject of Object.values(templatesCatalog)) {
+            for (const topicTemplates of Object.values(subject)) {
+              if (topicTemplates.some(t => t.id === templateId)) {
+                isKnown = true;
+                break;
+              }
             }
+            if (isKnown) break;
           }
-          if (isKnown) break;
+        }
+        if (!isKnown && dynamicTemplates) {
+          isKnown = dynamicTemplates.some(t => t.id === templateId);
         }
         setUseCustomTemplateId(!isKnown);
       } else {
         setUseCustomTemplateId(false);
       }
     }
-  }, [currSelected, templatesCatalog]);
+  }, [currSelected, templatesCatalog, dynamicTemplates]);
 
   // Reset library page on filter changes
   useEffect(() => {
@@ -2310,6 +2828,25 @@ export default function AdminConsolePage() {
     const maxOptions = type === 'dynamic_pool' ? 100 : 8;
     if (options.length >= maxOptions) return;
     setOptions([...options, { label: `Distractor ${options.filter(o => o.isDistractorOnly).length + 1}`, isCorrect: false, isDistractorOnly: true, misconceptionType: 'general_confusion', similarity: 'medium', explanation: '' }]);
+  };
+
+  const bulkAddDynamicPoolOptions = (isDistractorOnly) => {
+    const kind = isDistractorOnly ? 'distractors' : 'targets';
+    const text = prompt(`Paste ${kind} separated by commas, spaces, or new lines:`);
+    if (!text) return;
+
+    const words = text.split(/[\s,\n]+/).map(word => word.trim()).filter(Boolean);
+    if (words.length === 0) return;
+
+    const existing = options.filter(option => option.label.trim() !== '');
+    const additions = words.slice(0, Math.max(0, 100 - existing.length)).map(label => ({
+      label,
+      isCorrect: false,
+      isDistractorOnly,
+      ...(isDistractorOnly ? { misconceptionType: 'general_confusion', similarity: 'medium' } : { explanation: '' })
+    }));
+    setOptions([...existing, ...additions]);
+    setIsDirty(true);
   };
 
   const updateOptionExplanation = (idx, val) => {
@@ -3163,6 +3700,9 @@ export default function AdminConsolePage() {
     setSkillId('nouns');
     setDifficulty('beginner');
     setType('mcq');
+    setPoolId('');
+    setTargetCategory('');
+    setDistractorCategories('');
     setQuestionText('Is the word **frog** a person, place, animal, or thing?');
     setVoice('Puck');
     setExplanation('');
@@ -3185,6 +3725,7 @@ export default function AdminConsolePage() {
     setCommonImageWidth(180);
     setDirectImageSelect(false);
     setHideOptionImages(false);
+    setHideOptionLabel(false);
     setCategories([
       { id: 'cat_1', label: 'Category 1' },
       { id: 'cat_2', label: 'Category 2' }
@@ -3217,6 +3758,10 @@ export default function AdminConsolePage() {
     setIsHotspotTransparent(false);
     setActivePreviewDevice('desktop');
     setLayouts({ desktop: null, mobile: null });
+    setShadowStickers([]);
+    setShadowTargets([]);
+    setShadowSceneImageUrl('');
+    setSelectedShadowTargetId(null);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -3282,6 +3827,10 @@ export default function AdminConsolePage() {
     setIsHotspotTransparent(false);
     setActivePreviewDevice('desktop');
     setLayouts({ desktop: null, mobile: null });
+    setShadowStickers([]);
+    setShadowTargets([]);
+    setShadowSceneImageUrl('');
+    setSelectedShadowTargetId(null);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -3333,13 +3882,20 @@ export default function AdminConsolePage() {
     }
     setExplanation(explanationText);
     
-    // Load custom metadata fields
     setTeacherNotes(q.teacherNotes || q.metadata?.teacherNotes || '');
     setTags(Array.isArray(q.tags) ? q.tags.join(', ') : (q.tags || q.metadata?.tags?.join(', ') || ''));
     setEstimatedGrade(q.estimatedGrade || q.metadata?.estimatedGrade || '');
     setTimeEstimate(q.timeEstimate || q.metadata?.timeEstimate || '');
     setSourceMapping(q.sourceMapping || q.metadata?.sourceMapping || '');
-    
+    const activePoolId = q.poolId || q.metadata?.poolId || '';
+    setPoolId(activePoolId);
+    setTargetCategory(q.targetCategory || q.metadata?.targetCategory || '');
+    setDistractorCategories(
+      Array.isArray(q.distractorCategories || q.metadata?.distractorCategories)
+        ? (q.distractorCategories || q.metadata?.distractorCategories).join(', ')
+        : (q.distractorCategories || q.metadata?.distractorCategories || '')
+    );
+
     // Extract categories, items, and parts for categorizationv2
     let loadedCategories = q.categories || [];
     let loadedItems = q.items || [];
@@ -3563,10 +4119,38 @@ export default function AdminConsolePage() {
       setActivePreviewDevice('desktop');
     }
 
+    // Load shadow match data
+    const shadowPart = q.parts?.find(p => p.type === 'interactive_stickers' && p.mode === 'shadow_match');
+    if (shadowPart) {
+      setType('shadow_match');
+      setShadowSceneImageUrl(shadowPart.sceneImageUrl || '');
+      setShadowStickers((shadowPart.stickers || []).map((s, i) => ({
+        id: s.id ?? i,
+        type: s.type || `sticker_${i}`,
+        name: s.name || `Sticker ${i + 1}`,
+        imageUrl: s.imageUrl || '',
+        widthPercent: s.widthPercent || s.width || 14,
+        heightPercent: s.heightPercent || s.height || 14,
+      })));
+      setShadowTargets((shadowPart.targets || []).map((t, i) => ({
+        id: t.id || `st_${i}`,
+        type: t.type || `sticker_${i}`,
+        x: t.x,
+        y: t.y,
+        widthPercent: t.widthPercent || t.width || 14,
+        heightPercent: t.heightPercent || t.height || 14,
+      })));
+    } else {
+      setShadowStickers([]);
+      setShadowTargets([]);
+      setShadowSceneImageUrl('');
+    }
+
     setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
     setCommonImageWidth(q.commonImageWidth || q.metadata?.commonImageWidth || 180);
     setDirectImageSelect(Boolean(q.directImageSelect || q.interaction === 'direct_image_select' || q.metadata?.directImageSelect));
     setHideOptionImages(Boolean(q.hideOptionImages || q.metadata?.hideOptionImages));
+    setHideOptionLabel(Boolean(q.hideOptionLabel || q.metadata?.hideOptionLabel));
 
     // Extract parts or default to first question text part
     if (loadedParts.length > 0) {
@@ -3730,6 +4314,13 @@ export default function AdminConsolePage() {
     setTimeEstimate(tpl.timeEstimate || '');
     setSourceMapping(tpl.sourceMapping || '');
     setTeacherNotes(tpl.teacherNotes || '');
+    setPoolId(tpl.poolId || tpl.metadata?.poolId || '');
+    setTargetCategory(tpl.targetCategory || tpl.metadata?.targetCategory || '');
+    setDistractorCategories(
+      Array.isArray(tpl.distractorCategories || tpl.metadata?.distractorCategories)
+        ? (tpl.distractorCategories || tpl.metadata?.distractorCategories).join(', ')
+        : (tpl.distractorCategories || tpl.metadata?.distractorCategories || '')
+    );
     
     if (tpl.type === 'mcq') {
       setOptions(tpl.options.map(opt => ({
@@ -4393,6 +4984,9 @@ export default function AdminConsolePage() {
           estimatedGrade,
           timeEstimate,
           sourceMapping,
+          poolId,
+          targetCategory,
+          distractorCategories,
           parts,
           categories,
           categorizationItems,
@@ -4406,6 +5000,7 @@ export default function AdminConsolePage() {
           cardStyle,
           hideItemLabels,
           hideOptionImages,
+          hideOptionLabel,
           timestamp: Date.now()
         };
         localStorage.setItem('curriculum_authoring_draft', JSON.stringify(draft));
@@ -4420,9 +5015,9 @@ export default function AdminConsolePage() {
     type, questionText, voice, explanation, audioUrl, generateAudioCheckbox,
     readable, readOptions,
     options, correctAnswer, fibAnswers, teacherNotes, tags, estimatedGrade, timeEstimate,
-    sourceMapping, parts, categories, categorizationItems,
+    sourceMapping, poolId, targetCategory, distractorCategories, parts, categories, categorizationItems,
     layoutMode, interaction, targets, backgroundImage, canvas, behavior, sourceTray,
-    cardStyle, hideItemLabels, hideOptionImages
+    cardStyle, hideItemLabels, hideOptionImages, hideOptionLabel
   ]);
 
   const handleLoadDraft = () => {
@@ -4459,6 +5054,9 @@ export default function AdminConsolePage() {
       setEstimatedGrade(draft.estimatedGrade || '');
       setTimeEstimate(draft.timeEstimate || '');
       setSourceMapping(draft.sourceMapping || '');
+      setPoolId(draft.poolId || '');
+      setTargetCategory(draft.targetCategory || '');
+      setDistractorCategories(draft.distractorCategories || '');
       
       setParts(draft.parts || [
         { type: 'text', content: draft.questionText || '' }
@@ -4508,8 +5106,9 @@ export default function AdminConsolePage() {
       setBehavior(draft.behavior || null);
       setSourceTray(draft.sourceTray || null);
       setCardStyle(draft.cardStyle || '');
-      setHideItemLabels(Boolean(draft.hideItemLabels));
-      setHideOptionImages(Boolean(draft.hideOptionImages));
+    setHideItemLabels(Boolean(draft.hideItemLabels));
+    setHideOptionImages(Boolean(draft.hideOptionImages));
+    setHideOptionLabel(Boolean(draft.hideOptionLabel));
       
       setIsDirty(true);
       setAutosaveStatus('● Draft restored');
@@ -4590,7 +5189,42 @@ export default function AdminConsolePage() {
       payload.solution = { sections: [] };
     }
 
-    if (type === 'mcq_hotspot') {
+    if (type === 'shadow_match') {
+      // Serialize shadow match question
+      payload.type = 'mcq';
+      payload.interaction = 'interactive_stickers';
+      payload.correctAnswerIndex = undefined;
+      payload.answer = null;
+      payload.options = [];
+
+      const shadowMatchPart = {
+        type: 'interactive_stickers',
+        mode: 'shadow_match',
+        sceneImageUrl: shadowSceneImageUrl || '',
+        stickers: shadowStickers.map(s => ({
+          id: s.id,
+          type: s.type,
+          name: s.name,
+          imageUrl: s.imageUrl,
+          widthPercent: Number(s.widthPercent) || 14,
+          heightPercent: Number(s.heightPercent) || 14,
+        })),
+        targets: shadowTargets.map(t => ({
+          id: t.id,
+          type: t.type,
+          x: Number(t.x),
+          y: Number(t.y),
+          widthPercent: Number(t.widthPercent) || 14,
+          heightPercent: Number(t.heightPercent) || 14,
+        })),
+        itemLabel: 'sticker',
+      };
+
+      payload.parts = [...parts.map(p => ({ ...p })), shadowMatchPart];
+      payload.metadata.layoutMode = 'shadow_match';
+      payload.layoutMode = 'shadow_match';
+
+    } else if (type === 'mcq_hotspot') {
       const activeConfig = {
         backgroundImage: backgroundImage || '',
         backgroundSvg: backgroundSvg || '',
@@ -4740,6 +5374,8 @@ export default function AdminConsolePage() {
     } else if (type === 'dynamic_pool') {
       payload.hideOptionImages = hideOptionImages;
       payload.metadata.hideOptionImages = hideOptionImages;
+      payload.hideOptionLabel = hideOptionLabel;
+      payload.metadata.hideOptionLabel = hideOptionLabel;
       
       const correctPool = options
         .filter(opt => !opt.isDistractorOnly)
@@ -4762,13 +5398,23 @@ export default function AdminConsolePage() {
           similarity: opt.similarity || 'medium'
         }));
 
-      payload.pools = {
-        correctPool,
-        distractorPool
-      };
+      if (poolId.trim()) {
+        payload.poolId = poolId.trim();
+        payload.metadata.poolId = poolId.trim();
+        payload.targetCategory = targetCategory.trim();
+        payload.metadata.targetCategory = targetCategory.trim();
+        const parsedCats = parseCategoryList(distractorCategories);
+        payload.distractorCategories = parsedCats;
+        payload.metadata.distractorCategories = parsedCats;
+      } else {
+        payload.pools = {
+          correctPool,
+          distractorPool
+        };
+        payload.metadata.pools = payload.pools;
+      }
 
       payload.difficultyRules = difficultyRules;
-      payload.metadata.pools = payload.pools;
       payload.metadata.difficultyRules = difficultyRules;
 
       payload.correctAnswerIndex = undefined;
@@ -4979,14 +5625,43 @@ export default function AdminConsolePage() {
         return;
       }
     } else if (type === 'dynamic_pool') {
-      if (options.length < 2) {
-        setAlert({ type: 'error', text: 'Validation Error: Dynamic Option Pool must have at least 2 options.' });
-        return;
-      }
-      const hasEmptyLabel = options.some(opt => !opt.label.trim());
-      if (hasEmptyLabel) {
-        setAlert({ type: 'error', text: 'Validation Error: All Dynamic Option Pool options must have a text label.' });
-        return;
+      if (poolId.trim()) {
+        const parsedDistractors = parseCategoryList(distractorCategories);
+        if (!selectedVocabularyPool) {
+          setAlert({ type: 'error', text: `Validation Error: Centralized pool "${poolId.trim()}" was not found. Select an existing pool or clear Pool ID to author an inline pool.` });
+          return;
+        }
+        if (!targetCategory.trim() || !selectedPoolCategories.includes(targetCategory.trim())) {
+          setAlert({ type: 'error', text: 'Validation Error: Select a valid target category from the centralized pool.' });
+          return;
+        }
+        if (parsedDistractors.length === 0 || parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
+          setAlert({ type: 'error', text: 'Validation Error: Select at least one valid distractor category from the centralized pool.' });
+          return;
+        }
+        if (parsedDistractors.includes(targetCategory.trim())) {
+          setAlert({ type: 'error', text: 'Validation Error: The target category cannot also be a distractor category.' });
+          return;
+        }
+        const targetCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+          ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+          ?? 0;
+        if (targetCount === 0) {
+          setAlert({ type: 'error', text: 'Validation Error: The selected target category has no options.' });
+          return;
+        }
+      } else {
+        const targets = options.filter(option => !option.isDistractorOnly);
+        const distractors = options.filter(option => option.isDistractorOnly);
+        if (targets.length === 0 || distractors.length === 0) {
+          setAlert({ type: 'error', text: 'Validation Error: An inline Dynamic Option Pool needs at least one target and one distractor.' });
+          return;
+        }
+        const hasEmptyLabel = options.some(opt => !opt.label.trim());
+        if (hasEmptyLabel) {
+          setAlert({ type: 'error', text: 'Validation Error: All inline Dynamic Option Pool options must have a text label.' });
+          return;
+        }
       }
     } else if (type === 'mcq_hotspot') {
       if (hotspots.length < 2) {
@@ -5499,7 +6174,7 @@ export default function AdminConsolePage() {
         id: o.id || `opt_${idx}`,
         label: o.label,
         imageUrl: (type === 'dynamic_pool' && hideOptionImages) ? undefined : (o.imageUrl || undefined),
-        hideLabel: o.hideLabel || undefined,
+        hideLabel: (type === 'dynamic_pool' && hideOptionLabel) || o.hideLabel || undefined,
         audioUrl: o.audioUrl || undefined,
         isCorrect: !o.isDistractorOnly,
         isDistractorOnly: o.isDistractorOnly || undefined,
@@ -5513,7 +6188,10 @@ export default function AdminConsolePage() {
       correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { readable, readOptions },
       // Advanced Dynamic Pool fields
-      pools: type === 'dynamic_pool' ? {
+      poolId: (type === 'dynamic_pool' && poolId) ? poolId.trim() : undefined,
+      targetCategory: (type === 'dynamic_pool' && targetCategory) ? targetCategory.trim() : undefined,
+      distractorCategories: (type === 'dynamic_pool' && distractorCategories) ? distractorCategories.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      pools: (type === 'dynamic_pool' && !poolId) ? {
         correctPool: options.filter(o => !o.isDistractorOnly).map(o => ({
           id: o.id || o.label.replace(/\s+/g, '_').toLowerCase().trim(),
           label: o.label,
@@ -5539,7 +6217,9 @@ export default function AdminConsolePage() {
       behavior: behavior || undefined,
       sourceTray: sourceTray || undefined,
       cardStyle: cardStyle || undefined,
-      hideItemLabels: hideItemLabels || undefined
+      hideItemLabels: hideItemLabels || undefined,
+      hideOptionImages: type === 'dynamic_pool' ? hideOptionImages : undefined,
+      hideOptionLabel: type === 'dynamic_pool' ? hideOptionLabel : undefined
     };
   }, [
     type,
@@ -5567,7 +6247,11 @@ export default function AdminConsolePage() {
     backgroundSvg,
     directImageSelect,
     hideOptionImages,
-    difficultyRules
+    hideOptionLabel,
+    difficultyRules,
+    poolId,
+    targetCategory,
+    distractorCategories
   ]);
 
   const handleCheckAnswer = () => {
@@ -5684,6 +6368,13 @@ export default function AdminConsolePage() {
         >
           🖼 IMAGE ASSETS
         </button>
+        <a 
+          className={styles.tabButton}
+          href="/admin/templates"
+          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+        >
+          ⚙️ VISUAL TEMPLATE BUILDER
+        </a>
       </nav>
 
       {/* Active Tab View */}
@@ -6178,6 +6869,46 @@ export default function AdminConsolePage() {
         {/* --- VIEW 2: QUESTIONS LIBRARY --- */}
         {activeTab === 'library' && (
           <>
+            <div style={{ padding: '16px 20px 0 20px', display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--color-bg-panel)' }}>
+              <button
+                type="button"
+                onClick={() => setLibraryMode('questions')}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: '1px solid',
+                  borderColor: libraryMode === 'questions' ? 'var(--color-brand)' : 'var(--color-border)',
+                  backgroundColor: libraryMode === 'questions' ? 'var(--color-brand)' : 'transparent',
+                  color: libraryMode === 'questions' ? '#ffffff' : 'var(--color-text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: libraryMode === 'questions' ? '0 4px 10px rgba(79, 70, 229, 0.15)' : 'none'
+                }}
+              >
+                📝 Generated Questions ({qTotalCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setLibraryMode('templates')}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: '1px solid',
+                  borderColor: libraryMode === 'templates' ? 'var(--color-brand)' : 'var(--color-border)',
+                  backgroundColor: libraryMode === 'templates' ? 'var(--color-brand)' : 'transparent',
+                  color: libraryMode === 'templates' ? '#ffffff' : 'var(--color-text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: libraryMode === 'templates' ? '0 4px 10px rgba(79, 70, 229, 0.15)' : 'none'
+                }}
+              >
+                ⚙️ Universal Templates ({tTotalTemplates})
+              </button>
+            </div>
             <div className={styles.stickyFiltersBar}>
               <div className={styles.filterGroup}>
                 <label className={styles.filterLabel}>Search Phrase</label>
@@ -6316,268 +7047,440 @@ export default function AdminConsolePage() {
               </div>
             </div>
 
-            <div style={{ padding: '0 20px 12px 20px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className={styles.btnOutline}
-                onClick={handleCloneRandomQuestions}
-                style={{ 
-                  background: 'var(--color-bg-panel)', 
-                  borderColor: 'var(--color-brand)',
-                  color: 'var(--color-brand)',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  height: '34px'
-                }}
-                disabled={cloningInProgress}
-              >
-                {cloningInProgress ? (
-                  <>
-                    <span className={styles.spinner} style={{ width: '12px', height: '12px', borderSize: '2px', marginRight: 4 }}></span>
-                    Cloning...
-                  </>
-                ) : (
-                  <>📋 Clone Random Drafts</>
-                )}
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 700 }}>Count:</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={cloneCount}
-                  onChange={(e) => setCloneCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className={styles.formInput}
-                  style={{ width: '56px', height: '34px', textAlign: 'center', padding: '0 4px' }}
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 700 }}>Skill ID:</span>
-                <select
-                  value={cloneSkillId}
-                  onChange={(e) => setCloneSkillId(e.target.value)}
-                  className={styles.formSelect}
-                  style={{ height: '34px', padding: '0 8px', minWidth: '150px' }}
-                  disabled={!qSubject || !qTopic}
+            {libraryMode === 'questions' && (
+              <div style={{ padding: '0 20px 12px 20px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className={styles.btnOutline}
+                  onClick={handleCloneRandomQuestions}
+                  style={{ 
+                    background: 'var(--color-bg-panel)', 
+                    borderColor: 'var(--color-brand)',
+                    color: 'var(--color-brand)',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    height: '34px'
+                  }}
+                  disabled={cloningInProgress}
                 >
-                  <option value="">-- All Skills --</option>
-                  {availableSkillsForClone.map(skill => (
-                    <option key={skill.id} value={skill.skillId || skill.id}>
-                      {skill.code ? `[${skill.code}] ` : ''}{skill.title || skill.skillId || skill.id} ({skill.skillId || skill.id})
-                    </option>
-                  ))}
-                  <option value="__custom__">-- Custom Skill ID --</option>
-                </select>
-              </div>
-              {cloneSkillId === '__custom__' && (
+                  {cloningInProgress ? (
+                    <>
+                      <span className={styles.spinner} style={{ width: '12px', height: '12px', borderSize: '2px', marginRight: 4 }}></span>
+                      Cloning...
+                    </>
+                  ) : (
+                    <>📋 Clone Random Drafts</>
+                  )}
+                </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 700 }}>Count:</span>
                   <input
-                    type="text"
-                    placeholder="Enter custom Skill ID..."
-                    value={customCloneSkillId}
-                    onChange={(e) => setCustomCloneSkillId(e.target.value)}
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={cloneCount}
+                    onChange={(e) => setCloneCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
                     className={styles.formInput}
-                    style={{ height: '34px', padding: '0 8px', width: '200px' }}
-                    disabled={!qSubject || !qTopic}
+                    style={{ width: '56px', height: '34px', textAlign: 'center', padding: '0 4px' }}
                   />
                 </div>
-              )}
-              <small style={{ color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 650 }}>
-                Picks random active questions from the selected <strong>Subject</strong>, <strong>Topic/Skill</strong>, and optional <strong>Skill ID</strong>, duplicates them, and saves them as reviewable drafts.
-              </small>
-            </div>
-
-            {loadingQuestions ? (
-              <div className={styles.emptyState}>
-                <span className={styles.spinner} style={{ marginRight: 10 }}></span>
-                Loading curriculum question database...
-              </div>
-            ) : questions.length === 0 ? (
-              <div className={styles.emptyState}>
-                No questions match the active query filters. Select "Authoring Center" to publish one.
-              </div>
-            ) : (
-              <>
-                <div className={styles.tableContainer}>
-                  <table className={styles.adminTable}>
-                    <thead>
-                      <tr>
-                        {visibleColumns.id && <th style={{ width: '5%' }}>ID</th>}
-                        {visibleColumns.subject && <th style={{ width: '8%' }}>Subject</th>}
-                        {visibleColumns.topic && <th style={{ width: '8%' }}>Topic</th>}
-                        {visibleColumns.skillId && <th style={{ width: '10%' }}>Skill</th>}
-                        {visibleColumns.type && <th style={{ width: '6%' }}>Type</th>}
-                        {visibleColumns.questionText && <th style={{ width: 'auto' }}>Question Text</th>}
-                        {visibleColumns.audioStatus && <th style={{ width: '8%' }}>Audio Status</th>}
-                        {visibleColumns.play && <th style={{ width: '5%', textAlign: 'center' }}>Play</th>}
-                        {visibleColumns.actions && <th style={{ width: '11%' }}>Actions</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {questions.map((q) => (
-                        <tr key={q.id}>
-                          {visibleColumns.id && (
-                            <td className={styles.idCol}>
-                              <code>{q.id}</code>
-                              {q.status === 'draft' && (
-                                <span style={{ 
-                                  marginLeft: 6, 
-                                  padding: '2px 6px', 
-                                  fontSize: 9, 
-                                  fontWeight: 'bold', 
-                                  color: '#ea580c', 
-                                  backgroundColor: '#ffedd5', 
-                                  borderRadius: 4,
-                                  border: '1px solid #fed7aa',
-                                  display: 'inline-block' 
-                                }}>
-                                  DRAFT
-                                </span>
-                              )}
-                            </td>
-                          )}
-                          {visibleColumns.subject && (
-                            <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{q.subject}</td>
-                          )}
-                          {visibleColumns.topic && (
-                            <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{q.topic}</td>
-                          )}
-                          {visibleColumns.skillId && (
-                            <td style={{ fontSize: 12, wordBreak: 'break-all' }}>{q.skillId || '—'}</td>
-                          )}
-                          {visibleColumns.type && (
-                            <td>
-                              <span style={{ fontSize: 11, fontWeight: 800 }}>
-                                {q.type === 'mcq' ? 'MCQ' : (q.type === 'dynamic_pool' ? 'POOL' : String(q.type).toUpperCase())}
-                              </span>
-                            </td>
-                          )}
-                          {visibleColumns.questionText && (
-                            <td>
-                              <div className={styles.truncatedText} title={q.questionText}>
-                                {q.questionText}
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.audioStatus && (
-                            <td>
-                              {q.audioUrl ? (
-                                <span className={`${styles.badgeSolid} ${styles.badgeGreen}`}>Baked R2</span>
-                              ) : (
-                                <span className={`${styles.badgeSolid} ${styles.badgeRed}`}>Missing</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleColumns.play && (
-                            <td style={{ textAlign: 'center' }}>
-                              {q.audioUrl ? (
-                                <button 
-                                  className={`${styles.iconPlayBtn} ${playingAudioId === q.id ? styles.iconPlayActive : ''}`} 
-                                  onClick={() => handlePlayUrlAudio(q.id, q.audioUrl)}
-                                  title="Hear pre-baked R2 voice file"
-                                >
-                                  {playingAudioId === q.id ? '■' : '▶'}
-                                </button>
-                              ) : (
-                                <span style={{ color: '#9ca3af', fontSize: 11 }}>N/A</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleColumns.actions && (
-                            <td>
-                              <div className={styles.actionIconGroup}>
-                                <div className={styles.actionRowInline}>
-                                  {q.status === 'draft' && (
-                                    <button 
-                                      className={styles.btnSolid}
-                                      onClick={() => handleApproveQuestion(q)}
-                                      style={{ 
-                                        backgroundColor: '#16a34a', 
-                                        borderColor: '#16a34a', 
-                                        color: '#fff',
-                                        fontWeight: 'bold',
-                                        padding: '2px 8px',
-                                        fontSize: 10,
-                                        marginRight: 4
-                                      }}
-                                    >
-                                      Approve
-                                    </button>
-                                  )}
-                                  <button 
-                                    className={`${styles.btnOutline} ${styles.btnCompact}`}
-                                    onClick={() => handleLoadQuestionToForm(q, 'edit')}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button 
-                                    className={`${styles.btnOutline} ${styles.btnCompact}`}
-                                    onClick={() => handleLoadQuestionToForm(q, 'duplicate')}
-                                  >
-                                    Duplicate
-                                  </button>
-                                </div>
-                                <div className={styles.actionRowInline} style={{ marginTop: 4, gap: 4 }}>
-                                  <a 
-                                    href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&qn=${q.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`${styles.btnOutline} ${styles.btnCompact}`}
-                                    style={{ textDecoration: 'none', color: '#0ea5e9', borderColor: '#0ea5e9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, padding: '2px 6px' }}
-                                  >
-                                    Test (qn)
-                                  </a>
-                                  <a 
-                                    href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&id=${q.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`${styles.btnOutline} ${styles.btnCompact}`}
-                                    style={{ textDecoration: 'none', color: '#8b5cf6', borderColor: '#8b5cf6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, padding: '2px 6px' }}
-                                  >
-                                    Test (id)
-                                  </a>
-                                </div>
-                                <button 
-                                  className={`${styles.btnDanger} ${styles.btnCompact}`}
-                                  onClick={() => handleDeleteQuestion(q.id)}
-                                  style={{ marginTop: 4 }}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 700 }}>Skill ID:</span>
+                  <select
+                    value={cloneSkillId}
+                    onChange={(e) => setCloneSkillId(e.target.value)}
+                    className={styles.formSelect}
+                    style={{ height: '34px', padding: '0 8px', minWidth: '150px' }}
+                    disabled={!qSubject || !qTopic}
+                  >
+                    <option value="">-- All Skills --</option>
+                    {availableSkillsForClone.map(skill => (
+                      <option key={skill.id} value={skill.skillId || skill.id}>
+                        {skill.code ? `[${skill.code}] ` : ''}{skill.title || skill.skillId || skill.id} ({skill.skillId || skill.id})
+                      </option>
+                    ))}
+                    <option value="__custom__">-- Custom Skill ID --</option>
+                  </select>
                 </div>
-
-                <div className={styles.paginationRow}>
-                  <span className={styles.paginationText}>
-                    Showing {questions.length} of {qTotalCount} questions (Page {qPage} of {qTotalPages})
-                  </span>
-                  <div className={styles.paginationButtons}>
-                    <button 
-                      className={styles.btnOutline} 
-                      onClick={() => setQPage(p => Math.max(1, p - 1))} 
-                      disabled={qPage <= 1}
-                    >
-                      ◀ Prev
-                    </button>
-                    <button 
-                      className={styles.btnOutline} 
-                      onClick={() => setQPage(p => Math.min(qTotalPages, p + 1))} 
-                      disabled={qPage >= qTotalPages}
-                    >
-                      Next ▶
-                    </button>
+                {cloneSkillId === '__custom__' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Enter custom Skill ID..."
+                      value={customCloneSkillId}
+                      onChange={(e) => setCustomCloneSkillId(e.target.value)}
+                      className={styles.formInput}
+                      style={{ height: '34px', padding: '0 8px', width: '200px' }}
+                      disabled={!qSubject || !qTopic}
+                    />
                   </div>
+                )}
+                <small style={{ color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 650 }}>
+                  Picks random active questions from the selected <strong>Subject</strong>, <strong>Topic/Skill</strong>, and optional <strong>Skill ID</strong>, duplicates them, and saves them as reviewable drafts.
+                </small>
+              </div>
+            )}
+
+            {libraryMode === 'questions' ? (
+              loadingQuestions ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.spinner} style={{ marginRight: 10 }}></span>
+                  Loading curriculum question database...
                 </div>
-              </>
+              ) : questions.length === 0 ? (
+                <div className={styles.emptyState}>
+                  No questions match the active query filters. Select "Authoring Center" to publish one.
+                </div>
+              ) : (
+                <>
+                  <div className={styles.tableContainer}>
+                    <table className={styles.adminTable}>
+                      <thead>
+                        <tr>
+                          {visibleColumns.id && <th style={{ width: '5%' }}>ID</th>}
+                          {visibleColumns.subject && <th style={{ width: '8%' }}>Subject</th>}
+                          {visibleColumns.topic && <th style={{ width: '8%' }}>Topic</th>}
+                          {visibleColumns.skillId && <th style={{ width: '10%' }}>Skill</th>}
+                          {visibleColumns.type && <th style={{ width: '6%' }}>Type</th>}
+                          {visibleColumns.questionText && <th style={{ width: 'auto' }}>Question Text</th>}
+                          {visibleColumns.audioStatus && <th style={{ width: '8%' }}>Audio Status</th>}
+                          {visibleColumns.play && <th style={{ width: '5%', textAlign: 'center' }}>Play</th>}
+                          {visibleColumns.actions && <th style={{ width: '11%' }}>Actions</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {questions.map((q) => (
+                          <tr key={q.id}>
+                            {visibleColumns.id && (
+                              <td className={styles.idCol}>
+                                <code>{q.id}</code>
+                                {q.status === 'draft' && (
+                                  <span style={{ 
+                                    marginLeft: 6, 
+                                    padding: '2px 6px', 
+                                    fontSize: 9, 
+                                    fontWeight: 'bold', 
+                                    color: '#ea580c', 
+                                    backgroundColor: '#ffedd5', 
+                                    borderRadius: 4,
+                                    border: '1px solid #fed7aa',
+                                    display: 'inline-block' 
+                                  }}>
+                                    DRAFT
+                                  </span>
+                                )}
+                              </td>
+                            )}
+                            {visibleColumns.subject && (
+                              <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{q.subject}</td>
+                            )}
+                            {visibleColumns.topic && (
+                              <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{q.topic}</td>
+                            )}
+                            {visibleColumns.skillId && (
+                              <td style={{ fontSize: 12, wordBreak: 'break-all' }}>{q.skillId || '—'}</td>
+                            )}
+                            {visibleColumns.type && (
+                              <td>
+                                <span style={{ fontSize: 11, fontWeight: 800 }}>
+                                  {q.type === 'mcq' ? 'MCQ' : (q.type === 'dynamic_pool' ? 'POOL' : String(q.type).toUpperCase())}
+                                </span>
+                              </td>
+                            )}
+                            {visibleColumns.questionText && (
+                              <td>
+                                <div className={styles.truncatedText} title={q.questionText}>
+                                  {q.questionText}
+                                </div>
+                              </td>
+                            )}
+                            {visibleColumns.audioStatus && (
+                              <td>
+                                {q.audioUrl ? (
+                                  <span className={`${styles.badgeSolid} ${styles.badgeGreen}`}>Baked R2</span>
+                                ) : (
+                                  <span className={`${styles.badgeSolid} ${styles.badgeRed}`}>Missing</span>
+                                )}
+                              </td>
+                            )}
+                            {visibleColumns.play && (
+                              <td style={{ textAlign: 'center' }}>
+                                {q.audioUrl ? (
+                                  <button 
+                                    className={`${styles.iconPlayBtn} ${playingAudioId === q.id ? styles.iconPlayActive : ''}`} 
+                                    onClick={() => handlePlayUrlAudio(q.id, q.audioUrl)}
+                                    title="Hear pre-baked R2 voice file"
+                                  >
+                                    {playingAudioId === q.id ? '■' : '▶'}
+                                  </button>
+                                ) : (
+                                  <span style={{ color: '#9ca3af', fontSize: 11 }}>N/A</span>
+                                )}
+                              </td>
+                            )}
+                            {visibleColumns.actions && (
+                              <td>
+                                <div className={styles.actionIconGroup}>
+                                  <div className={styles.actionRowInline}>
+                                    {q.status === 'draft' && (
+                                      <button 
+                                        className={styles.btnSolid}
+                                        onClick={() => handleApproveQuestion(q)}
+                                        style={{ 
+                                          backgroundColor: '#16a34a', 
+                                          borderColor: '#16a34a', 
+                                          color: '#fff',
+                                          fontWeight: 'bold',
+                                          padding: '2px 8px',
+                                          fontSize: 10,
+                                          marginRight: 4
+                                        }}
+                                      >
+                                        Approve
+                                      </button>
+                                    )}
+                                    <button 
+                                      className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                      onClick={() => handleLoadQuestionToForm(q, 'edit')}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button 
+                                      className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                      onClick={() => handleLoadQuestionToForm(q, 'duplicate')}
+                                    >
+                                      Duplicate
+                                    </button>
+                                  </div>
+                                  <div className={styles.actionRowInline} style={{ marginTop: 4, gap: 4 }}>
+                                    <a 
+                                      href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&qn=${q.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                      style={{ textDecoration: 'none', color: '#0ea5e9', borderColor: '#0ea5e9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, padding: '2px 6px' }}
+                                    >
+                                      Test (qn)
+                                    </a>
+                                    <a 
+                                      href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&id=${q.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                      style={{ textDecoration: 'none', color: '#8b5cf6', borderColor: '#8b5cf6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, padding: '2px 6px' }}
+                                    >
+                                      Test (id)
+                                    </a>
+                                  </div>
+                                  <button 
+                                    className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                    onClick={() => handleDeleteQuestion(q.id)}
+                                    style={{ marginTop: 4 }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className={styles.paginationRow}>
+                    <span className={styles.paginationText}>
+                      Showing {questions.length} of {qTotalCount} questions (Page {qPage} of {qTotalPages})
+                    </span>
+                    <div className={styles.paginationButtons}>
+                      <button 
+                        className={styles.btnOutline} 
+                        onClick={() => setQPage(p => Math.max(1, p - 1))} 
+                        disabled={qPage <= 1}
+                      >
+                        ◀ Prev
+                      </button>
+                      <button 
+                        className={styles.btnOutline} 
+                        onClick={() => setQPage(p => Math.min(qTotalPages, p + 1))} 
+                        disabled={qPage >= qTotalPages}
+                      >
+                        Next ▶
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )
+            ) : (
+              paginatedTemplates.length === 0 ? (
+                <div className={styles.emptyState}>
+                  No templates match the active query filters. Create one in the Visual Template Builder.
+                </div>
+              ) : (
+                <>
+                  <div className={styles.tableContainer}>
+                    <table className={styles.adminTable}>
+                      <thead>
+                        <tr>
+                          {visibleColumns.id && <th style={{ width: '15%' }}>ID</th>}
+                          {visibleColumns.subject && <th style={{ width: '8%' }}>Subject</th>}
+                          {visibleColumns.topic && <th style={{ width: '10%' }}>Topic</th>}
+                          {visibleColumns.skillId && <th style={{ width: '10%' }}>Skill</th>}
+                          {visibleColumns.type && <th style={{ width: '8%' }}>Type</th>}
+                          {visibleColumns.questionText && <th style={{ width: 'auto' }}>Title / Question Text</th>}
+                          {visibleColumns.audioStatus && <th style={{ width: '8%' }}>Audio Status</th>}
+                          {visibleColumns.play && <th style={{ width: '5%', textAlign: 'center' }}>Play</th>}
+                          {visibleColumns.actions && <th style={{ width: '11%' }}>Actions</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedTemplates.map((tpl) => (
+                          <tr key={tpl.id}>
+                            {visibleColumns.id && (
+                              <td className={styles.idCol}>
+                                <code>{tpl.id}</code>
+                                {tpl.isStatic ? (
+                                  <span style={{ 
+                                    marginLeft: 6, 
+                                    padding: '2px 6px', 
+                                    fontSize: 9, 
+                                    fontWeight: 'bold', 
+                                    color: '#0369a1', 
+                                    backgroundColor: '#e0f2fe', 
+                                    borderRadius: 4,
+                                    border: '1px solid #bae6fd',
+                                    display: 'inline-block' 
+                                  }}>
+                                    STATIC CATALOG
+                                  </span>
+                                ) : (
+                                  <span style={{ 
+                                    marginLeft: 6, 
+                                    padding: '2px 6px', 
+                                    fontSize: 9, 
+                                    fontWeight: 'bold', 
+                                    color: '#16a34a', 
+                                    backgroundColor: '#dcfce7', 
+                                    borderRadius: 4,
+                                    border: '1px solid #bbf7d0',
+                                    display: 'inline-block' 
+                                  }}>
+                                    DYNAMIC / DB
+                                  </span>
+                                )}
+                              </td>
+                            )}
+                            {visibleColumns.subject && (
+                              <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{tpl.subject}</td>
+                            )}
+                            {visibleColumns.topic && (
+                              <td style={{ textTransform: 'uppercase', fontSize: 12 }}>{tpl.topic}</td>
+                            )}
+                            {visibleColumns.skillId && (
+                              <td style={{ fontSize: 12, wordBreak: 'break-all' }}>{tpl.skillId || '—'}</td>
+                            )}
+                            {visibleColumns.type && (
+                              <td>
+                                <span style={{ fontSize: 11, fontWeight: 800 }}>
+                                  {String(tpl.optionsType || tpl.type || 'MCQ').toUpperCase()}
+                                </span>
+                              </td>
+                            )}
+                            {visibleColumns.questionText && (
+                              <td>
+                                <div className={styles.truncatedText} title={tpl.questionText}>
+                                  {tpl.title || tpl.questionText || '—'}
+                                </div>
+                              </td>
+                            )}
+                            {visibleColumns.audioStatus && (
+                              <td>
+                                <span style={{ color: '#9ca3af', fontSize: 11 }}>N/A</span>
+                              </td>
+                            )}
+                            {visibleColumns.play && (
+                              <td style={{ textAlign: 'center' }}>
+                                <span style={{ color: '#9ca3af', fontSize: 11 }}>N/A</span>
+                              </td>
+                            )}
+                            {visibleColumns.actions && (
+                              <td>
+                                <div className={styles.actionIconGroup}>
+                                  <div className={styles.actionRowInline}>
+                                    {tpl.isStatic ? (
+                                      <button 
+                                        className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                        onClick={() => window.location.href = `/admin/templates?id=${encodeURIComponent(tpl.id)}&duplicate=true`}
+                                        title="Create a custom template copy in builder"
+                                      >
+                                        Customize
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <button 
+                                          className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                          onClick={() => window.location.href = `/admin/templates?id=${encodeURIComponent(tpl.id)}`}
+                                          title="Edit this dynamic template in builder"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button 
+                                          className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                          onClick={() => window.location.href = `/admin/templates?id=${encodeURIComponent(tpl.id)}&duplicate=true`}
+                                          title="Duplicate this template"
+                                        >
+                                          Duplicate
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                  <button 
+                                    className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                    disabled={tpl.isStatic}
+                                    onClick={() => handleDeleteTemplate(tpl.id)}
+                                    style={{
+                                      marginTop: 4,
+                                      opacity: tpl.isStatic ? 0.5 : 1,
+                                      cursor: tpl.isStatic ? 'not-allowed' : 'pointer'
+                                    }}
+                                    title={tpl.isStatic ? "Static catalog templates cannot be deleted" : "Delete custom template from database"}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className={styles.paginationRow}>
+                    <span className={styles.paginationText}>
+                      Showing {paginatedTemplates.length} of {tTotalTemplates} templates (Page {qPage} of {tTotalPages})
+                    </span>
+                    <div className={styles.paginationButtons}>
+                      <button 
+                        className={styles.btnOutline} 
+                        onClick={() => setQPage(p => Math.max(1, p - 1))} 
+                        disabled={qPage <= 1}
+                      >
+                        ◀ Prev
+                      </button>
+                      <button 
+                        className={styles.btnOutline} 
+                        onClick={() => setQPage(p => Math.min(tTotalPages, p + 1))} 
+                        disabled={qPage >= tTotalPages}
+                      >
+                        Next ▶
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )
             )}
           </>
         )}
@@ -7546,7 +8449,17 @@ export default function AdminConsolePage() {
                               className={styles.formSelect} 
                               value={type} 
                               onChange={(e) => {
-                                setType(e.target.value);
+                                const nextType = e.target.value;
+                                setType(nextType);
+                                if (nextType === 'dynamic_pool' && type !== 'dynamic_pool') {
+                                  setPoolId('');
+                                  setTargetCategory('');
+                                  setDistractorCategories('');
+                                  setOptions([
+                                    { label: '', isCorrect: false, isDistractorOnly: false, explanation: '' },
+                                    { label: '', isCorrect: false, isDistractorOnly: true, misconceptionType: 'general_confusion', similarity: 'medium' }
+                                  ]);
+                                }
                                 ignoreDirtyChange.current = false;
                                 setIsDirty(true);
                               }}
@@ -7554,6 +8467,7 @@ export default function AdminConsolePage() {
                               <option value="mcq">Multiple Choice Question (MCQ)</option>
                               <option value="dynamic_pool">Dynamic Option Pool</option>
                               <option value="mcq_hotspot">Multiple Choice (Hotspot Select)</option>
+                              <option value="shadow_match">Shadow Match (Sticker Drag)</option>
                               <option value="fillInTheBlank">Fill-In-The-Blank (FIB)</option>
                               <option value="trueOrFalse">True / False</option>
                               <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
@@ -7563,6 +8477,168 @@ export default function AdminConsolePage() {
 
                           {(type === 'mcq' || type === 'dynamic_pool') && (
                             <div className={styles.formGroup}>
+                              {type === 'dynamic_pool' && (
+                                <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                                  <h4 style={{ fontSize: 13, fontWeight: 'bold', color: '#0f766e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    🌐 Pool Source
+                                  </h4>
+                                  <p style={{ fontSize: 11, color: '#0d9488', margin: '0 0 10px' }}>
+                                    Select a centralized pool to reuse reviewed vocabulary, or choose Inline manual pool to store options inside this question.
+                                  </p>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 1fr 1fr', gap: 12, marginBottom: 8 }}>
+                                    <div>
+                                      <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Pool ID</label>
+                                      <select
+                                        className={styles.formSelect}
+                                        style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                        value={poolId}
+                                        onChange={(e) => {
+                                          setPoolId(e.target.value);
+                                          setTargetCategory('');
+                                          setDistractorCategories('');
+                                          setPoolWordManagerOpen(false);
+                                          setPoolWordManagerData(null);
+                                          setPoolWordCategory('');
+                                          setPoolWordInput('');
+                                          setPoolWordManagerStatus('');
+                                          setPoolAssetAudit(null);
+                                          ignoreDirtyChange.current = false;
+                                          setIsDirty(true);
+                                        }}
+                                      >
+                                        <option value="">Inline manual pool</option>
+                                        {vocabularyPools.map(pool => (
+                                          <option key={pool.poolId} value={pool.poolId}>
+                                            {pool.poolId}{pool.status ? ` (${pool.status})` : ''}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        type="button"
+                                        className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                        onClick={openCreatePoolModal}
+                                        style={{ marginTop: 6, width: '100%', padding: '5px 8px' }}
+                                      >
+                                        + Create New Pool
+                                      </button>
+                                    </div>
+                                    <div>
+                                      <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Target Category</label>
+                                      <select
+                                        className={styles.formSelect}
+                                        style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                        value={targetCategory}
+                                        disabled={!selectedVocabularyPool}
+                                        onChange={(e) => {
+                                          setTargetCategory(e.target.value);
+                                          setPoolAssetAudit(null);
+                                          const nextDistractors = parseCategoryList(distractorCategories).filter(category => category !== e.target.value);
+                                          setDistractorCategories(nextDistractors.join(', '));
+                                          ignoreDirtyChange.current = false;
+                                          setIsDirty(true);
+                                        }}
+                                      >
+                                        <option value="">Select target category</option>
+                                        {selectedPoolCategories.map(category => (
+                                          <option key={category} value={category}>{category}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label style={{ fontSize: 11, fontWeight: '600', color: '#be123c', display: 'block', marginBottom: 4 }}>Distractor Categories</label>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, minHeight: 32, alignItems: 'center' }}>
+                                        {selectedPoolCategories.filter(category => category !== targetCategory).map(category => {
+                                          const checked = parseCategoryList(distractorCategories).includes(category);
+                                          return (
+                                            <label key={category} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+                                              <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => {
+                                                  const current = parseCategoryList(distractorCategories);
+                                                  const next = checked ? current.filter(item => item !== category) : [...current, category];
+                                                  setDistractorCategories(next.join(', '));
+                                                  setPoolAssetAudit(null);
+                                                  ignoreDirtyChange.current = false;
+                                                  setIsDirty(true);
+                                                }}
+                                              />
+                                              {category}
+                                            </label>
+                                          );
+                                        })}
+                                        {selectedVocabularyPool && selectedPoolCategories.length === 0 && <span style={{ fontSize: 11, color: '#be123c' }}>No categories found</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {vocabularyPoolsLoading && <p style={{ fontSize: 11, color: '#0d9488', margin: 0 }}>Loading centralized pools…</p>}
+                                  {vocabularyPoolsError && <p style={{ fontSize: 11, color: '#be123c', margin: 0 }}>{vocabularyPoolsError}</p>}
+                                  {selectedVocabularyPool && (
+                                    <>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                                        <p style={{ fontSize: 11, color: '#0f766e', margin: 0 }}>
+                                          Referenced pool categories: {selectedPoolCategories.map(category => `${category} (${selectedVocabularyPool.categoryCounts?.[category] ?? selectedVocabularyPool.pools?.[category]?.length ?? 0})`).join(', ')}.
+                                        </p>
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                          onClick={openPoolManagerModal}
+                                          style={{ padding: '5px 10px', whiteSpace: 'nowrap' }}
+                                        >
+                                          Manage Option Pool
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #99f6e4' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 320px) auto', gap: 10, alignItems: 'end' }}>
+                                      <div>
+                                        <label style={{ fontSize: 11, fontWeight: 650, color: '#0f766e', display: 'block', marginBottom: 4 }}>Option Display</label>
+                                        <select
+                                          className={styles.formSelect}
+                                          value={hideOptionImages ? (hideOptionLabel ? 'audio_only' : 'label_only') : (hideOptionLabel ? 'image_only' : 'image_label')}
+                                          onChange={(event) => {
+                                            const mode = event.target.value;
+                                            setHideOptionImages(mode === 'label_only' || mode === 'audio_only');
+                                            setHideOptionLabel(mode === 'image_only' || mode === 'audio_only');
+                                            setPoolAssetAudit(null);
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ width: '100%', margin: 0 }}
+                                        >
+                                          <option value="image_label">Show images and labels</option>
+                                          <option value="image_only">Show images, hide labels</option>
+                                          <option value="label_only">Hide images, show labels</option>
+                                          <option value="audio_only">Hide images and labels (audio only)</option>
+                                        </select>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className={`${styles.btnOutline} ${styles.btnCompact}`}
+                                        onClick={auditDynamicPoolAssets}
+                                        disabled={poolAssetAuditLoading || (poolId.trim() && (!targetCategory.trim() || parseCategoryList(distractorCategories).length === 0))}
+                                        style={{ padding: '6px 10px' }}
+                                      >
+                                        {poolAssetAuditLoading ? 'Checking…' : 'Check Images & Audio'}
+                                      </button>
+                                    </div>
+                                    {poolAssetAudit && !poolAssetAudit.error && (
+                                      <div style={{ marginTop: 8, fontSize: 11, color: '#334155', lineHeight: 1.5 }}>
+                                        <strong>{poolAssetAudit.total} active options checked.</strong>
+                                        <div style={{ color: poolAssetAudit.missingImages.length ? '#b45309' : '#047857' }}>
+                                          Images: {poolAssetAudit.missingImages.length ? `${poolAssetAudit.missingImages.length} missing — ${poolAssetAudit.missingImages.slice(0, 12).join(', ')}${poolAssetAudit.missingImages.length > 12 ? '…' : ''}` : 'all available'}
+                                        </div>
+                                        <div style={{ color: poolAssetAudit.missingAudio.length ? '#b45309' : '#047857' }}>
+                                          Audio: {poolAssetAudit.missingAudio.length ? `${poolAssetAudit.missingAudio.length} missing — ${poolAssetAudit.missingAudio.slice(0, 12).join(', ')}${poolAssetAudit.missingAudio.length > 12 ? '…' : ''}` : 'all available'}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {poolAssetAudit?.error && <p style={{ margin: '8px 0 0', fontSize: 11, color: '#be123c' }}>{poolAssetAudit.error}</p>}
+                                  </div>
+                                </div>
+                              )}
+                              {(!poolId.trim() || type !== 'dynamic_pool') && (
+                                <>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                 <label className={styles.filterLabel} style={{ marginBottom: 0 }}>
                                   {type === 'dynamic_pool'
@@ -8102,52 +9178,35 @@ export default function AdminConsolePage() {
                                     </button>
                                   )
                                 )}
-                                <button
-                                  type="button"
-                                  className={styles.btnOutline}
-                                  onClick={() => {
-                                    const text = prompt("Paste a list of words (space, comma, or newline separated) to add to the options list:");
-                                    if (text) {
-                                      const words = text
-                                        .split(/[\s,\n]+/)
-                                        .map(w => w.trim())
-                                        .filter(w => w.length > 0);
-                                      if (words.length > 0) {
-                                        const newOptions = [...options];
-                                        // Filter out initial empty default options if they are empty
-                                        const filteredOptions = newOptions.filter(o => o.label.trim() !== '');
-                                        const maxLimit = type === 'dynamic_pool' ? 100 : 8;
-                                        words.forEach(word => {
-                                          if (filteredOptions.length < maxLimit) {
-                                            filteredOptions.push({ label: word, isCorrect: false });
-                                          }
-                                        });
-                                        setOptions(filteredOptions);
-                                        setIsDirty(true);
-                                      }
-                                    }
-                                  }}
-                                  style={{ padding: '6px 12px' }}
-                                >
-                                  📋 Bulk Add Words
-                                </button>
-
-                                {type === 'dynamic_pool' && (
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, userSelect: 'none', marginLeft: 'auto', cursor: 'pointer', fontWeight: 650 }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={hideOptionImages}
-                                      onChange={(e) => {
-                                        setHideOptionImages(e.target.checked);
-                                        ignoreDirtyChange.current = false;
-                                        setIsDirty(true);
-                                      }}
-                                      style={{ width: 15, height: 15, cursor: 'pointer' }}
-                                    />
-                                    Hide Option Images (Text Only)
-                                  </label>
+                                {type === 'dynamic_pool' ? (
+                                  <>
+                                    <button type="button" className={styles.btnOutline} onClick={() => bulkAddDynamicPoolOptions(false)} style={{ padding: '6px 12px' }}>
+                                      📋 Bulk Add Targets
+                                    </button>
+                                    <button type="button" className={styles.btnOutline} onClick={() => bulkAddDynamicPoolOptions(true)} style={{ padding: '6px 12px' }}>
+                                      📋 Bulk Add Distractors
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={styles.btnOutline}
+                                    onClick={() => {
+                                      const text = prompt("Paste a list of words (space, comma, or newline separated) to add to the options list:");
+                                      if (!text) return;
+                                      const words = text.split(/[\s,\n]+/).map(word => word.trim()).filter(Boolean);
+                                      setOptions([...options.filter(option => option.label.trim() !== ''), ...words.slice(0, Math.max(0, 8 - options.length)).map(label => ({ label, isCorrect: false }))]);
+                                      setIsDirty(true);
+                                    }}
+                                    style={{ padding: '6px 12px' }}
+                                  >
+                                    📋 Bulk Add Words
+                                  </button>
                                 )}
+
                               </div>
+                                </>
+                              )}
                             </div>
                           )}
 
@@ -8659,6 +9718,416 @@ export default function AdminConsolePage() {
                                   </div>
                                 );
                               })()}
+                            </div>
+                          )}
+
+                          {type === 'shadow_match' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                              {/* Header Info */}
+                              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px' }}>
+                                <h4 style={{ fontSize: 13, fontWeight: 700, color: '#15803d', margin: '0 0 4px' }}>🎯 Shadow Match Builder</h4>
+                                <p style={{ fontSize: 12, color: '#166534', margin: 0 }}>Add stickers (the draggable items in the tray), then click on the scene canvas to place shadow targets. Each target must match a sticker by its <strong>Type ID</strong>.</p>
+                              </div>
+
+                              {/* Scene Image URL */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Scene / Background Image URL</label>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                  <input
+                                    type="text"
+                                    className={styles.formInput}
+                                    value={shadowSceneImageUrl}
+                                    onChange={e => { setShadowSceneImageUrl(e.target.value); setIsDirty(true); }}
+                                    placeholder="/images/prek_landscape.webp or https://..."
+                                    style={{ flex: 1 }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className={styles.btnOutline}
+                                    onClick={() => {
+                                      setImgPickerPartIdx(-99); // special sentinel
+                                      setImgPickerTab('gallery');
+                                      setImgPickerOpen(true);
+                                    }}
+                                    style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                                  >
+                                    🖼 Browse
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Sticker List */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Stickers (draggable items in the tray)</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                                  {shadowStickers.map((sticker, idx) => (
+                                    <div key={sticker.id} style={{
+                                      border: '1.5px solid #e2e8f0',
+                                      borderRadius: 8,
+                                      padding: '12px 14px',
+                                      background: '#f8fafc',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: 10
+                                    }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>Sticker #{idx + 1}</span>
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                          onClick={() => {
+                                            const updated = shadowStickers.filter(s => s.id !== sticker.id);
+                                            setShadowStickers(updated.map((s, i) => ({ ...s, id: i })));
+                                            // Remove matching target
+                                            setShadowTargets(prev => prev.filter(t => t.type !== sticker.type));
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ padding: '3px 10px', fontSize: 11 }}
+                                        >
+                                          × Remove
+                                        </button>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Name (display label)</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={sticker.name}
+                                            onChange={e => {
+                                              const updated = shadowStickers.map(s => s.id === sticker.id ? { ...s, name: e.target.value } : s);
+                                              setShadowStickers(updated);
+                                              setIsDirty(true);
+                                            }}
+                                            placeholder="e.g. Penguin"
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Type ID (must match target)</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={sticker.type}
+                                            onChange={e => {
+                                              const oldType = sticker.type;
+                                              const newType = e.target.value;
+                                              setShadowStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, type: newType } : s));
+                                              setShadowTargets(prev => prev.map(t => t.type === oldType ? { ...t, type: newType } : t));
+                                              setIsDirty(true);
+                                            }}
+                                            placeholder="e.g. penguin"
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.filterLabel} style={{ fontSize: 11 }}>Image URL</label>
+                                        <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                                          {sticker.imageUrl && (
+                                            <img src={sticker.imageUrl} alt={sticker.name} style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }} />
+                                          )}
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={sticker.imageUrl || ''}
+                                            onChange={e => {
+                                              const updated = shadowStickers.map(s => s.id === sticker.id ? { ...s, imageUrl: e.target.value } : s);
+                                              setShadowStickers(updated);
+                                              setIsDirty(true);
+                                            }}
+                                            placeholder="/images/penguin.svg"
+                                            style={{ flex: 1, fontSize: 12, margin: 0 }}
+                                          />
+                                          <button
+                                            type="button"
+                                            className={styles.btnOutline}
+                                            onClick={() => {
+                                              setImgPickerHotspotId(`shadow_sticker_${sticker.id}`);
+                                              setImgPickerTab('gallery');
+                                              setImgPickerOpen(true);
+                                            }}
+                                            style={{ padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap' }}
+                                          >
+                                            🔍
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Width %</label>
+                                          <input
+                                            type="number"
+                                            className={styles.formInput}
+                                            value={sticker.widthPercent}
+                                            min={5} max={40}
+                                            onChange={e => {
+                                              const updated = shadowStickers.map(s => s.id === sticker.id ? { ...s, widthPercent: parseFloat(e.target.value) || 14 } : s);
+                                              setShadowStickers(updated);
+                                              // Also update matching target size
+                                              setShadowTargets(prev => prev.map(t => t.type === sticker.type ? { ...t, widthPercent: parseFloat(e.target.value) || 14 } : t));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Height %</label>
+                                          <input
+                                            type="number"
+                                            className={styles.formInput}
+                                            value={sticker.heightPercent}
+                                            min={5} max={40}
+                                            onChange={e => {
+                                              const updated = shadowStickers.map(s => s.id === sticker.id ? { ...s, heightPercent: parseFloat(e.target.value) || 14 } : s);
+                                              setShadowStickers(updated);
+                                              setShadowTargets(prev => prev.map(t => t.type === sticker.type ? { ...t, heightPercent: parseFloat(e.target.value) || 14 } : t));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => {
+                                    const newId = shadowStickers.length;
+                                    const newType = `sticker_${newId}`;
+                                    setShadowStickers(prev => [...prev, {
+                                      id: newId,
+                                      type: newType,
+                                      name: `Sticker ${newId + 1}`,
+                                      imageUrl: '',
+                                      widthPercent: 14,
+                                      heightPercent: 14,
+                                    }]);
+                                    setIsDirty(true);
+                                  }}
+                                  style={{ marginTop: 10, padding: '6px 14px', alignSelf: 'flex-start' }}
+                                >
+                                  + Add Sticker
+                                </button>
+                              </div>
+
+                              {/* Shadow Target Canvas */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Shadow Target Canvas</label>
+                                <span style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 8 }}>
+                                  Click on the scene to place a shadow target. Select a sticker type from the dropdown first. Drag targets to reposition.
+                                </span>
+
+                                {/* Sticker selector for next click */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                                  <label className={styles.filterLabel} style={{ marginBottom: 0 }}>Place target for sticker:</label>
+                                  <select
+                                    className={styles.formSelect}
+                                    id="shadowTargetStickerSelect"
+                                    style={{ minWidth: 180, fontSize: 12 }}
+                                    defaultValue=""
+                                  >
+                                    <option value="">— Select a sticker type —</option>
+                                    {shadowStickers.map(s => (
+                                      <option key={s.id} value={s.type}>{s.name} ({s.type})</option>
+                                    ))}
+                                  </select>
+                                  <span style={{ fontSize: 11, color: '#94a3b8' }}>then click on the canvas below</span>
+                                </div>
+
+                                {/* Canvas */}
+                                <div
+                                  ref={canvasRef}
+                                  style={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    maxWidth: '800px',
+                                    aspectRatio: shadowSceneImageUrl ? 'auto' : '16/9',
+                                    minHeight: shadowSceneImageUrl ? 'auto' : '300px',
+                                    backgroundColor: '#f0fdf4',
+                                    backgroundImage: !shadowSceneImageUrl ? 'radial-gradient(#bbf7d0 1.5px, transparent 1.5px)' : 'none',
+                                    backgroundSize: '16px 16px',
+                                    border: '2px dashed #4ade80',
+                                    borderRadius: 8,
+                                    overflow: 'hidden',
+                                    cursor: 'crosshair',
+                                    userSelect: 'none',
+                                    margin: '0 auto'
+                                  }}
+                                  onClick={e => {
+                                    // Don't trigger if clicked on an existing target
+                                    if (e.target.closest('[data-shadow-target]')) return;
+                                    const rect = canvasRef.current?.getBoundingClientRect();
+                                    if (!rect) return;
+                                    const xPct = parseFloat(((e.clientX - rect.left) / rect.width * 100).toFixed(2));
+                                    const yPct = parseFloat(((e.clientY - rect.top) / rect.height * 100).toFixed(2));
+                                    const select = document.getElementById('shadowTargetStickerSelect');
+                                    const selectedType = select?.value;
+                                    if (!selectedType) { window.alert('Please select a sticker type first.'); return; }
+                                    // Check if target for this type already exists
+                                    if (shadowTargets.find(t => t.type === selectedType)) {
+                                      window.alert(`A target for "${selectedType}" already exists. Delete it first or move it.`);
+                                      return;
+                                    }
+                                    const matchingSticker = shadowStickers.find(s => s.type === selectedType);
+                                    const newTarget = {
+                                      id: `st_${Date.now()}`,
+                                      type: selectedType,
+                                      x: Math.max(0, Math.min(85, xPct - 7)),
+                                      y: Math.max(0, Math.min(85, yPct - 7)),
+                                      widthPercent: matchingSticker?.widthPercent || 14,
+                                      heightPercent: matchingSticker?.heightPercent || 14,
+                                    };
+                                    setShadowTargets(prev => [...prev, newTarget]);
+                                    setSelectedShadowTargetId(newTarget.id);
+                                    setIsDirty(true);
+                                  }}
+                                >
+                                  {shadowSceneImageUrl ? (
+                                    <img
+                                      src={shadowSceneImageUrl}
+                                      alt="Scene"
+                                      style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none', userSelect: 'none' }}
+                                    />
+                                  ) : (
+                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4ade80', fontSize: 14, fontWeight: 500 }}>
+                                      Enter a scene image URL above to start placing targets
+                                    </div>
+                                  )}
+
+                                  {/* Render shadow targets on canvas */}
+                                  {shadowTargets.map(target => {
+                                    const matchingSt = shadowStickers.find(s => s.type === target.type);
+                                    const isSelected = selectedShadowTargetId === target.id;
+                                    return (
+                                      <div
+                                        key={target.id}
+                                        data-shadow-target="true"
+                                        title={`${target.type} — click to select`}
+                                        onPointerDown={e => {
+                                          e.stopPropagation();
+                                          setSelectedShadowTargetId(target.id);
+                                          const rect = canvasRef.current?.getBoundingClientRect();
+                                          if (!rect) return;
+                                          const offsetX = e.clientX - rect.left - (target.x / 100 * rect.width);
+                                          const offsetY = e.clientY - rect.top - (target.y / 100 * rect.height);
+                                          setShadowTargetDragging({ id: target.id, offsetX, offsetY });
+                                          e.currentTarget.setPointerCapture(e.pointerId);
+                                        }}
+                                        onPointerMove={e => {
+                                          if (!shadowTargetDragging || shadowTargetDragging.id !== target.id) return;
+                                          const rect = canvasRef.current?.getBoundingClientRect();
+                                          if (!rect) return;
+                                          const newX = parseFloat((((e.clientX - rect.left - shadowTargetDragging.offsetX) / rect.width) * 100).toFixed(2));
+                                          const newY = parseFloat((((e.clientY - rect.top - shadowTargetDragging.offsetY) / rect.height) * 100).toFixed(2));
+                                          setShadowTargets(prev => prev.map(t => t.id === target.id ? { ...t, x: Math.max(0, Math.min(95, newX)), y: Math.max(0, Math.min(95, newY)) } : t));
+                                        }}
+                                        onPointerUp={() => { setShadowTargetDragging(null); setIsDirty(true); }}
+                                        onPointerCancel={() => setShadowTargetDragging(null)}
+                                        style={{
+                                          position: 'absolute',
+                                          left: `${target.x}%`,
+                                          top: `${target.y}%`,
+                                          width: `${target.widthPercent}%`,
+                                          height: `${target.heightPercent}%`,
+                                          border: isSelected ? '2.5px solid #16a34a' : '2px dashed #4ade80',
+                                          borderRadius: 6,
+                                          background: isSelected ? 'rgba(22, 163, 74, 0.15)' : 'rgba(74, 222, 128, 0.1)',
+                                          cursor: 'move',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          overflow: 'hidden',
+                                          touchAction: 'none',
+                                          zIndex: isSelected ? 10 : 5,
+                                        }}
+                                      >
+                                        {matchingSt?.imageUrl && (
+                                          <img
+                                            src={matchingSt.imageUrl}
+                                            alt={matchingSt.name}
+                                            style={{ width: '80%', height: '80%', objectFit: 'contain', filter: 'brightness(0) opacity(0.3)', pointerEvents: 'none' }}
+                                          />
+                                        )}
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: '#15803d', textAlign: 'center', padding: '0 2px', lineHeight: 1.2, pointerEvents: 'none' }}>
+                                          {target.type}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Selected Target Inspector */}
+                                {selectedShadowTargetId && (() => {
+                                  const activeSt = shadowTargets.find(t => t.id === selectedShadowTargetId);
+                                  if (!activeSt) return null;
+                                  return (
+                                    <div style={{ border: '1.5px solid #bbf7d0', borderRadius: 8, padding: 14, backgroundColor: '#f0fdf4', marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, fontSize: 13, color: '#15803d' }}>Target: {activeSt.type}</span>
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                          onClick={() => {
+                                            setShadowTargets(prev => prev.filter(t => t.id !== activeSt.id));
+                                            setSelectedShadowTargetId(null);
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ padding: '3px 10px', fontSize: 11 }}
+                                        >
+                                          × Delete
+                                        </button>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                                        {[['x', 'X (%)'], ['y', 'Y (%)'], ['widthPercent', 'Width (%)'], ['heightPercent', 'Height (%)']].map(([field, label]) => (
+                                          <div key={field} className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 10 }}>{label}</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeSt[field]}
+                                              min={0} max={100}
+                                              onChange={e => {
+                                                setShadowTargets(prev => prev.map(t => t.id === activeSt.id ? { ...t, [field]: parseFloat(e.target.value) || 0 } : t));
+                                                setIsDirty(true);
+                                              }}
+                                              style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Targets Summary */}
+                                {shadowTargets.length > 0 && (
+                                  <div style={{ marginTop: 12 }}>
+                                    <label className={styles.filterLabel}>Placed Targets ({shadowTargets.length}/{shadowStickers.length})</label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                                      {shadowStickers.map(s => {
+                                        const hasTarget = shadowTargets.find(t => t.type === s.type);
+                                        return (
+                                          <span key={s.id} style={{
+                                            padding: '3px 10px',
+                                            borderRadius: 20,
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            background: hasTarget ? '#dcfce7' : '#fee2e2',
+                                            color: hasTarget ? '#15803d' : '#b91c1c',
+                                            border: `1px solid ${hasTarget ? '#86efac' : '#fca5a5'}`
+                                          }}>
+                                            {hasTarget ? '✓' : '○'} {s.name}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
 
@@ -9336,7 +10805,7 @@ export default function AdminConsolePage() {
                             }
                           })()}
 
-                          {type !== 'mcq' && type !== 'mcq_hotspot' && type !== 'categorizationv2' && type !== 'categorization' && type !== 'fillInTheBlank' && (
+                          {type !== 'mcq' && type !== 'dynamic_pool' && type !== 'mcq_hotspot' && type !== 'categorizationv2' && type !== 'categorization' && type !== 'fillInTheBlank' && (
                             <div className={styles.formGroup}>
                               <label className={styles.filterLabel}>Correct Answer Phrase</label>
                               <input 
@@ -13752,6 +15221,177 @@ Explanation: A question must end with a question mark.`}</pre>
       </main>
     </div>
 
+    {createPoolModalOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Create centralized option pool"
+        onClick={event => { if (event.target === event.currentTarget) setCreatePoolModalOpen(false); }}
+        style={{ position: 'fixed', inset: 0, zIndex: 8900, background: 'rgba(15,23,42,.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      >
+        <div style={{ width: 'min(560px, 94vw)', background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 24px 80px rgba(0,0,0,.35)' }}>
+          <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>Create Centralized Option Pool</h3>
+          <p style={{ margin: '0 0 16px', fontSize: 12, lineHeight: 1.5, color: '#64748b' }}>
+            Create reusable option categories. After creation, add labels, images, audio, and review metadata in the Option Pool Library.
+          </p>
+
+          <label style={{ display: 'block', marginBottom: 5, fontSize: 12, fontWeight: 700, color: '#334155' }}>Pool ID</label>
+          <input
+            className={styles.formInput}
+            value={newPoolId}
+            onChange={event => setNewPoolId(event.target.value)}
+            placeholder="science-states-of-matter-v1"
+            style={{ width: '100%', margin: 0 }}
+          />
+          <div style={{ marginTop: 5, fontSize: 11, color: '#64748b' }}>Use a stable, unique ID. Existing pools cannot be overwritten here.</div>
+
+          <label style={{ display: 'block', margin: '16px 0 5px', fontSize: 12, fontWeight: 700, color: '#334155' }}>Categories</label>
+          <textarea
+            className={styles.formInput}
+            value={newPoolCategories}
+            onChange={event => setNewPoolCategories(event.target.value)}
+            placeholder="solids, liquids, gases"
+            rows={4}
+            style={{ width: '100%', margin: 0, resize: 'vertical' }}
+          />
+          <div style={{ marginTop: 5, fontSize: 11, color: '#64748b' }}>Separate categories with commas or new lines. The first category becomes the initial correct-answer pool.</div>
+
+          {createPoolStatus && (
+            <p style={{ margin: '14px 0 0', padding: '8px 10px', borderRadius: 7, background: '#fff7ed', color: '#9a3412', fontSize: 12 }}>
+              {createPoolStatus}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+            <button type="button" className={styles.btnOutline} onClick={() => setCreatePoolModalOpen(false)} disabled={createPoolSaving}>Cancel</button>
+            <button type="button" className={styles.btnSolid} onClick={createCentralizedPool} disabled={createPoolSaving}>
+              {createPoolSaving ? 'Creating…' : 'Create Pool'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {poolManagerModalOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Manage option pool"
+        onClick={event => { if (event.target === event.currentTarget) setPoolManagerModalOpen(false); }}
+        style={{ position: 'fixed', inset: 0, zIndex: 8800, background: 'rgba(15,23,42,.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      >
+        <div style={{ width: 'min(1180px, 96vw)', height: 'min(88vh, 850px)', background: '#fff', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,.35)' }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: 0, fontSize: 17 }}>Option Pool Library</h3>
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>{poolId}</div>
+            </div>
+            <input
+              type="search"
+              value={poolManagerSearch}
+              onChange={event => setPoolManagerSearch(event.target.value)}
+              placeholder="Search label or ID"
+              style={{ width: 220, padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8 }}
+            />
+            <select className={styles.formSelect} value={poolWordCategory} onChange={event => setPoolWordCategory(event.target.value)} style={{ width: 170, margin: 0 }}>
+              {Object.keys(poolWordManagerData?.pools || {}).map(category => (
+                <option key={category} value={category}>{category} ({poolWordManagerData.pools[category]?.length || 0})</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={styles.btnOutline}
+              onClick={generateMissingAudiosForCategory}
+              disabled={!poolWordManagerData || poolWordManagerSaving}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              🎙️ Generate Missing Audios
+            </button>
+            <button type="button" className={styles.btnOutline} onClick={savePoolManagerChanges} disabled={!poolWordManagerData || poolWordManagerSaving}>
+              {poolWordManagerSaving ? 'Saving…' : 'Save Pool Changes'}
+            </button>
+            <button type="button" className={styles.btnOutline} onClick={() => setPoolManagerModalOpen(false)}>Close</button>
+          </div>
+
+          <div style={{ padding: 14, borderBottom: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '170px 1fr auto', gap: 8, alignItems: 'center', background: '#f8fafc' }}>
+            <select className={styles.formSelect} value={poolWordCategory} onChange={event => setPoolWordCategory(event.target.value)} style={{ margin: 0 }}>
+              {Object.keys(poolWordManagerData?.pools || {}).map(category => <option key={category} value={category}>Add to {category}</option>)}
+            </select>
+            <input className={styles.formInput} value={poolWordInput} onChange={event => setPoolWordInput(event.target.value)} placeholder="Add words separated by commas or new lines" />
+            <button type="button" className={styles.btnOutline} onClick={addWordsToCentralizedPool} disabled={!poolWordInput.trim() || poolWordManagerSaving}>Add Words</button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: '#f8fafc' }}>
+            {!poolWordManagerData ? (
+              <div style={{ textAlign: 'center', padding: 50, color: '#64748b' }}>{poolWordManagerStatus || 'Loading pool…'}</div>
+            ) : (
+              (() => {
+                const query = poolManagerSearch.trim().toLowerCase();
+                const matchingItems = (poolWordManagerData.pools?.[poolWordCategory] || [])
+                  .map((item, index) => ({ item, index }))
+                  .filter(({ item }) => (
+                    !query
+                    || String(item.label || '').toLowerCase().includes(query)
+                    || String(item.id || '').toLowerCase().includes(query)
+                  ));
+
+                if (matchingItems.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: 50, color: '#64748b' }}>
+                      No pool items match “{poolManagerSearch}”.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(245px, 1fr))', gap: 12 }}>
+                    {matchingItems.map(({ item, index }) => {
+                      const audioId = `pool_${poolWordCategory}_${index}`;
+                      return (
+                        <div key={item.id || `${poolWordCategory}_${index}`} style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 10, padding: 10, display: 'grid', gridTemplateRows: '120px auto auto', gap: 8 }}>
+                      <div style={{ background: '#f1f5f9', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.label || ''} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: 12 }}>No image</span>
+                        )}
+                        <button type="button" onClick={() => openImgPickerForPoolItem(poolWordCategory, index)} style={{ position: 'absolute', right: 6, bottom: 6, border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', padding: '4px 7px', cursor: 'pointer', fontSize: 11 }}>
+                          Gallery
+                        </button>
+                      </div>
+                      <div>
+                        <input
+                          className={styles.formInput}
+                          value={item.label || ''}
+                          onChange={event => updatePoolManagerItem(poolWordCategory, index, { label: event.target.value })}
+                          placeholder="Label"
+                          style={{ width: '100%' }}
+                        />
+                        <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.id}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(audioId, item.audioUrl)} disabled={!item.audioUrl} style={{ flex: 1, padding: '5px 7px' }}>
+                          {item.audioUrl ? (playingAudioId === audioId ? 'Stop Audio' : 'Play Audio') : 'No Audio'}
+                        </button>
+                        <button type="button" className={styles.btnOutline} onClick={() => generatePoolItemAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `${poolWordCategory}:${index}`} style={{ flex: 1, padding: '5px 7px' }}>
+                          {poolManagerGeneratingId === `${poolWordCategory}:${index}` ? 'Generating…' : item.audioUrl ? 'Make New Audio' : 'Create Audio'}
+                        </button>
+                      </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()
+            )}
+          </div>
+          <div style={{ padding: '10px 16px', borderTop: '1px solid #e2e8f0', fontSize: 11, color: poolWordManagerStatus === 'Pool changes saved.' ? '#047857' : '#64748b' }}>
+            {poolWordManagerStatus || 'Review labels, images, and audio. Save changes when finished.'}
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* ═══════════════════════════════════════════════════════════
         IMAGE PICKER MODAL
         Opens when user clicks Upload or Gallery on an image part
@@ -13766,7 +15406,7 @@ Explanation: A question must end with a question mark.`}</pre>
           background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-        onClick={e => { if (e.target === e.currentTarget) setImgPickerOpen(false); }}
+        onClick={e => { if (e.target === e.currentTarget) closeImgPicker(); }}
       >
         <div style={{
           background: '#fff', borderRadius: 16, width: 'min(92vw, 860px)',
@@ -13798,7 +15438,7 @@ Explanation: A question must end with a question mark.`}</pre>
                 >{label}</button>
               ))}
             </div>
-            <button type="button" onClick={() => setImgPickerOpen(false)}
+            <button type="button" onClick={closeImgPicker}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#94a3b8', lineHeight: 1, padding: 4 }}
               aria-label="Close"
             >✕</button>
@@ -14147,7 +15787,7 @@ Explanation: A question must end with a question mark.`}</pre>
                   ? 'Selected image will be downloaded, saved to R2, and inserted'
                   : 'Image will be uploaded to R2 and auto-inserted'}
             </span>
-            <button type="button" onClick={() => setImgPickerOpen(false)}
+            <button type="button" onClick={closeImgPicker}
               style={{
                 padding: '8px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0',
                 background: '#fff', color: '#475569', fontWeight: 700, fontSize: 13, cursor: 'pointer',
@@ -14961,4 +16601,3 @@ function GalleryImageCropper({ img, styles, onCancel, onSave }) {
     </div>
   );
 }
-

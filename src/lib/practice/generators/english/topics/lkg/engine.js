@@ -4,6 +4,7 @@ import letterAudios from './letterAudios.json' with { type: 'json' };
 import vocabulary from './vocabulary.json' with { type: 'json' };
 import phonicsImages from './phonicsImages.json' with { type: 'json' };
 import { generate as generatePhonicsAssoc } from '../../../../templates/english/phonics/generator.js';
+import { generatePartsOfSpeechQuestion } from './partsOfSpeech.engine.js';
 
 const { wordPool: WORD_POOL, endingFamilies: ENDING_FAMILIES, sentencesPool: SENTENCES_POOL, wordImages: WORD_IMAGES, spottingWordPool: SPOTTING_WORD_POOL } = vocabulary;
 
@@ -2787,6 +2788,8 @@ export function resolveLkgGenerator(skillId, config = {}) {
         question = generateLocPositionMultiQuestion(skillId, seed, r);
       } else if (template.engine === 'assoc_lower_word_begins') {
         question = generatePhonicsAssoc({ seed, difficulty: config.difficulty }, config);
+      } else if (template.engine === 'parts_of_speech') {
+        question = generatePartsOfSpeechQuestion(skillId, seed);
       }
 
       if (question) {

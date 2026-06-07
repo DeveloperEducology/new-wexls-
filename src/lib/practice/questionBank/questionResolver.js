@@ -1,4 +1,4 @@
-import { findStoredPracticeQuestion } from './questionRepository.js';
+import { findStoredPracticeQuestion, findVocabularyPool } from './questionRepository.js';
 import { generateFromDynamicPool } from '../engine/DynamicPoolGenerator.js';
 
 function buildTemplateFromQuestion(question, { skill }) {
@@ -38,6 +38,14 @@ export async function resolveStoredPracticePayload({
   if (question.type === 'dynamic_pool') {
     const resolvedSkill = Array.isArray(skill) ? skill[0] : skill;
     try {
+      // Hydrate centralized option pool if referenced
+      if (question.poolId) {
+        const poolDoc = await findVocabularyPool(question.poolId);
+        if (poolDoc) {
+          question.pools = poolDoc.pools;
+        }
+      }
+
       const generatedQuestion = generateFromDynamicPool(
         question,
         seed,

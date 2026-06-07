@@ -14,16 +14,48 @@ import { getDifficultyParameters } from './DifficultyEngine.js';
 export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade = 'lkg') {
   const prng = createSeededRandom(seed);
   const voice = poolDoc.voice || 'Puck';
+  const hasExplicitLabelDisplay = Object.prototype.hasOwnProperty.call(poolDoc, 'hideOptionLabel')
+    || Object.prototype.hasOwnProperty.call(poolDoc.metadata || {}, 'hideOptionLabel');
+  const configuredHideOptionLabel = Boolean(
+    Object.prototype.hasOwnProperty.call(poolDoc, 'hideOptionLabel')
+      ? poolDoc.hideOptionLabel
+      : poolDoc.metadata?.hideOptionLabel
+  );
+  const isAllowedForMode = (option, mode) => {
+    if (option?.active === false) return false;
+    if (!Array.isArray(option?.allowedModes) || option.allowedModes.length === 0) return true;
+    return option.allowedModes.includes(mode);
+  };
 
   // If the poolDoc has the new 'pools' property, use the new structure
   if (poolDoc.pools) {
-    let correctPool = poolDoc.pools.correctPool || [];
-    let distractorPool = poolDoc.pools.distractorPool || [];
+    let correctPool = [];
+    let distractorPool = [];
 
-    // Filter pools for image-only options (when hideOptionLabel is true and hideOptionImages is not true)
-    if (poolDoc.hideOptionLabel && !poolDoc.hideOptionImages) {
-      correctPool = correctPool.filter(o => o.imageUrl);
-      distractorPool = distractorPool.filter(o => o.imageUrl);
+    // Dynamically map from centralized category pools if specified, otherwise fallback
+    if (poolDoc.targetCategory) {
+      const targetCat = poolDoc.targetCategory;
+      correctPool = poolDoc.pools[targetCat] || [];
+
+      const distCats = poolDoc.distractorCategories || [];
+      distCats.forEach(cat => {
+        const items = poolDoc.pools[cat] || [];
+        distractorPool = [...distractorPool, ...items];
+      });
+    } else {
+      correctPool = poolDoc.pools.correctPool || [];
+      distractorPool = poolDoc.pools.distractorPool || [];
+    }
+
+    const activeMode = poolDoc.mode || 'identify_text';
+    correctPool = correctPool.filter(option => isAllowedForMode(option, activeMode));
+    distractorPool = distractorPool.filter(option => isAllowedForMode(option, activeMode));
+
+    // Filter pools for image-only options (when mode is identify_visual or when hideOptionLabel is true and hideOptionImages is not true)
+    const needsImages = poolDoc.mode === 'identify_visual' || (poolDoc.hideOptionLabel && !poolDoc.hideOptionImages);
+    if (needsImages) {
+      correctPool = correctPool.filter(o => o.imageUrl && o.assetStatus?.image !== 'needs_review');
+      distractorPool = distractorPool.filter(o => o.imageUrl && o.assetStatus?.image !== 'needs_review');
     }
 
     if (correctPool.length === 0) {
@@ -140,7 +172,9 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
 
     const soundText = targetOption.soundText || targetWord;
-    const soundUrl = targetOption.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`;
+    const soundUrl = targetOption.audioUrl && targetOption.assetStatus?.audio !== 'needs_review'
+      ? targetOption.audioUrl
+      : `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`;
 
     // Interpolate parts
     const parts = (poolDoc.parts || [
@@ -165,15 +199,24 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       return newPart;
     });
 
-    const hideLabels = (rules.showLabels === false);
+    // An author-selected Option Display mode takes precedence over adaptive
+    // difficulty rules. Older pool documents without this field keep the
+    // existing difficulty-driven label behavior.
+    const hideLabels = hasExplicitLabelDisplay
+      ? configuredHideOptionLabel
+      : rules.showLabels === false;
 
     const options = activeOptions.map((opt, idx) => ({
       id: opt.id || `opt_${idx}`,
       label: hideLabels ? '' : opt.label,
-      audioUrl: opt.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(opt.label)}`,
-      imageUrl: poolDoc.hideOptionImages ? null : (opt.imageUrl || null),
+      audioUrl: opt.audioUrl && opt.assetStatus?.audio !== 'needs_review'
+        ? opt.audioUrl
+        : `/api/tts?voice=${voice}&text=${encodeURIComponent(opt.label)}`,
+      imageUrl: poolDoc.hideOptionImages || opt.assetStatus?.image === 'needs_review'
+        ? null
+        : (opt.imageUrl || null),
       isCorrect: opt.id === targetOption.id,
-      hideLabel: hideLabels || opt.hideLabel || poolDoc.hideOptionLabel || false,
+      hideLabel: hasExplicitLabelDisplay ? hideLabels : (hideLabels || opt.hideLabel || false),
       misconceptionType: opt.misconceptionType || null
     }));
 

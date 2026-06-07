@@ -66,13 +66,25 @@ Return:
 ]
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: generationPrompt,
-      config: {
-        responseMimeType: 'application/json',
-      }
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: generationPrompt,
+        config: {
+          responseMimeType: 'application/json',
+        }
+      });
+    } catch (primaryError) {
+      console.warn('[questions-generate] gemini-2.5-flash failed, falling back to gemini-2.0-flash. Error:', primaryError);
+      response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: generationPrompt,
+        config: {
+          responseMimeType: 'application/json',
+        }
+      });
+    }
 
     const text = response.text || '';
     const rawQuestions = JSON.parse(text.trim());

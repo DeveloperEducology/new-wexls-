@@ -82,6 +82,12 @@ export const lkgEnglishTemplateRegistry = {
     engine: 'assoc_lower_word_begins',
     family: 'lkg.english',
     questionType: 'mcq'
+  },
+  'lkg.english.parts_of_speech': {
+    title: 'Parts of Speech',
+    engine: 'parts_of_speech',
+    family: 'lkg.english',
+    questionType: 'mcq'
   }
 };
 
@@ -549,6 +555,94 @@ export const lkgEnglishMicroSkillRegistry = {
     grade: 'LKG',
     chapterId: 'english-lkg-location-words',
     chapterTitle: 'Location words'
+  },
+  'ukg-english-find-action-verb-text': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.1',
+    title: 'Find the action verb',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-find-action-verb-images': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.2',
+    title: 'Choose the picture that shows an action',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-find-verb-in-sentence': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.3',
+    title: 'Find the verb in a sentence',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-complete-sentence-action-verb': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.4',
+    title: 'Complete the sentence with an action verb',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-match-verb-to-picture': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.5',
+    title: 'Match an action verb to a picture',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-choose-verb-for-noun': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.6',
+    title: 'Choose an action for a person or animal',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-find-not-a-verb': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.7',
+    title: 'Which word is not a verb?',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-find-two-action-verbs': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.8',
+    title: 'Choose two action verbs',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-verbs-and-nouns-review': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.9',
+    title: 'Verbs and nouns review',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-verbs-mixed-review': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.10',
+    title: 'Verb skills mixed review',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbs',
+    chapterTitle: 'Verbs'
+  },
+  'ukg-english-find-action-verb-images-v2': {
+    templateId: 'lkg.english.parts_of_speech',
+    code: 'HH.2.v2',
+    title: 'Choose the picture that shows an action (V2)',
+    grade: 'UKG',
+    chapterId: 'english-ukg-verbsv2',
+    chapterTitle: 'Verbs V2'
   }
 };
 

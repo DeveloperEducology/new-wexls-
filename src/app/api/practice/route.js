@@ -189,7 +189,39 @@ export async function GET(request) {
   }
 
   // Centralized template and topic resolution
-  const resolvedTemplateId = skillNode?.templateId || skillNode?.metadata?.templateId || skill;
+  // ─── Difficulty-scaled multi-template pool ────────────────────────────────
+  // If the skill node has metadata.templateLevels, pick templateId by:
+  //   1. Map correctStreak / difficulty param → level number (1-3)
+  //   2. Within that level's pool, pick by: seedHash % pool.length
+  // Falls back to single templateId for backward-compatibility.
+  let resolvedTemplateId = skillNode?.templateId || skillNode?.metadata?.templateId || skill;
+
+  const templateLevels = skillNode?.metadata?.templateLevels;
+  if (Array.isArray(templateLevels) && templateLevels.length > 0) {
+    // Determine target level
+    const correctStreak = Number(searchParams.get('correctStreak') || 0);
+    let targetLevel = 1;
+    if (difficulty === 'hard' || correctStreak >= 6) targetLevel = 3;
+    else if (difficulty === 'medium' || correctStreak >= 3) targetLevel = 2;
+    else targetLevel = 1;
+
+    // Find pool for target level (fall back to highest available)
+    let levelEntry = templateLevels.find(l => l.level === targetLevel);
+    if (!levelEntry) levelEntry = templateLevels[templateLevels.length - 1];
+
+    const pool = Array.isArray(levelEntry?.templateIds) ? levelEntry.templateIds.filter(Boolean) : [];
+    if (pool.length > 0) {
+      // Deterministic pick from pool using seed hash
+      const seedStr = String(seed || Date.now());
+      let seedHash = 0;
+      for (let i = 0; i < seedStr.length; i++) {
+        seedHash = (seedHash * 31 + seedStr.charCodeAt(i)) >>> 0;
+      }
+      resolvedTemplateId = pool[seedHash % pool.length];
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const resolvedTopic = skillNode?.topicId || topic;
   const targetTopic = skillNode?.engine || resolvedTopic;
   let resolvedSkillId = skillNode?.skillId || skill;
@@ -267,6 +299,71 @@ export async function GET(request) {
     console.error('Practice DB Pre-fetch error:', error);
   }
 
+  if (skillNode?.metadata?.generatorFallback === false) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `No stored questions found for manual-only skill: ${resolvedSkillId}`,
+        needsQuestion: true,
+        subject,
+        topic: resolvedTopic,
+        skill: resolvedSkillId,
+      },
+      { status: 404 },
+    );
+  }
+  
+  // Handle universal-template dynamic template engine
+  if (skillNode?.engine === 'universal-template') {
+    try {
+      const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
+      const { evaluateTemplate } = await import('../../../lib/practice/generators/universalEvaluator.js');
+      
+      const templateDoc = await findDynamicTemplateById(resolvedTemplateId);
+      if (!templateDoc) {
+        return NextResponse.json(
+          { success: false, error: `Dynamic template not found: ${resolvedTemplateId}` },
+          { status: 404 }
+        );
+      }
+      
+      const rawQuestion = evaluateTemplate(templateDoc, seed);
+      
+      // Normalize metadata to match expectations
+      const question = {
+        ...rawQuestion,
+        id: `universal-template-${resolvedSkillId}-${seed}`,
+        metadata: {
+          subject,
+          topic: resolvedTopic,
+          skillId: resolvedSkillId,
+          templateId: resolvedTemplateId,
+          engine: 'universal-template',
+          grade: skillNode?.grade || skillNode?.metadata?.grade || 'UKG',
+          seed
+        }
+      };
+
+      return respond(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: resolvedSkillId,
+          logic_type: resolvedSkillId,
+          templateId: resolvedTemplateId,
+          engine: 'universal-template'
+        }
+      }, { subject, topic: resolvedTopic, skill: resolvedSkillId }));
+    } catch (err) {
+      console.error('Error generating question via universal-template:', err);
+      return NextResponse.json(
+        { success: false, error: `Universal template engine error: ${err.message}` },
+        { status: 500 }
+      );
+    }
+  }
+
   let isDbTopicActive = false;
   try {
     let topicNode = await getCurriculumNode(targetTopic);
@@ -278,11 +375,11 @@ export async function GET(request) {
     console.error('Practice DB node check error:', error);
   }
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'division', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement', 'standard-object-measurement', 'story-math', 'interactive-tools', 'cube-tools'].includes(targetTopic);
+  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'division', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement', 'standard-object-measurement', 'story-math', 'interactive-tools', 'cube-tools', 'ukg-numbers-counting'].includes(targetTopic);
 
   const isSocialTopic = subject === 'social' && targetTopic === 'gk';
 
-  const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system'].includes(targetTopic);
+  const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system', 'ukg-science'].includes(targetTopic);
   const isEnglishTopic = subject === 'english' && (
     ['grammar', 'lkg', 'english-lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 'phonics_vowels', 'phonics_images'].includes(targetTopic) ||
     resolvedTopic === 'lkg' ||
@@ -321,11 +418,20 @@ export async function GET(request) {
 
   try {
     if (topicContract) {
-      const rawQuestion = topicContract.generateQuestion(config);
+      const generatorSkillId = resolvedSkillId || resolvedTemplateId;
+      const topicConfig = {
+        ...config,
+        logic_type: generatorSkillId,
+        forcedTask: generatorSkillId,
+        skillId: generatorSkillId,
+        templateId: resolvedTemplateId,
+      };
+
+      const rawQuestion = topicContract.generateQuestion(topicConfig);
       const question = topicContract.normalizeQuestion(rawQuestion, {
         subject,
         topic: targetTopic,
-        skill: resolvedTemplateId,
+        skill: generatorSkillId,
         seed,
       });
 
@@ -333,8 +439,8 @@ export async function GET(request) {
         success: true,
         question,
         seed,
-        template: topicContract.getTemplate(resolvedTemplateId, question),
-      }, { subject, topic, skill }));
+        template: topicContract.getTemplate(generatorSkillId, question),
+      }, { subject, topic, skill: resolvedSkillId }));
     }
 
     if (subject === 'social' && targetTopic === 'gk') {

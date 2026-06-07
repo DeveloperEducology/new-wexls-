@@ -1,0 +1,222 @@
+export const shapesUkgSkills = [
+  {
+    id: 'ukg-shapes-name',
+    code: 'Q.1',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_name',
+    title: 'Name the two-dimensional shape',
+    description: 'Name 2D shapes: circles, triangles, squares, rectangles, hexagons.',
+    templateId: 'shapes.ukg.name',
+    config: { forcedTask: 'ukg_shapes_name' }
+  },
+  {
+    id: 'ukg-shapes-circles',
+    code: 'Q.2',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_circles',
+    title: 'Circles',
+    description: 'Identify circles and answer questions about circles.',
+    templateId: 'shapes.ukg.circles',
+    config: { forcedTask: 'ukg_circles' }
+  },
+  {
+    id: 'ukg-shapes-triangles',
+    code: 'Q.3',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_triangles',
+    title: 'Triangles',
+    description: 'Identify triangles and answer questions about triangles.',
+    templateId: 'shapes.ukg.triangles',
+    config: { forcedTask: 'ukg_triangles' }
+  },
+  {
+    id: 'ukg-shapes-squares-rectangles',
+    code: 'Q.4',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_squares_rectangles',
+    title: 'Squares and rectangles',
+    description: 'Identify and differentiate squares and rectangles.',
+    templateId: 'shapes.ukg.squares_rectangles',
+    config: { forcedTask: 'ukg_squares_rectangles' }
+  },
+  {
+    id: 'ukg-shapes-hexagons',
+    code: 'Q.5',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_hexagons',
+    title: 'Hexagons',
+    description: 'Identify hexagons and answer questions about hexagons.',
+    templateId: 'shapes.ukg.hexagons',
+    config: { forcedTask: 'ukg_hexagons' }
+  },
+  {
+    id: 'ukg-shapes-select-2d',
+    code: 'Q.6',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_select_2d',
+    title: 'Select two-dimensional shapes',
+    description: 'Differentiate two-dimensional (flat) shapes from three-dimensional (solid) shapes.',
+    templateId: 'shapes.ukg.select_2d',
+    config: { forcedTask: 'ukg_select_2d' }
+  },
+  {
+    id: 'ukg-shapes-count-sides-corners',
+    code: 'Q.7',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_count_sides_corners',
+    title: 'Count sides and corners',
+    description: 'Count sides and corners on triangles, squares, rectangles, hexagons, circles.',
+    templateId: 'shapes.ukg.count_sides_corners',
+    config: { forcedTask: 'ukg_count_sides_corners' }
+  },
+  {
+    id: 'ukg-shapes-compare-sides-corners',
+    code: 'Q.8',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_compare_sides_corners',
+    title: 'Compare sides and corners',
+    description: 'Compare shape properties: identify shapes with more/fewer sides/corners.',
+    templateId: 'shapes.ukg.compare_sides_corners',
+    config: { forcedTask: 'ukg_compare_sides_corners' }
+  },
+  {
+    id: 'ukg-shapes-intro-symmetry',
+    code: 'Q.9',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_intro_symmetry',
+    title: 'Introduction to symmetry',
+    description: 'Determine if a folding line split represents a line of symmetry.',
+    templateId: 'shapes.ukg.intro_symmetry',
+    config: { forcedTask: 'ukg_intro_symmetry' }
+  },
+  {
+    id: 'ukg-shapes-pictures-symmetry',
+    code: 'Q.10',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_pictures_symmetry',
+    title: 'Identify pictures with symmetry',
+    description: 'Identify symmetrical vs asymmetrical drawings.',
+    templateId: 'shapes.ukg.pictures_symmetry',
+    config: { forcedTask: 'ukg_pictures_symmetry' }
+  },
+  {
+    id: 'ukg-shapes-2d-3d',
+    code: 'R.1',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_2d_3d',
+    title: 'Two-dimensional and three-dimensional shapes',
+    description: 'Differentiate between 2D (flat) and 3D (solid) shapes.',
+    templateId: 'shapes.ukg.two_three_3d',
+    config: { forcedTask: 'ukg_two_three_3d' }
+  },
+  {
+    id: 'ukg-shapes-name-3d',
+    code: 'R.2',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_name_3d',
+    title: 'Name the three-dimensional shape',
+    description: 'Identify the names of 3D shapes: spheres, cubes, cones, and cylinders.',
+    templateId: 'shapes.ukg.name_3d',
+    config: { forcedTask: 'ukg_name_3d' }
+  },
+  {
+    id: 'ukg-shapes-spheres',
+    code: 'R.3',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_spheres',
+    title: 'Spheres',
+    description: 'Identify sphere shapes in different contexts.',
+    templateId: 'shapes.ukg.spheres',
+    config: { forcedTask: 'ukg_spheres' }
+  },
+  {
+    id: 'ukg-shapes-cubes',
+    code: 'R.4',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_cubes',
+    title: 'Cubes',
+    description: 'Identify cube shapes in different contexts.',
+    templateId: 'shapes.ukg.cubes',
+    config: { forcedTask: 'ukg_cubes' }
+  },
+  {
+    id: 'ukg-shapes-cones',
+    code: 'R.5',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_cones',
+    title: 'Cones',
+    description: 'Identify cone shapes in different contexts.',
+    templateId: 'shapes.ukg.cones',
+    config: { forcedTask: 'ukg_cones' }
+  },
+  {
+    id: 'ukg-shapes-cylinders',
+    code: 'R.6',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_cylinders',
+    title: 'Cylinders',
+    description: 'Identify cylinder shapes in different contexts.',
+    templateId: 'shapes.ukg.cylinders',
+    config: { forcedTask: 'ukg_cylinders' }
+  },
+  {
+    id: 'ukg-shapes-select-3d',
+    code: 'R.7',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_select_3d',
+    title: 'Select three-dimensional shapes',
+    description: 'Select solid 3D shapes from a group of shapes.',
+    templateId: 'shapes.ukg.select_3d',
+    config: { forcedTask: 'ukg_select_3d' }
+  },
+  {
+    id: 'ukg-shapes-traced-solids',
+    code: 'R.8',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_traced_solids',
+    title: 'Identify shapes traced from solids',
+    description: 'Identify which 2D flat shape you get by tracing faces of solid 3D shapes.',
+    templateId: 'shapes.ukg.traced_solids',
+    config: { forcedTask: 'ukg_traced_solids' }
+  },
+  {
+    id: 'ukg-shapes-everyday-objects-1',
+    code: 'R.9',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_everyday_objects_1',
+    title: 'Shapes of everyday objects I',
+    description: 'Identify the 3D shape of common everyday items (Part I).',
+    templateId: 'shapes.ukg.everyday_objects_1',
+    config: { forcedTask: 'ukg_everyday_objects_1' }
+  },
+  {
+    id: 'ukg-shapes-everyday-objects-2',
+    code: 'R.10',
+    grade: 'UKG',
+    topic: 'shapes',
+    competencyId: 'shapes_ukg_everyday_objects_2',
+    title: 'Shapes of everyday objects II',
+    description: 'Identify the 3D shape of common everyday items (Part II).',
+    templateId: 'shapes.ukg.everyday_objects_2',
+    config: { forcedTask: 'ukg_everyday_objects_2' }
+  }
+];

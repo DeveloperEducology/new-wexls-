@@ -285,8 +285,32 @@ export default function FillInTheBlankRenderer({
   const hasQuestionTextHeader = question.questionText && firstPartText === question.questionText.trim();
   const displayParts = hasQuestionTextHeader ? parts.slice(1) : parts;
 
+  const hasClickToFill = question.metaConfig?.hasClickToFill === true;
+  const hasInlineInput = displayParts.some(part => {
+    if (part.type === 'input') return true;
+    const text = part.content || part.text || '';
+    return text.includes('[blank');
+  });
+
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
+      {hasClickToFill && !hasInlineInput && (
+        <input
+          id="ans"
+          type="text"
+          value={typeof userAnswer === 'object' && userAnswer !== null ? (userAnswer.ans ?? userAnswer.answer ?? '') : (userAnswer ?? '')}
+          disabled={isAnswered}
+          onChange={(event) => {
+            const val = event.target.value;
+            if (typeof userAnswer === 'object' && userAnswer !== null) {
+              onAnswer(writeAnswer(userAnswer, 'ans', val));
+            } else {
+              onAnswer(val);
+            }
+          }}
+          style={{ display: 'none' }}
+        />
+      )}
       {question.questionText ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <button

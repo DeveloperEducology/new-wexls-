@@ -4,6 +4,7 @@ import { subtractionSkillsByGrade } from '../practice/generators/math/topics/sub
 import { placeValueSkillsByGrade } from '../practice/generators/math/topics/place-values/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../practice/generators/science/topics/units-measurement/skills/index.js';
 import { shapesSkillsByGrade } from '../practice/generators/math/topics/shapes/skills/index.js';
+import { moneySkillsByGrade } from '../practice/generators/math/topics/money/skills/index.js';
 
 const unitsMeasurementGrades = Object.entries(unitsMeasurementSkillsByGrade).map(([grade, skills]) => ({
   id: isNaN(Number(grade)) ? grade : Number(grade),
@@ -37,7 +38,13 @@ const placeValueGrades = Object.entries(placeValueSkillsByGrade).map(([grade, sk
 
 const shapesGrades = Object.entries(shapesSkillsByGrade).map(([grade, skills]) => ({
   id: isNaN(Number(grade)) ? grade : Number(grade),
-  title: `Grade ${grade}`,
+  title: grade === 'remediation' ? 'Remediation' : (grade === 'LKG' || grade === 'UKG' ? grade : `Grade ${grade}`),
+  skills: skills.map((skill) => skill.id),
+}));
+
+const moneyGrades = Object.entries(moneySkillsByGrade).map(([grade, skills]) => ({
+  id: isNaN(Number(grade)) ? grade : Number(grade),
+  title: grade === 'LKG' || grade === 'UKG' ? grade : `Grade ${grade}`,
   skills: skills.map((skill) => skill.id),
 }));
 
@@ -164,6 +171,11 @@ export const curriculumCatalog = {
           id: 'shapes',
           title: 'Shapes',
           grades: shapesGrades,
+        },
+        {
+          id: 'money',
+          title: 'Money',
+          grades: moneyGrades,
         }
       ],
     },

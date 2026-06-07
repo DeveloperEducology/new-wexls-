@@ -1,0 +1,583 @@
+.container {
+  min-height: 100vh;
+  background: #e0f2fe; /* Soft light blue background matching screenshot */
+  color: #1e293b;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* IXL Green Navigation Bar */
+.ixlNavBar {
+  background: #7ecb00; /* Distinct IXL Green */
+  height: 60px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.ixlBrand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ixlLogo {
+  height: 32px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #4b0082;
+  font-size: 20px;
+  letter-spacing: -0.05em;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ixlLogo span {
+  color: #ff8c00;
+}
+
+.searchIcon {
+  width: 28px;
+  height: 28px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.navLinks {
+  display: flex;
+  gap: 24px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.navLinks span {
+  cursor: pointer;
+  opacity: 0.95;
+  transition: opacity 0.2s;
+}
+
+.navLinks span:hover {
+  opacity: 1;
+}
+
+.authButtons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.signInBtn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.joinBtn {
+  background: #ffffff;
+  color: #0284c7;
+  border: 1px solid #0284c7;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Breadcrumb Sub-Header */
+.subHeader {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.shareBtn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Main Layout Grid */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 140px; /* Right-hand scoring widgets layout */
+  gap: 32px;
+  max-width: 1080px;
+  width: 100%;
+  margin: 32px auto;
+  padding: 0 20px;
+  align-items: start;
+}
+
+/* Practice Card Container */
+.practiceCard {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(15,23,42,0.06);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Learn with Example Helper Pill */
+.learnExample {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  background: #f0f9ff;
+  border: 1px dashed #0ea5e9;
+  color: #0369a1;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.learnExample:hover {
+  background: #e0f2fe;
+}
+
+/* Question prompt layout */
+.promptRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.speakerBtn {
+  background: #0ea5e9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);
+  transition: transform 0.1s;
+}
+
+.speakerBtn:active {
+  transform: scale(0.92);
+}
+
+/* Landscape Canvas Frame */
+.canvasFrame {
+  position: relative;
+  aspect-ratio: 800 / 400;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  touch-action: none;
+}
+
+.canvasBg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Interactive Placed Sticker on Canvas */
+.placedSticker {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: grab;
+  z-index: 10;
+  transition: transform 0.1s ease;
+}
+
+.placedSticker:hover {
+  transform: scale(1.05);
+}
+
+.placedStickerActive {
+  cursor: grabbing !important;
+  transform: scale(1.08) !important;
+  z-index: 11;
+}
+
+/* Sticker Dock Panel */
+.dockPanel {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px 12px 0 0;
+  padding: 16px 24px 8px 24px;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  min-height: 90px;
+}
+
+.dockSlotWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dockSlot {
+  width: 84px;
+  height: 84px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slotNumber {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  background: #f1f5f9;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+}
+
+.dockCount {
+  display: flex;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  margin-top: -21px; /* Flush layout overlap */
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.dockCount strong {
+  color: #7ecb00; /* Matching IXL green progress check style */
+  font-weight: 900;
+  font-size: 14px;
+}
+
+
+/* Active sticker in Dock */
+.sticker {
+  width: 76px;
+  height: 76px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: grab;
+  z-index: 5;
+  transition: transform 0.2s;
+  user-select: none;
+}
+
+.sticker:hover {
+  transform: scale(1.1) rotate(2deg);
+}
+
+.stickerDragging {
+  opacity: 0.4;
+}
+
+/* Silhouette placeholder in Dock when placed */
+.silhouettePlaceholder {
+  width: 76px;
+  height: 76px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.15;
+  filter: grayscale(1) brightness(0.4);
+  pointer-events: none;
+}
+
+/* Canvas Target Shadows */
+.shadowTarget {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.25;
+  filter: grayscale(1) brightness(0.4) contrast(0.5);
+  border: 2.5px dashed rgba(15, 23, 42, 0.35);
+  border-radius: 12px;
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+
+.shadowTargetActive {
+  opacity: 0.85;
+  filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.6)) contrast(1.1);
+  border: 2.5px solid #22c55e;
+  background-color: rgba(34, 197, 94, 0.12);
+}
+
+.shadowTargetLabel {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 800;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shadowTargetActive .shadowTargetLabel {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+
+/* Action button controls */
+.actionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.submitBtn {
+  background: #7ecb00; /* Green submit color matching screenshot */
+  color: #ffffff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #5fa300;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.submitBtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #5fa300;
+}
+
+.navControls {
+  display: flex;
+  gap: 12px;
+}
+
+.navBtn {
+  background: rgba(30, 41, 59, 0.05);
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  color: #475569;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.navBtn:hover {
+  background: rgba(30, 41, 59, 0.08);
+}
+
+/* Right Panel Scoreboard Widgets (IXL Mirror) */
+.widgetsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.widget {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.widgetHeader {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.questionsHeader {
+  background: #7ecb00; /* Green questions widget */
+}
+
+.timeHeader {
+  background: #0ea5e9; /* Blue time widget */
+}
+
+.scoreHeader {
+  background: #f97316; /* Orange score widget */
+}
+
+.widgetBody {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.widgetValue {
+  font-size: 28px;
+  font-weight: 900;
+  color: #334155;
+}
+
+.widgetSubtext {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.scratchpadWidget {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.scratchpadIcon {
+  font-size: 24px;
+  color: #0ea5e9;
+}
+
+.scratchpadText {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* Feedback Overlay alerts */
+.feedbackAlert {
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.successAlert {
+  background: #ecfdf5;
+  border: 1.5px solid #10b981;
+  color: #047857;
+}
+
+.errorAlert {
+  background: #fef2f2;
+  border: 1.5px solid #ef4444;
+  color: #b91c1c;
+}
+
+/* Mobile responsive configurations */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .widgetsPanel {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .widget {
+    flex: 1;
+  }
+}
+
+@media (max-width: 500px) {
+  .ixlNavBar {
+    padding: 0 16px;
+  }
+  .navLinks {
+    display: none; /* Hide nav links on mobile to fit screen */
+  }
+  .practiceCard {
+    padding: 16px;
+  }
+  .promptRow {
+    font-size: 16px;
+  }
+}

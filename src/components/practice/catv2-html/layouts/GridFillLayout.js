@@ -300,6 +300,41 @@ export default function GridFillLayout({
   const isCopiable = Boolean(question.isCopiable || question.behavior?.isCopiable || question.metadata?.isCopiable);
   const isSortable = Boolean(question.isSortable || question.grid?.isSortable || question.behavior?.isSortable || question.metadata?.isSortable);
   const dnd = useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered, isCopiable });
+  const fitToWindow = Boolean(question.grid?.fitToWindow || question.fitToWindow || question.pattern);
+  const clickToDrop = question.behavior?.clickToDrop !== false && question.clickToDrop !== false;
+  const clickToNextEmpty = clickToDrop && Boolean(
+    question.pattern ||
+    isCopiable ||
+    question.grid?.clickToNextEmpty ||
+    question.behavior?.clickToNextEmpty ||
+    question.metadata?.clickToNextEmpty
+  );
+  const cellMinHeight = Number(question.grid?.cellMinHeight) || (fitToWindow ? 84 : 116);
+  const itemById = useMemo(() => {
+    const map = new Map();
+    items.forEach((item) => map.set(item.id, item));
+    return map;
+  }, [items]);
+  const patternRows = useMemo(() => {
+    if (Array.isArray(question.pattern?.rows) && question.pattern.rows.length) {
+      return question.pattern.rows;
+    }
+    if (Array.isArray(question.pattern?.promptItems) && question.pattern.promptItems.length) {
+      return [question.pattern.promptItems];
+    }
+    return [];
+  }, [question.pattern]);
+  const hidePatternLabels = question.pattern?.hideLabels !== false;
+  const firstEmptyTargetId = targets.find((target) => !dnd.placements[target.id])?.id || null;
+
+  const handleSourceClick = useCallback((itemId) => {
+    if (isAnswered || !itemId) return;
+    if (clickToNextEmpty && firstEmptyTargetId) {
+      dnd.placeItem(itemId, firstEmptyTargetId);
+      return;
+    }
+    dnd.selectItem(itemId);
+  }, [clickToNextEmpty, dnd, firstEmptyTargetId, isAnswered]);
 
   if (isSortable) {
     return (
@@ -318,10 +353,54 @@ export default function GridFillLayout({
 
   return (
     <div style={{ display: 'grid', gap: 18, paddingTop: 6 }}>
+      {patternRows.length ? (
+        <div
+          aria-label="Pattern to copy"
+          style={{
+            display: 'grid',
+            gap: 10,
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '2px 0 4px',
+          }}
+        >
+          {patternRows.map((row, rowIndex) => (
+            <div
+              key={`pattern-row-${rowIndex}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: fitToWindow ? 'center' : 'flex-start',
+                gap: fitToWindow ? 8 : 12,
+                minWidth: 'max-content',
+              }}
+            >
+              {row.map((itemId, index) => {
+                const item = itemById.get(itemId);
+                if (!item) return null;
+                return (
+                  <CatV2Card
+                    key={`${rowIndex}-${itemId}-${index}`}
+                    item={item}
+                    compact
+                    cardStyle="borderless"
+                    hideLabel={hidePatternLabels}
+                    disabled
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${Math.max(columnCount, 1)}, minmax(92px, 1fr))`,
+          gridTemplateColumns: fitToWindow
+            ? `repeat(${Math.max(columnCount, 1)}, minmax(64px, 88px))`
+            : `repeat(${Math.max(columnCount, 1)}, minmax(92px, 1fr))`,
+          justifyContent: fitToWindow ? 'center' : 'stretch',
           gap: 10,
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -336,7 +415,8 @@ export default function GridFillLayout({
               label={target.label || `Slot ${target.row || ''}${target.column ? `-${target.column}` : ''}`}
               active={Boolean(active)}
               filled={Boolean(item)}
-              minHeight={116}
+              minHeight={cellMinHeight}
+              style={fitToWindow ? { padding: 6, background: item ? '#ffffff' : '#dff6ff' } : undefined}
               onClick={() => {
                 if (item) dnd.returnItem(item.id, target.id);
                 else dnd.placeItem(dnd.selectedItemId, target.id);
@@ -375,7 +455,7 @@ export default function GridFillLayout({
             compact
             cardStyle={cardStyle}
             hideLabel={hideItemLabels}
-            onClick={() => dnd.selectItem(item.id)}
+            onClick={() => handleSourceClick(item.id)}
             onDragStart={dnd.handleDragStart}
             onDragEnd={dnd.handleDragEnd}
           />

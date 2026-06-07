@@ -250,10 +250,15 @@ a {
 }
 
 .skill-columns {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(230px, 1fr));
-  gap: 34px 54px;
-  align-items: start;
+  column-count: 3;
+  column-gap: 54px;
+}
+
+.skill-column {
+  break-inside: avoid;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 34px;
 }
 
 .skill-column h2 {
@@ -321,7 +326,7 @@ a {
   }
 
   .skill-columns {
-    grid-template-columns: repeat(2, minmax(230px, 1fr));
+    column-count: 2;
   }
 }
 
@@ -385,7 +390,7 @@ a {
   }
 
   .skill-columns {
-    grid-template-columns: 1fr;
+    column-count: 1;
   }
 }
 

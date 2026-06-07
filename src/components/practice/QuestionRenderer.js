@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import MCQRenderer from './MCQRenderer';
 import FillInTheBlankRenderer from './FillInTheBlankRenderer';
+import PictographMCQRenderer from './PictographMCQRenderer';
 
 const LoadingRenderer = () => (
   <div style={{ padding: 24, color: '#64748b', fontWeight: 800 }}>
@@ -41,6 +42,7 @@ const RENDERERS = {
   sorting: CategorizationRenderer,
   sort: CategorizationRenderer,
   matching: CategorizationRenderer,
+  visual_choice: MCQRenderer,
   interactiveApplet: InteractiveAppletRenderer,
   interactiveapplet: InteractiveAppletRenderer,
   interactiveTool: InteractiveToolRenderer,
@@ -56,7 +58,12 @@ export default function QuestionRenderer({
   isCorrect,
 }) {
   const normalizedType = String(question?.type || '').trim();
-  const Renderer = RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
+  const normalizedInteraction = String(question?.interaction || '').trim().toLowerCase();
+  const Renderer = normalizedInteraction === 'pictograph_mcq'
+    ? PictographMCQRenderer
+    : normalizedInteraction === 'interactive_stickers'
+    ? MCQRenderer
+    : RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
 
   if (!question) return null;
 

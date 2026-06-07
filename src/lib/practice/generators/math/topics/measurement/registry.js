@@ -44,7 +44,15 @@ const ENGINES = {
   balanceScale: generateBalanceScaleQuestion,
   diceMeasurement: generateDiceMeasurementQuestion,
   svgToolDemo: generateSvgToolDemoQuestion,
-  nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion
+  nonStandardUnitMeasurement: generateNonStandardMeasurementQuestion,
+  sticksMeasurement: (rng, config) => ({
+    type: 'interactiveTool',
+    toolId: 'sticks_builder',
+    toolConfig: { dockStickers: [] },
+    questionText: 'Use the sticks to build a shape.',
+    explanation: { sections: [{ type: 'text', content: 'Drag the sticks onto the outlines to build the shape.' }] },
+    solution: { sections: [{ type: 'text', content: 'Build the shape.' }] }
+  })
 };
 
 /**

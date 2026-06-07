@@ -12,6 +12,10 @@ export async function POST(request) {
 
     const audioUrl = await getOrGenerateR2Audio(text, voice || 'Puck');
 
+    if (!audioUrl) {
+      return NextResponse.json({ success: false, error: 'Audio generation failed. Please check if your local Piper TTS server is running, or check your Gemini API billing/quota status.' }, { status: 500 });
+    }
+
     return NextResponse.json({
       success: true,
       audioUrl

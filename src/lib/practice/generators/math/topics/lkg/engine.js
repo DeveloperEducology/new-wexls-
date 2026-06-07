@@ -1696,9 +1696,17 @@ export function generateLkgQuestion(config = {}) {
     rawQuestion = lkgCountingEngine(config, { subType: 'objects', limit: 5 }, random);
   }
 
+  const hasOnlyNumericOptions = Array.isArray(rawQuestion.options)
+    && rawQuestion.options.length > 0
+    && rawQuestion.options.every((option) => /^-?\d+(?:\.\d+)?$/.test(String(option?.label ?? option?.value ?? option)));
+  const layoutConfig = hasOnlyNumericOptions && !rawQuestion.layoutConfig?.variant
+    ? { ...(rawQuestion.layoutConfig || {}), variant: 'numbers' }
+    : rawQuestion.layoutConfig;
+
   // Inject metaConfig reader controls by default for LKG questions
   return {
     ...rawQuestion,
+    ...(layoutConfig ? { layoutConfig } : {}),
     metaConfig: {
       readable: true,
       readOptions: true,

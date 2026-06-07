@@ -50,6 +50,13 @@ export {
 } from './lkg/index.js';
 
 export {
+  generateUkgNumbersCountingQuestion,
+  ukgNumbersCountingTopicContract,
+  ukgNumbersCountingSkills,
+  ukgNumbersCountingSkillsByChapter
+} from './ukg-numbers-counting/index.js';
+
+export {
   shapesRegistry,
   shapesGenerator,
   generateShapesQuestion,
@@ -89,4 +96,15 @@ export {
   multiplicationSkillsByGrade,
   multiplicationTemplates
 } from './multiplication/index.js';
+
+export {
+  moneyTopicGenerators,
+  rawMoneyTopicRegistry,
+  generateMoneyTopicQuestion,
+  createMoneyTopicTemplate,
+  moneyMicroSkills,
+  moneySkillsByGrade,
+  moneyTemplates,
+  moneyTopicContract
+} from './money/index.js';
 

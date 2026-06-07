@@ -1,6 +1,7 @@
 import { buildShapeSvg, getShapeInfo, SUPPORTED_SHAPES, CURATED_COLOR_KEYS } from './shared/svgShapes.js';
 import { generate3DShapesQuestion } from './engines/3dShapes.engine.js';
 import { generateSymmetryQuestion } from './engines/symmetry.engine.js';
+import { generateUkgShapesQuestion } from './engines/ukgShapes.engine.js';
 
 const SHAPES_AUDIO_URLS = {
   oval: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/tts/Kore/a0e1b285a930528ee716b939441d996a4507292385fca0e847ae49cb4f64c467.wav',
@@ -42,6 +43,24 @@ export function generateShapesQuestion(config = {}) {
   const seed = config.variables?.seed || config.seed || Date.now().toString();
   const rng = new SeededRandom(seed);
   const forcedTask = config.forcedTask || config.engineParams?.forcedTask || 'visual_to_text';
+
+  // Route to UKG shapes engine
+  if (forcedTask.startsWith('ukg_')) {
+    const rawQuestion = generateUkgShapesQuestion({ config: { mode: forcedTask.substring(4) } }, { seed });
+    return {
+      ...rawQuestion,
+      metadata: {
+        ...(rawQuestion.metadata || {}),
+        subject: 'math',
+        topic: 'shapes',
+        skillId: config.metadata?.skill?.id || config.logic_type || forcedTask,
+        templateId: config.metadata?.template?.id || config.templateId || `shapes.ukg.${forcedTask.substring(4)}`,
+        engine: 'shapes',
+        grade: 'UKG',
+        seed
+      }
+    };
+  }
 
   // Route to 3D Shapes Engine
   if (forcedTask === 'shapes-g2-2d-vs-3d' || forcedTask === 'shapes-g2-vertices-edges-faces') {
