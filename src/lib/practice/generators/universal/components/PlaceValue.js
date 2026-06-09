@@ -315,9 +315,10 @@ export function renderPlaceValue(props) {
     `.trim();
 
   } else {
-    // ─── IXL-Style Vertical Floating Layout ───
-    
-    // 1. Calculate row dimensions and vertical positions
+    // ─── IXL-Style Vertical Floating Layout with Medium Scaling (0.55x) ───
+    const scale = 0.55;
+
+    // 1. Calculate row dimensions and vertical positions (standard coordinates)
     const thousandsRows = Math.ceil(thousands / 5);
     const thousandsHeight = thousands > 0 ? (thousandsRows - 1) * 200 + 185 : 0;
     
@@ -325,27 +326,25 @@ export function renderPlaceValue(props) {
     
     const tensAndOnesHeight = (tens > 0 || ones > 0) ? 185 : 0;
 
-    let currentY = 20;
+    let rawHeight = 0;
     let thousandsY = 0;
     let hundredsY = 0;
     let tensAndOnesY = 0;
 
     if (thousands > 0) {
-      thousandsY = currentY;
-      currentY += thousandsHeight + 40;
+      thousandsY = rawHeight;
+      rawHeight += thousandsHeight + 40;
     }
     if (hundreds > 0) {
-      hundredsY = currentY;
-      currentY += hundredsHeight + 40;
+      hundredsY = rawHeight;
+      rawHeight += hundredsHeight + 40;
     }
     if (tens > 0 || ones > 0) {
-      tensAndOnesY = currentY;
-      currentY += tensAndOnesHeight + 20;
+      tensAndOnesY = rawHeight;
+      rawHeight += tensAndOnesHeight + 20;
     }
 
-    const canvasHeight = currentY;
-
-    // 2. Calculate dynamic canvas width
+    // 2. Calculate dynamic canvas width (standard coordinates)
     const maxThousandsCols = Math.min(thousands, 5);
     const thousandsWidth = thousands > 0 ? (maxThousandsCols - 1) * 290 + 270 : 0;
     const hundredsWidth = hundreds > 0 ? 270 : 0;
@@ -357,14 +356,17 @@ export function renderPlaceValue(props) {
     const tensAndOnesWidth = tensWidth + (tensWidth > 0 && onesWidth > 0 ? 50 : 0) + onesWidth;
     
     const rawWidth = Math.max(thousandsWidth, hundredsWidth, tensAndOnesWidth, 300);
-    const canvasWidth = rawWidth + 40;
+
+    // Scaled canvas dimensions with 20px padding on all sides
+    const canvasWidth = rawWidth * scale + 40;
+    const canvasHeight = rawHeight * scale + 40;
 
     // 3. Render blocks at their calculated positions
     let blocksMarkup = '';
 
     // Render Thousands (Row 1)
     if (thousands > 0) {
-      const startX = (canvasWidth - thousandsWidth) / 2;
+      const startX = (rawWidth - thousandsWidth) / 2;
       for (let i = 0; i < thousands; i++) {
         const row = Math.floor(i / 5);
         const col = i % 5;
@@ -376,7 +378,7 @@ export function renderPlaceValue(props) {
 
     // Render Hundreds (Row 2)
     if (hundreds > 0) {
-      const startX = (canvasWidth - 270) / 2;
+      const startX = (rawWidth - 270) / 2;
       for (let i = 0; i < hundreds; i++) {
         const x = startX;
         // Stack bottom flat first (i = 0 is bottom, i = hundreds-1 is top)
@@ -387,7 +389,7 @@ export function renderPlaceValue(props) {
 
     // Render Tens & Ones (Row 3)
     if (tens > 0 || ones > 0) {
-      const startX = (canvasWidth - tensAndOnesWidth) / 2;
+      const startX = (rawWidth - tensAndOnesWidth) / 2;
       
       // Draw Tens rods
       if (tens > 0) {
@@ -414,7 +416,7 @@ export function renderPlaceValue(props) {
     return `
       <svg viewBox="0 0 ${canvasWidth} ${canvasHeight}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="max-width: ${Math.min(canvasWidth, 750)}px; display: block; margin: 10px auto;" filter="url(#shadow)">
         ${SVG_DEFS}
-        <g>${blocksMarkup}</g>
+        <g transform="translate(20, 20) scale(${scale})">${blocksMarkup}</g>
       </svg>
     `.trim();
   }
