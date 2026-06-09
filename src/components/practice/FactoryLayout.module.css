@@ -3201,6 +3201,756 @@
     flex-shrink: 0;
 }
 
+/* ==========================================================================
+   🎨 Montessori-Inspired Prepared Environment UI Styles
+   ========================================================================== */
+
+.montessoriPageContainer {
+    min-height: 100vh;
+    background-color: #f7f3eb;
+    font-family: 'Fredoka', 'Outfit', 'Quicksand', system-ui, sans-serif;
+    color: #4e3629;
+    position: relative;
+    overflow-x: hidden;
+    padding-bottom: 240px; /* Space for the slide-out manipulatives drawer */
+}
+
+/* Background scene representing a minimalist learning cabinet space */
+.montessoriClassroomBackdrop {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: 
+        /* Soft horizontal wood panel dividers */
+        linear-gradient(180deg, rgba(239, 231, 218, 0.3) 0%, rgba(239, 231, 218, 0.3) 4px, transparent 4px),
+        /* Calming warm wall glow */
+        radial-gradient(circle at 50% 25%, #fffdf9 0%, #f7f3eb 70%, #eddcc8 100%);
+    background-size: 100% 80px, 100% 100%;
+}
+
+.montessoriPageWrapper {
+    position: relative;
+    z-index: 10;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* Calming, Ordered Header */
+.montessoriHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border-bottom: 3.5px solid #ebdccb;
+    margin: 12px 0 20px;
+    box-shadow: 0 8px 24px rgba(92, 64, 51, 0.03);
+}
+
+.montessoriBackBtn {
+    border: 2px solid #dcd1c4;
+    background: #ffffff;
+    color: #6d4c41;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #dcd1c4, 0 4px 10px rgba(0,0,0,0.03);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.montessoriBackBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 #dcd1c4, 0 8px 16px rgba(0,0,0,0.05);
+}
+
+.montessoriBackBtn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 #dcd1c4;
+}
+
+.montessoriHeaderSubjectPill {
+    background: #eef1f6;
+    color: #475569;
+    padding: 5px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border: 1.5px solid #e2e8f0;
+}
+
+/* Glassmorphic Stars Jar for score tracking */
+.rewardsJarContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 90px;
+    margin-top: -8px;
+}
+
+.jarLabel {
+    font-size: 8px;
+    font-weight: 950;
+    color: #8d6e63;
+    letter-spacing: 0.06em;
+    margin-bottom: 2px;
+}
+
+.jarGlass {
+    position: relative;
+    width: 50px;
+    height: 58px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-radius: 12px 12px 18px 18px;
+    box-shadow: 
+        inset 0 0 10px rgba(255, 255, 255, 0.45),
+        0 4px 12px rgba(92, 64, 51, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Cork Lid overlay */
+.jarLid {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 6px;
+    background: #a1887f; /* Wood cork color */
+    border-radius: 3px 3px 0 0;
+    border-bottom: 1.5px solid #5d4037;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.jarRibbon {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 3px;
+    background: #ef4444; /* Small ribbon band */
+    border-radius: 1px;
+}
+
+.jarWorkspace {
+    position: absolute;
+    inset: 4px;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.jarStar {
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    line-height: 1;
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+}
+
+/* Dynamic falling star animation */
+.starDropAnimation {
+    animation: starFallIntoJar 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes starFallIntoJar {
+    0% {
+        transform: translate(0, -90px) scale(2.2) rotate(-35deg);
+        opacity: 0;
+    }
+    30% {
+        opacity: 1;
+    }
+    70% {
+        transform: translate(0, 5px) scale(0.8) rotate(15deg);
+    }
+    100% {
+        transform: translate(var(--target-x, 0px), var(--target-y, 10px)) scale(1) rotate(0deg);
+    }
+}
+
+.jarScorePill {
+    position: absolute;
+    bottom: -8px;
+    background: #f59e0b;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 950;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+/* Avatar profile block */
+.montessoriAvatarBlock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 2px solid #ebdccb;
+}
+
+.montessoriAvatarFrame {
+    font-size: 16px;
+}
+
+.montessoriAvatarName {
+    font-size: 11px;
+    font-weight: 900;
+    color: #5c4033;
+}
+
+.montessoriAvatarGrade {
+    font-size: 8px;
+    font-weight: 800;
+    color: #8d6e63;
+    text-transform: uppercase;
+}
+
+.montessoriResetBtn {
+    border: 2px solid #ebdccb;
+    background: #ffffff;
+    font-size: 14px;
+    padding: 6px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #ebdccb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.montessoriResetBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 0 #ebdccb;
+}
+
+.montessoriResetBtn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 #ebdccb;
+}
+
+/* Central Workspace Grid */
+.montessoriMainGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+/* Main Chalkboard/Question Panel */
+.montessoriQuestionBoardCard {
+    width: 100%;
+    background: #fffdf9; /* Creamy prepared canvas */
+    border-radius: 26px;
+    border: 5.5px solid #8d6e63; /* Wooden cabinet frame style */
+    box-shadow: 
+        0 16px 36px rgba(92, 64, 51, 0.08), 
+        inset 0 2px 0 rgba(255,255,255,0.6);
+    position: relative;
+    overflow: visible;
+}
+
+.montessoriBoardAestheticLine {
+    height: 6px;
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 20px 20px 0 0;
+}
+
+.montessoriBoardContent {
+    padding: 24px;
+}
+
+.montessoriQuestionFocusArea {
+    font-size: 18px;
+    font-weight: 600;
+    color: #3e2723;
+}
+
+.montessoriLoaderSpinner {
+    width: 44px;
+    height: 44px;
+    border: 5px solid #eddcc8;
+    border-top-color: #8d6e63;
+    border-radius: 50%;
+    margin: 0 auto;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Bottom Action Row and Buttons */
+.montessoriActionRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.montessoriShelfTriggerBtn {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 2.5px solid #c8e6c9;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #a5d6a7, 0 6px 16px rgba(46, 125, 50, 0.08);
+    transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+    font-family: var(--font-outfit), sans-serif;
+}
+
+.montessoriShelfTriggerBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #a5d6a7, 0 10px 20px rgba(46, 125, 50, 0.12);
+    background: #f1f8e9;
+}
+
+.montessoriShelfTriggerBtn:active,
+.shelfTriggerBtnActive {
+    transform: translateY(2px) !important;
+    box-shadow: 0 1px 0 #a5d6a7 !important;
+    background: #c8e6c9 !important;
+}
+
+.montessoriCheckBtn {
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    color: #ffffff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #b45309, 0 8px 20px rgba(234, 88, 12, 0.22);
+    transition: all 0.15s ease;
+    font-family: var(--font-outfit), sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.montessoriCheckBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #b45309, 0 12px 24px rgba(234, 88, 12, 0.3);
+}
+
+.montessoriCheckBtn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #b45309;
+}
+
+.montessoriCheckBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Special styling for retry state (Control of Error) */
+.montessoriRetryBtn {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: #ffffff;
+    border: none;
+    padding: 12px 26px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #4c1d95, 0 8px 20px rgba(109, 40, 217, 0.22);
+    transition: all 0.15s ease;
+    font-family: var(--font-outfit), sans-serif;
+    animation: retryPulse 2s infinite;
+}
+
+@keyframes retryPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.montessoriRetryBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #4c1d95, 0 12px 24px rgba(109, 40, 217, 0.3);
+}
+
+.montessoriRetryBtn:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #4c1d95;
+}
+
+.montessoriNextBtnCapsule {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #047857, 0 8px 20px rgba(5, 150, 105, 0.25);
+    transition: all 0.15s ease;
+    font-family: var(--font-outfit), sans-serif;
+}
+
+.montessoriNextBtnCapsule:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #047857, 0 12px 24px rgba(5, 150, 105, 0.35);
+}
+
+.montessoriNextBtnCapsule:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #047857;
+}
+
+/* ==========================================================================
+   🦊 Mascot Guide & Speech Bubble Styles
+   ========================================================================== */
+
+.mascotGuideContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.mascotAvatarBubble {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 6px 16px rgba(92, 64, 51, 0.12),
+        0 0 0 4px #ffffff;
+    position: relative;
+    z-index: 15;
+    outline: none;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+}
+
+.mascotAvatarBubble:hover {
+    transform: scale(1.08) rotate(-4deg);
+}
+
+.mascotBounce {
+    animation: mascotBounceKey 1.2s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+}
+
+@keyframes mascotBounceKey {
+    0%, 100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-12px) scale(1.03) rotate(4deg); }
+    50% { transform: translateY(0) scale(0.97) rotate(-2deg); }
+    70% { transform: translateY(-4px) scale(1.01) rotate(1deg); }
+}
+
+.mascotChangeBadge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: #ffffff;
+    border: 1.5px solid #dcd1c4;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Circular Selection Overlay for switching Guides */
+.mascotSelectorDrawer {
+    position: absolute;
+    top: 75px;
+    left: 0;
+    z-index: 200;
+}
+
+.mascotSelectorBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    background: transparent;
+}
+
+.mascotSelectorBubbleList {
+    position: relative;
+    z-index: 200;
+    background: #ffffff;
+    border: 3.5px solid #ebdccb;
+    border-radius: 20px;
+    padding: 12px 16px;
+    box-shadow: 0 12px 28px rgba(92, 64, 51, 0.12);
+    animation: popUp 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popUp {
+    from { transform: scale(0.8) translateY(-10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.mascotSelectorTitle {
+    font-size: 10px;
+    font-weight: 900;
+    color: #8d6e63;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+}
+
+.mascotSelectorItem {
+    border: 2.5px solid #f3ebe1;
+    background: #ffffff;
+    padding: 8px;
+    border-radius: 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    min-width: 60px;
+}
+
+.mascotSelectorItem:hover {
+    border-color: var(--hover-color, #a1887f);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.activeMascotItem {
+    border-color: #f59e0b !important;
+    background: #fffbeb !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Custom Speech Bubble */
+.mascotSpeechBubble {
+    flex-grow: 1;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 12px 18px;
+    position: relative;
+    margin-left: 10px;
+    z-index: 5;
+    box-shadow: 0 8px 24px rgba(92, 64, 51, 0.03);
+}
+
+.mascotSpeechBubbleTail {
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border-radius: 0 0 0 3px;
+    z-index: -1;
+}
+
+.mascotSpeechContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.mascotSpeechText {
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.45;
+    color: #4e3629;
+}
+
+.mascotSpeakerBtn {
+    border: none;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 3px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.mascotSpeakerBtn:hover {
+    transform: scale(1.04);
+}
+
+/* ==========================================================================
+   🧮 Montessori Manipulatives Drawer & Workspace Canvas
+   ========================================================================== */
+
+.montessoriContainer {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(820px, 98vw);
+    background: #fbf9f6;
+    border-top: 5px solid #8d6e63; /* Wood top frame */
+    border-left: 5.5px solid #8d6e63;
+    border-right: 5.5px solid #8d6e63;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -10px 32px rgba(92, 64, 51, 0.12);
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    animation: drawerSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes drawerSlideUp {
+    from { transform: translate(-50%, 100%); }
+    to { transform: translate(-50%, 0); }
+}
+
+.montessoriWorkspaceHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #f3ede2;
+    border-bottom: 2px solid #e1d4c2;
+    border-radius: 18px 18px 0 0;
+}
+
+.montessoriWorkspaceCanvas {
+    height: 250px;
+    position: relative;
+    background-color: #faf6ee; /* Sand colored writing surface */
+    background-image: 
+        /* Light grid pattern to support ordering placement */
+        radial-gradient(circle, #e6ded0 1px, transparent 1px);
+    background-size: 24px 24px;
+    overflow: hidden;
+}
+
+.montessoriEmptyWorkspace {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #a1887f;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    pointer-events: none;
+    padding: 0 32px;
+}
+
+.montessoriMaterialsCabinet {
+    background: #efe8de; /* Darker shelf base */
+    padding: 12px 16px;
+    display: flex;
+    gap: 16px;
+    border-top: 3px solid #dfd3c3;
+}
+
+.cabinetSection {
+    display: flex;
+    flex-direction: column;
+}
+
+.cabinetLabel {
+    font-size: 9px;
+    font-weight: 900;
+    color: #8d6e63;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.cabinetDivider {
+    width: 2.5px;
+    align-self: stretch;
+    background: #dfd3c3;
+    border-radius: 99px;
+}
+
+.spawnMaterialBtn {
+    background: #ffffff;
+    border: 2px solid #d7ccc8;
+    border-radius: 14px;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2.5px 0 #d7ccc8;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    min-width: 60px;
+}
+
+.spawnMaterialBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4.5px 0 #d7ccc8;
+}
+
+.spawnMaterialBtn:active {
+    transform: translateY(1.5px);
+    box-shadow: 0 1px 0 #d7ccc8;
+}
+
+.spawnBtnVisual {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spawnMaterialBtn span {
+    font-size: 10px;
+    font-weight: 900;
+    color: #5d4037;
+    margin-top: 2px;
+}
+
+.montessoriActionBtn {
+    border: none;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 5px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.montessoriCloseBtn {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    color: #8d6e63;
+    cursor: pointer;
+    font-weight: 900;
+    padding: 2px 6px;
+}
+
+.montessoriCloseBtn:hover {
+    color: #3e2723;
+}
+
 .wexlsActionText {
     display: flex;
     flex-direction: column;
@@ -3268,3 +4018,85 @@
 .wexlsHamburgerBtn:active {
     transform: scale(0.95);
 }
+
+/* ==========================================================================
+   🔊 Speaker Pulsing and Wood Option overrides (Immersive Montessori)
+   ========================================================================== */
+
+.pulsingSpeaker {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    padding: 0 !important;
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4) !important;
+    animation: speakerPulseKey 2s infinite ease-in-out !important;
+}
+
+@keyframes speakerPulseKey {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4);
+    }
+    70% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 12px rgba(217, 119, 6, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
+    }
+}
+
+/* tactile wood blocks for options */
+.montessoriPageContainer .preKOptionButton,
+.montessoriPageContainer .optionButton,
+.montessoriPageContainer .montessoriVisualChoicePanel {
+    background: #fdfaf6 !important;
+    border: 4px solid #eae0d5 !important;
+    color: #5c4033 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 6px 0 #d2c5b4, 0 8px 16px rgba(92, 64, 51, 0.05) !important;
+    font-size: 22px !important;
+    font-weight: 950 !important;
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.25), box-shadow 0.15s ease, border-color 0.15s ease !important;
+    max-width: 320px !important;
+}
+
+.montessoriPageContainer .preKOptionButton:hover:not(:disabled),
+.montessoriPageContainer .optionButton:hover:not(:disabled),
+.montessoriPageContainer .montessoriVisualChoicePanel:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02) !important;
+    border-color: #d9770633 !important;
+    box-shadow: 0 8px 0 #d2c5b4, 0 12px 24px rgba(92, 64, 51, 0.08) !important;
+}
+
+.montessoriPageContainer .preKOptionButton:active:not(:disabled),
+.montessoriPageContainer .optionButton:active:not(:disabled),
+.montessoriPageContainer .montessoriVisualChoicePanel:active:not(:disabled) {
+    transform: translateY(4px) scale(0.98) !important;
+    box-shadow: 0 2px 0 #d2c5b4, 0 4px 8px rgba(92, 64, 51, 0.03) !important;
+}
+
+.montessoriPageContainer .preKOptionButtonActive,
+.montessoriPageContainer .optionButtonActive,
+.montessoriPageContainer .montessoriVisualChoicePanelActive {
+    background: #fffdf5 !important;
+    border-color: #ea580c !important;
+    box-shadow: 0 3px 0 #b45309, 0 6px 12px rgba(234, 88, 12, 0.15) !important;
+    transform: translateY(3px) !important;
+}
+
+/* Scaled up visual item counter counters for 4-6 year olds */
+.montessoriPageContainer :global(.item-counter-container) {
+    transform: scale(1.4) !important;
+    transform-origin: center;
+    margin: 28px auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+

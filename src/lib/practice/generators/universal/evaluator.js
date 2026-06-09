@@ -61,6 +61,50 @@ function numberToWords(num) {
   return String(num); // fallback for very large numbers
 }
 
+function resolvePartStrings(part, resolvedVariables) {
+  if (typeof part === 'string') {
+    return interpolateString(part, resolvedVariables);
+  }
+  if (!part || typeof part !== 'object') {
+    return part;
+  }
+  const resolved = { ...part };
+  if (typeof resolved.content === 'string') {
+    resolved.content = interpolateString(resolved.content, resolvedVariables);
+  }
+  if (typeof resolved.text === 'string') {
+    resolved.text = interpolateString(resolved.text, resolvedVariables);
+  }
+  if (typeof resolved.label === 'string') {
+    resolved.label = interpolateString(resolved.label, resolvedVariables);
+  }
+  if (Array.isArray(resolved.parts)) {
+    resolved.parts = resolved.parts.map(p => resolvePartStrings(p, resolvedVariables));
+  }
+  if (resolved.type === 'arithmeticLayout' && resolved.layout && Array.isArray(resolved.layout.rows)) {
+    resolved.layout = {
+      ...resolved.layout,
+      rows: resolved.layout.rows.map(row => {
+        const resRow = { ...row };
+        if (typeof resRow.text === 'string') {
+          resRow.text = interpolateString(resRow.text, resolvedVariables);
+        }
+        if (Array.isArray(resRow.cells)) {
+          resRow.cells = resRow.cells.map(cell => {
+            const resCell = { ...cell };
+            if (resCell.expected !== undefined) {
+              resCell.expected = interpolateString(String(resCell.expected), resolvedVariables);
+            }
+            return resCell;
+          });
+        }
+        return resRow;
+      })
+    };
+  }
+  return resolved;
+}
+
 // Main Template Evaluator Engine
 export function evaluateTemplate(template, seed) {
   if (!template || typeof template !== 'object') {
@@ -614,45 +658,7 @@ export function evaluateTemplate(template, seed) {
   // 4.5. Resolve Solution sections
   let solutionSections = [];
   if (template.solution && Array.isArray(template.solution.sections)) {
-    solutionSections = template.solution.sections.map(part => {
-      let resolvedPart;
-      if (typeof part === 'string') {
-        resolvedPart = interpolateString(part, resolvedVariables);
-      } else {
-        resolvedPart = { ...part };
-        if (typeof resolvedPart.content === 'string') {
-          resolvedPart.content = interpolateString(resolvedPart.content, resolvedVariables);
-        }
-        if (typeof resolvedPart.text === 'string') {
-          resolvedPart.text = interpolateString(resolvedPart.text, resolvedVariables);
-        }
-        if (typeof resolvedPart.label === 'string') {
-          resolvedPart.label = interpolateString(resolvedPart.label, resolvedVariables);
-        }
-        if (resolvedPart.type === 'arithmeticLayout' && resolvedPart.layout && Array.isArray(resolvedPart.layout.rows)) {
-          resolvedPart.layout = {
-            ...resolvedPart.layout,
-            rows: resolvedPart.layout.rows.map(row => {
-              const resRow = { ...row };
-              if (typeof resRow.text === 'string') {
-                resRow.text = interpolateString(resRow.text, resolvedVariables);
-              }
-              if (Array.isArray(resRow.cells)) {
-                resRow.cells = resRow.cells.map(cell => {
-                  const resCell = { ...cell };
-                  if (resCell.expected !== undefined) {
-                    resCell.expected = interpolateString(String(resCell.expected), resolvedVariables);
-                  }
-                  return resCell;
-                });
-              }
-              return resRow;
-            })
-          };
-        }
-      }
-      return resolvedPart;
-    });
+    solutionSections = template.solution.sections.map(part => resolvePartStrings(part, resolvedVariables));
   }
 
   // 5. Build final question structure

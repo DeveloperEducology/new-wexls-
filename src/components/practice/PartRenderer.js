@@ -37,9 +37,12 @@ export function SvgPart({ part, question, userAnswer, onAnswer, isAnswered, inGr
   const style = part.style || {};
   const resolvedMaxWidth = style.maxWidth || (nativeWidth && nativeWidth < 500 ? `${nativeWidth}px` : '100%');
 
+  const isMontessoriMode = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('theme') === 'montessori';
+
   return (
     <div
-      className={styles.responsiveSvg}
+      className={`${styles.responsiveSvg} ${isMontessoriMode ? 'item-counter-container' : ''}`}
       style={{
         width: inGroup ? 'auto' : '100%',
         maxWidth: resolvedMaxWidth,

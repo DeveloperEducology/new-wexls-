@@ -505,6 +505,12 @@ export default function AdminConsolePage() {
   const [createPoolStatus, setCreatePoolStatus] = useState('');
   const [createPoolSaving, setCreatePoolSaving] = useState(false);
   const [poolManagerSearch, setPoolManagerSearch] = useState('');
+  const [canvaDesignUrl, setCanvaDesignUrl] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCanvaDesignUrl(localStorage.getItem('canva_design_url') || 'https://canva.link/w9hc0502n2fbjo9');
+    }
+  }, []);
   const [poolManagerGeneratingId, setPoolManagerGeneratingId] = useState('');
   const [imgPickerPoolItem, setImgPickerPoolItem] = useState(null);
   const [poolAssetAudit, setPoolAssetAudit] = useState(null);
@@ -743,15 +749,96 @@ export default function AdminConsolePage() {
     }
   };
 
+  const generateMissingImagesForCategory = async () => {
+    if (!poolWordManagerData || !poolWordCategory) return;
+    const category = poolWordCategory;
+    const items = poolWordManagerData.pools[category] || [];
+
+    const missingItems = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.imageUrl);
+
+    if (missingItems.length === 0) {
+      setPoolWordManagerStatus(`No missing images in category "${category}"!`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to search and download clipart images for the ${missingItems.length} words in "${category}" that don't have images? This might take a minute.`)) {
+      return;
+    }
+
+    setPoolWordManagerStatus(`Preparing to search and download ${missingItems.length} missing images...`);
+    setPoolWordManagerSaving(true);
+
+    let generatedCount = 0;
+    let failedCount = 0;
+
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    try {
+      for (let i = 0; i < missingItems.length; i++) {
+        const { item, index } = missingItems[i];
+        if (!item.label?.trim()) continue;
+
+        setPoolWordManagerStatus(`Searching & downloading clipart for "${item.label}" (${i + 1}/${missingItems.length})...`);
+
+        try {
+          const searchRes = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(item.label.trim())}&type=clipart`);
+          const searchData = await searchRes.json();
+          if (!searchRes.ok || !searchData.results || searchData.results.length === 0) {
+            throw new Error(searchData.error || 'No search results found');
+          }
+
+          const firstResult = searchData.results[0];
+
+          const fetchRes = await fetch('/api/admin/fetch-url-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: firstResult.image,
+              folder: 'images',
+              customName: item.label.trim()
+            })
+          });
+          const fetchData = await fetchRes.json();
+          if (!fetchRes.ok || !fetchData.r2Url) {
+            throw new Error(fetchData.error || 'Failed to download search image');
+          }
+
+          updatePoolManagerItem(category, index, { imageUrl: fetchData.r2Url });
+          generatedCount++;
+        } catch (err) {
+          console.error(`Failed to generate image for "${item.label}":`, err);
+          failedCount++;
+        }
+
+        await sleep(400);
+      }
+      setPoolWordManagerStatus(`Done! Successfully downloaded ${generatedCount} clipart images. Failed: ${failedCount}. Click "Save Pool Changes" to save.`);
+    } catch (error) {
+      setPoolWordManagerStatus(`Bulk image process failed: ${error.message}`);
+    } finally {
+      setPoolWordManagerSaving(false);
+    }
+  };
+
   const openImgPickerForPoolItem = (category, index) => {
+    const item = poolWordManagerData?.pools?.[category]?.[index];
+    const label = item?.label || '';
     setImgPickerPoolItem({ category, index });
     setImgPickerOptionIdx(null);
     setImgPickerPartIdx(null);
     setImgPickerHotspotId(null);
-    setImgPickerTab('gallery');
+    setImgPickerTab('web');
     setImgPickerSearch('');
+    setWebSearchQuery(label);
+    setWebSearchType('clipart');
+    setWebSearchResults([]);
+    setWebSearchSelectedUrl('');
     setImgPickerOpen(true);
-    fetchImgPickerGallery('images');
+    if (label.trim()) {
+      handleWebSearch(label.trim(), 'clipart');
+    }
   };
 
   const addWordsToCentralizedPool = async () => {
@@ -15291,9 +15378,9 @@ Explanation: A question must end with a question mark.`}</pre>
               value={poolManagerSearch}
               onChange={event => setPoolManagerSearch(event.target.value)}
               placeholder="Search label or ID"
-              style={{ width: 220, padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8 }}
+              style={{ width: 180, padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8 }}
             />
-            <select className={styles.formSelect} value={poolWordCategory} onChange={event => setPoolWordCategory(event.target.value)} style={{ width: 170, margin: 0 }}>
+            <select className={styles.formSelect} value={poolWordCategory} onChange={event => setPoolWordCategory(event.target.value)} style={{ width: 150, margin: 0 }}>
               {Object.keys(poolWordManagerData?.pools || {}).map(category => (
                 <option key={category} value={category}>{category} ({poolWordManagerData.pools[category]?.length || 0})</option>
               ))}
@@ -15306,6 +15393,15 @@ Explanation: A question must end with a question mark.`}</pre>
               style={{ display: 'flex', alignItems: 'center', gap: 4 }}
             >
               🎙️ Generate Missing Audios
+            </button>
+            <button
+              type="button"
+              className={styles.btnOutline}
+              onClick={generateMissingImagesForCategory}
+              disabled={!poolWordManagerData || poolWordManagerSaving}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              🖼️ Generate Missing Images
             </button>
             <button type="button" className={styles.btnOutline} onClick={savePoolManagerChanges} disabled={!poolWordManagerData || poolWordManagerSaving}>
               {poolWordManagerSaving ? 'Saving…' : 'Save Pool Changes'}
@@ -15356,7 +15452,7 @@ Explanation: A question must end with a question mark.`}</pre>
                           <span style={{ color: '#94a3b8', fontSize: 12 }}>No image</span>
                         )}
                         <button type="button" onClick={() => openImgPickerForPoolItem(poolWordCategory, index)} style={{ position: 'absolute', right: 6, bottom: 6, border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', padding: '4px 7px', cursor: 'pointer', fontSize: 11 }}>
-                          Gallery
+                          🔍 Image Search
                         </button>
                       </div>
                       <div>

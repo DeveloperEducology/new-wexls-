@@ -1,3 +1,5 @@
+import { COMPONENT_REGISTRY } from './components/index.js';
+
 // Safe math expression parser (CSP-safe)
 function evaluateSimpleExpression(str) {
   let s = String(str).replace(/\s+/g, '');
@@ -69,6 +71,27 @@ function evaluateSimpleExpression(str) {
   return tokens[0];
 }
 
+const drawingHelpers = {
+  drawPlaceValue: (thousands, hundreds, tens, ones, showChart = true, color = undefined) => {
+    return COMPONENT_REGISTRY.PlaceValue({ thousands, hundreds, tens, ones, showChart, color });
+  },
+  drawBaseTenBlocks: (rodsCount, blocksCount, flatsCount = 0, cubesCount = 0, color = undefined) => {
+    return COMPONENT_REGISTRY.PlaceValue({ tens: rodsCount, ones: blocksCount, hundreds: flatsCount, thousands: cubesCount, showChart: false, color });
+  },
+  drawTenFrame: (filledCount, crossedOutCount = 0, color = 'red') => {
+    return COMPONENT_REGISTRY.TenFrame({ filledCount, crossedOutCount, color });
+  },
+  drawJarOfMarbles: (colorA, countA, colorB, countB, seed) => {
+    return COMPONENT_REGISTRY.JarOfMarbles({ colorA, countA, colorB, countB }, seed);
+  },
+  drawSpinner: (colorA, sectorsA, colorB, sectorsB) => {
+    return COMPONENT_REGISTRY.Spinner({ colorA, sectorsA, colorB, sectorsB });
+  },
+  drawItemCounter: (itemCount, itemType = 'cupcake') => {
+    return COMPONENT_REGISTRY.ItemCounter({ count: itemCount, itemType });
+  }
+};
+
 export function resolveExpression(expr, context) {
   if (typeof expr === 'number') return expr;
   if (!expr) return 0;
@@ -77,7 +100,7 @@ export function resolveExpression(expr, context) {
   const hasComparisons = /[=\!<>\?:]/.test(String(expr));
 
   // Try custom safe parser first if it is a simple math formula without conditionals/strings
-  if (hasOperators && !hasComparisons) {
+  if (hasOperators && !hasComparisons && !String(expr).includes('draw')) {
     // Replace variables by their value from context
     let evaluated = String(expr).replace(/[a-zA-Z_]+/g, (token) => {
       if (context[token] !== undefined) {
@@ -97,8 +120,8 @@ export function resolveExpression(expr, context) {
   }
 
   try {
-    const varNames = Object.keys(context || {});
-    const varValues = Object.values(context || {});
+    const varNames = [...Object.keys(context || {}), ...Object.keys(drawingHelpers)];
+    const varValues = [...Object.values(context || {}), ...Object.values(drawingHelpers)];
     // Evaluate in context scope to support strings and conditionals correctly
     return new Function(...varNames, `"use strict"; return (${expr})`)(...varValues);
   } catch (err) {

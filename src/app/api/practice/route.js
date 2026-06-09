@@ -288,7 +288,7 @@ export async function GET(request) {
           remediationActive: searchParams.get('remediationActive') === 'true',
           remediationStep: Number(searchParams.get('remediationStep') || 0),
         },
-        grade: skillNode?.grade || skillNode?.metadata?.grade || 'lkg',
+        grade: skillNode?.grade || skillNode?.metadata?.grade || '1',
       });
 
       if (storedPayload) {
@@ -339,7 +339,7 @@ export async function GET(request) {
           skillId: resolvedSkillId,
           templateId: resolvedTemplateId,
           engine: 'universal-template',
-          grade: skillNode?.grade || skillNode?.metadata?.grade || 'UKG',
+          grade: skillNode?.grade || skillNode?.metadata?.grade || '1',
           seed
         }
       };

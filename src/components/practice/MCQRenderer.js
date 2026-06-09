@@ -63,6 +63,9 @@ function getOptionContent(option) {
   if (isSvgString(option)) return option;
   if (isImageUrl(option)) return option;
   if (typeof option === 'string' || typeof option === 'number') return null;
+  const labelVal = option?.label || option?.text || option?.value || '';
+  if (isSvgString(labelVal)) return labelVal;
+  if (isImageUrl(labelVal)) return labelVal;
   return resolveToolSvg(option) || option?.content || option?.svg || option?.imageUrl || option?.image || option?.src || null;
 }
 
@@ -872,6 +875,7 @@ export default function MCQRenderer({
                         speakText(`Option ${index + 1}`, question.voice || 'Puck');
                       }
                     }}
+                    className={`${styles.montessoriVisualChoicePanel} ${selected ? styles.montessoriVisualChoicePanelActive : ''}`}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',

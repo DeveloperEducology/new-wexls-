@@ -102,6 +102,17 @@ const VISUAL_COMPONENTS = [
       itemType: 'cupcake',
       distractorMode: 'auto'
     }
+  },
+  {
+    name: 'Place Value Chart',
+    value: 'PlaceValue',
+    props: {
+      thousands: 'Th',
+      hundreds: 'H',
+      tens: 'T',
+      ones: 'O',
+      showChart: 'true'
+    }
   }
 ];
 
@@ -772,6 +783,45 @@ const MATH_STARTERS = [
     explanation: {
       sections: [{ type: "text", content: "There are [Rows] rows of apples, with [Cols] apples in each row. [Rows] groups of [Cols] is written as [Rows] × [Cols] = [Total]." }]
     }
+  },
+  // ── Place Value Blocks ──────────────────────────────────────────────────────
+  {
+    id: "starter-place-value-blocks",
+    title: "Place Value — Tens & Ones Blocks MCQ",
+    emoji: "🧱",
+    subject: "math",
+    topic: "ukg-numbers-counting",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [
+      { name: "T", type: "integer", min: "1", max: "9" },
+      { name: "O", type: "integer", min: "1", max: "9" },
+      { name: "Value", type: "expression", formula: "T * 10 + O" }
+    ],
+    visuals: [
+      {
+        component: "PlaceValue",
+        props: {
+          thousands: "0",
+          hundreds: "0",
+          tens: "T",
+          ones: "O",
+          showChart: "true"
+        }
+      }
+    ],
+    questionText: "What number do these blocks show? There are [T] tens and [O] ones.",
+    optionsType: "mcq",
+    options: [
+      { label: "[Value]", isCorrect: true },
+      { label: "[O] * 10 + [T]", isCorrect: false },
+      { label: "[Value] + 10", isCorrect: false },
+      { label: "[Value] - 1", isCorrect: false }
+    ],
+    explanation: {
+      sections: [
+        { type: "text", content: "[T] tens is equal to [T * 10], and [O] ones is equal to [O]. When we put them together, [T * 10] + [O] makes [Value]." }
+      ]
+    }
   }
 ];
 
@@ -975,6 +1025,114 @@ export default function VisualTemplateBuilderPage() {
       alert(`AI template generation failed: ${err.message}`);
     } finally {
       setAiTemplateGenerating(false);
+    }
+  };
+
+  const handleCopyJson = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(jsonText);
+        alert('📋 JSON recipe copied to clipboard!');
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = jsonText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('📋 JSON recipe copied to clipboard! (fallback)');
+      }
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+      alert('Failed to copy text to clipboard.');
+    }
+  };
+
+  const handlePasteJson = async () => {
+    try {
+      let text = '';
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        text = await navigator.clipboard.readText();
+      }
+      
+      if (!text) {
+        text = prompt('Paste your template JSON recipe here:');
+      }
+
+      if (text) {
+        setJsonText(text);
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed === 'object') {
+            setTemplate({
+              ...parsed,
+              variables: parsed.variables || [],
+              visuals: parsed.visuals || [],
+              options: parsed.options || [],
+              explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
+            });
+            setJsonError(null);
+            alert('✅ JSON recipe pasted and parsed successfully!');
+          } else {
+            setJsonError('Must be a JSON object');
+            alert('⚠️ Pasted JSON is not an object.');
+          }
+        } catch (err) {
+          setJsonError(err.message);
+          alert(`⚠️ Pasted JSON has syntax error: ${err.message}`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to read clipboard:', err);
+      const pasted = prompt('Paste your template JSON recipe here:');
+      if (pasted) {
+        setJsonText(pasted);
+        try {
+          const parsed = JSON.parse(pasted);
+          if (parsed && typeof parsed === 'object') {
+            setTemplate({
+              ...parsed,
+              variables: parsed.variables || [],
+              visuals: parsed.visuals || [],
+              options: parsed.options || [],
+              explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
+            });
+            setJsonError(null);
+            alert('✅ JSON recipe pasted and parsed successfully!');
+          } else {
+            setJsonError('Must be a JSON object');
+            alert('⚠️ Pasted JSON is not an object.');
+          }
+        } catch (err) {
+          setJsonError(err.message);
+          alert(`⚠️ Pasted JSON has syntax error: ${err.message}`);
+        }
+      }
+    }
+  };
+
+  const handleParseToFormAndReview = () => {
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (parsed && typeof parsed === 'object') {
+        setTemplate({
+          ...parsed,
+          variables: parsed.variables || [],
+          visuals: parsed.visuals || [],
+          options: parsed.options || [],
+          explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
+        });
+        setJsonError(null);
+        setEditorMode('form');
+        setCurrentStep(5);
+        alert('⚡ Parsed to form successfully! Redirecting you to "Preview & Test" tab to review.');
+      } else {
+        setJsonError('Must be a JSON object');
+        alert('⚠️ Parse Error: The JSON is not a valid object.');
+      }
+    } catch (err) {
+      setJsonError(err.message);
+      alert(`⚠️ Parse Error: ${err.message}`);
     }
   };
 
@@ -1388,29 +1546,46 @@ export default function VisualTemplateBuilderPage() {
   // Auto-fill link skill fields when template changes
   useEffect(() => {
     if (template) {
-      setSkillTitle(template.title || '');
-      setSkillIdInput(template.id || '');
-      
-      const subj = template.subject || 'math';
-      setSkillSubject(subj);
-      setSkillSubjectCustomId('');
-      setSkillSubjectCustomTitle('');
+      const existingNode = Array.isArray(curriculumNodes) && curriculumNodes.find(
+        node => node.templateId === template.id || node.id === template.id
+      );
 
-      const topic = template.topic || '';
-      setSkillTopic(topic);
-      setSkillTopicCustomId('');
-      setSkillTopicCustomTitle('');
+      if (existingNode) {
+        setLinkToSkill(true);
+        setSkillTitle(existingNode.title || template.title || '');
+        setSkillIdInput(existingNode.skillId || template.id || '');
+        setSkillSubject(existingNode.subjectId || '');
+        setSkillTopic(existingNode.topicId || '');
+        setSkillChapter(existingNode.chapterId || '');
+        setSkillGrade(existingNode.grade || '');
+        setSkillCode(existingNode.code || '');
+        setSkillOrder(String(existingNode.order || 0));
+      } else {
+        setLinkToSkill(false);
+        setSkillTitle(template.title || '');
+        setSkillIdInput(template.id || '');
+        
+        const subj = template.subject || 'math';
+        setSkillSubject(subj);
+        setSkillSubjectCustomId('');
+        setSkillSubjectCustomTitle('');
 
-      const chap = topic ? `${topic}-chapter` : '';
-      setSkillChapter(chap);
-      setSkillChapterCustomId('');
-      setSkillChapterCustomTitle('');
+        const topic = template.topic || '';
+        setSkillTopic(topic);
+        setSkillTopicCustomId('');
+        setSkillTopicCustomTitle('');
 
-      setSkillGrade('');
-      setSkillCode('');
-      setSkillOrder('0');
+        const chap = topic ? `${topic}-chapter` : '';
+        setSkillChapter(chap);
+        setSkillChapterCustomId('');
+        setSkillChapterCustomTitle('');
+
+        setSkillGrade('');
+        setSkillCode('');
+        setSkillOrder('0');
+      }
     }
-  }, [template.id]);
+  }, [template.id, curriculumNodes]);
 
   // Auto-initialize hotspot canvas properties when changed to hotspot_select
   useEffect(() => {
@@ -2477,7 +2652,35 @@ export default function VisualTemplateBuilderPage() {
               {editorMode === 'json' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', minHeight: '520px' }}>
                   <div className={styles.formGroup} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <label htmlFor="json-editor">JSON Recipe Code Editor</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                      <label htmlFor="json-editor" style={{ margin: 0, fontWeight: 700 }}>JSON Recipe Code Editor</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          className={styles.btn + ' ' + styles.btnSecondary}
+                          style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                          onClick={handleCopyJson}
+                        >
+                          📋 Copy JSON
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.btn + ' ' + styles.btnSecondary}
+                          style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                          onClick={handlePasteJson}
+                        >
+                          📥 Paste JSON
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.btn + ' ' + styles.btnPrimary}
+                          style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', background: '#4f46e5', color: '#ffffff', cursor: 'pointer' }}
+                          onClick={handleParseToFormAndReview}
+                        >
+                          ⚡ Parse to Form & Review
+                        </button>
+                      </div>
+                    </div>
                     <textarea
                       id="json-editor"
                       className={styles.textarea}
@@ -3159,6 +3362,68 @@ export default function VisualTemplateBuilderPage() {
                           ⚠️ Set Options Type to <strong>Visual Choice</strong> in Question Contents below for this to work.
                         </div>
                       )}
+                    </>
+                  )}
+
+                  {/* PlaceValue props */}
+                  {template.visuals[0].component === 'PlaceValue' && (
+                    <>
+                      <div className={styles.propRow}>
+                        <label htmlFor="pv-thousands">Thousands (variable or number)</label>
+                        <input
+                          id="pv-thousands"
+                          type="text"
+                          className={styles.input}
+                          style={{ padding: '6px 10px', fontSize: '13px' }}
+                          value={template.visuals[0].props?.thousands || '0'}
+                          onChange={(e) => updateVisualProp('thousands', e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.propRow}>
+                        <label htmlFor="pv-hundreds">Hundreds (variable or number)</label>
+                        <input
+                          id="pv-hundreds"
+                          type="text"
+                          className={styles.input}
+                          style={{ padding: '6px 10px', fontSize: '13px' }}
+                          value={template.visuals[0].props?.hundreds || '0'}
+                          onChange={(e) => updateVisualProp('hundreds', e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.propRow}>
+                        <label htmlFor="pv-tens">Tens (variable or number)</label>
+                        <input
+                          id="pv-tens"
+                          type="text"
+                          className={styles.input}
+                          style={{ padding: '6px 10px', fontSize: '13px' }}
+                          value={template.visuals[0].props?.tens || 'T'}
+                          onChange={(e) => updateVisualProp('tens', e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.propRow}>
+                        <label htmlFor="pv-ones">Ones (variable or number)</label>
+                        <input
+                          id="pv-ones"
+                          type="text"
+                          className={styles.input}
+                          style={{ padding: '6px 10px', fontSize: '13px' }}
+                          value={template.visuals[0].props?.ones || 'O'}
+                          onChange={(e) => updateVisualProp('ones', e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.propRow} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
+                        <input
+                          id="pv-show-chart"
+                          type="checkbox"
+                          checked={template.visuals[0].props?.showChart !== 'false' && template.visuals[0].props?.showChart !== false}
+                          onChange={(e) => updateVisualProp('showChart', e.target.checked ? 'true' : 'false')}
+                          style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="pv-show-chart" style={{ fontSize: '12px', fontWeight: 650, color: '#334155', cursor: 'pointer', margin: 0 }}>
+                          Show Place Value Chart Grid
+                        </label>
+                      </div>
                     </>
                   )}
                 </div>
@@ -4117,6 +4382,29 @@ export default function VisualTemplateBuilderPage() {
                   <div className={styles.wizardStepContent}>
                 {renderCurriculumLinkerCard()}
 
+                {/* Existing link info */}
+                {(() => {
+                  const existingNode = Array.isArray(curriculumNodes) && curriculumNodes.find(
+                    node => node.templateId === template.id || node.id === template.id
+                  );
+                  const isAlreadySaved = Array.isArray(dynamicTemplates) && dynamicTemplates.some(t => t.id === template.id);
+
+                  return (
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {isAlreadySaved && (
+                        <div style={{ fontSize: '13px', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          ✅ Saved: This template exists in MongoDB templates catalog.
+                        </div>
+                      )}
+                      {existingNode && (
+                        <div style={{ fontSize: '13px', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🔗 Linked: Currently linked to Curriculum Node "{existingNode.title}" (ID: {existingNode.id})
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Save Button */}
                 <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <button
@@ -4126,7 +4414,7 @@ export default function VisualTemplateBuilderPage() {
                     onClick={handleSave}
                     disabled={saving || (!!selectedId && staticList.some(s => s.id === selectedId))}
                   >
-                    {saving ? 'Saving to Database...' : 'Save Template to MongoDB'}
+                    {saving ? 'Saving to Database...' : 'Save Template & Update Skill Node'}
                   </button>
                 </div>
 
@@ -4805,7 +5093,11 @@ export default function VisualTemplateBuilderPage() {
                           key={opt.id}
                           className={`${styles.optionBtn} ${isCorrect ? styles.optionBtnCorrect : ''}`}
                         >
-                          <span>{opt.label}</span>
+                          {isInlineSvg(opt.label) ? (
+                            <div dangerouslySetInnerHTML={{ __html: opt.label }} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80px', padding: '8px' }} />
+                          ) : (
+                            <span>{opt.label}</span>
+                          )}
                           {isCorrect && <span className={styles.optionBadge}>Correct</span>}
                         </div>
                       );
@@ -4816,9 +5108,15 @@ export default function VisualTemplateBuilderPage() {
                   {/* Render Explanation */}
                   <div className={styles.explanationBox}>
                     <div className={styles.explanationTitle}>Explanation (Step-by-Step)</div>
-                    <p className={styles.explanationText}>
-                      {evaluatedQuestion.question.explanation?.sections?.[0]?.content}
-                    </p>
+                    <div className={styles.explanationText} style={{ whiteSpace: 'pre-line' }}>
+                      {(() => {
+                        const expContent = evaluatedQuestion.question.explanation?.sections?.[0]?.content || '';
+                        if (isInlineSvg(expContent) || expContent.includes('<')) {
+                          return <div dangerouslySetInnerHTML={{ __html: expContent }} />;
+                        }
+                        return <p style={{ margin: 0 }}>{expContent}</p>;
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4944,30 +5242,40 @@ export default function VisualTemplateBuilderPage() {
                 {/* Validation and Status */}
                 <div>
                   <div className={styles.controlSectionTitle}>Validation</div>
-                  {[
-                    { label: 'Template information is complete', passed: !!(template.id && template.title) },
-                    { label: 'At least 2 categories added', passed: (template.parts?.[0]?.categories?.length || 0) >= 2 },
-                    { label: 'At least 2 items in total', passed: (template.parts?.[0]?.items?.length || 0) >= 2 },
-                    { label: 'All items assigned to categories', passed: (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id]) },
-                    { label: 'Preview generated successfully', passed: !!evaluatedQuestion?.ok }
-                  ].map((check, idx) => (
-                    <div key={idx} className={styles.validationItem}>
-                      <span className={styles.validationLabel}>{check.label}</span>
-                      <div className={`${styles.statusIcon} ${check.passed ? styles.passed : styles.failed}`}>
-                        {check.passed ? '✓' : '✓'}
+                  {(() => {
+                    const isCategorization = template.parts?.some(p => p.type === 'categorization' || p.type === 'categorizationv2') || template.optionsType === 'categorization';
+                    const checks = [
+                      { label: 'Template information is complete', passed: !!(template.id && template.title) },
+                      ...(isCategorization ? [
+                        { label: 'At least 2 categories added', passed: (template.parts?.[0]?.categories?.length || 0) >= 2 },
+                        { label: 'At least 2 items in total', passed: (template.parts?.[0]?.items?.length || 0) >= 2 },
+                        { label: 'All items assigned to categories', passed: (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id]) }
+                      ] : []),
+                      { label: 'Preview generated successfully', passed: !!evaluatedQuestion?.ok }
+                    ];
+
+                    return checks.map((check, idx) => (
+                      <div key={idx} className={styles.validationItem}>
+                        <span className={styles.validationLabel}>{check.label}</span>
+                        <div className={`${styles.statusIcon} ${check.passed ? styles.passed : styles.failed}`}>
+                          {check.passed ? '✓' : '✗'}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
                 
                 <div className={styles.overallStatusBox}>
                   <div className={styles.controlSectionTitle} style={{ marginBottom: 0 }}>Overall Status</div>
                   {(() => {
+                    const isCategorization = template.parts?.some(p => p.type === 'categorization' || p.type === 'categorizationv2') || template.optionsType === 'categorization';
                     const allPassed = [
                       !!(template.id && template.title),
-                      (template.parts?.[0]?.categories?.length || 0) >= 2,
-                      (template.parts?.[0]?.items?.length || 0) >= 2,
-                      (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id]),
+                      ...(isCategorization ? [
+                        (template.parts?.[0]?.categories?.length || 0) >= 2,
+                        (template.parts?.[0]?.items?.length || 0) >= 2,
+                        (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id])
+                      ] : []),
                       !!evaluatedQuestion?.ok
                     ].every(Boolean);
 

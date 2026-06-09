@@ -10,6 +10,10 @@ function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
 }
 
+function isSvgString(value) {
+  return typeof value === 'string' && value.trim().startsWith('<svg');
+}
+
 function InlineMarkdown({ text }) {
   return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
     const match = piece.match(/^\*\*([^*]+)\*\*$/);
@@ -361,6 +365,8 @@ export default function PracticeFeedback({
           <div className={styles.preKSpotlightCircle}>
             {correctImageUrl ? (
               <img src={correctImageUrl} alt={cleanLabel} style={{ width: 68, height: 68, objectFit: 'contain' }} />
+            ) : isSvgString(correctLabel) ? (
+              <div style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }} dangerouslySetInnerHTML={{ __html: correctLabel }} />
             ) : (
               <span style={{ fontSize: 32, fontWeight: 950, color: '#16a34a' }}>✓</span>
             )}
@@ -370,7 +376,7 @@ export default function PracticeFeedback({
               Correct Answer
             </div>
             <div style={{ fontSize: 19, fontWeight: 950, color: '#0f172a', fontFamily: 'var(--font-outfit), sans-serif' }}>
-              {cleanLabel || 'Right choice'}
+              {isSvgString(correctLabel) ? 'Right choice' : (cleanLabel || 'Right choice')}
             </div>
           </div>
         </div>

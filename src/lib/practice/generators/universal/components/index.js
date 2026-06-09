@@ -5,6 +5,7 @@ import { renderItemCounter } from './ItemCounter.js';
 import { renderImage } from './Image.js';
 import { drawVisualChoicePanel } from './VisualChoice.js';
 import { renderSceneComposer } from './SceneComposer.js';
+import { renderPlaceValue } from './PlaceValue.js';
 
 export const COMPONENT_REGISTRY = {
   TenFrame: renderTenFrame,
@@ -13,6 +14,8 @@ export const COMPONENT_REGISTRY = {
   ItemCounter: renderItemCounter,
   Image: renderImage,
   VisualChoicePanel: drawVisualChoicePanel,
-  SceneComposer: renderSceneComposer
+  SceneComposer: renderSceneComposer,
+  PlaceValue: renderPlaceValue,
+  BaseTenBlocks: renderPlaceValue
 };
 
