@@ -794,6 +794,11 @@
   margin: 0 auto;
 }
 
+.deviceContainer.desktop {
+  width: 900px;
+  max-width: 100%;
+}
+
 .deviceContainer.tablet {
   width: 768px;
   max-width: 100%;
