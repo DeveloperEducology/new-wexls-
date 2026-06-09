@@ -315,65 +315,101 @@ export function renderPlaceValue(props) {
     `.trim();
 
   } else {
-    // ─── Floating Layout (Best for visual choice buttons and custom prompts) ───
-    let activeGroups = [];
+    // ─── IXL-Style Vertical Floating Layout ───
+    
+    // 1. Calculate row dimensions and vertical positions
+    const thousandsRows = Math.ceil(thousands / 5);
+    const thousandsHeight = thousands > 0 ? (thousandsRows - 1) * 200 + 185 : 0;
+    
+    const hundredsHeight = hundreds > 0 ? (hundreds - 1) * 30 + 23 : 0;
+    
+    const tensAndOnesHeight = (tens > 0 || ones > 0) ? 185 : 0;
+
+    let currentY = 20;
+    let thousandsY = 0;
+    let hundredsY = 0;
+    let tensAndOnesY = 0;
+
     if (thousands > 0) {
-      const w = (thousands - 1) * 35 + 270;
-      activeGroups.push({ type: 'thousands', width: w });
+      thousandsY = currentY;
+      currentY += thousandsHeight + 40;
     }
     if (hundreds > 0) {
-      activeGroups.push({ type: 'hundreds', width: 270 });
+      hundredsY = currentY;
+      currentY += hundredsHeight + 40;
     }
-    if (tens > 0) {
-      activeGroups.push({ type: 'tens', width: (tens - 1) * 32 + 27 });
-    }
-    if (ones > 0) {
-      activeGroups.push({ type: 'ones', width: ones > 1 ? 59 : 27 });
+    if (tens > 0 || ones > 0) {
+      tensAndOnesY = currentY;
+      currentY += tensAndOnesHeight + 20;
     }
 
-    const gap = 35;
-    let currentX = 20;
+    const canvasHeight = currentY;
 
-    activeGroups.forEach((group) => {
-      const colX = currentX;
-      const centerX = colX + group.width / 2;
+    // 2. Calculate dynamic canvas width
+    const maxThousandsCols = Math.min(thousands, 5);
+    const thousandsWidth = thousands > 0 ? (maxThousandsCols - 1) * 290 + 270 : 0;
+    const hundredsWidth = hundreds > 0 ? 270 : 0;
+    const tensWidth = tens > 0 ? (tens - 1) * 40 + 27 : 0;
+    
+    const onesCols = Math.min(ones, 5);
+    const onesWidth = ones > 0 ? (onesCols - 1) * 40 + 27 : 0;
+    
+    const tensAndOnesWidth = tensWidth + (tensWidth > 0 && onesWidth > 0 ? 50 : 0) + onesWidth;
+    
+    const rawWidth = Math.max(thousandsWidth, hundredsWidth, tensAndOnesWidth, 300);
+    const canvasWidth = rawWidth + 40;
 
-      if (group.type === 'thousands') {
-        for (let i = 0; i < thousands; i++) {
-          const x = colX + i * 35;
-          const y = 80 - i * 5;
-          blocksMarkup += drawThousand(x, y, thousandsTheme);
-        }
-        currentX += group.width + gap;
-      } else if (group.type === 'hundreds') {
-        for (let i = 0; i < hundreds; i++) {
-          const x = colX;
-          const y = 242 - i * 15;
-          blocksMarkup += drawHundred(x, y, hundredsTheme);
-        }
-        currentX += group.width + gap;
-      } else if (group.type === 'tens') {
-        // Spaces rods with a clean 32px step (5px gap between 27px wide rods)
+    // 3. Render blocks at their calculated positions
+    let blocksMarkup = '';
+
+    // Render Thousands (Row 1)
+    if (thousands > 0) {
+      const startX = (canvasWidth - thousandsWidth) / 2;
+      for (let i = 0; i < thousands; i++) {
+        const row = Math.floor(i / 5);
+        const col = i % 5;
+        const x = startX + col * 290;
+        const y = thousandsY + row * 200;
+        blocksMarkup += drawThousand(x, y, thousandsTheme);
+      }
+    }
+
+    // Render Hundreds (Row 2)
+    if (hundreds > 0) {
+      const startX = (canvasWidth - 270) / 2;
+      for (let i = 0; i < hundreds; i++) {
+        const x = startX;
+        // Stack bottom flat first (i = 0 is bottom, i = hundreds-1 is top)
+        const y = hundredsY + (hundreds - 1 - i) * 30;
+        blocksMarkup += drawHundred(x, y, hundredsTheme);
+      }
+    }
+
+    // Render Tens & Ones (Row 3)
+    if (tens > 0 || ones > 0) {
+      const startX = (canvasWidth - tensAndOnesWidth) / 2;
+      
+      // Draw Tens rods
+      if (tens > 0) {
         for (let i = 0; i < tens; i++) {
-          const x = colX + i * 32;
-          const y = 80;
+          const x = startX + i * 40;
+          const y = tensAndOnesY;
           blocksMarkup += drawTen(x, y, tensTheme);
         }
-        currentX += group.width + gap;
-      } else if (group.type === 'ones') {
+      }
+
+      // Draw Ones cubes (aligned to baseline of tens)
+      if (ones > 0) {
+        const onesStartX = startX + (tens > 0 ? (tens - 1) * 40 + 27 + 50 : 0);
         for (let i = 0; i < ones; i++) {
-          const row = Math.floor(i / 2);
-          const cIdx = i % 2;
-          const x = colX + cIdx * 32;
-          const y = 240 - row * 24;
+          const row = Math.floor(i / 5);
+          const col = i % 5;
+          const x = onesStartX + col * 40;
+          const y = tensAndOnesY + 162 - row * 30;
           blocksMarkup += drawCube(x, y, onesTheme);
         }
-        currentX += group.width + gap;
       }
-    });
-
-    const canvasWidth = Math.max(100, currentX - gap + 20);
-    const canvasHeight = 280;
+    }
 
     return `
       <svg viewBox="0 0 ${canvasWidth} ${canvasHeight}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="max-width: ${Math.min(canvasWidth, 750)}px; display: block; margin: 10px auto;" filter="url(#shadow)">
