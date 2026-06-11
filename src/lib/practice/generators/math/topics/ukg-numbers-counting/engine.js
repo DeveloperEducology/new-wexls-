@@ -3225,15 +3225,29 @@ const drawJarOfMarbles = (colorA, countA, colorB, countB, random) => {
     {x: 83, y: 104}, {x: 117, y: 104}
   ];
 
+  const MARBLE_IMAGES = {
+    black: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142819264-black-marble.webp',
+    blue: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142824300-blue-marble.webp',
+    green: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142833112-green-marble.webp',
+    gren: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142833112-green-marble.webp',
+    yellow: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142840665-yellow-marble.webp'
+  };
+
   for (let i = 0; i < colors.length && i < positions.length; i++) {
     const pos = positions[i];
-    const fill = colors[i] === 'red' ? '#ef4444' : (colors[i] === 'blue' ? '#3b82f6' : (colors[i] === 'green' ? '#10b981' : '#f59e0b'));
-    const stroke = colors[i] === 'red' ? '#991b1b' : (colors[i] === 'blue' ? '#1e3a8a' : (colors[i] === 'green' ? '#065f46' : '#92400e'));
-    marblesHtml += `<circle cx="${pos.x + 1.5}" cy="${pos.y + 1.5}" r="${marbleRadius}" fill="#0f172a" opacity="0.1" />`;
-    marblesHtml += `
-      <circle cx="${pos.x}" cy="${pos.y}" r="${marbleRadius}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />
-      <circle cx="${pos.x - 4}" cy="${pos.y - 4}" r="4" fill="#ffffff" opacity="0.45" />
-    `;
+    const colorKey = String(colors[i] || '').toLowerCase().trim();
+    const imgUrl = MARBLE_IMAGES[colorKey];
+    if (imgUrl) {
+      marblesHtml += `<image href="${imgUrl}" x="${pos.x - marbleRadius}" y="${pos.y - marbleRadius}" width="${marbleRadius * 2}" height="${marbleRadius * 2}" />`;
+    } else {
+      const fill = colors[i] === 'red' ? '#ef4444' : (colors[i] === 'blue' ? '#3b82f6' : (colors[i] === 'green' ? '#10b981' : '#f59e0b'));
+      const stroke = colors[i] === 'red' ? '#991b1b' : (colors[i] === 'blue' ? '#1e3a8a' : (colors[i] === 'green' ? '#065f46' : '#92400e'));
+      marblesHtml += `<circle cx="${pos.x + 1.5}" cy="${pos.y + 1.5}" r="${marbleRadius}" fill="#0f172a" opacity="0.1" />`;
+      marblesHtml += `
+        <circle cx="${pos.x}" cy="${pos.y}" r="${marbleRadius}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />
+        <circle cx="${pos.x - 4}" cy="${pos.y - 4}" r="4" fill="#ffffff" opacity="0.45" />
+      `;
+    }
   }
 
   return `
@@ -3260,7 +3274,7 @@ const drawSpinner = (colorA, sectorsA, colorB, sectorsB) => {
   for (let i = 0; i < sectorsA; i++) colorsList.push(colorA);
   for (let i = 0; i < sectorsB; i++) colorsList.push(colorB);
 
-  const getSectColor = (col) => col === 'red' ? '#ef4444' : (col === 'blue' ? '#3b82f6' : (col === 'green' ? '#10b981' : '#f59e0b'));
+  const getSectColor = (col) => col === 'red' ? '#ef4444' : (col === 'blue' ? '#3b82f6' : (col === 'green' ? '#10b981' : (col === 'black' ? '#1e293b' : '#f59e0b')));
 
   for (let i = 0; i < total; i++) {
     const angleStart = (i * 360) / total;
@@ -3295,7 +3309,7 @@ const drawSpinner = (colorA, sectorsA, colorB, sectorsB) => {
 
 function generateUkgProbabilityQuestion(skill, random, config) {
   const isSpinner = random() > 0.5;
-  const colors = ['green', 'yellow', 'blue', 'red'];
+  const colors = ['green', 'yellow', 'blue', 'red', 'black'];
   const colorA = colors[Math.floor(random() * colors.length)];
   const remainingColors = colors.filter(c => c !== colorA);
   const colorB = remainingColors[Math.floor(random() * remainingColors.length)];

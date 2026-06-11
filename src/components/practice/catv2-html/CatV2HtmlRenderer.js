@@ -141,7 +141,7 @@ function CategorySortLayout({
   const textCardMinWidth = 96;
   const textCardMaxWidth = 154;
   const textCardHeight = 54;
-  const hasItemVisual = (item) => Boolean(item.imageUrl || item.svg || resolveToolSvg(item));
+  const hasItemVisual = (item) => Boolean(item.imageUrl || item.svg || resolveToolSvg(item) || isInlineSvg(item.content || ''));
   const getTextCardWidth = (item) => {
     const contentLength = String(item.content || '').replace(/\s+/g, '').length;
     return Math.max(textCardMinWidth, Math.min(textCardMaxWidth, contentLength * 15 + 34));
@@ -1486,11 +1486,18 @@ function CategorySortLayout({
     const isDragging = draggingId === item.id && !options.isDragLayer;
     const isSelected = selectedItemId === item.id && !options.isDragLayer;
     const toolSvg = resolveToolSvg(item);
-    const showCompactImage = Boolean(item.imageUrl || item.svg || toolSvg);
-    const mediaCard = Boolean(item.imageUrl || item.svg || toolSvg);
+    // Detect if item.content contains an inline SVG (e.g. from drawPlaceValue())
+    const contentIsSvg = !item.imageUrl && !item.svg && !toolSvg && isInlineSvg(item.content || '');
+    const showCompactImage = Boolean(item.imageUrl || item.svg || toolSvg || contentIsSvg);
+    const mediaCard = Boolean(item.imageUrl || item.svg || toolSvg || contentIsSvg);
     const transparentImageCard = isV2 && isTransparentImageStyle(item);
-    const showImageLabel = item.content && item.content.trim() && !shouldHideImageLabel(item);
-    const inlineSvg = item.svg || toolSvg ? cleanSvgContent(item.svg || toolSvg) : (item.imageUrl && isInlineSvg(item.imageUrl) ? cleanSvgContent(item.imageUrl) : null);
+    // If content is SVG, hide the text label (there's nothing else to show)
+    const showImageLabel = !contentIsSvg && item.content && item.content.trim() && !shouldHideImageLabel(item);
+    const inlineSvg = item.svg || toolSvg
+      ? cleanSvgContent(item.svg || toolSvg)
+      : (item.imageUrl && isInlineSvg(item.imageUrl)
+        ? cleanSvgContent(item.imageUrl)
+        : (contentIsSvg ? cleanSvgContent(item.content) : null));
     const effectiveWidth = options.width || (isV2 && mediaCard ? responsiveGridCardWidth : itemCardWidth(item));
     const effectiveHeight = options.height || (isV2 && mediaCard ? responsiveSourceSlotHeight : itemCardHeight(item));
 
@@ -1542,7 +1549,7 @@ function CategorySortLayout({
         ...options.style,
       }}
     >
-      {item.imageUrl || item.svg || toolSvg ? (
+      {item.imageUrl || item.svg || toolSvg || contentIsSvg ? (
         <>
           <div
             style={{

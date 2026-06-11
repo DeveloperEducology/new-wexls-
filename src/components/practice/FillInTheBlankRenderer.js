@@ -30,22 +30,24 @@ function responsivePx(value, minPx, fallbackMaxPx) {
 }
 
 function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
-  const pieces = String(text || '').split(/(\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
+  const pieces = String(text || '').split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
 
   return (
     <span>
       {pieces.map((piece, index) => {
-        const match = piece.match(/^(?:\*\*)?\[blank(?::([^\]]+))?\](?:\*\*)?$/);
-        if (!match) {
+        const legacyMatch = piece.match(/^(?:\*\*)?\[blank(?::([^\]]+))?\](?:\*\*)?$/);
+        const bracketMatch = piece.match(/^\[\[([^\]]+)\]\]$/);
+        const blankId = legacyMatch?.[1] || bracketMatch?.[1] || (legacyMatch ? 'blank' : null);
+
+        if (!blankId) {
           const boldMatch = piece.match(/^\*\*([^*]+)\*\*$/);
           if (boldMatch) return <strong key={index}>{boldMatch[1]}</strong>;
           return <span key={index}>{piece.replace(/^#{1,4}\s*/, '')}</span>;
         }
 
-        const blankId = match[1] || 'blank';
         return (
           <input
-            key={blankId}
+            key={`${blankId}-${index}`}
             value={readAnswer(userAnswer, blankId)}
             disabled={isAnswered}
             onChange={(event) => onAnswer(writeAnswer(userAnswer, blankId, event.target.value))}
@@ -289,7 +291,7 @@ export default function FillInTheBlankRenderer({
   const hasInlineInput = displayParts.some(part => {
     if (part.type === 'input') return true;
     const text = part.content || part.text || '';
-    return text.includes('[blank');
+    return text.includes('[blank') || /\[\[[^\]]+\]\]/.test(text);
   });
 
   return (
@@ -419,6 +421,51 @@ export default function FillInTheBlankRenderer({
           );
         });
       })()}
+
+      {!hasClickToFill && !hasInlineInput && (
+        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start' }}>
+          <span style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', fontWeight: 700, color: '#475569' }}>Answer:</span>
+          <input
+            id="ans"
+            type="text"
+            placeholder="e.g. 1/4"
+            value={typeof userAnswer === 'object' && userAnswer !== null ? (userAnswer.ans ?? userAnswer.answer ?? '') : (userAnswer ?? '')}
+            disabled={isAnswered}
+            onChange={(event) => {
+              const val = event.target.value;
+              if (typeof userAnswer === 'object' && userAnswer !== null) {
+                onAnswer(writeAnswer(userAnswer, 'ans', val));
+              } else {
+                onAnswer(val);
+              }
+            }}
+            style={{
+              width: 'clamp(100px, 25vw, 160px)',
+              height: 'clamp(38px, 9.5vw, 46px)',
+              border: '2px solid #cbd5e1',
+              borderRadius: 12,
+              textAlign: 'center',
+              fontSize: 'clamp(16px, 4.2vw, 22px)',
+              fontWeight: 800,
+              color: '#0f172a',
+              background: isAnswered ? '#f8fafc' : '#ffffff',
+              outline: 'none',
+              boxShadow: '0 2px 4px rgba(15, 23, 42, 0.05)',
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            }}
+            onFocus={(e) => {
+              if (!isAnswered) {
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.15), 0 2px 4px rgba(15, 23, 42, 0.05)';
+              }
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#cbd5e1';
+              e.target.style.boxShadow = '0 2px 4px rgba(15, 23, 42, 0.05)';
+            }}
+          />
+        </div>
+      )}
     </section>
   );
 }

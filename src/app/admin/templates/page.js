@@ -52,6 +52,7 @@ const VISUAL_COMPONENTS = [
   {
     name: 'Ten Frame',
     value: 'TenFrame',
+    mathOnly: true,
     props: {
       filledCount: 'A',
       crossedOutCount: 'B',
@@ -61,6 +62,7 @@ const VISUAL_COMPONENTS = [
   {
     name: 'Jar of Marbles',
     value: 'JarOfMarbles',
+    mathOnly: true,
     props: {
       colorA: 'blue',
       countA: 'A',
@@ -71,6 +73,7 @@ const VISUAL_COMPONENTS = [
   {
     name: 'Spinner',
     value: 'Spinner',
+    mathOnly: true,
     props: {
       colorA: 'blue',
       sectorsA: 'A',
@@ -106,6 +109,7 @@ const VISUAL_COMPONENTS = [
   {
     name: 'Place Value Chart',
     value: 'PlaceValue',
+    mathOnly: true,
     props: {
       thousands: 'Th',
       hundreds: 'H',
@@ -113,10 +117,504 @@ const VISUAL_COMPONENTS = [
       ones: 'O',
       showChart: 'true'
     }
+  },
+  {
+    name: 'Base Ten Blocks',
+    value: 'BaseTenBlocks',
+    mathOnly: true,
+    props: {
+      thousands: '0',
+      hundreds: 'H',
+      tens: 'T',
+      ones: 'O',
+      showChart: 'false',
+      color: 'blue'
+    }
+  },
+  {
+    name: 'Number Line',
+    value: 'NumberLine',
+    mathOnly: true,
+    props: {
+      min: '0',
+      max: '20',
+      step: '1',
+      pointValue: 'A',
+      pointLabel: '',
+      color: 'blue'
+    }
+  },
+  {
+    name: 'Hundred Chart',
+    value: 'HundredChart',
+    mathOnly: true,
+    props: {
+      highlighted: 'A',
+      missing: '',
+      color: 'blue'
+    }
+  },
+  {
+    name: 'Rekenrek',
+    value: 'Rekenrek',
+    mathOnly: true,
+    props: {
+      rows: '2',
+      values: 'A,B'
+    }
+  },
+  {
+    name: 'Number Bond',
+    value: 'NumberBond',
+    mathOnly: true,
+    props: {
+      whole: 'A',
+      left: 'B',
+      right: 'Result',
+      missing: 'right'
+    }
+  },
+  {
+    name: 'Tally Chart',
+    value: 'TallyChart',
+    mathOnly: true,
+    props: {
+      categories: 'A,B,C',
+      counts: '3,4,5',
+      showFrequency: 'true'
+    }
+  },
+  {
+    name: 'Fraction Bar',
+    value: 'FractionBar',
+    mathOnly: true,
+    props: {
+      denominator: '4',
+      numerator: '1',
+      color: 'blue',
+      interactive: 'false'
+    }
+  },
+  {
+    name: 'Fraction Circle',
+    value: 'FractionCircle',
+    mathOnly: true,
+    props: {
+      denominator: '4',
+      numerator: '1',
+      color: 'red',
+      interactive: 'false'
+    }
+  },
+  {
+    name: 'Fraction Grid',
+    value: 'FractionGrid',
+    mathOnly: true,
+    props: {
+      rows: '2',
+      cols: '4',
+      shaded: '3',
+      color: 'green',
+      interactive: 'false'
+    }
+  },
+  {
+    name: 'Decimal Grid',
+    value: 'DecimalGrid',
+    mathOnly: true,
+    props: {
+      value: '0.35',
+      color: 'orange'
+    }
+  },
+  {
+    name: 'Decimal Line',
+    value: 'DecimalLine',
+    mathOnly: true,
+    props: {
+      min: '0',
+      max: '1',
+      step: '0.1',
+      markedPoint: '0.4',
+      pointLabel: '',
+      color: 'blue'
+    }
+  },
+  {
+    name: 'Shape Canvas',
+    value: 'ShapeCanvas',
+    mathOnly: true,
+    props: {
+      shape: 'triangle',
+      label: '',
+      color: 'purple'
+    }
+  },
+  {
+    name: 'Coordinate Plane',
+    value: 'CoordinatePlane',
+    mathOnly: true,
+    props: {
+      xMin: '-5',
+      xMax: '5',
+      yMin: '-5',
+      yMax: '5',
+      points: '3,2',
+      polygon: ''
+    }
+  },
+  {
+    name: 'Protractor',
+    value: 'Protractor',
+    mathOnly: true,
+    props: {
+      angle: '45'
+    }
+  },
+  {
+    name: 'Ruler',
+    value: 'Ruler',
+    mathOnly: true,
+    props: {
+      length: '10',
+      objectLength: '4',
+      objectType: 'pencil'
+    }
+  },
+  {
+    name: 'Geoboard',
+    value: 'Geoboard',
+    mathOnly: true,
+    props: {
+      gridSize: '5',
+      polygon: '1,1;4,1;4,4;1,4',
+      color: 'red'
+    }
+  },
+  {
+    name: 'Bar Graph',
+    value: 'BarGraph',
+    mathOnly: true,
+    props: {
+      title: 'Favorite fruits',
+      categories: 'Apples,Bananas,Grapes',
+      values: '4,6,3',
+      color: 'blue'
+    }
+  },
+  {
+    name: 'Pictograph',
+    value: 'Pictograph',
+    mathOnly: true,
+    props: {
+      categories: 'Cats,Dogs,Birds',
+      values: '3,5,2',
+      emoji: 'star',
+      key: '1',
+      showCount: 'true'
+    }
+  },
+  {
+    name: 'Frequency Table',
+    value: 'FrequencyTable',
+    mathOnly: true,
+    props: {
+      title: 'Class votes',
+      categories: 'Red,Blue,Green',
+      values: '5,7,4',
+      headers: 'Category,Frequency'
+    }
+  },
+  {
+    name: 'Analog Clock',
+    value: 'AnalogClock',
+    mathOnly: true,
+    props: {
+      hour: '3',
+      minute: '30',
+      interactive: 'false'
+    }
+  },
+  {
+    name: 'Calendar',
+    value: 'Calendar',
+    mathOnly: true,
+    props: {
+      month: 'June',
+      daysInMonth: '30',
+      startDay: '1',
+      highlightDays: '11'
+    }
+  },
+  {
+    name: 'Thermometer',
+    value: 'Thermometer',
+    mathOnly: true,
+    props: {
+      min: '0',
+      max: '100',
+      value: '37',
+      unit: 'C'
+    }
+  },
+  {
+    name: 'Balance Scale',
+    value: 'BalanceScale',
+    mathOnly: true,
+    props: {
+      leftWeight: 'A',
+      rightWeight: 'B',
+      leftLabel: 'Left',
+      rightLabel: 'Right',
+      showStacked: 'false'
+    }
+  },
+  {
+    name: 'Measuring Jug',
+    value: 'MeasuringJug',
+    mathOnly: true,
+    props: {
+      capacity: '1000',
+      step: '100',
+      value: '500'
+    }
+  },
+  {
+    name: 'Money Display',
+    value: 'MoneyDisplay',
+    mathOnly: true,
+    props: {
+      amount: '25'
+    }
+  },
+  {
+    name: 'Price Tag Compare',
+    value: 'PriceTagCompare',
+    mathOnly: true,
+    props: {
+      itemA: 'Apple',
+      priceA: '10',
+      itemB: 'Mango',
+      priceB: '15'
+    }
+  },
+  {
+    name: 'Scene Composer',
+    value: 'SceneComposer',
+    props: {
+      containerType: 'box',
+      targetClipart: '',
+      placements: 'center'
+    }
   }
 ];
 
 const COLORS_LIST = ['red', 'blue', 'green', 'yellow', 'pink', 'purple', 'orange'];
+
+const MISCONCEPTION_PRESETS = [
+  { value: '', label: 'Select misconception' },
+  { value: 'off_by_one', label: 'Off by one' },
+  { value: 'operation_confusion', label: 'Operation confusion' },
+  { value: 'place_value_error', label: 'Place value error' },
+  { value: 'counting_all', label: 'Counting all instead of strategy' },
+  { value: 'reversal', label: 'Reversal / order mix-up' },
+  { value: 'visual_misread', label: 'Visual model misread' },
+  { value: 'vocabulary_confusion', label: 'Vocabulary confusion' },
+  { value: 'near_miss', label: 'Near miss distractor' }
+];
+
+const SUBJECT_MODES = {
+  english: {
+    label: 'English',
+    strands: ['vocabulary', 'phonics', 'grammar', 'reading'],
+    visuals: ['Text', 'Image', 'Audio', 'ReadingPassage'],
+    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'matching', 'fill_blank', 'text_input', 'sequence']
+  },
+  math: {
+    label: 'Math',
+    strands: ['arithmetic', 'fractions', 'geometry', 'measurement'],
+    visuals: ['Text', 'NumberLine', 'FractionBar', 'Clock', 'BaseTenBlocks', 'MeasuringCup', 'GeometryCanvas', 'DragCanvas'],
+    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'fill_blank', 'number_input', 'sequence', 'interactive_tool']
+  },
+  science: {
+    label: 'Science',
+    strands: ['diagrams', 'labeling', 'experiments'],
+    visuals: ['Text', 'Image', 'Audio', 'SVG', 'Video', 'GeometryCanvas', 'DragCanvas'],
+    interactions: ['mcq', 'picture_mcq', 'multi_select', 'drag_drop', 'sorting', 'matching', 'hotspot', 'label_diagram']
+  },
+  gk: {
+    label: 'General Knowledge',
+    strands: ['facts', 'image matching', 'associations'],
+    visuals: ['Text', 'Image', 'Audio', 'Video'],
+    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'matching', 'sorting', 'hotspot']
+  },
+  social_studies: {
+    label: 'Social Studies',
+    strands: ['places', 'people', 'history', 'civics', 'maps'],
+    visuals: ['Text', 'Image', 'Audio', 'SVG', 'Video', 'ReadingPassage'],
+    interactions: ['mcq', 'picture_mcq', 'multi_select', 'matching', 'hotspot', 'label_diagram', 'sequence']
+  },
+  coding: {
+    label: 'Coding',
+    strands: ['sequencing', 'logic', 'debugging', 'patterns'],
+    visuals: ['Text', 'SVG', 'DragCanvas'],
+    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'sequence', 'text_input', 'interactive_tool']
+  },
+  logical_reasoning: {
+    label: 'Logical Reasoning',
+    strands: ['patterns', 'classification', 'analogies', 'deduction'],
+    visuals: ['Text', 'Image', 'SVG', 'DragCanvas'],
+    interactions: ['mcq', 'multi_select', 'sorting', 'matching', 'sequence', 'fill_blank']
+  }
+};
+
+const DATA_SOURCE_TYPES = [
+  'pool_selection',
+  'random_number',
+  'random_item',
+  'static_data',
+  'curriculum_dataset',
+  'image_library',
+  'audio_library',
+  'svg_library',
+  'facts_database'
+];
+
+const VARIABLE_TYPES = [
+  'integer',
+  'expression',
+  'list',
+  'string_template',
+  'array_transform',
+  'conditional',
+  'computed'
+];
+
+const LAYOUT_MODES = [
+  'prompt_top',
+  'prompt_left',
+  'visual_center',
+  'split_screen',
+  'reading_passage',
+  'worksheet',
+  'mobile_first',
+  'tablet_first',
+  'desktop_first'
+];
+
+const INTERACTION_ENGINES = [
+  'mcq',
+  'picture_mcq',
+  'audio_mcq',
+  'multi_select',
+  'drag_drop',
+  'sorting',
+  'matching',
+  'fill_blank',
+  'number_input',
+  'text_input',
+  'sequence',
+  'hotspot',
+  'draw_line',
+  'label_diagram',
+  'interactive_tool'
+];
+
+const VALIDATION_RULE_TYPES = [
+  'exact_match',
+  'case_insensitive',
+  'numeric_tolerance',
+  'multi_answer',
+  'regex_validation',
+  'custom_formula'
+];
+
+const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'];
+
+const ANALYTICS_FIELDS = [
+  'attempts',
+  'time_spent',
+  'hints_used',
+  'first_try_correct',
+  'mastery_score',
+  'smart_score',
+  'confidence_score'
+];
+
+const createUniversalSchemaDefaults = () => ({
+  description: '',
+  grade: '',
+  skillId: '',
+  competencyId: '',
+  difficultyLevel: 'easy',
+  tags: [],
+  dataSources: [],
+  constraints: {
+    uniqueOptions: true,
+    preventDuplicateWords: true,
+    minOptionCount: 3,
+    maxOptionCount: 6,
+    distractorSimilarity: 'medium'
+  },
+  layoutConfig: {
+    mode: 'prompt_top',
+    responsiveTarget: 'desktop_first'
+  },
+  interaction: {
+    engine: 'mcq',
+    inputMode: 'choice'
+  },
+  validationRules: [
+    { type: 'exact_match', target: 'answer', value: '[Result]' }
+  ],
+  feedbackRules: {
+    correct_message: 'Correct!',
+    incorrect_message: 'Try again.',
+    hints: [],
+    step_by_step_explanation: '',
+    misconception_feedback: {}
+  },
+  difficultyRules: {
+    easy: { optionCount: 3, distractorSimilarity: 'low', hintVisibility: 'high', visualSupport: 'high', answerComplexity: 'low' },
+    medium: { optionCount: 4, distractorSimilarity: 'medium', hintVisibility: 'medium', visualSupport: 'medium', answerComplexity: 'medium' },
+    hard: { optionCount: 5, distractorSimilarity: 'high', hintVisibility: 'low', visualSupport: 'low', answerComplexity: 'high' }
+  },
+  analyticsConfig: ANALYTICS_FIELDS.reduce((acc, field) => ({ ...acc, [field]: true }), {}),
+  adaptiveRules: {
+    correct: { route: 'next_skill', targetSkillId: '' },
+    incorrect: { route: 'remediation_skill', targetSkillId: '' },
+    masteryAchieved: { route: 'harder_template', targetTemplateId: '' }
+  }
+});
+
+const withUniversalDefaults = (template) => {
+  const defaults = createUniversalSchemaDefaults();
+  return {
+    ...defaults,
+    ...template,
+    dataSources: template.dataSources || defaults.dataSources,
+    constraints: { ...defaults.constraints, ...(template.constraints || {}) },
+    layoutConfig: { ...defaults.layoutConfig, ...(template.layoutConfig || {}) },
+    interaction: { ...defaults.interaction, ...(template.interaction || {}) },
+    validationRules: template.validationRules || defaults.validationRules,
+    feedbackRules: { ...defaults.feedbackRules, ...(template.feedbackRules || {}) },
+    difficultyRules: { ...defaults.difficultyRules, ...(template.difficultyRules || {}) },
+    analyticsConfig: { ...defaults.analyticsConfig, ...(template.analyticsConfig || {}) },
+    adaptiveRules: { ...defaults.adaptiveRules, ...(template.adaptiveRules || {}) },
+    tags: Array.isArray(template.tags) ? template.tags : String(template.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+  };
+};
+
+const normalizeTemplateForBuilder = (template) => {
+  const normalized = withUniversalDefaults(template || {});
+  return {
+    ...normalized,
+    variables: normalized.variables || [],
+    visuals: normalized.visuals || [],
+    options: normalized.options || [],
+    explanation: normalized.explanation || { sections: [{ type: 'text', content: '' }] }
+  };
+};
 
 const REFERENCE_EXAMPLES = [
   {
@@ -880,19 +1378,235 @@ const getImageUrlPreview = (value) => {
   return null;
 };
 
+const normalizeOptionLabel = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
+
+const hasUnresolvedPlaceholder = (value) => /\[[A-Za-z_][A-Za-z0-9_]*\]|\[\[[^\]]+\]\]/.test(String(value ?? ''));
+
+const getTemplateMode = (template) => {
+  const partType = template.parts?.[0]?.type || '';
+  const optionType = template.optionsType || template.type || '';
+  if (partType === 'categorizationv2' || partType === 'categorization' || optionType.includes('categorization')) return 'categorization';
+  if (optionType === 'fillInTheBlank' || optionType === 'fib') return 'fillInTheBlank';
+  if (partType === 'hotspot_canvas' || optionType.includes('hotspot')) return 'hotspot';
+  if (optionType === 'visual_choice') return 'visualChoice';
+  return 'mcq';
+};
+
+const getStepLabel = (stepId, template) => {
+  if (stepId !== 4) return {
+    1: 'Template Info',
+    2: 'Question Setup',
+    3: 'Visuals & Prompt',
+    5: 'Feedback & Routing',
+    6: 'Preview & Publish'
+  }[stepId];
+
+  const mode = getTemplateMode(template);
+  if (mode === 'categorization') return 'Drag Items';
+  if (mode === 'fillInTheBlank') return 'Blank Answers';
+  if (mode === 'hotspot') return 'Hotspot Targets';
+  if (mode === 'visualChoice') return 'Visual Choices';
+  return 'Answer Choices';
+};
+
+const makeVariantSeed = (baseSeed, index) => `${baseSeed || 'qa'}-${index + 1}`;
+
+const analyzeVariantQuestion = (template, question, seed) => {
+  const issues = [];
+  const warnings = [];
+  const mode = getTemplateMode(template);
+
+  if (!question || typeof question !== 'object') {
+    issues.push('Evaluator returned no question object.');
+    return { seed, issues, warnings };
+  }
+
+  if (!question.questionText || !String(question.questionText).trim()) {
+    issues.push('Question text is empty.');
+  } else if (hasUnresolvedPlaceholder(question.questionText)) {
+    issues.push(`Question text has unresolved placeholder: "${question.questionText}"`);
+  }
+
+  const visualParts = Array.isArray(question.parts)
+    ? question.parts.filter(part => ['svg', 'image', 'visual', 'component', 'interactive'].includes(part.type) || part.imageUrl || part.content?.includes?.('<svg'))
+    : [];
+  if ((template.visuals?.length || 0) > 0 && visualParts.length === 0) {
+    warnings.push('Template defines visuals, but this variant produced no visual part.');
+  }
+
+  if (mode === 'mcq' || mode === 'visualChoice') {
+    const options = Array.isArray(question.options) ? question.options : [];
+    if (options.length < 2) issues.push('MCQ/visual choice variant has fewer than 2 options.');
+
+    const labels = options.map(opt => normalizeOptionLabel(opt?.label ?? opt?.text ?? opt?.value ?? opt));
+    const nonEmptyLabels = labels.filter(Boolean);
+    if (nonEmptyLabels.length !== labels.length) issues.push('One or more answer choices are empty.');
+
+    const duplicates = nonEmptyLabels.filter((label, idx) => nonEmptyLabels.indexOf(label) !== idx);
+    if (duplicates.length > 0) issues.push(`Duplicate answer choices: ${[...new Set(duplicates)].join(', ')}`);
+
+    const unresolved = labels.filter(hasUnresolvedPlaceholder);
+    if (unresolved.length > 0) issues.push(`Answer choices have unresolved placeholders: ${unresolved.join(', ')}`);
+
+    const correctIndex = Number(question.correctAnswerIndex);
+    if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) {
+      issues.push('Correct answer index is missing or out of range.');
+    }
+
+    const declaredCorrect = options.filter(opt => opt?.isCorrect === true).length;
+    if (declaredCorrect > 1) issues.push('More than one answer choice is marked correct.');
+    if (options.length === 4 && new Set(nonEmptyLabels).size < 4) warnings.push('Four-choice MCQ collapsed to fewer than 4 unique labels.');
+
+  }
+
+  if (mode === 'fillInTheBlank') {
+    const hasBlank = Array.isArray(question.parts) && question.parts.some(part => String(part.content || '').includes('[['));
+    if (!question.answer && !question.correctAnswer && !hasBlank) {
+      issues.push('Fill-in-the-blank variant is missing an answer mapping or blank content.');
+    }
+  }
+
+  if (mode === 'categorization') {
+    const catPart = question.parts?.find(part => part.type === 'categorizationv2' || part.type === 'categorization') || template.parts?.[0];
+    const categories = catPart?.categories || [];
+    const items = catPart?.items || [];
+    const answer = catPart?.answer || catPart?.answerKey || question.answer || {};
+    if (categories.length < 2) issues.push('Categorization needs at least 2 categories.');
+    if (items.length < 2) issues.push('Categorization needs at least 2 draggable items.');
+    const missingAssignments = items.filter(item => !answer?.[item.id]);
+    if (missingAssignments.length > 0) issues.push(`Items missing category assignment: ${missingAssignments.map(item => item.id).join(', ')}`);
+  }
+
+  const explanationText = question.explanation?.sections?.map(section => section.content || '').join(' ') || '';
+  if (explanationText && hasUnresolvedPlaceholder(explanationText)) warnings.push('Explanation has unresolved placeholders.');
+  if (!explanationText && template.explanation) warnings.push('Template has an explanation definition, but this variant produced no explanation text.');
+
+  return { seed, issues, warnings };
+};
+
+const runTemplateVariantQA = (template, count, baseSeed) => {
+  const total = Math.max(1, Math.min(Number(count) || 25, 100));
+  const failures = [];
+  const warningItems = [];
+  let passed = 0;
+
+  const templateDistractors = Array.isArray(template.options)
+    ? template.options.filter(opt => opt && opt.isCorrect !== true)
+    : [];
+  const distractorsWithoutPedagogy = templateDistractors.filter(opt => (
+    !String(opt.misconception || '').trim() &&
+    !String(opt.feedback || '').trim() &&
+    !String(opt.remediationHint || '').trim()
+  ));
+  if (templateDistractors.length > 0 && distractorsWithoutPedagogy.length > 0) {
+    warningItems.push({
+      seed: 'template',
+      issues: [],
+      warnings: [`${distractorsWithoutPedagogy.length} distractor(s) have no misconception, feedback, or remediation hint.`]
+    });
+  }
+
+  for (let i = 0; i < total; i += 1) {
+    const seed = makeVariantSeed(baseSeed, i);
+    try {
+      const question = evaluateTemplate(template, seed);
+      const result = analyzeVariantQuestion(template, question, seed);
+      if (result.issues.length > 0) failures.push(result);
+      else passed += 1;
+      if (result.warnings.length > 0) warningItems.push(result);
+    } catch (error) {
+      failures.push({ seed, issues: [error.message || 'Evaluation failed.'], warnings: [] });
+    }
+  }
+
+  const failCount = failures.length;
+  const warningCount = warningItems.reduce((sum, item) => sum + item.warnings.length, 0);
+  const passRate = Math.round(((total - failCount) / total) * 100);
+  const score = Math.max(0, passRate - Math.min(20, warningCount * 2));
+
+  return {
+    total,
+    passed,
+    failCount,
+    warningCount,
+    score,
+    failures: failures.slice(0, 12),
+    warnings: warningItems.slice(0, 12),
+    generatedAt: new Date().toISOString()
+  };
+};
+
 export default function VisualTemplateBuilderPage() {
   // Database templates state
   const [dynamicTemplates, setDynamicTemplates] = useState([]);
   const [staticTemplates, setStaticTemplates] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
+  const [loadedPools, setLoadedPools] = useState({});
+
+  // Sidebar search & collapsible category state
+  const [sidebarSearch, setSidebarSearch] = useState('');
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [expandedSections, setExpandedSections] = useState({
+    customDb: true,
+    referenceExamples: false,
+    mathStarters: false,
+    staticCatalog: false,
+    // Custom MongoDB sub-subjects
+    'custom-math': true,
+    'custom-english': true,
+    'custom-other': true,
+    // Static Catalog sub-subjects
+    'static-math': false,
+    'static-english': false,
+    'static-science': false,
+    'static-other': false,
+  });
+
+  const toggleSection = (key) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const matchesSearch = (tpl) => {
+    if (!sidebarSearch.trim()) return true;
+    const term = sidebarSearch.toLowerCase();
+    const title = (tpl.title || "").toLowerCase();
+    const id = (tpl.id || "").toLowerCase();
+    const topic = (tpl.topic || "").toLowerCase();
+    const subject = (tpl.subject || tpl.templateInfo?.subject || "").toLowerCase();
+    return title.includes(term) || id.includes(term) || topic.includes(term) || subject.includes(term);
+  };
+
+  const isSectionExpanded = (key) => {
+    if (sidebarSearch.trim()) return true;
+    return !!expandedSections[key];
+  };
+
+  // Group dynamic templates categorically by subject
+  const groupedDynamicTemplates = useMemo(() => {
+    const groups = {};
+    const filtered = dynamicTemplates.filter(matchesSearch);
+    filtered.forEach(tpl => {
+      let subject = tpl.subject || tpl.templateInfo?.subject || 'other';
+      subject = subject.toLowerCase().trim();
+      const subjectKey = (subject === 'math' || subject === 'english' || subject === 'gk' || subject === 'social_studies') ? subject : 'other';
+      if (!groups[subjectKey]) {
+        groups[subjectKey] = [];
+      }
+      groups[subjectKey].push(tpl);
+    });
+    return groups;
+  }, [dynamicTemplates, sidebarSearch]);
 
   // Guide modal states
   const [showGuide, setShowGuide] = useState(false);
   const [activeGuideTab, setActiveGuideTab] = useState('overview');
 
   // Editor State
-  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [template, setTemplate] = useState(normalizeTemplateForBuilder(DEFAULT_TEMPLATE));
   const [saveStatus, setSaveStatus] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -911,10 +1625,14 @@ export default function VisualTemplateBuilderPage() {
     previewAsStudent: true
   });
   const [sampleSet, setSampleSet] = useState('Sample Set 1');
+  const [qaSampleCount, setQaSampleCount] = useState(50);
+  const [variantQaReport, setVariantQaReport] = useState(null);
+  const [variantQaRunning, setVariantQaRunning] = useState(false);
+  const [aiAssistantExpanded, setAiAssistantExpanded] = useState(false);
 
   // Code editor state
   const [editorMode, setEditorMode] = useState('form'); // 'form' or 'json'
-  const [jsonText, setJsonText] = useState(JSON.stringify(DEFAULT_TEMPLATE, null, 2));
+  const [jsonText, setJsonText] = useState(JSON.stringify(normalizeTemplateForBuilder(DEFAULT_TEMPLATE), null, 2));
   const [jsonError, setJsonError] = useState(null);
 
   // Gallery and Custom Selector States
@@ -1007,14 +1725,9 @@ export default function VisualTemplateBuilderPage() {
       const data = await res.json();
       if (data.success && data.template) {
         const generated = data.template;
-        setTemplate({
-          ...generated,
-          variables: generated.variables || [],
-          visuals: generated.visuals || [],
-          options: generated.options || [],
-          explanation: generated.explanation || { sections: [{ type: 'text', content: '' }] }
-        });
-        setJsonText(JSON.stringify(generated, null, 2));
+        const normalized = normalizeTemplateForBuilder(generated);
+        setTemplate(normalized);
+        setJsonText(JSON.stringify(normalized, null, 2));
         setAiTemplateSuccessMsg('✨ AI successfully generated the template! Check it out below.');
         setTimeout(() => setAiTemplateSuccessMsg(''), 5000);
       } else {
@@ -1026,6 +1739,29 @@ export default function VisualTemplateBuilderPage() {
     } finally {
       setAiTemplateGenerating(false);
     }
+  };
+
+  const handleRunVariantQA = () => {
+    setVariantQaRunning(true);
+    setTimeout(() => {
+      try {
+        const report = runTemplateVariantQA(resolvedTemplate, qaSampleCount, seed);
+        setVariantQaReport(report);
+      } catch (error) {
+        setVariantQaReport({
+          total: 0,
+          passed: 0,
+          failCount: 1,
+          warningCount: 0,
+          score: 0,
+          failures: [{ seed, issues: [error.message || 'Variant QA failed.'], warnings: [] }],
+          warnings: [],
+          generatedAt: new Date().toISOString()
+        });
+      } finally {
+        setVariantQaRunning(false);
+      }
+    }, 0);
   };
 
   const handleCopyJson = async () => {
@@ -1064,13 +1800,7 @@ export default function VisualTemplateBuilderPage() {
         try {
           const parsed = JSON.parse(text);
           if (parsed && typeof parsed === 'object') {
-            setTemplate({
-              ...parsed,
-              variables: parsed.variables || [],
-              visuals: parsed.visuals || [],
-              options: parsed.options || [],
-              explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
-            });
+            setTemplate(normalizeTemplateForBuilder(parsed));
             setJsonError(null);
             alert('✅ JSON recipe pasted and parsed successfully!');
           } else {
@@ -1090,13 +1820,7 @@ export default function VisualTemplateBuilderPage() {
         try {
           const parsed = JSON.parse(pasted);
           if (parsed && typeof parsed === 'object') {
-            setTemplate({
-              ...parsed,
-              variables: parsed.variables || [],
-              visuals: parsed.visuals || [],
-              options: parsed.options || [],
-              explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
-            });
+            setTemplate(normalizeTemplateForBuilder(parsed));
             setJsonError(null);
             alert('✅ JSON recipe pasted and parsed successfully!');
           } else {
@@ -1115,17 +1839,11 @@ export default function VisualTemplateBuilderPage() {
     try {
       const parsed = JSON.parse(jsonText);
       if (parsed && typeof parsed === 'object') {
-        setTemplate({
-          ...parsed,
-          variables: parsed.variables || [],
-          visuals: parsed.visuals || [],
-          options: parsed.options || [],
-          explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
-        });
+        setTemplate(normalizeTemplateForBuilder(parsed));
         setJsonError(null);
         setEditorMode('form');
-        setCurrentStep(5);
-        alert('⚡ Parsed to form successfully! Redirecting you to "Preview & Test" tab to review.');
+        setCurrentStep(6);
+        alert('⚡ Parsed to form successfully! Redirecting you to "Preview & Publish" tab to review.');
       } else {
         setJsonError('Must be a JSON object');
         alert('⚠️ Parse Error: The JSON is not a valid object.');
@@ -1619,18 +2337,36 @@ export default function VisualTemplateBuilderPage() {
     setSelectedId(tpl.id);
     
     // Ensure explanation structure is normalized
-    const normalized = {
-      ...tpl,
-      variables: tpl.variables || [],
-      visuals: tpl.visuals || [],
-      options: tpl.options || [],
-      explanation: tpl.explanation || { sections: [{ type: 'text', content: '' }] }
-    };
+    const normalized = normalizeTemplateForBuilder(tpl);
     
     setTemplate(normalized);
     setJsonText(JSON.stringify(normalized, null, 2));
     setJsonError(null);
     setSaveStatus(null);
+
+    // Auto expand parent category sections
+    const isReference = REFERENCE_EXAMPLES.some(r => r.id === tpl.id);
+    const isStarter = MATH_STARTERS.some(s => s.id === tpl.id);
+    const isStatic = tpl.isStatic || (!isReference && !isStarter && staticList.some(s => s.id === tpl.id));
+    
+    const subject = tpl.subject || tpl.templateInfo?.subject || 'other';
+    const subjectKey = subject.toLowerCase().trim();
+
+    setExpandedSections(prev => {
+      const next = { ...prev };
+      if (isReference) {
+        next.referenceExamples = true;
+      } else if (isStarter) {
+        next.mathStarters = true;
+      } else if (isStatic) {
+        next.staticCatalog = true;
+        next[`static-${subjectKey}`] = true;
+      } else {
+        next.customDb = true;
+        next[`custom-${subjectKey}`] = true;
+      }
+      return next;
+    });
   };
 
   // Start a new template
@@ -1638,7 +2374,7 @@ export default function VisualTemplateBuilderPage() {
     setSelectedId(null);
     const uniqueId = `template-${Date.now()}`;
     const newTpl = {
-      ...DEFAULT_TEMPLATE,
+      ...normalizeTemplateForBuilder(DEFAULT_TEMPLATE),
       id: uniqueId,
       title: 'New Custom Template'
     };
@@ -1676,6 +2412,63 @@ export default function VisualTemplateBuilderPage() {
       };
       return next;
     });
+  };
+
+  const updateNestedConfig = (section, key, value) => {
+    setTemplate(prev => ({
+      ...prev,
+      [section]: {
+        ...(prev[section] || {}),
+        [key]: value
+      }
+    }));
+  };
+
+  const updateDeepConfig = (section, group, key, value) => {
+    setTemplate(prev => ({
+      ...prev,
+      [section]: {
+        ...(prev[section] || {}),
+        [group]: {
+          ...((prev[section] || {})[group] || {}),
+          [key]: value
+        }
+      }
+    }));
+  };
+
+  const addDataSource = () => {
+    updateField('dataSources', [
+      ...(template.dataSources || []),
+      { id: `source_${(template.dataSources || []).length + 1}`, type: 'static_data', name: 'New Source', items: [] }
+    ]);
+  };
+
+  const updateDataSource = (index, key, value) => {
+    const sources = [...(template.dataSources || [])];
+    sources[index] = { ...sources[index], [key]: value };
+    updateField('dataSources', sources);
+  };
+
+  const removeDataSource = (index) => {
+    updateField('dataSources', (template.dataSources || []).filter((_, idx) => idx !== index));
+  };
+
+  const addValidationRule = () => {
+    updateField('validationRules', [
+      ...(template.validationRules || []),
+      { type: 'exact_match', target: 'answer', value: '' }
+    ]);
+  };
+
+  const updateValidationRule = (index, key, value) => {
+    const rules = [...(template.validationRules || [])];
+    rules[index] = { ...rules[index], [key]: value };
+    updateField('validationRules', rules);
+  };
+
+  const removeValidationRule = (index) => {
+    updateField('validationRules', (template.validationRules || []).filter((_, idx) => idx !== index));
   };
 
   const updateDndPartProp = (propName, propVal) => {
@@ -2024,15 +2817,166 @@ export default function VisualTemplateBuilderPage() {
     }
   };
 
+  // Fetch required vocabulary pools for template variables or dataSources
+  useEffect(() => {
+    const poolsToFetch = new Set();
+    
+    // Scan variables
+    if (Array.isArray(template.variables)) {
+      template.variables.forEach(v => {
+        if (v.type === 'pool_selection' && v.poolId) {
+          poolsToFetch.add(v.poolId);
+        }
+      });
+    }
+    
+    // Scan dataSources
+    if (Array.isArray(template.dataSources)) {
+      template.dataSources.forEach(ds => {
+        if (ds.type === 'pool_selection' && ds.poolId) {
+          poolsToFetch.add(ds.poolId);
+        }
+      });
+    }
+    
+    // Fetch each pool that isn't already loaded
+    poolsToFetch.forEach(async (poolId) => {
+      if (loadedPools[poolId] || poolId === 'loading') return;
+      
+      // Temporarily mark as loading
+      setLoadedPools(prev => ({ ...prev, [poolId]: 'loading' }));
+      
+      try {
+        const res = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId)}`);
+        const data = await res.json();
+        if (data.success && data.pool) {
+          setLoadedPools(prev => ({ ...prev, [poolId]: data.pool }));
+        } else {
+          setLoadedPools(prev => {
+            const copy = { ...prev };
+            delete copy[poolId];
+            return copy;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch pool:', poolId, err);
+        setLoadedPools(prev => {
+          const copy = { ...prev };
+          delete copy[poolId];
+          return copy;
+        });
+      }
+    });
+  }, [template.variables, template.dataSources, loadedPools]);
+
+  // Inject variable/dataSource lists from loadedPools into template before evaluation
+  const resolvedTemplate = useMemo(() => {
+    const copy = JSON.parse(JSON.stringify(template));
+    
+    // Inject variables
+    if (Array.isArray(copy.variables)) {
+      copy.variables = copy.variables.map(v => {
+        if (v.type === 'pool_selection' && v.poolId) {
+          const poolDoc = loadedPools[v.poolId];
+          if (poolDoc && poolDoc !== 'loading') {
+            const category = v.category || 'targets';
+            const words = poolDoc.pools?.[category] || [];
+            return {
+              ...v,
+              type: 'list',
+              items: words.map(w => typeof w === 'string' ? w : w.label)
+            };
+          }
+        }
+        return v;
+      });
+    }
+    
+    // Inject dataSources
+    if (Array.isArray(copy.dataSources)) {
+      copy.dataSources = copy.dataSources.map(ds => {
+        if (ds.type === 'pool_selection' && ds.poolId) {
+          const poolDoc = loadedPools[ds.poolId];
+          if (poolDoc && poolDoc !== 'loading') {
+            const category = ds.category || 'targets';
+            const words = poolDoc.pools?.[category] || [];
+            return {
+              ...ds,
+              type: 'static_data',
+              items: words.map(w => typeof w === 'string' ? w : w.label)
+            };
+          }
+        }
+        return ds;
+      });
+    }
+    
+    return copy;
+  }, [template, loadedPools]);
+
   // Live simulation evaluation
   const evaluatedQuestion = useMemo(() => {
     try {
-      const q = evaluateTemplate(template, seed);
+      const q = evaluateTemplate(resolvedTemplate, seed);
       return { ok: true, question: q };
     } catch (err) {
       return { ok: false, error: err.message };
     }
-  }, [template, seed]);
+  }, [resolvedTemplate, seed]);
+
+  const universalPreviewPayload = useMemo(() => {
+    const question = evaluatedQuestion.ok ? evaluatedQuestion.question : null;
+    const correctOption = question?.options?.[question?.correctAnswerIndex];
+
+    return {
+      jsonSchema: {
+        templateId: template.id,
+        title: template.title,
+        description: template.description || '',
+        subject: template.subject,
+        topic: template.topic,
+        grade: template.grade,
+        skillId: template.skillId,
+        competencyId: template.competencyId,
+        difficultyLevel: template.difficultyLevel,
+        tags: template.tags || [],
+        dataSources: template.dataSources || [],
+        variables: template.variables || [],
+        constraints: template.constraints || {},
+        layout: template.layoutConfig || {},
+        visualComponents: template.visuals || [],
+        interaction: template.interaction || {},
+        validationRules: template.validationRules || [],
+        feedbackRules: template.feedbackRules || {},
+        difficultyRules: template.difficultyRules || {},
+        analyticsConfig: template.analyticsConfig || {},
+        adaptiveRules: template.adaptiveRules || {},
+      },
+      reactConfiguration: {
+        layoutMode: template.layoutConfig?.mode || 'prompt_top',
+        visualComponents: template.visuals || [],
+        interactionEngine: template.interaction?.engine || template.optionsType || 'mcq',
+        responsiveTarget: template.layoutConfig?.responsiveTarget || 'mobile_first',
+      },
+      validationRules: template.validationRules || [],
+      previewPayload: {
+        sampleQuestion: question?.questionText || '',
+        renderedLayout: template.layoutConfig?.mode || 'prompt_top',
+        generatedVariables: (template.variables || []).map(variable => ({
+          name: variable.name,
+          type: variable.type,
+          source: variable.source || variable.formula || variable.template || variable.items || `${variable.min || ''}-${variable.max || ''}`,
+        })),
+        correctAnswer: question?.correctAnswerText || question?.answer || correctOption?.label || '',
+        explanation: question?.explanation?.sections?.[0]?.content || template.feedbackRules?.step_by_step_explanation || '',
+        difficultyVariations: template.difficultyRules || {},
+      },
+    };
+  }, [template, evaluatedQuestion]);
+
+  useEffect(() => {
+    setVariantQaReport(null);
+  }, [resolvedTemplate]);
 
   // Dynamic lists from static config
   const staticList = useMemo(() => {
@@ -2046,6 +2990,21 @@ export default function VisualTemplateBuilderPage() {
     });
     return list;
   }, [staticTemplates]);
+
+  const groupedStaticTemplates = useMemo(() => {
+    const groups = {};
+    const filtered = staticList.filter(tpl => !REFERENCE_EXAMPLES.some(r => r.id === tpl.id)).filter(matchesSearch);
+    filtered.forEach(tpl => {
+      let subject = tpl.subject || tpl.templateInfo?.subject || 'other';
+      subject = subject.toLowerCase().trim();
+      const subjectKey = (subject === 'math' || subject === 'english' || subject === 'gk' || subject === 'social_studies') ? subject : 'other';
+      if (!groups[subjectKey]) {
+        groups[subjectKey] = [];
+      }
+      groups[subjectKey].push(tpl);
+    });
+    return groups;
+  }, [staticList, sidebarSearch]);
 
   const renderCurriculumLinkerCard = () => {
     const subjects = curriculumNodes.filter(n => n.type === 'subject');
@@ -2429,6 +3388,92 @@ export default function VisualTemplateBuilderPage() {
     );
   };
 
+  const renderSectionHeader = (title, count, sectionKey, icon = '') => {
+    const expanded = isSectionExpanded(sectionKey);
+    return (
+      <div
+        onClick={() => toggleSection(sectionKey)}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px 4px',
+          cursor: 'pointer',
+          borderBottom: '1px solid #f1f5f9',
+          marginTop: '12px',
+          userSelect: 'none'
+        }}
+      >
+        <span style={{
+          fontSize: '11px',
+          fontWeight: '800',
+          color: '#475569',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <span>{expanded ? '▼' : '▶'}</span>
+          <span>{icon} {title}</span>
+        </span>
+        <span style={{
+          fontSize: '10px',
+          background: '#f1f5f9',
+          color: '#64748b',
+          padding: '2px 6px',
+          borderRadius: '99px',
+          fontWeight: '700'
+        }}>
+          {count}
+        </span>
+      </div>
+    );
+  };
+
+  const renderSubjectHeader = (title, count, subjectKey) => {
+    const expanded = isSectionExpanded(subjectKey);
+    return (
+      <div
+        onClick={() => toggleSection(subjectKey)}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '4px 8px',
+          cursor: 'pointer',
+          marginTop: '6px',
+          userSelect: 'none',
+          background: '#f8fafc',
+          borderRadius: '4px'
+        }}
+      >
+        <span style={{
+          fontSize: '10px',
+          fontWeight: '700',
+          color: '#64748b',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          borderLeft: '2px solid #e2e8f0',
+          paddingLeft: '6px'
+        }}>
+          <span>{expanded ? '▼' : '▶'}</span>
+          <span>{title}</span>
+        </span>
+        <span style={{
+          fontSize: '9px',
+          color: '#94a3b8',
+          fontWeight: '600'
+        }}>
+          ({count})
+        </span>
+      </div>
+    );
+  };
+
   return (
     <main className={styles.container}>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -2449,6 +3494,13 @@ export default function VisualTemplateBuilderPage() {
           <button
             type="button"
             className={styles.btn + ' ' + styles.btnSecondary}
+            onClick={() => setIsSidebarVisible(prev => !prev)}
+          >
+            {isSidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
+          </button>
+          <button
+            type="button"
+            className={styles.btn + ' ' + styles.btnSecondary}
             style={{ backgroundColor: '#f5f3ff', color: '#6d28d9', borderColor: '#c084fc' }}
             onClick={() => setShowGuide(true)}
           >
@@ -2462,91 +3514,243 @@ export default function VisualTemplateBuilderPage() {
           </button>
         </div>
       </header>
- 
-      <div className={styles.workspace}>
+
+      <div className={`${styles.workspace} ${!isSidebarVisible ? styles.workspaceSidebarHidden : ''}`}>
         {/* Left column: Sidebar list of existing templates */}
+        {isSidebarVisible && (
         <aside className={styles.sidebar}>
-          <h3 className={styles.sidebarTitle}>Templates Repository</h3>
+          <h3 className={styles.sidebarTitle}>
+            <span>Templates Repository</span>
+            <button
+              type="button"
+              className={styles.sidebarMiniButton}
+              onClick={() => setIsSidebarVisible(false)}
+            >
+              Hide
+            </button>
+          </h3>
+          
+          {/* Search Box */}
+          <div style={{ marginBottom: '12px', position: 'relative' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search templates..."
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 32px 8px 12px',
+                fontSize: '13px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            {sidebarSearch && (
+              <button
+                onClick={() => setSidebarSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  padding: '4px'
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {loading ? (
             <p className={styles.emptyStateText}>Loading...</p>
           ) : (
             <div className={styles.templateList}>
-              <div className={styles.sectionTitle} style={{ marginTop: 0 }}>
-                <span>Custom MongoDB</span>
-              </div>
-              {dynamicTemplates.length === 0 ? (
-                <p className={styles.emptyStateText} style={{ padding: '8px 0' }}>No custom templates</p>
-              ) : (
-                dynamicTemplates.map(tpl => (
-                  <button
-                    key={`dynamic-${tpl.id}`}
-                    className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                    onClick={() => handleSelectTemplate(tpl)}
-                  >
-                    <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
-                    <div className={styles.templateItemMeta}>{tpl.topic} • {tpl.id}</div>
-                  </button>
-                ))
+              
+              {/* 1. Custom MongoDB Section */}
+              {(() => {
+                const totalCount = dynamicTemplates.filter(matchesSearch).length;
+                if (totalCount === 0 && sidebarSearch) return null;
+                
+                return (
+                  <>
+                    {renderSectionHeader("Custom MongoDB", totalCount, "customDb", "📁")}
+                    
+                    {isSectionExpanded("customDb") && (
+                      <div style={{ paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {Object.keys(groupedDynamicTemplates).sort().map(subjKey => {
+                          const list = groupedDynamicTemplates[subjKey];
+                          if (list.length === 0) return null;
+                          
+                          const subjectTitle = subjKey === 'gk' ? 'General Knowledge'
+                            : subjKey === 'social_studies' ? 'Social Studies'
+                            : subjKey.charAt(0).toUpperCase() + subjKey.slice(1);
+                            
+                          const subSectionKey = `custom-${subjKey}`;
+                          const isExpanded = isSectionExpanded(subSectionKey);
+                          
+                          return (
+                            <div key={subjKey}>
+                              {renderSubjectHeader(subjectTitle, list.length, subSectionKey)}
+                              
+                              {isExpanded && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
+                                  {list.map(tpl => (
+                                    <button
+                                      key={`dynamic-${tpl.id}`}
+                                      className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                      onClick={() => handleSelectTemplate(tpl)}
+                                    >
+                                      <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
+                                      <div className={styles.templateItemMeta}>{tpl.topic} • {tpl.id}</div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* 2. Reference Examples Section */}
+              {(() => {
+                const list = REFERENCE_EXAMPLES.filter(matchesSearch);
+                if (list.length === 0) return null;
+                
+                return (
+                  <>
+                    {renderSectionHeader("Reference Examples", list.length, "referenceExamples", "💡")}
+                    
+                    {isSectionExpanded("referenceExamples") && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
+                        {list.map(tpl => (
+                          <button
+                            key={`ref-${tpl.id}`}
+                            className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                            onClick={() => handleSelectTemplate(tpl)}
+                          >
+                            <div className={styles.templateItemTitle}>{tpl.title}</div>
+                            <div className={styles.templateItemMeta}>{tpl.topic} • Example</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* 3. Math Starters Section */}
+              {(() => {
+                const list = MATH_STARTERS.filter(matchesSearch);
+                if (list.length === 0) return null;
+                
+                return (
+                  <>
+                    {renderSectionHeader("Math Starters", list.length, "mathStarters", "⚡")}
+                    
+                    {isSectionExpanded("mathStarters") && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
+                        {list.map(tpl => (
+                          <button
+                            key={`starter-${tpl.id}`}
+                            className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                            onClick={() => handleSelectTemplate(tpl)}
+                            style={{ borderLeft: '3px solid #f59e0b' }}
+                          >
+                            <div className={styles.templateItemTitle}>{tpl.emoji} {tpl.title}</div>
+                            <div className={styles.templateItemMeta}>{tpl.topic} • Starter</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* 4. Static Catalog Section */}
+              {(() => {
+                const totalCount = staticList.filter(tpl => !REFERENCE_EXAMPLES.some(r => r.id === tpl.id)).filter(matchesSearch).length;
+                if (totalCount === 0 && sidebarSearch) return null;
+                
+                return (
+                  <>
+                    {renderSectionHeader("Static Catalog", totalCount, "staticCatalog", "📚")}
+                    
+                    {isSectionExpanded("staticCatalog") && (
+                      <div style={{ paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {Object.keys(groupedStaticTemplates).sort().map(subjKey => {
+                          const list = groupedStaticTemplates[subjKey];
+                          if (list.length === 0) return null;
+                          
+                          const subjectTitle = subjKey === 'gk' ? 'General Knowledge'
+                            : subjKey === 'social_studies' ? 'Social Studies'
+                            : subjKey.charAt(0).toUpperCase() + subjKey.slice(1);
+                            
+                          const subSectionKey = `static-${subjKey}`;
+                          const isExpanded = isSectionExpanded(subSectionKey);
+                          
+                          return (
+                            <div key={subjKey}>
+                              {renderSubjectHeader(subjectTitle, list.length, subSectionKey)}
+                              
+                              {isExpanded && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
+                                  {list.map(tpl => (
+                                    <button
+                                      key={`static-${tpl.subject}-${tpl.topic}-${tpl.id}`}
+                                      className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                      onClick={() => handleSelectTemplate(tpl)}
+                                    >
+                                      <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
+                                      <div className={styles.templateItemMeta}>{tpl.topic} • Static</div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Empty Search Result State */}
+              {sidebarSearch &&
+                dynamicTemplates.filter(matchesSearch).length === 0 &&
+                REFERENCE_EXAMPLES.filter(matchesSearch).length === 0 &&
+                MATH_STARTERS.filter(matchesSearch).length === 0 &&
+                staticList.filter(tpl => !REFERENCE_EXAMPLES.some(r => r.id === tpl.id)).filter(matchesSearch).length === 0 && (
+                  <p className={styles.emptyStateText}>No templates match "{sidebarSearch}"</p>
               )}
- 
-              <div className={styles.sectionTitle} style={{ marginTop: '16px' }}>
-                <span>Reference Examples</span>
-              </div>
-              {REFERENCE_EXAMPLES.map(tpl => (
-                <button
-                  key={`ref-${tpl.id}`}
-                  className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                  onClick={() => handleSelectTemplate(tpl)}
-                >
-                  <div className={styles.templateItemTitle}>{tpl.title}</div>
-                  <div className={styles.templateItemMeta}>{tpl.topic} • Example</div>
-                </button>
-              ))}
 
-              {/* ── Math Starters ── */}
-              <div className={styles.sectionTitle} style={{ marginTop: '16px' }}>
-                <span>⚡ Math Starters</span>
-              </div>
-              {MATH_STARTERS.map(tpl => (
-                <button
-                  key={`starter-${tpl.id}`}
-                  className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                  onClick={() => handleSelectTemplate(tpl)}
-                  style={{ borderLeft: '3px solid #f59e0b' }}
-                >
-                  <div className={styles.templateItemTitle}>{tpl.emoji} {tpl.title}</div>
-                  <div className={styles.templateItemMeta}>{tpl.topic} • Starter</div>
-                </button>
-              ))}
-
-              <div className={styles.sectionTitle} style={{ marginTop: '16px' }}>
-                <span>Static Catalog</span>
-              </div>
-              {staticList.filter(tpl => !REFERENCE_EXAMPLES.some(r => r.id === tpl.id)).map(tpl => (
-                <button
-                  key={`static-${tpl.subject}-${tpl.topic}-${tpl.id}`}
-                  className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                  onClick={() => handleSelectTemplate(tpl)}
-                >
-                  <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
-                  <div className={styles.templateItemMeta}>{tpl.topic} • Static</div>
-                </button>
-              ))}
             </div>
           )}
         </aside>
+        )}
 
         {/* Right columns: Editor Form & Live Simulator */}
         <div className={styles.builderAreaFull}>
           {/* Top Navigation Tabs */}
           <div className={styles.stepTabsContainer}>
             {[
-              { id: 1, label: 'Template Info' },
-              { id: 2, label: 'Question Setup' },
-              { id: 3, label: 'Categories' },
-              { id: 4, label: 'Drag Items' },
-              { id: 5, label: 'Preview & Test' },
-              { id: 6, label: 'Publish' }
+              { id: 1 },
+              { id: 2 },
+              { id: 3 },
+              { id: 4 },
+              { id: 5 },
+              { id: 6 }
             ].map(step => (
               <div 
                 key={step.id}
@@ -2554,13 +3758,15 @@ export default function VisualTemplateBuilderPage() {
                 onClick={() => setCurrentStep(step.id)}
               >
                 <div className={styles.stepNumber}>{currentStep > step.id ? '✓' : step.id}</div>
-                <span>{step.label}</span>
+                <span>{getStepLabel(step.id, template)}</span>
               </div>
             ))}
           </div>
 
+          <div className={styles.builderEditorGrid}>
+            <div className={styles.builderEditorColumn}>
           {/* Builder Editor Card */}
-          <section className={styles.panel} style={{ display: currentStep === 5 ? 'none' : 'block' }}>
+          <section className={styles.panel} style={{ display: 'block' }}>
             <div className={styles.panelHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h2>Template Editor</h2>
@@ -2608,40 +3814,49 @@ export default function VisualTemplateBuilderPage() {
 
             <div className={styles.panelBody}>
               {/* ✨ AI Template Assistant Card */}
-              <div className={styles.aiAssistantCard}>
-                <h3 className={styles.aiTitle}>
-                  ✨ AI Template Builder Assistant
-                </h3>
-                <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#4f46e5', fontWeight: 600 }}>
-                  Describe the question template you want to generate. Gemini will write the logic, variables, option choices, and visuals, then load it into both the Form and JSON editors.
-                </p>
-                <div className={styles.aiPromptArea}>
-                  <textarea
-                    className={styles.aiPromptTextarea}
-                    placeholder="Describe your question, e.g. 'A math subtraction ten frame question where A is between 5 and 10, B is between 1 and A-1, and B counters are crossed out. Give 4 multiple choice options with the correct result.'"
-                    value={aiTemplatePrompt}
-                    onChange={(e) => setAiTemplatePrompt(e.target.value)}
-                    disabled={aiTemplateGenerating}
-                  />
-                  <button
-                    type="button"
-                    className={styles.aiBtnGenerate}
-                    onClick={handleAiTemplateGenerate}
-                    disabled={aiTemplateGenerating || !aiTemplatePrompt.trim()}
-                  >
-                    {aiTemplateGenerating ? (
-                      <>
-                        <div className={styles.loadingSpinner} style={{ borderTopColor: '#ffffff' }} />
-                        <span style={{ fontSize: '10px' }}>Generating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>🪄 Build</span>
-                        <span style={{ fontSize: '10px' }}>Template</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+              <div className={`${styles.aiAssistantCard} ${!aiAssistantExpanded ? styles.aiAssistantCompact : ''}`}>
+                <button
+                  type="button"
+                  className={styles.aiAssistantHeader}
+                  onClick={() => setAiAssistantExpanded(prev => !prev)}
+                >
+                  <span className={styles.aiTitle}>✨ AI Template Builder Assistant</span>
+                  <span className={styles.aiHeaderMeta}>{aiAssistantExpanded ? 'Collapse' : 'Open assistant'}</span>
+                </button>
+                {aiAssistantExpanded && (
+                  <>
+                    <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#4f46e5', fontWeight: 600 }}>
+                      Describe the question template you want to generate. Gemini will write the logic, variables, option choices, and visuals, then load it into both the Form and JSON editors.
+                    </p>
+                    <div className={styles.aiPromptArea}>
+                      <textarea
+                        className={styles.aiPromptTextarea}
+                        placeholder="Describe your question, e.g. 'A math subtraction ten frame question where A is between 5 and 10, B is between 1 and A-1, and B counters are crossed out. Give 4 multiple choice options with the correct result.'"
+                        value={aiTemplatePrompt}
+                        onChange={(e) => setAiTemplatePrompt(e.target.value)}
+                        disabled={aiTemplateGenerating}
+                      />
+                      <button
+                        type="button"
+                        className={styles.aiBtnGenerate}
+                        onClick={handleAiTemplateGenerate}
+                        disabled={aiTemplateGenerating || !aiTemplatePrompt.trim()}
+                      >
+                        {aiTemplateGenerating ? (
+                          <>
+                            <div className={styles.loadingSpinner} style={{ borderTopColor: '#ffffff' }} />
+                            <span style={{ fontSize: '10px' }}>Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🪄 Build</span>
+                            <span style={{ fontSize: '10px' }}>Template</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
                 {aiTemplateSuccessMsg && (
                   <div style={{ fontSize: '12px', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
                     {aiTemplateSuccessMsg}
@@ -2704,13 +3919,7 @@ export default function VisualTemplateBuilderPage() {
                         try {
                           const parsed = JSON.parse(val);
                           if (parsed && typeof parsed === 'object') {
-                            setTemplate({
-                              ...parsed,
-                              variables: parsed.variables || [],
-                              visuals: parsed.visuals || [],
-                              options: parsed.options || [],
-                              explanation: parsed.explanation || { sections: [{ type: 'text', content: '' }] }
-                            });
+                            setTemplate(normalizeTemplateForBuilder(parsed));
                             setJsonError(null);
                           } else {
                             setJsonError('Must be a JSON object');
@@ -2781,6 +3990,18 @@ export default function VisualTemplateBuilderPage() {
                 </div>
               </div>
 
+              <div className={styles.formGroup}>
+                <label htmlFor="tpl-description">Description</label>
+                <textarea
+                  id="tpl-description"
+                  className={styles.textarea}
+                  value={template.description || ''}
+                  placeholder="Short internal summary of what this activity teaches."
+                  onChange={(e) => updateField('description', e.target.value)}
+                  style={{ minHeight: 72 }}
+                />
+              </div>
+
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
                   <label htmlFor="tpl-subject">Subject</label>
@@ -2790,8 +4011,9 @@ export default function VisualTemplateBuilderPage() {
                     value={template.subject || 'math'}
                     onChange={(e) => updateField('subject', e.target.value)}
                   >
-                    <option value="math">math</option>
-                    <option value="english">english</option>
+                    {Object.entries(SUBJECT_MODES).map(([value, config]) => (
+                      <option key={value} value={value}>{config.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className={styles.formGroup}>
@@ -2807,14 +4029,182 @@ export default function VisualTemplateBuilderPage() {
                 </div>
               </div>
 
-              {/* Variables Board */}
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tpl-grade">Grade</label>
+                  <input
+                    id="tpl-grade"
+                    type="text"
+                    className={styles.input}
+                    value={template.grade || ''}
+                    placeholder="e.g. K, 1, 5, 10"
+                    onChange={(e) => updateField('grade', e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tpl-difficulty">Difficulty Level</label>
+                  <select
+                    id="tpl-difficulty"
+                    className={styles.select}
+                    value={template.difficultyLevel || 'easy'}
+                    onChange={(e) => updateField('difficultyLevel', e.target.value)}
+                  >
+                    {DIFFICULTY_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tpl-skill">Skill ID</label>
+                  <input
+                    id="tpl-skill"
+                    type="text"
+                    className={styles.input}
+                    value={template.skillId || ''}
+                    placeholder="e.g. addition-g1-ten-frame"
+                    onChange={(e) => updateField('skillId', e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tpl-competency">Competency ID</label>
+                  <input
+                    id="tpl-competency"
+                    type="text"
+                    className={styles.input}
+                    value={template.competencyId || ''}
+                    placeholder="e.g. subtraction-within-10"
+                    onChange={(e) => updateField('competencyId', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="tpl-tags">Tags</label>
+                <input
+                  id="tpl-tags"
+                  type="text"
+                  className={styles.input}
+                  value={(template.tags || []).join(', ')}
+                  placeholder="comma separated, e.g. ten-frame, subtraction, visual"
+                  onChange={(e) => updateField('tags', e.target.value.split(',').map(tag => tag.trim()).filter(Boolean))}
+                />
+              </div>
+
+              <div className={styles.subjectModeCard}>
+                <div className={styles.subjectModeTitle}>Subject Aware Mode: {SUBJECT_MODES[template.subject]?.label || 'Custom'}</div>
+                <div className={styles.subjectModeGrid}>
+                  <div>
+                    <strong>Relevant strands</strong>
+                    <span>{(SUBJECT_MODES[template.subject]?.strands || []).join(', ') || 'Custom strands'}</span>
+                  </div>
+                  <div>
+                    <strong>Recommended visuals</strong>
+                    <span>{(SUBJECT_MODES[template.subject]?.visuals || []).join(', ') || 'Any visual'}</span>
+                  </div>
+                  <div>
+                    <strong>Recommended interactions</strong>
+                    <span>{(SUBJECT_MODES[template.subject]?.interactions || []).join(', ') || 'Any interaction'}</span>
+                  </div>
+                </div>
+              </div>
+              </div>
+              )}
+
+              {currentStep === 2 && (
+                <div className={styles.wizardStepContent}>
+
+              {/* Data & Logic Board */}
               <div className={styles.sectionTitle}>
-                <span>Variables Board</span>
+                <span>Data & Logic Board</span>
                 <button type="button" className={styles.btn + ' ' + styles.btnSecondary} style={{ padding: '4px 10px', fontSize: '12px' }} onClick={addVariable}>
                   + Add Variable
                 </button>
               </div>
 
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Data Sources</h3>
+                    <p>Connect pools, random values, curriculum datasets, asset libraries, and fact databases.</p>
+                  </div>
+                  <button type="button" className={styles.btn + ' ' + styles.btnSecondary} onClick={addDataSource}>
+                    + Add Data Source
+                  </button>
+                </div>
+                {(template.dataSources || []).length === 0 ? (
+                  <div className={styles.emptyStateText}>No data sources configured. Variables can still use static ranges or lists.</div>
+                ) : (
+                  <div className={styles.schemaCardList}>
+                    {(template.dataSources || []).map((source, idx) => (
+                      <div key={idx} className={styles.schemaMiniCard}>
+                        <div className={styles.schemaMiniGrid}>
+                          <div>
+                            <label htmlFor={`ds-id-${idx}`}>ID</label>
+                            <input id={`ds-id-${idx}`} className={styles.input} value={source.id || ''} onChange={(e) => updateDataSource(idx, 'id', e.target.value)} />
+                          </div>
+                          <div>
+                            <label htmlFor={`ds-type-${idx}`}>Type</label>
+                            <select id={`ds-type-${idx}`} className={styles.select} value={source.type || 'static_data'} onChange={(e) => updateDataSource(idx, 'type', e.target.value)}>
+                              {DATA_SOURCE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor={`ds-name-${idx}`}>Name / Pool / Dataset</label>
+                            <input id={`ds-name-${idx}`} className={styles.input} value={source.name || source.poolId || source.datasetId || ''} onChange={(e) => updateDataSource(idx, 'name', e.target.value)} />
+                          </div>
+                          <button type="button" className={styles.btnRemoveOption} onClick={() => removeDataSource(idx)}>✕</button>
+                        </div>
+                        <label htmlFor={`ds-items-${idx}`}>Items / Query / Notes</label>
+                        <input
+                          id={`ds-items-${idx}`}
+                          className={styles.input}
+                          value={Array.isArray(source.items) ? source.items.join(', ') : (source.query || source.items || '')}
+                          placeholder="comma list, query, or descriptor"
+                          onChange={(e) => updateDataSource(idx, 'items', e.target.value.split(',').map(item => item.trim()).filter(Boolean))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Constraints & Validation Guardrails</h3>
+                    <p>Global generation rules used by QA, answer generation, and future adaptive engines.</p>
+                  </div>
+                </div>
+                <div className={styles.schemaControlGrid}>
+                  <label><input type="checkbox" checked={!!template.constraints?.uniqueOptions} onChange={(e) => updateNestedConfig('constraints', 'uniqueOptions', e.target.checked)} /> Unique options</label>
+                  <label><input type="checkbox" checked={!!template.constraints?.preventDuplicateWords} onChange={(e) => updateNestedConfig('constraints', 'preventDuplicateWords', e.target.checked)} /> Prevent duplicate words</label>
+                  <div>
+                    <label htmlFor="constraint-min-options">Min options</label>
+                    <input id="constraint-min-options" type="number" className={styles.input} value={template.constraints?.minOptionCount ?? 3} onChange={(e) => updateNestedConfig('constraints', 'minOptionCount', Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label htmlFor="constraint-max-options">Max options</label>
+                    <input id="constraint-max-options" type="number" className={styles.input} value={template.constraints?.maxOptionCount ?? 6} onChange={(e) => updateNestedConfig('constraints', 'maxOptionCount', Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label htmlFor="constraint-similarity">Distractor similarity</label>
+                    <select id="constraint-similarity" className={styles.select} value={template.constraints?.distractorSimilarity || 'medium'} onChange={(e) => updateNestedConfig('constraints', 'distractorSimilarity', e.target.value)}>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high">high</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Variables & Expressions</h3>
+                    <p>Define random values, expressions, string templates, array transforms, and computed variables.</p>
+                  </div>
+                </div>
               <div className={styles.varList}>
                 {template.variables.map((variable, idx) => (
                   <div key={idx} className={styles.varCard}>
@@ -2839,9 +4229,9 @@ export default function VisualTemplateBuilderPage() {
                         value={variable.type || 'integer'}
                         onChange={(e) => updateVariable(idx, 'type', e.target.value)}
                       >
-                        <option value="integer">Integer Range</option>
-                        <option value="expression">Arithmetic Expression</option>
-                        <option value="list">Choice List</option>
+                        {VARIABLE_TYPES.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -2887,6 +4277,21 @@ export default function VisualTemplateBuilderPage() {
                         </div>
                       )}
 
+                      {['string_template', 'array_transform', 'conditional', 'computed'].includes(variable.type) && (
+                        <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                          <label htmlFor={`var-logic-${idx}`} style={{ fontSize: '11px' }}>Formula / Template / Transform</label>
+                          <input
+                            id={`var-logic-${idx}`}
+                            type="text"
+                            className={styles.input}
+                            style={{ padding: '6px 10px', fontSize: '13px' }}
+                            value={variable.formula || variable.template || ''}
+                            placeholder="e.g. NounsPool[0].label or Numbers[0] + Numbers[1]"
+                            onChange={(e) => updateVariable(idx, variable.type === 'string_template' ? 'template' : 'formula', e.target.value)}
+                          />
+                        </div>
+                      )}
+
                       {variable.type === 'list' && (
                         <div className={styles.formGroup} style={{ marginBottom: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -2917,11 +4322,68 @@ export default function VisualTemplateBuilderPage() {
                   <p className={styles.emptyStateText} style={{ padding: '12px' }}>No variables declared. Constants will be evaluated.</p>
                 )}
               </div>
+              </div>
                 </div>
               )}
 
-              {currentStep === 2 && (
+              {currentStep === 3 && (
                 <div className={styles.wizardStepContent}>
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Layout Composition</h3>
+                    <p>Choose the rendering strategy used by the universal player across mobile, tablet, and desktop.</p>
+                  </div>
+                </div>
+                <div className={styles.schemaControlGrid}>
+                  <div>
+                    <label htmlFor="layout-mode">Layout mode</label>
+                    <select
+                      id="layout-mode"
+                      className={styles.select}
+                      value={template.layoutConfig?.mode || 'prompt_top'}
+                      onChange={(e) => updateNestedConfig('layoutConfig', 'mode', e.target.value)}
+                    >
+                      {LAYOUT_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="layout-responsive">Responsive priority</label>
+                    <select
+                      id="layout-responsive"
+                      className={styles.select}
+                      value={template.layoutConfig?.responsiveTarget || 'mobile_first'}
+                      onChange={(e) => updateNestedConfig('layoutConfig', 'responsiveTarget', e.target.value)}
+                    >
+                      <option value="mobile_first">mobile_first</option>
+                      <option value="tablet_first">tablet_first</option>
+                      <option value="desktop_first">desktop_first</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="layout-density">Content density</label>
+                    <select
+                      id="layout-density"
+                      className={styles.select}
+                      value={template.layoutConfig?.density || 'balanced'}
+                      onChange={(e) => updateNestedConfig('layoutConfig', 'density', e.target.value)}
+                    >
+                      <option value="compact">compact</option>
+                      <option value="balanced">balanced</option>
+                      <option value="spacious">spacious</option>
+                    </select>
+                  </div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!template.layoutConfig?.showWorkArea}
+                      onChange={(e) => updateNestedConfig('layoutConfig', 'showWorkArea', e.target.checked)}
+                    />
+                    Show student work area
+                  </label>
+                </div>
+              </div>
+
               {/* Visual Binding */}
               <div className={styles.sectionTitle}>
                 <span>Visual SVG Model Binding</span>
@@ -3426,6 +4888,31 @@ export default function VisualTemplateBuilderPage() {
                       </div>
                     </>
                   )}
+
+                  {!['TenFrame', 'JarOfMarbles', 'Spinner', 'ItemCounter', 'Image', 'VisualChoice', 'PlaceValue'].includes(template.visuals[0].component) && (
+                    <div className={styles.schemaSectionCard} style={{ marginTop: 12, marginBottom: 0 }}>
+                      <div className={styles.schemaSectionHeader}>
+                        <div>
+                          <h3>Component Props</h3>
+                          <p>Edit the default properties for {template.visuals[0].component}. You can use numbers, text, or variables like A, B, Result.</p>
+                        </div>
+                      </div>
+                      <div className={styles.schemaControlGrid}>
+                        {Object.entries(template.visuals[0].props || {}).map(([propName, propValue]) => (
+                          <div key={propName}>
+                            <label htmlFor={`generic-visual-${propName}`}>{propName}</label>
+                            <input
+                              id={`generic-visual-${propName}`}
+                              type="text"
+                              className={styles.input}
+                              value={Array.isArray(propValue) ? propValue.join(', ') : String(propValue ?? '')}
+                              onChange={(e) => updateVisualProp(propName, e.target.value)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3444,6 +4931,83 @@ export default function VisualTemplateBuilderPage() {
                   placeholder="e.g. What is [A] minus [B]?"
                   onChange={(e) => updateField('questionText', e.target.value)}
                 />
+              </div>
+              </div>
+              )}
+
+              {currentStep === 4 && (
+                <div className={styles.wizardStepContent}>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Interaction Engine</h3>
+                    <p>Select the student action model. Subject-aware recommendations stay visible, but all engines remain available for advanced templates.</p>
+                  </div>
+                </div>
+                <div className={styles.schemaControlGrid}>
+                  <div>
+                    <label htmlFor="interaction-engine">Engine</label>
+                    <select
+                      id="interaction-engine"
+                      className={styles.select}
+                      value={template.interaction?.engine || template.optionsType || 'mcq'}
+                      onChange={(e) => {
+                        updateNestedConfig('interaction', 'engine', e.target.value);
+                        if (['mcq', 'fill_blank', 'drag_drop', 'picture_mcq', 'audio_mcq', 'hotspot'].includes(e.target.value)) {
+                          const legacyTypeMap = {
+                            mcq: 'mcq',
+                            picture_mcq: 'visual_choice',
+                            audio_mcq: 'mcq',
+                            fill_blank: 'fillInTheBlank',
+                            drag_drop: 'categorizationv2',
+                            hotspot: 'hotspot_select',
+                          };
+                          updateField('optionsType', legacyTypeMap[e.target.value] || e.target.value);
+                        }
+                      }}
+                    >
+                      {INTERACTION_ENGINES.map(engine => (
+                        <option key={engine} value={engine}>
+                          {engine}{SUBJECT_MODES[template.subject]?.interactions?.includes(engine) ? ' • recommended' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="interaction-input-mode">Input mode</label>
+                    <select
+                      id="interaction-input-mode"
+                      className={styles.select}
+                      value={template.interaction?.inputMode || 'single_answer'}
+                      onChange={(e) => updateNestedConfig('interaction', 'inputMode', e.target.value)}
+                    >
+                      <option value="single_answer">single_answer</option>
+                      <option value="multi_answer">multi_answer</option>
+                      <option value="free_response">free_response</option>
+                      <option value="manipulative">manipulative</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="interaction-attempts">Max attempts</label>
+                    <input
+                      id="interaction-attempts"
+                      type="number"
+                      min="1"
+                      className={styles.input}
+                      value={template.interaction?.maxAttempts ?? 2}
+                      onChange={(e) => updateNestedConfig('interaction', 'maxAttempts', Number(e.target.value))}
+                    />
+                  </div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!template.interaction?.allowRetry}
+                      onChange={(e) => updateNestedConfig('interaction', 'allowRetry', e.target.checked)}
+                    />
+                    Allow retry with feedback
+                  </label>
+                </div>
               </div>
 
               {/* Options Type Selector */}
@@ -3494,6 +5058,45 @@ export default function VisualTemplateBuilderPage() {
                   <option value="visual_choice">Visual Choice (Which shows N?)</option>
                   <option value="hotspot_select">Interactive Hotspot (Click Image)</option>
                 </select>
+              </div>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Answer Validation Rules</h3>
+                    <p>Attach reusable answer rules for exact, numeric, regex, multi-answer, and custom formula validation.</p>
+                  </div>
+                  <button type="button" className={styles.btn + ' ' + styles.btnSecondary} onClick={addValidationRule}>
+                    + Add Rule
+                  </button>
+                </div>
+                {(template.validationRules || []).length === 0 ? (
+                  <div className={styles.emptyStateText}>No explicit validation rules yet. The evaluator will use the selected interaction answer key.</div>
+                ) : (
+                  <div className={styles.schemaCardList}>
+                    {(template.validationRules || []).map((rule, idx) => (
+                      <div key={idx} className={styles.schemaMiniCard}>
+                        <div className={styles.schemaMiniGrid}>
+                          <div>
+                            <label htmlFor={`validation-type-${idx}`}>Rule type</label>
+                            <select id={`validation-type-${idx}`} className={styles.select} value={rule.type || 'exact_match'} onChange={(e) => updateValidationRule(idx, 'type', e.target.value)}>
+                              {VALIDATION_RULE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor={`validation-target-${idx}`}>Target</label>
+                            <input id={`validation-target-${idx}`} className={styles.input} value={rule.target || 'answer'} onChange={(e) => updateValidationRule(idx, 'target', e.target.value)} />
+                          </div>
+                          <div>
+                            <label htmlFor={`validation-value-${idx}`}>Expected / Formula</label>
+                            <input id={`validation-value-${idx}`} className={styles.input} value={rule.value || rule.formula || ''} onChange={(e) => updateValidationRule(idx, 'value', e.target.value)} />
+                          </div>
+                          <button type="button" className={styles.btnRemoveOption} onClick={() => removeValidationRule(idx)}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Hotspot Canvas Editor — only show for hotspot_select */}
@@ -3870,34 +5473,76 @@ export default function VisualTemplateBuilderPage() {
               {(template.optionsType === 'mcq' || template.optionsType === 'hotspot_select') && (
               <div className={styles.formGroup}>
                 <label>Choices (Multiple Choice Options)</label>
-                {template.options.map((opt, idx) => (
-                  <div key={idx} className={styles.optionRow}>
-                    <input
-                      type="text"
-                      className={styles.input + ' ' + styles.optionInput}
-                      value={opt.label || opt.value || ''}
-                      placeholder={`Choice ${idx + 1}`}
-                      onChange={(e) => updateOption(idx, 'label', e.target.value)}
-                    />
-                    <label className={styles.checkboxLabel}>
+                {(template.options || []).map((opt, idx) => (
+                  <div key={idx} className={styles.optionPedagogyCard}>
+                    <div className={styles.optionRow}>
                       <input
-                        type="checkbox"
-                        checked={opt.isCorrect || false}
-                        onChange={(e) => updateOption(idx, 'isCorrect', e.target.checked)}
+                        type="text"
+                        className={styles.input + ' ' + styles.optionInput}
+                        value={opt.label || opt.value || ''}
+                        placeholder={`Choice ${idx + 1}`}
+                        onChange={(e) => updateOption(idx, 'label', e.target.value)}
                       />
-                      Correct
-                    </label>
-                    {template.options.length > 2 && (
-                      <button
-                        type="button"
-                        className={styles.btnRemoveOption}
-                        onClick={() => {
-                          const newOpts = template.options.filter((_, i) => i !== idx);
-                          updateField('options', newOpts);
-                        }}
-                      >
-                        ✕
-                      </button>
+                      <label className={styles.checkboxLabel}>
+                        <input
+                          type="checkbox"
+                          checked={opt.isCorrect || false}
+                          onChange={(e) => updateOption(idx, 'isCorrect', e.target.checked)}
+                        />
+                        Correct
+                      </label>
+                      {template.options.length > 2 && (
+                        <button
+                          type="button"
+                          className={styles.btnRemoveOption}
+                          onClick={() => {
+                            const newOpts = template.options.filter((_, i) => i !== idx);
+                            updateField('options', newOpts);
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {!opt.isCorrect && (
+                      <div className={styles.optionPedagogyFields}>
+                        <div>
+                          <label htmlFor={`option-misconception-${idx}`}>Misconception</label>
+                          <select
+                            id={`option-misconception-${idx}`}
+                            className={styles.select}
+                            value={opt.misconception || ''}
+                            onChange={(e) => updateOption(idx, 'misconception', e.target.value)}
+                          >
+                            {MISCONCEPTION_PRESETS.map(preset => (
+                              <option key={preset.value} value={preset.value}>{preset.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor={`option-feedback-${idx}`}>Feedback</label>
+                          <input
+                            id={`option-feedback-${idx}`}
+                            type="text"
+                            className={styles.input}
+                            value={opt.feedback || ''}
+                            placeholder="e.g. You counted one extra counter."
+                            onChange={(e) => updateOption(idx, 'feedback', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor={`option-remediation-${idx}`}>Remediation Hint</label>
+                          <input
+                            id={`option-remediation-${idx}`}
+                            type="text"
+                            className={styles.input}
+                            value={opt.remediationHint || ''}
+                            placeholder="e.g. Cross out [B], then count what is left."
+                            onChange={(e) => updateOption(idx, 'remediationHint', e.target.value)}
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -3944,7 +5589,7 @@ export default function VisualTemplateBuilderPage() {
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                    {currentStep === 3 && (
+                    {currentStep === 4 && (
                       <div className={styles.wizardStepContent}>
                     {/* Layout Configuration */}
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -4277,7 +5922,7 @@ export default function VisualTemplateBuilderPage() {
                 );
               })()}
 
-              {currentStep === 2 && (
+              {currentStep === 5 && (
                 <div className={styles.wizardStepContent}>
               {/* Explanation */}
               <div className={styles.formGroup}>
@@ -4293,6 +5938,122 @@ export default function VisualTemplateBuilderPage() {
                     });
                   }}
                 />
+              </div>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Feedback Rules</h3>
+                    <p>Define success, misconception, hints, and explanation copy that the player can render consistently.</p>
+                  </div>
+                </div>
+                <div className={styles.schemaControlGrid}>
+                  <div>
+                    <label htmlFor="feedback-correct">Correct message</label>
+                    <input
+                      id="feedback-correct"
+                      className={styles.input}
+                      value={template.feedbackRules?.correct_message || ''}
+                      placeholder="Great job!"
+                      onChange={(e) => updateNestedConfig('feedbackRules', 'correct_message', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="feedback-incorrect">Incorrect message</label>
+                    <input
+                      id="feedback-incorrect"
+                      className={styles.input}
+                      value={template.feedbackRules?.incorrect_message || ''}
+                      placeholder="Try checking the visual again."
+                      onChange={(e) => updateNestedConfig('feedbackRules', 'incorrect_message', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="feedback-hints">Hints</label>
+                    <input
+                      id="feedback-hints"
+                      className={styles.input}
+                      value={(template.feedbackRules?.hints || []).join(', ')}
+                      placeholder="comma separated hints"
+                      onChange={(e) => updateNestedConfig('feedbackRules', 'hints', e.target.value.split(',').map(hint => hint.trim()).filter(Boolean))}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="feedback-misconception">Misconception feedback</label>
+                    <input
+                      id="feedback-misconception"
+                      className={styles.input}
+                      value={template.feedbackRules?.misconception_feedback || ''}
+                      placeholder="What common wrong thinking should this correct?"
+                      onChange={(e) => updateNestedConfig('feedbackRules', 'misconception_feedback', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Difficulty Rules</h3>
+                    <p>Control how easy, medium, and hard variants change options, distractors, hints, visuals, and answer complexity.</p>
+                  </div>
+                </div>
+                <div className={styles.difficultyGrid}>
+                  {DIFFICULTY_LEVELS.map(level => (
+                    <div key={level} className={styles.difficultyCard}>
+                      <h4>{level}</h4>
+                      <label htmlFor={`difficulty-options-${level}`}>Option count</label>
+                      <input
+                        id={`difficulty-options-${level}`}
+                        type="number"
+                        min="2"
+                        className={styles.input}
+                        value={template.difficultyRules?.[level]?.optionCount ?? (level === 'easy' ? 3 : level === 'medium' ? 4 : 6)}
+                        onChange={(e) => updateDeepConfig('difficultyRules', level, 'optionCount', Number(e.target.value))}
+                      />
+                      <label htmlFor={`difficulty-similarity-${level}`}>Distractor similarity</label>
+                      <select
+                        id={`difficulty-similarity-${level}`}
+                        className={styles.select}
+                        value={template.difficultyRules?.[level]?.distractorSimilarity || (level === 'easy' ? 'low' : level === 'medium' ? 'medium' : 'high')}
+                        onChange={(e) => updateDeepConfig('difficultyRules', level, 'distractorSimilarity', e.target.value)}
+                      >
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                      </select>
+                      <label htmlFor={`difficulty-hints-${level}`}>Hint visibility</label>
+                      <select
+                        id={`difficulty-hints-${level}`}
+                        className={styles.select}
+                        value={template.difficultyRules?.[level]?.hintVisibility || (level === 'hard' ? 'after_error' : 'visible')}
+                        onChange={(e) => updateDeepConfig('difficultyRules', level, 'hintVisibility', e.target.value)}
+                      >
+                        <option value="visible">visible</option>
+                        <option value="after_error">after_error</option>
+                        <option value="hidden">hidden</option>
+                      </select>
+                      <label htmlFor={`difficulty-support-${level}`}>Visual support</label>
+                      <select
+                        id={`difficulty-support-${level}`}
+                        className={styles.select}
+                        value={template.difficultyRules?.[level]?.visualSupport || (level === 'hard' ? 'minimal' : 'full')}
+                        onChange={(e) => updateDeepConfig('difficultyRules', level, 'visualSupport', e.target.value)}
+                      >
+                        <option value="full">full</option>
+                        <option value="partial">partial</option>
+                        <option value="minimal">minimal</option>
+                      </select>
+                      <label htmlFor={`difficulty-complexity-${level}`}>Answer complexity</label>
+                      <input
+                        id={`difficulty-complexity-${level}`}
+                        className={styles.input}
+                        value={template.difficultyRules?.[level]?.answerComplexity || level}
+                        onChange={(e) => updateDeepConfig('difficultyRules', level, 'answerComplexity', e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Concept & Meta Configuration */}
@@ -4405,6 +6166,80 @@ export default function VisualTemplateBuilderPage() {
                   );
                 })()}
 
+                <div className={styles.schemaSectionCard}>
+                  <div className={styles.schemaSectionHeader}>
+                    <div>
+                      <h3>Analytics Configuration</h3>
+                      <p>Choose which learner signals this template should emit for mastery, smart score, and confidence models.</p>
+                    </div>
+                  </div>
+                  <div className={styles.analyticsGrid}>
+                    {ANALYTICS_FIELDS.map(field => (
+                      <label key={field}>
+                        <input
+                          type="checkbox"
+                          checked={template.analyticsConfig?.[field] !== false}
+                          onChange={(e) => updateNestedConfig('analyticsConfig', field, e.target.checked)}
+                        />
+                        {field}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.schemaSectionCard}>
+                  <div className={styles.schemaSectionHeader}>
+                    <div>
+                      <h3>Adaptive Learning Routing</h3>
+                      <p>Define where the learner goes after success, struggle, or mastery.</p>
+                    </div>
+                  </div>
+                  <div className={styles.schemaControlGrid}>
+                    <div>
+                      <label htmlFor="adaptive-correct">Correct route target</label>
+                      <input
+                        id="adaptive-correct"
+                        className={styles.input}
+                        value={template.adaptiveRules?.correct?.target || ''}
+                        placeholder="next skill id"
+                        onChange={(e) => updateDeepConfig('adaptiveRules', 'correct', 'target', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="adaptive-incorrect">Incorrect route target</label>
+                      <input
+                        id="adaptive-incorrect"
+                        className={styles.input}
+                        value={template.adaptiveRules?.incorrect?.target || ''}
+                        placeholder="remediation skill id"
+                        onChange={(e) => updateDeepConfig('adaptiveRules', 'incorrect', 'target', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="adaptive-mastery">Mastery route target</label>
+                      <input
+                        id="adaptive-mastery"
+                        className={styles.input}
+                        value={template.adaptiveRules?.masteryAchieved?.target || ''}
+                        placeholder="harder template id"
+                        onChange={(e) => updateDeepConfig('adaptiveRules', 'masteryAchieved', 'target', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="adaptive-threshold">Mastery threshold</label>
+                      <input
+                        id="adaptive-threshold"
+                        type="number"
+                        min="0"
+                        max="100"
+                        className={styles.input}
+                        value={template.adaptiveRules?.masteryAchieved?.threshold ?? 90}
+                        onChange={(e) => updateDeepConfig('adaptiveRules', 'masteryAchieved', 'threshold', Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Save Button */}
                 <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <button
@@ -4435,10 +6270,140 @@ export default function VisualTemplateBuilderPage() {
             )}
             </div>
           </section>
+            </div>
+
+            <aside className={`${styles.panel} ${styles.livePreviewRail}`}>
+              <div className={styles.livePreviewHeader}>
+                <div>
+                  <h2>Question Preview</h2>
+                  <span>{template.title || template.id || 'Untitled template'}</span>
+                </div>
+                <div className={styles.livePreviewActions}>
+                  <button
+                    type="button"
+                    className={styles.sidebarMiniButton}
+                    onClick={() => setSeed(Math.floor(Math.random() * 100000).toString())}
+                    title={`Current Seed: ${seed}`}
+                  >
+                    New Seed
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.sidebarMiniButton}
+                    onClick={() => setCurrentStep(6)}
+                  >
+                    Full
+                  </button>
+                </div>
+              </div>
+              <div className={styles.livePreviewBody}>
+                {evaluatedQuestion.ok ? (
+                  (() => {
+                    const q = evaluatedQuestion.question;
+                    const visualParts = (q.parts || []).filter(part => part.type !== 'text').slice(0, 4);
+                    const options = Array.isArray(q.options) ? q.options.slice(0, 6) : [];
+                    const correctValue = q.correctAnswer ?? q.answer ?? q.correctAnswerText;
+
+                    return (
+                      <>
+                        <div className={styles.railPrompt}>
+                          {q.questionText || 'Preview question text appears here.'}
+                        </div>
+
+                        {visualParts.length > 0 && (
+                          <div className={styles.railVisualStack}>
+                            {visualParts.map((part, idx) => {
+                              const svg = part.svg || part.content || part.imageUrl;
+                              const hasInlineSvg = typeof svg === 'string' && isInlineSvg(svg);
+                              const imageUrl = part.imageUrl && !isInlineSvg(part.imageUrl) ? part.imageUrl : null;
+
+                              if (hasInlineSvg) {
+                                return (
+                                  <div
+                                    key={`${part.type || 'visual'}-${part.id || idx}`}
+                                    className={styles.railSvg}
+                                    dangerouslySetInnerHTML={{ __html: cleanSvgContent(svg) }}
+                                  />
+                                );
+                              }
+
+                              if (imageUrl) {
+                                return (
+                                  <img
+                                    key={`${part.type || 'image'}-${part.id || idx}`}
+                                    className={styles.railImage}
+                                    src={imageUrl}
+                                    alt={part.alt || part.label || 'Question visual'}
+                                  />
+                                );
+                              }
+
+                              if (part.type === 'categorization' || part.type === 'categorizationv2') {
+                                return (
+                                  <div key={`category-${idx}`} className={styles.railSummaryBox}>
+                                    <strong>Sorting activity</strong>
+                                    <span>{part.categories?.length || 0} groups · {part.items?.length || 0} items</span>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div key={`${part.type || 'part'}-${part.id || idx}`} className={styles.railSummaryBox}>
+                                  <strong>{part.type || 'Visual'}</strong>
+                                  <span>{part.label || part.title || 'Dynamic visual component'}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {options.length > 0 ? (
+                          <div className={styles.railOptions}>
+                            {options.map((opt, idx) => {
+                              const label = typeof opt === 'string' ? opt : (opt.label ?? opt.value ?? `Option ${idx + 1}`);
+                              const hasCorrectValue = correctValue !== undefined && correctValue !== null;
+                              const isCorrect = idx === q.correctAnswerIndex
+                                || Boolean(opt?.isCorrect)
+                                || (hasCorrectValue && String(label) === String(correctValue))
+                                || (hasCorrectValue && opt?.value !== undefined && String(opt.value) === String(correctValue));
+                              return (
+                                <div
+                                  key={`rail-option-${idx}-${String(label).slice(0, 18)}`}
+                                  className={`${styles.railOption} ${isCorrect ? styles.railOptionCorrect : ''}`}
+                                >
+                                  <span>{String(label)}</span>
+                                  {isCorrect && <strong>Correct</strong>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className={styles.railSummaryBox}>
+                            <strong>Answer</strong>
+                            <span>{String(correctValue ?? 'Generated by validation rules')}</span>
+                          </div>
+                        )}
+
+                        <div className={styles.railMeta}>
+                          <span>{q.type || template.interactionType || 'activity'}</span>
+                          <span>{template.difficultyLevel || 'medium'}</span>
+                        </div>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <div className={styles.railError}>
+                    <strong>Preview needs attention</strong>
+                    <span>{evaluatedQuestion.error}</span>
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
 
           {/* Simulator Preview Card */}
-          <section className={`${styles.panel} ${styles.simulator}`} style={{ display: (currentStep >= 5) ? 'block' : 'none' }}>
-            <div className={styles.panelHeader} style={{ display: currentStep === 5 ? 'flex' : 'none' }}>
+          <section className={`${styles.panel} ${styles.simulator}`} style={{ display: (currentStep === 6) ? 'block' : 'none' }}>
+            <div className={styles.panelHeader} style={{ display: currentStep === 6 ? 'flex' : 'none' }}>
               <div className={styles.simulatorHeader}>
                 <h2>Live Preview</h2>
                 <div className={styles.deviceToggles}>
@@ -4476,7 +6441,7 @@ export default function VisualTemplateBuilderPage() {
             </div>
 
             <div className={styles.panelBody}>
-              {currentStep === 5 && (
+              {currentStep === 6 && (
                 <>
               {evaluatedQuestion.ok ? (
                 <div className={styles.previewWrapper} style={isPreviewFullscreen ? { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, background: '#f8fafc', padding: '24px', overflowY: 'auto', margin: 0 } : {}}>
@@ -5153,7 +7118,7 @@ export default function VisualTemplateBuilderPage() {
                   </>
                 )}
               
-              {currentStep === 5 && (
+              {currentStep === 6 && (
               <div className={styles.controlsPanel}>
                 {/* Controls and Sample Set */}
                 <div>
@@ -5237,6 +7202,120 @@ export default function VisualTemplateBuilderPage() {
               </div>
               )}
 
+              {currentStep === 6 && (
+                <div className={styles.schemaSectionCard}>
+                  <div className={styles.schemaSectionHeader}>
+                    <div>
+                      <h3>Universal Builder Outputs</h3>
+                      <p>Production artifacts emitted by this template: JSON schema, React configuration, validation rules, and preview payload.</p>
+                    </div>
+                  </div>
+                  <div className={styles.outputGrid}>
+                    <div>
+                      <div className={styles.controlSectionTitle}>JSON Schema</div>
+                      <pre className={styles.outputCodeBlock}>{JSON.stringify(universalPreviewPayload.jsonSchema, null, 2)}</pre>
+                    </div>
+                    <div>
+                      <div className={styles.controlSectionTitle}>React Configuration</div>
+                      <pre className={styles.outputCodeBlock}>{JSON.stringify(universalPreviewPayload.reactConfiguration, null, 2)}</pre>
+                    </div>
+                    <div>
+                      <div className={styles.controlSectionTitle}>Validation Rules</div>
+                      <pre className={styles.outputCodeBlock}>{JSON.stringify(universalPreviewPayload.validationRules, null, 2)}</pre>
+                    </div>
+                    <div>
+                      <div className={styles.controlSectionTitle}>Preview Payload</div>
+                      <pre className={styles.outputCodeBlock}>{JSON.stringify(universalPreviewPayload.previewPayload, null, 2)}</pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 6 && (
+                <div className={styles.variantQaPanel}>
+                  <div className={styles.variantQaHeader}>
+                    <div>
+                      <div className={styles.controlSectionTitle}>Variant QA</div>
+                      <p className={styles.variantQaDescription}>
+                        Generate many seeded variants and catch duplicate options, broken answers, unresolved placeholders, and evaluation failures.
+                      </p>
+                    </div>
+                    <div className={styles.variantQaActions}>
+                      <label className={styles.variantQaCountLabel}>
+                        Samples
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={qaSampleCount}
+                          onChange={(event) => setQaSampleCount(event.target.value)}
+                          className={styles.variantQaCountInput}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnPrimary}`}
+                        onClick={handleRunVariantQA}
+                        disabled={variantQaRunning}
+                      >
+                        {variantQaRunning ? 'Running QA...' : 'Run Variant QA'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {variantQaReport ? (
+                    <div className={styles.variantQaResults}>
+                      <div className={styles.variantQaScoreCard}>
+                        <div className={styles.variantQaScore}>{variantQaReport.score}%</div>
+                        <div className={styles.variantQaScoreLabel}>Quality Score</div>
+                      </div>
+                      <div className={styles.variantQaMetric}>
+                        <strong>{variantQaReport.passed}/{variantQaReport.total}</strong>
+                        <span>variants passed</span>
+                      </div>
+                      <div className={styles.variantQaMetric}>
+                        <strong>{variantQaReport.failCount}</strong>
+                        <span>failures</span>
+                      </div>
+                      <div className={styles.variantQaMetric}>
+                        <strong>{variantQaReport.warningCount}</strong>
+                        <span>warnings</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.variantQaEmpty}>No QA run yet. Run QA before publishing student-facing templates.</div>
+                  )}
+
+                  {variantQaReport?.failures?.length > 0 && (
+                    <div className={styles.variantQaIssueList}>
+                      <div className={styles.variantQaIssueTitle}>Failures</div>
+                      {variantQaReport.failures.map((item, idx) => (
+                        <div key={`failure-${item.seed}-${idx}`} className={styles.variantQaIssue}>
+                          <strong>Seed {item.seed}</strong>
+                          <ul>
+                            {item.issues.map((issue, issueIdx) => <li key={issueIdx}>{issue}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {variantQaReport?.warnings?.length > 0 && (
+                    <div className={styles.variantQaIssueList}>
+                      <div className={styles.variantQaIssueTitle}>Warnings</div>
+                      {variantQaReport.warnings.map((item, idx) => (
+                        <div key={`warning-${item.seed}-${idx}`} className={styles.variantQaIssue}>
+                          <strong>Seed {item.seed}</strong>
+                          <ul>
+                            {item.warnings.map((warning, warningIdx) => <li key={warningIdx}>{warning}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {currentStep >= 5 && (
               <div className={styles.validationPanel}>
                 {/* Validation and Status */}
@@ -5251,7 +7330,10 @@ export default function VisualTemplateBuilderPage() {
                         { label: 'At least 2 items in total', passed: (template.parts?.[0]?.items?.length || 0) >= 2 },
                         { label: 'All items assigned to categories', passed: (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id]) }
                       ] : []),
-                      { label: 'Preview generated successfully', passed: !!evaluatedQuestion?.ok }
+                      { label: 'Preview generated successfully', passed: !!evaluatedQuestion?.ok },
+                      ...(variantQaReport ? [
+                        { label: `Variant QA passed ${variantQaReport.passed}/${variantQaReport.total} samples`, passed: variantQaReport.failCount === 0 }
+                      ] : [])
                     ];
 
                     return checks.map((check, idx) => (
@@ -5276,7 +7358,8 @@ export default function VisualTemplateBuilderPage() {
                         (template.parts?.[0]?.items?.length || 0) >= 2,
                         (template.parts?.[0]?.items || []).every(i => (template.parts[0].answer || template.parts[0].answerKey)?.[i.id])
                       ] : []),
-                      !!evaluatedQuestion?.ok
+                      !!evaluatedQuestion?.ok,
+                      variantQaReport ? variantQaReport.failCount === 0 : true
                     ].every(Boolean);
 
                     return allPassed ? (

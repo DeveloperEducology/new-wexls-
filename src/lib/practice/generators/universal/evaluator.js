@@ -105,10 +105,103 @@ function resolvePartStrings(part, resolvedVariables) {
   return resolved;
 }
 
+function pickRandom(items, rng, fallback = '') {
+  if (!Array.isArray(items) || items.length === 0) return fallback;
+  return items[Math.floor(rng() * items.length)];
+}
+
+function normalizeDataSourceItems(source) {
+  if (!source) return [];
+  if (Array.isArray(source.items)) return source.items;
+  if (Array.isArray(source.data)) return source.data;
+  if (typeof source.items === 'string') {
+    return source.items.split(',').map(item => item.trim()).filter(Boolean);
+  }
+  if (typeof source.value === 'string') {
+    return source.value.split(',').map(item => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
+  const type = String(variable?.type || '').toLowerCase();
+  const sourceItems = variable?.source ? dataSourceMap[variable.source] : null;
+
+  if (type === 'integer' || type === 'random_number') {
+    const minVal = resolveExpression(variable.min, resolvedVariables);
+    const maxVal = resolveExpression(variable.max, resolvedVariables);
+    const min = Math.min(minVal, maxVal);
+    const max = Math.max(minVal, maxVal);
+    return Math.floor(rng() * (max - min + 1)) + min;
+  }
+
+  if (type === 'expression' || type === 'computed') {
+    return resolveExpression(variable.formula || variable.expression || variable.value, resolvedVariables);
+  }
+
+  if (type === 'string_template') {
+    return interpolateString(variable.template || variable.value || '', resolvedVariables);
+  }
+
+  if (type === 'conditional') {
+    const condition = resolveExpression(variable.condition || variable.if || 'false', resolvedVariables);
+    const nextValue = condition ? variable.trueValue ?? variable.then : variable.falseValue ?? variable.else;
+    return typeof nextValue === 'string' ? interpolateString(nextValue, resolvedVariables) : nextValue;
+  }
+
+  if (type === 'array_transform') {
+    const items = Array.isArray(sourceItems) ? sourceItems : normalizeDataSourceItems(variable);
+    if (variable.transform === 'join') return items.join(variable.separator || ', ');
+    if (variable.transform === 'labels') return items.map(item => item?.label ?? item);
+    if (variable.pick === 'random') return pickRandom(items, rng);
+    return items;
+  }
+
+  if (type === 'list' || type === 'random_item') {
+    const items = Array.isArray(sourceItems) ? sourceItems : normalizeDataSourceItems(variable);
+    return pickRandom(items, rng);
+  }
+
+  return variable?.value ?? '';
+}
+
+function resolveValidationRules(rules, resolvedVariables) {
+  if (!Array.isArray(rules)) return [];
+  return rules.map(rule => {
+    if (!rule || typeof rule !== 'object') return rule;
+    const resolved = { ...rule };
+    ['value', 'expected', 'answer', 'formula', 'target'].forEach(key => {
+      if (typeof resolved[key] === 'string') {
+        resolved[key] = interpolateString(resolved[key], resolvedVariables);
+      }
+    });
+    if (String(resolved.type || '').toLowerCase() === 'custom_formula' && resolved.formula) {
+      resolved.resolvedValue = resolveExpression(resolved.formula, resolvedVariables);
+      resolved.value = resolved.resolvedValue;
+    }
+    return resolved;
+  });
+}
+
 // Main Template Evaluator Engine
-export function evaluateTemplate(template, seed) {
-  if (!template || typeof template !== 'object') {
+export function evaluateTemplate(originalTemplate, seed) {
+  if (!originalTemplate || typeof originalTemplate !== 'object') {
     throw new Error('Template document is invalid.');
+  }
+
+  // Normalize universal template format to legacy flat structure for evaluator compatibility
+  let template = originalTemplate;
+  if (originalTemplate.templateInfo || originalTemplate.layout || originalTemplate.interaction || originalTemplate.feedback) {
+    const schemaInteraction = originalTemplate.interaction || {};
+    template = {
+      ...originalTemplate,
+      questionText: originalTemplate.layout?.questionText || originalTemplate.questionText,
+      optionsType: schemaInteraction.engine || schemaInteraction.type || originalTemplate.optionsType || 'mcq',
+      options: schemaInteraction.options || originalTemplate.options || [],
+      explanation: originalTemplate.feedback?.stepByStepExplanation 
+        ? { sections: [{ type: 'text', content: originalTemplate.feedback.stepByStepExplanation }] }
+        : originalTemplate.explanation,
+    };
   }
 
   const rng = seededRandom(seed);
@@ -116,29 +209,30 @@ export function evaluateTemplate(template, seed) {
   const resolvedVariables = {
     toWords: numberToWords,
   };
+  const dataSourceMap = {};
+
+  if (Array.isArray(template.dataSources)) {
+    for (const source of template.dataSources) {
+      const sourceId = source?.id || source?.name;
+      if (!sourceId) continue;
+      if (source.type === 'random_number') {
+        const min = Number(source.min ?? 0);
+        const max = Number(source.max ?? 10);
+        dataSourceMap[sourceId] = Math.floor(rng() * (Math.max(min, max) - Math.min(min, max) + 1)) + Math.min(min, max);
+      } else if (source.type === 'random_item') {
+        dataSourceMap[sourceId] = pickRandom(normalizeDataSourceItems(source), rng);
+      } else {
+        dataSourceMap[sourceId] = normalizeDataSourceItems(source);
+      }
+      resolvedVariables[sourceId] = dataSourceMap[sourceId];
+    }
+  }
 
   // 1. Evaluate variables sequentially
   if (Array.isArray(template.variables)) {
     for (const v of template.variables) {
-      if (v.type === 'integer') {
-        const minVal = resolveExpression(v.min, resolvedVariables);
-        const maxVal = resolveExpression(v.max, resolvedVariables);
-        // Ensure min <= max
-        const min = Math.min(minVal, maxVal);
-        const max = Math.max(minVal, maxVal);
-        
-        resolvedVariables[v.name] = Math.floor(rng() * (max - min + 1)) + min;
-      } else if (v.type === 'expression') {
-        resolvedVariables[v.name] = resolveExpression(v.formula, resolvedVariables);
-      } else if (v.type === 'list') {
-        const items = Array.isArray(v.items) ? v.items : [];
-        if (items.length > 0) {
-          const idx = Math.floor(rng() * items.length);
-          resolvedVariables[v.name] = items[idx];
-        } else {
-          resolvedVariables[v.name] = '';
-        }
-      }
+      if (!v?.name) continue;
+      resolvedVariables[v.name] = resolveVariableValue(v, resolvedVariables, dataSourceMap, rng);
     }
   }
 
@@ -707,6 +801,34 @@ export function evaluateTemplate(template, seed) {
       readable: true,
       readOptions: !isVisualChoice,
       hasClickToFill
+    },
+    layoutConfig: template.layoutConfig || template.layout || undefined,
+    validationRules: resolveValidationRules(template.validationRules || template.validation?.rules, resolvedVariables),
+    feedbackRules: template.feedbackRules || template.feedback || undefined,
+    difficultyRules: template.difficultyRules || undefined,
+    analyticsConfig: template.analyticsConfig || undefined,
+    adaptiveRules: template.adaptiveRules || undefined,
+    schema: {
+      templateId: template.id || template.templateId || template.templateInfo?.templateId,
+      subject: template.subject || template.templateInfo?.subject,
+      topic: template.topic || template.templateInfo?.topic,
+      grade: template.grade || template.templateInfo?.grade,
+      skillId: template.skillId || template.templateInfo?.skillId,
+      competencyId: template.competencyId || template.templateInfo?.competencyId,
+      difficultyLevel: template.difficultyLevel || template.templateInfo?.difficultyLevel,
+      layout: template.layoutConfig || template.layout || {},
+      interaction: template.interaction && typeof template.interaction === 'object'
+        ? template.interaction
+        : { engine: template.optionsType || (isVisualChoice ? 'visual_choice' : 'mcq') },
+      constraints: template.constraints || {},
+      validationRules: resolveValidationRules(template.validationRules || template.validation?.rules, resolvedVariables),
+      feedbackRules: template.feedbackRules || template.feedback || {},
+      difficultyRules: template.difficultyRules || {},
+      analyticsConfig: template.analyticsConfig || {},
+      adaptiveRules: template.adaptiveRules || {},
+      variables: Object.fromEntries(
+        Object.entries(resolvedVariables).filter(([key, value]) => typeof value !== 'function' && !key.startsWith('_'))
+      )
     }
   };
 

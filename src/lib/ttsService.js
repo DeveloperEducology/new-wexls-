@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { GoogleGenAI } from '@google/genai';
 
 export function cleanTextForSpeech(text) {
   if (!text) return '';
@@ -61,6 +62,35 @@ export function getWavHeader(pcmLength, sampleRate = 24000) {
   return header;
 }
 
+function getGeminiTtsClient() {
+  if (process.env.GEMINI_API_KEY) {
+    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+
+  const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+  const location = process.env.GOOGLE_CLOUD_LOCATION || process.env.GOOGLE_CLOUD_REGION || 'us-central1';
+  if (!project) {
+    return null;
+  }
+
+  return new GoogleGenAI({
+    enterprise: true,
+    project,
+    location,
+  });
+}
+
+function extractAudioPcm(data) {
+  const candidate = data?.candidates?.[0];
+  const audioPart = candidate?.content?.parts?.find(part => part.inlineData);
+
+  if (!audioPart || !audioPart.inlineData?.data) {
+    throw new Error('Invalid Gemini API response (missing audio)');
+  }
+
+  return Buffer.from(audioPart.inlineData.data, 'base64');
+}
+
 export async function generateTtsBuffer(text, voice = 'Puck') {
   let provider = process.env.TTS_PROVIDER || (process.env.PIPER_TTS_URL ? 'piper' : 'gemini');
   let targetVoice = voice;
@@ -116,16 +146,10 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
   }
 
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not defined');
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
-
   const payload = {
     contents: [
       {
+        role: 'user',
         parts: [
           { text: `Read this math question or instruction out loud clearly, slowly, and in a friendly voice suitable for elementary school kids: "${cleanText}"` }
         ]
@@ -142,6 +166,25 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
       }
     }
   };
+
+  const ai = getGeminiTtsClient();
+  if (ai) {
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview',
+      contents: payload.contents,
+      config: payload.generationConfig,
+    });
+    const pcmBuffer = extractAudioPcm(response);
+    const wavHeader = getWavHeader(pcmBuffer.length, 24000);
+    return Buffer.concat([wavHeader, pcmBuffer]);
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('Gemini TTS is not configured. Set GOOGLE_CLOUD_PROJECT for ADC/Enterprise auth or GEMINI_API_KEY for Gemini API auth.');
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview'}:generateContent?key=${apiKey}`;
 
   let apiResponse = null;
   let attempts = 0;
@@ -181,15 +224,7 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
   }
 
   const data = await apiResponse.json();
-  const candidate = data.candidates?.[0];
-  const audioPart = candidate?.content?.parts?.find(part => part.inlineData);
-
-  if (!audioPart || !audioPart.inlineData?.data) {
-    throw new Error('Invalid Gemini API response (missing audio)');
-  }
-
-  const base64Pcm = audioPart.inlineData.data;
-  const pcmBuffer = Buffer.from(base64Pcm, 'base64');
+  const pcmBuffer = extractAudioPcm(data);
   
   // Prepend WAV header (24kHz, 16-bit, mono)
   const wavHeader = getWavHeader(pcmBuffer.length, 24000);

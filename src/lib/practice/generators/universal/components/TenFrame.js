@@ -1,6 +1,6 @@
-import { COLORS, SVG_DEFS } from './defs.js';
+import { COLORS, SVG_DEFS, resolveColor } from './defs.js';
 
-export function renderTenFrame(props) {
+export function renderTenFrame(props, rng) {
   const filledCount = props.filledCount;
   const crossedOutCount = props.crossedOutCount || 0;
   const color = props.color || 'red';
@@ -17,7 +17,7 @@ export function renderTenFrame(props) {
   const extraHeight = clickToFill ? 60 : 0;
   const svgHeight = gridHeight + padding * 2 + extraHeight;
   
-  const selectedColor = COLORS[color] || COLORS.red;
+  const selectedColor = resolveColor(color, COLORS, rng);
   const initialFilled = Number(filledCount) || 0;
   const crossed = Number(crossedOutCount) || 0;
 

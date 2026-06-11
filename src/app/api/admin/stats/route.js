@@ -108,6 +108,83 @@ export async function GET(request) {
       { $limit: 5 }
     ]).toArray();
 
+    // 1. Fetch unique skillIds defined in curriculum_nodes
+    const curriculumCollection = db.collection('curriculum_nodes');
+    const skillsDefinedCount = await curriculumCollection.countDocuments({ type: 'skill' });
+
+    // 2. Fetch unique active templates
+    let templatesCount = 0;
+    try {
+      templatesCount = await db.collection('dynamic_templates').countDocuments();
+    } catch (e) {
+      // fallback
+    }
+
+    // 3. Count unique skillIds implemented in questions
+    const uniqueSkillsImplemented = (await questionsCollection.distinct('skillId')).length;
+
+    // 4. Calculate questions by grade and topic in memory
+    const skillNodes = await curriculumCollection.find({ type: 'skill' }).toArray();
+    const skillMap = new Map();
+    skillNodes.forEach(node => {
+      skillMap.set(node.id || node.skillId, {
+        grade: node.grade,
+        topic: node.topicId
+      });
+    });
+
+    const allQuestions = await questionsCollection.find({}, { projection: { id: 1, topic: 1, skillId: 1 } }).toArray();
+
+    const gradeCounts = {};
+    const topicCounts = {};
+
+    function inferGrade(skillId, parentId) {
+      const s = String(skillId || '').toLowerCase();
+      const p = String(parentId || '').toLowerCase();
+      if (s.includes('-lkg-') || s.startsWith('lkg-') || p.includes('lkg')) return 'LKG';
+      if (s.includes('-ukg-') || s.startsWith('ukg-') || p.includes('ukg')) return 'UKG';
+      if (s.includes('-prek-') || s.startsWith('prek-') || p.includes('prek') || p.includes('pre-k')) return 'Pre-K';
+      if (s.includes('-g1-') || s.includes('-grade-1-') || p.includes('grade-1') || p.includes('1st-grade') || s.includes('-grade1-')) return 'Grade 1';
+      if (s.includes('-g2-') || s.includes('-grade-2-') || p.includes('grade-2') || p.includes('2nd-grade') || s.includes('-grade2-')) return 'Grade 2';
+      if (s.includes('-g3-') || s.includes('-grade-3-') || p.includes('grade-3') || p.includes('3rd-grade') || s.includes('-grade3-')) return 'Grade 3';
+      if (s.includes('-g4-') || s.includes('-grade-4-') || p.includes('grade-4') || p.includes('4th-grade') || s.includes('-grade4-')) return 'Grade 4';
+      if (s.includes('-g5-') || s.includes('-grade-5-') || p.includes('grade-5') || p.includes('5th-grade') || s.includes('-grade5-')) return 'Grade 5';
+      if (s.includes('-g6-') || s.includes('-grade-6-') || p.includes('grade-6') || p.includes('6th-grade') || s.includes('-grade6-')) return 'Grade 6';
+      if (s.includes('-g7-') || s.includes('-grade-7-') || p.includes('grade-7') || p.includes('7th-grade') || s.includes('-grade7-')) return 'Grade 7';
+      if (s.includes('-g8-') || s.includes('-grade-8-') || p.includes('grade-8') || p.includes('8th-grade') || s.includes('-grade8-')) return 'Grade 8';
+      if (s.includes('remediation') || p.includes('remediation')) return 'Remediation';
+      return 'General Skills';
+    }
+
+    allQuestions.forEach(q => {
+      let rawGrade = 'General Skills';
+      const skillInfo = skillMap.get(q.skillId);
+      if (skillInfo && skillInfo.grade) {
+        rawGrade = skillInfo.grade;
+      } else {
+        rawGrade = inferGrade(q.skillId, q.topic);
+      }
+      
+      let grade = String(rawGrade).trim();
+      if (grade === '1') grade = 'Grade 1';
+      if (grade === '2') grade = 'Grade 2';
+      if (grade === '3') grade = 'Grade 3';
+      if (grade === '4') grade = 'Grade 4';
+      if (grade === '5') grade = 'Grade 5';
+      if (grade === '6') grade = 'Grade 6';
+      if (grade === '7') grade = 'Grade 7';
+      if (grade === '8') grade = 'Grade 8';
+      
+      gradeCounts[grade] = (gradeCounts[grade] || 0) + 1;
+      
+      const topicName = q.topic || (skillInfo && skillInfo.topic) || 'general';
+      const topicKey = topicName.charAt(0).toUpperCase() + topicName.slice(1);
+      topicCounts[topicKey] = (topicCounts[topicKey] || 0) + 1;
+    });
+
+    const questionsByGrade = Object.entries(gradeCounts).map(([grade, count]) => ({ grade, count }));
+    const questionsByTopic = Object.entries(topicCounts).map(([topic, count]) => ({ topic, count }));
+
     return NextResponse.json({
       success: true,
       dbConnected: true,
@@ -134,7 +211,12 @@ export async function GET(request) {
           ...att,
           _id: String(att._id)
         }))
-      }
+      },
+      skillsDefinedCount,
+      templatesCount,
+      uniqueSkillsImplemented,
+      questionsByGrade,
+      questionsByTopic
     });
   } catch (error) {
     console.error('Stats API error:', error);

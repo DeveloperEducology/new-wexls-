@@ -88,6 +88,81 @@ function writePracticeCache(cacheKey, payload) {
   }
 }
 
+async function resolveTemplatePools(templateDoc) {
+  const copy = JSON.parse(JSON.stringify(templateDoc));
+  const { findVocabularyPool } = await import('../../../lib/practice/questionBank/questionRepository.js');
+  
+  // Collect all unique poolIds
+  const poolIds = new Set();
+  if (Array.isArray(copy.variables)) {
+    copy.variables.forEach(v => {
+      if (v.type === 'pool_selection' && v.poolId) {
+        poolIds.add(v.poolId);
+      }
+    });
+  }
+  if (Array.isArray(copy.dataSources)) {
+    copy.dataSources.forEach(ds => {
+      if (ds.type === 'pool_selection' && ds.poolId) {
+        poolIds.add(ds.poolId);
+      }
+    });
+  }
+  
+  // Fetch all pools
+  const loadedPools = {};
+  for (const poolId of poolIds) {
+    try {
+      const poolDoc = await findVocabularyPool(poolId);
+      if (poolDoc) {
+        loadedPools[poolId] = poolDoc;
+      }
+    } catch (err) {
+      console.error(`Failed to fetch vocabulary pool ${poolId}:`, err);
+    }
+  }
+  
+  // Inject variable lists from loadedPools
+  if (Array.isArray(copy.variables)) {
+    copy.variables = copy.variables.map(v => {
+      if (v.type === 'pool_selection' && v.poolId) {
+        const poolDoc = loadedPools[v.poolId];
+        if (poolDoc) {
+          const category = v.category || 'targets';
+          const words = poolDoc.pools?.[category] || [];
+          return {
+            ...v,
+            type: 'list',
+            items: words.map(w => typeof w === 'string' ? w : w.label)
+          };
+        }
+      }
+      return v;
+    });
+  }
+  
+  // Inject dataSources lists from loadedPools
+  if (Array.isArray(copy.dataSources)) {
+    copy.dataSources = copy.dataSources.map(ds => {
+      if (ds.type === 'pool_selection' && ds.poolId) {
+        const poolDoc = loadedPools[ds.poolId];
+        if (poolDoc) {
+          const category = ds.category || 'targets';
+          const words = poolDoc.pools?.[category] || [];
+          return {
+            ...ds,
+            type: 'static_data',
+            items: words.map(w => typeof w === 'string' ? w : w.label)
+          };
+        }
+      }
+      return ds;
+    });
+  }
+  
+  return copy;
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const subject = searchParams.get('subject') || 'math';
@@ -327,7 +402,8 @@ export async function GET(request) {
         );
       }
       
-      const rawQuestion = evaluateTemplate(templateDoc, seed);
+      const resolvedTemplateDoc = await resolveTemplatePools(templateDoc);
+      const rawQuestion = evaluateTemplate(resolvedTemplateDoc, seed);
       
       // Normalize metadata to match expectations
       const question = {
@@ -902,6 +978,13 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     toolConfig: question.toolConfig,
     validation: question.validation,
     feedback: question.feedback,
+    validationRules: question.validationRules,
+    feedbackRules: question.feedbackRules,
+    difficultyRules: question.difficultyRules,
+    analyticsConfig: question.analyticsConfig,
+    adaptiveRules: question.adaptiveRules,
+    schema: question.schema,
+    universalSchema: question.universalSchema,
     layout: question.layout,
     accessibility: question.accessibility,
     manipulativeType: question.manipulativeType,

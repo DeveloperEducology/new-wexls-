@@ -49,10 +49,24 @@ export function renderJarOfMarbles(props, rng) {
     }
   }
 
+  const MARBLE_IMAGES = {
+    black: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142819264-black-marble.webp',
+    blue: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142824300-blue-marble.webp',
+    green: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142833112-green-marble.webp',
+    gren: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142833112-green-marble.webp',
+    yellow: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781142840665-yellow-marble.webp'
+  };
+
   let marblesMarkup = '';
   for (const m of placedMarbles) {
-    const colObj = COLORS[m.color] || COLORS.red;
-    marblesMarkup += `<circle cx="${m.x}" cy="${m.y}" r="${radius}" fill="${colObj.fill}" stroke="${colObj.stroke}" stroke-width="1.5" filter="url(#shadow)" />`;
+    const colorKey = String(m.color || '').toLowerCase().trim();
+    const imgUrl = MARBLE_IMAGES[colorKey];
+    if (imgUrl) {
+      marblesMarkup += `<image href="${imgUrl}" x="${m.x - radius}" y="${m.y - radius}" width="${radius * 2}" height="${radius * 2}" />`;
+    } else {
+      const colObj = COLORS[colorKey] || COLORS.red;
+      marblesMarkup += `<circle cx="${m.x}" cy="${m.y}" r="${radius}" fill="${colObj.fill}" stroke="${colObj.stroke}" stroke-width="1.5" filter="url(#shadow)" />`;
+    }
   }
 
   // Draw the glass jar SVG path

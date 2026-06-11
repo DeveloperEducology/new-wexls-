@@ -6,7 +6,19 @@ export const COLORS = {
   yellow: { fill: 'url(#yellowGrad)', stroke: '#a16207' },
   pink: { fill: 'url(#pinkGrad)', stroke: '#be185d' },
   purple: { fill: 'url(#purpleGrad)', stroke: '#6d28d9' },
-  orange: { fill: 'url(#orangeGrad)', stroke: '#c2410c' }
+  orange: { fill: 'url(#orangeGrad)', stroke: '#c2410c' },
+  black: { fill: 'url(#blackGrad)', stroke: '#1e293b' }
+};
+
+export const FLAT_COLORS = {
+  red: { fill: '#fee2e2', stroke: '#dc2626' },
+  blue: { fill: '#dbeafe', stroke: '#1d4ed8' },
+  green: { fill: '#dcfce7', stroke: '#15803d' },
+  yellow: { fill: '#fef9c3', stroke: '#ca8a04' },
+  pink: { fill: '#fce7f3', stroke: '#db2777' },
+  purple: { fill: '#f3e8ff', stroke: '#7c3aed' },
+  orange: { fill: '#ffedd5', stroke: '#ea580c' },
+  black: { fill: '#e2e8f0', stroke: '#1e293b' }
 };
 
 // SVG Gradients Definition Block to include in generated SVGs
@@ -47,9 +59,27 @@ export const SVG_DEFS = `
       <stop offset="70%" stop-color="#f97316" />
       <stop offset="100%" stop-color="#9a3412" />
     </radialGradient>
+    <radialGradient id="blackGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#cbd5e1" />
+      <stop offset="70%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </radialGradient>
     
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
       <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.3"/>
     </filter>
   </defs>
 `;
+
+export function resolveColor(color, palette = FLAT_COLORS, rng = null) {
+  let resolvedColor = color || 'blue';
+  if (resolvedColor === 'random') {
+    const keys = Object.keys(palette);
+    if (rng) {
+      resolvedColor = keys[Math.floor(rng() * keys.length)];
+    } else {
+      resolvedColor = keys[Math.floor(Math.random() * keys.length)];
+    }
+  }
+  return palette[resolvedColor] || Object.values(palette)[0];
+}

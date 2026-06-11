@@ -32,12 +32,21 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     let correctPool = [];
     let distractorPool = [];
 
-    // Dynamically map from centralized category pools if specified, otherwise fallback
-    if (poolDoc.targetCategory) {
-      const targetCat = poolDoc.targetCategory;
-      correctPool = poolDoc.pools[targetCat] || [];
+    let resolvedTargetCategory = poolDoc.targetCategory || '';
+    const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
+    const shouldRandomize = poolDoc.randomizeTargetCategory || poolDoc.targetCategory === '[random]' || (!poolDoc.targetCategory && poolKeys.length > 1);
 
-      const distCats = poolDoc.distractorCategories || [];
+    if (shouldRandomize && poolKeys.length > 0) {
+      const randIdx = Math.floor(prng() * poolKeys.length);
+      resolvedTargetCategory = poolKeys[randIdx];
+    }
+
+    if (resolvedTargetCategory) {
+      correctPool = poolDoc.pools[resolvedTargetCategory] || [];
+      const distCats = (poolDoc.distractorCategories && poolDoc.distractorCategories.length > 0)
+        ? poolDoc.distractorCategories.filter(cat => cat !== resolvedTargetCategory)
+        : poolKeys.filter(cat => cat !== resolvedTargetCategory);
+
       distCats.forEach(cat => {
         const items = poolDoc.pools[cat] || [];
         distractorPool = [...distractorPool, ...items];
@@ -62,22 +71,34 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       throw new Error('Correct options pool in dynamic_pool document is empty.');
     }
 
-    // 1. Pick a target correct option
-    const targetOption = correctPool[Math.floor(prng() * correctPool.length)];
-    const targetWord = targetOption.label;
-    const targetPrompt = targetOption.prompt || targetWord;
-    const targetImage = targetOption.imageUrl || '';
-    
+    const baseIsMultiSelect = poolDoc.interaction === 'multi_select' || poolDoc.multiSelect === true;
+
     // 2. Fetch difficulty rules
     const params = getDifficultyParameters(history, difficulty, grade);
     const resolvedDifficulty = params.level;
 
     const rules = (poolDoc.difficultyRules && poolDoc.difficultyRules[resolvedDifficulty]) || 
                   (poolDoc.difficultyRules && poolDoc.difficultyRules.easy) || 
-                  { optionCount: 3, correctCount: 1, distractorCount: 2, distractorSimilarity: 'medium', showLabels: true };
+                  { optionCount: baseIsMultiSelect ? 4 : 3, correctCount: baseIsMultiSelect ? 2 : 1, distractorCount: 2, distractorSimilarity: 'medium', showLabels: true };
 
-    const targetOptionCount = rules.optionCount || 3;
-    const neededDistractorCount = Math.max(1, targetOptionCount - 1);
+    const isMultiSelect = baseIsMultiSelect || rules.interaction === 'multi_select' || (rules.correctCount && rules.correctCount > 1);
+
+    const targetOptionCount = rules.optionCount || (isMultiSelect ? 4 : 3);
+    const neededCorrectCount = isMultiSelect 
+      ? Math.max(2, Math.min(rules.correctCount || 2, correctPool.length, targetOptionCount - 1)) 
+      : 1;
+    const neededDistractorCount = Math.max(1, targetOptionCount - neededCorrectCount);
+
+    // 1. Pick target correct options
+    const shuffledCorrect = seededShuffle(correctPool, prng);
+    const targetOptions = shuffledCorrect.slice(0, neededCorrectCount);
+    if (targetOptions.length === 0) {
+      throw new Error('Correct options pool in dynamic_pool document is empty.');
+    }
+    const targetOption = targetOptions[0];
+    const targetWord = targetOption.label;
+    const targetPrompt = targetOption.prompt || targetWord;
+    const targetImage = targetOption.imageUrl || '';
 
     // 3. Telemetry/Remediation check: find active misconception with highest error count
     let targetWeakness = null;
@@ -93,15 +114,17 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     // 4. Select distractors from distractor pool
     let selectedDistractors = [];
 
-    // Prioritize thematic distractors defined on the target option
-    if (Array.isArray(targetOption.distractors) && targetOption.distractors.length > 0) {
-      targetOption.distractors.forEach(lbl => {
-        const matched = distractorPool.find(d => d.label.toLowerCase().trim() === lbl.toLowerCase().trim());
-        if (matched && !selectedDistractors.some(sel => sel.id === matched.id)) {
-          selectedDistractors.push({ ...matched });
-        }
-      });
-    }
+    // Prioritize thematic distractors defined on any of the selected target options
+    targetOptions.forEach(tOpt => {
+      if (Array.isArray(tOpt.distractors) && tOpt.distractors.length > 0) {
+        tOpt.distractors.forEach(lbl => {
+          const matched = distractorPool.find(d => d.label.toLowerCase().trim() === lbl.toLowerCase().trim());
+          if (matched && !selectedDistractors.some(sel => sel.id === matched.id)) {
+            selectedDistractors.push({ ...matched });
+          }
+        });
+      }
+    });
 
     // Inject matching misconception distractor if student has a weakness
     if (targetWeakness) {
@@ -115,13 +138,13 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
     // Filter remaining candidates from distractorPool
     let remainingCandidates = distractorPool.filter(
-      d => d.id !== targetOption.id && !selectedDistractors.some(sel => sel.id === d.id)
+      d => !targetOptions.some(to => to.id === d.id) && !selectedDistractors.some(sel => sel.id === d.id)
     );
 
     // Fallback: if we don't have enough distractors, pull candidates from correctPool
     if (remainingCandidates.length + selectedDistractors.length < neededDistractorCount) {
       const extraCandidates = correctPool
-        .filter(c => c.id !== targetOption.id && !selectedDistractors.some(sel => sel.id === c.id))
+        .filter(c => !targetOptions.some(to => to.id === c.id) && !selectedDistractors.some(sel => sel.id === c.id))
         .map(c => ({
           ...c,
           isDistractorOnly: true // Treat as distractor for this dynamic variant
@@ -153,10 +176,9 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     
     selectedDistractors = [...selectedDistractors, ...additionalDistractors];
 
-    // Combine and shuffle correct target with distractors
-    const rawOptions = [targetOption, ...selectedDistractors];
+    // Combine and shuffle correct targets with distractors
+    const rawOptions = [...targetOptions, ...selectedDistractors];
     const activeOptions = seededShuffle(rawOptions, prng);
-    const correctAnswerIndex = activeOptions.findIndex(opt => opt.id === targetOption.id);
 
     // 5. Interpolation helper
     const interpolate = (templateStr) => {
@@ -165,7 +187,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         .replace(/\{\{target\}\}/g, targetWord)
         .replace(/\{\{targetWord\}\}/g, targetWord)
         .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
-        .replace(/\{\{targetImage\}\}/g, targetImage);
+        .replace(/\{\{targetImage\}\}/g, targetImage)
+        .replace(/\{\{targetCategory\}\}/g, resolvedTargetCategory || '');
     };
 
     const questionText = interpolate(poolDoc.questionText || "Click on the button. Which word do you hear?");
@@ -188,7 +211,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
           .replace(/\{\{target\}\}/g, targetWord)
           .replace(/\{\{targetWord\}\}/g, targetWord)
           .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
-          .replace(/\{\{targetImage\}\}/g, targetImage);
+          .replace(/\{\{targetImage\}\}/g, targetImage)
+          .replace(/\{\{targetCategory\}\}/g, resolvedTargetCategory || '');
       }
       if (newPart.imageUrl) {
         newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
@@ -215,14 +239,14 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       imageUrl: poolDoc.hideOptionImages || opt.assetStatus?.image === 'needs_review'
         ? null
         : (opt.imageUrl || null),
-      isCorrect: opt.id === targetOption.id,
+      isCorrect: targetOptions.some(to => to.id === opt.id),
       hideLabel: hasExplicitLabelDisplay ? hideLabels : (hideLabels || opt.hideLabel || false),
       misconceptionType: opt.misconceptionType || null
     }));
 
     const feedbackCorrect = poolDoc.feedback?.correct 
       ? interpolate(poolDoc.feedback.correct) 
-      : `Great! **${targetWord}** is correct.`;
+      : (isMultiSelect ? `Great! You selected all correct words.` : `Great! **${targetWord}** is correct.`);
 
     const feedbackIncorrect = poolDoc.feedback?.incorrect 
       ? interpolate(poolDoc.feedback.incorrect) 
@@ -230,14 +254,23 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
     const explanation = targetOption.explanation 
       ? interpolate(targetOption.explanation) 
-      : (poolDoc.explanation ? interpolate(poolDoc.explanation) : `The correct answer is **${targetWord}**.`);
+      : (poolDoc.explanation
+          ? interpolate(poolDoc.explanation)
+          : (isMultiSelect
+              ? `The correct words are: ${targetOptions.map(to => `**${to.label}**`).join(', ')}.`
+              : `The correct answer is **${targetWord}**.`));
 
     const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+
+    const correctAnswerIndices = activeOptions
+      .map((opt, idx) => (options[idx].isCorrect ? idx : null))
+      .filter(idx => idx !== null);
+    const correctAnswerIndex = correctAnswerIndices[0] ?? -1;
 
     return {
       id: `${poolDoc.id || 'dynamic_pool'}_${seed}_${targetWord}`,
       type: 'mcq',
-      interaction: poolDoc.interaction || 'choice',
+      interaction: isMultiSelect ? 'multi_select' : (poolDoc.interaction || 'choice'),
       questionText,
       audioUrl: questionAudioUrl,
       voice,
@@ -246,8 +279,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       soundUrl,
       options,
       correctAnswerIndex,
-      correctAnswerIndices: [correctAnswerIndex],
-      answer: correctAnswerIndex,
+      correctAnswerIndices,
+      answer: isMultiSelect ? correctAnswerIndices : correctAnswerIndex,
       explanation,
       feedback: {
         correct: feedbackCorrect,
@@ -265,7 +298,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         templateId: poolDoc.metadata?.templateId || 'lkg.english.word_recognition',
         engine: 'generator',
         remediationActive: !!targetWeakness,
-        targetMisconception: targetWeakness
+        targetMisconception: targetWeakness,
+        targetCategory: resolvedTargetCategory
       }
     };
   }
@@ -281,44 +315,57 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     throw new Error('Options pool in legacy dynamic_pool document is empty.');
   }
 
-  // Select target correct option
+  // Select target correct options
   const targetCandidates = pool.filter(opt => !opt.isDistractorOnly && opt.role !== 'distractor');
   if (targetCandidates.length === 0) {
     throw new Error('No valid target correct options found in legacy pool.');
   }
-  const targetOption = targetCandidates[Math.floor(prng() * targetCandidates.length)];
-  const targetOriginalIdx = pool.findIndex(opt => opt.label === targetOption.label);
 
-  // Select distractors
-  let distractorCandidates = [];
-  if (Array.isArray(targetOption.distractors) && targetOption.distractors.length > 0) {
-    distractorCandidates = targetOption.distractors.map(d => {
-      if (typeof d === 'string') {
-        const matchedOpt = pool.find(p => p.label.toLowerCase().trim() === d.toLowerCase().trim());
-        if (matchedOpt) {
-          return { ...matchedOpt };
-        }
-        return { label: d };
-      }
-      return d;
-    });
-  } else {
-    distractorCandidates = pool.filter((_, idx) => idx !== targetOriginalIdx);
-  }
-  const shuffledDistractors = seededShuffle(distractorCandidates, prng);
+  const baseIsMultiSelect = poolDoc.interaction === 'multi_select' || poolDoc.multiSelect === true;
+  const isMultiSelect = baseIsMultiSelect || params.interaction === 'multi_select' || (params.correctCount && params.correctCount > 1);
+  const targetOptionCount = params.optionCount || (isMultiSelect ? 4 : 3);
+  const neededCorrectCount = isMultiSelect
+    ? Math.max(2, Math.min(params.correctCount || 2, targetCandidates.length, targetOptionCount - 1))
+    : 1;
 
-  const targetOptionCount = params.optionCount || 3;
-  const neededDistractorCount = Math.min(targetOptionCount - 1, shuffledDistractors.length);
-  const selectedDistractors = shuffledDistractors.slice(0, neededDistractorCount);
-
-  // Combine and shuffle
-  const rawOptions = [targetOption, ...selectedDistractors];
-  const activeOptions = seededShuffle(rawOptions, prng);
-  const correctAnswerIndex = activeOptions.findIndex(opt => opt.label === targetOption.label);
-
+  const shuffledTargetCandidates = seededShuffle(targetCandidates, prng);
+  const targetOptions = shuffledTargetCandidates.slice(0, neededCorrectCount);
+  const targetOption = targetOptions[0];
   const targetWord = targetOption.label;
   const targetPrompt = targetOption.prompt || targetWord;
   const targetImage = targetOption.imageUrl || '';
+
+  // Select distractors
+  let distractorCandidates = [];
+  // Prioritize distractors from target options
+  targetOptions.forEach(tOpt => {
+    if (Array.isArray(tOpt.distractors) && tOpt.distractors.length > 0) {
+      tOpt.distractors.forEach(d => {
+        if (typeof d === 'string') {
+          const matchedOpt = pool.find(p => p.label.toLowerCase().trim() === d.toLowerCase().trim());
+          if (matchedOpt && !distractorCandidates.some(dc => dc.label === matchedOpt.label)) {
+            distractorCandidates.push({ ...matchedOpt });
+          } else if (!distractorCandidates.some(dc => dc.label === d)) {
+            distractorCandidates.push({ label: d });
+          }
+        } else if (!distractorCandidates.some(dc => dc.label === d.label)) {
+          distractorCandidates.push(d);
+        }
+      });
+    }
+  });
+
+  // If we don't have enough from targets' explicit distractors, pull the rest from pool
+  const otherCandidates = pool.filter(opt => !targetOptions.some(to => to.label === opt.label) && !distractorCandidates.some(dc => dc.label === opt.label));
+  const shuffledOther = seededShuffle(otherCandidates, prng);
+  distractorCandidates = [...distractorCandidates, ...shuffledOther];
+
+  const neededDistractorCount = Math.max(1, targetOptionCount - neededCorrectCount);
+  const selectedDistractors = distractorCandidates.slice(0, Math.min(neededDistractorCount, distractorCandidates.length));
+
+  // Combine and shuffle
+  const rawOptions = [...targetOptions, ...selectedDistractors];
+  const activeOptions = seededShuffle(rawOptions, prng);
 
   const interpolate = (templateStr) => {
     if (typeof templateStr !== 'string') return templateStr;
@@ -326,7 +373,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       .replace(/\{\{target\}\}/g, targetWord)
       .replace(/\{\{targetWord\}\}/g, targetWord)
       .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
-      .replace(/\{\{targetImage\}\}/g, targetImage);
+      .replace(/\{\{targetImage\}\}/g, targetImage)
+      .replace(/\{\{targetCategory\}\}/g, poolDoc.targetCategory || '');
   };
 
   const questionText = interpolate(poolDoc.questionText || "Click on the button. Which word do you hear?");
@@ -346,7 +394,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         .replace(/\{\{target\}\}/g, targetWord)
         .replace(/\{\{targetWord\}\}/g, targetWord)
         .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
-        .replace(/\{\{targetImage\}\}/g, targetImage);
+        .replace(/\{\{targetImage\}\}/g, targetImage)
+        .replace(/\{\{targetCategory\}\}/g, poolDoc.targetCategory || '');
     }
     if (newPart.imageUrl) {
       newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
@@ -362,20 +411,27 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     label: opt.label,
     audioUrl: opt.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(opt.label)}`,
     imageUrl: poolDoc.hideOptionImages ? null : (opt.imageUrl || null),
-    isCorrect: opt.label === targetWord,
+    isCorrect: targetOptions.some(to => to.label === opt.label),
     hideLabel: opt.hideLabel ?? poolDoc.hideOptionLabel ?? false
   }));
 
   const explanation = poolDoc.explanation 
     ? interpolate(poolDoc.explanation)
-    : `The word you hear is **${targetWord}**.`;
+    : (isMultiSelect
+        ? `The correct words are: ${targetOptions.map(to => `**${to.label}**`).join(', ')}.`
+        : `The word you hear is **${targetWord}**.`);
 
   const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+
+  const correctAnswerIndices = activeOptions
+    .map((opt, idx) => (options[idx].isCorrect ? idx : null))
+    .filter(idx => idx !== null);
+  const correctAnswerIndex = correctAnswerIndices[0] ?? -1;
 
   return {
     id: `${poolDoc.id || 'dynamic_pool'}_${seed}_${targetWord}`,
     type: 'mcq',
-    interaction: poolDoc.interaction || 'choice',
+    interaction: isMultiSelect ? 'multi_select' : (poolDoc.interaction || 'choice'),
     questionText,
     audioUrl: questionAudioUrl,
     voice,
@@ -384,8 +440,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     soundUrl,
     options,
     correctAnswerIndex,
-    correctAnswerIndices: [correctAnswerIndex],
-    answer: correctAnswerIndex,
+    correctAnswerIndices,
+    answer: isMultiSelect ? correctAnswerIndices : correctAnswerIndex,
     explanation,
     parts,
     metadata: {

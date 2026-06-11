@@ -1131,7 +1131,7 @@ export default function MCQRenderer({
                       )}
                     </div>
                   ) : null}
-                  {(isImageOption || (option && option.emoji)) && getOptionLabel(option, index) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
+                  {(isImageOption || (option && option.emoji)) && getOptionLabel(option, index) && !isImageUrl(getOptionLabel(option, index)) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
                     <div
                       className={isPreK ? styles.preKOptionLabel : undefined}
                       style={{ fontSize: isPreK ? 'clamp(14px, 2vw, 17px)' : 'clamp(12px, 3.4vw, 14px)', fontWeight: isPreK ? 900 : 500, lineHeight: 1.25, color: '#334155' }}

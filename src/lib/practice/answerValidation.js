@@ -4,6 +4,10 @@ function normalizeText(value) {
   return String(value ?? '').replace(/\s+/g, '').toLowerCase();
 }
 
+function normalizeLooseText(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
+}
+
 function parseMaybeJson(value, fallback = null) {
   if (value == null) return fallback;
   if (typeof value === 'object') return value;
@@ -36,6 +40,90 @@ function getValidIndex(value, optionsLength) {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric < 0 || numeric >= optionsLength) return null;
   return numeric;
+}
+
+function getAnswerPrimitive(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (value.value !== undefined) return value.value;
+    if (value.answer !== undefined) return value.answer;
+    if (value.ans !== undefined) return value.ans;
+    if (value.selectedIndex !== undefined) return value.selectedIndex;
+    if (value.index !== undefined) return value.index;
+    const keys = Object.keys(value);
+    if (keys.length === 1) return value[keys[0]];
+  }
+  return value;
+}
+
+function hasUnresolvedPlaceholder(value) {
+  return /\[[A-Za-z_][A-Za-z0-9_]*\]/.test(String(value ?? ''));
+}
+
+function validateRule(rule, question, userAnswer) {
+  if (!rule || typeof rule !== 'object') return true;
+  const type = String(rule.type || 'exact_match').toLowerCase();
+  const answerValue = getAnswerPrimitive(userAnswer);
+  const expectedRaw = rule.value
+    ?? rule.expected
+    ?? rule.answer
+    ?? rule.formula
+    ?? question.correctAnswerText
+    ?? question.correctAnswer
+    ?? question.answer;
+
+  if (hasUnresolvedPlaceholder(expectedRaw)) {
+    return true;
+  }
+
+  if (type === 'numeric_tolerance') {
+    const actual = Number(answerValue);
+    const expected = Number(expectedRaw);
+    const tolerance = Number(rule.tolerance ?? question.validation?.tolerance ?? 0);
+    return Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= tolerance;
+  }
+
+  if (type === 'case_insensitive') {
+    return normalizeText(answerValue) === normalizeText(expectedRaw);
+  }
+
+  if (type === 'regex_validation') {
+    try {
+      const regex = new RegExp(String(expectedRaw), rule.flags || 'i');
+      return regex.test(String(answerValue ?? ''));
+    } catch {
+      return false;
+    }
+  }
+
+  if (type === 'multi_answer') {
+    const expected = Array.isArray(expectedRaw)
+      ? expectedRaw
+      : String(expectedRaw ?? '').split(',').map(item => item.trim()).filter(Boolean);
+    const actual = Array.isArray(userAnswer)
+      ? userAnswer
+      : String(answerValue ?? '').split(',').map(item => item.trim()).filter(Boolean);
+    if (expected.length !== actual.length) return false;
+    const expectedSet = new Set(expected.map(normalizeText));
+    return actual.every(item => expectedSet.has(normalizeText(item)));
+  }
+
+  if (type === 'custom_formula') {
+    const formulaResult = rule.resolvedValue ?? rule.result ?? expectedRaw;
+    return normalizeLooseText(answerValue) === normalizeLooseText(formulaResult);
+  }
+
+  return normalizeLooseText(answerValue) === normalizeLooseText(expectedRaw);
+}
+
+function validateRules(question, userAnswer) {
+  const rules = Array.isArray(question.validationRules)
+    ? question.validationRules
+    : Array.isArray(question.validation?.rules)
+    ? question.validation.rules
+    : [];
+  const actionableRules = rules.filter(rule => rule && typeof rule === 'object' && !hasUnresolvedPlaceholder(rule.value ?? rule.expected ?? rule.answer ?? rule.formula));
+  if (!actionableRules.length) return null;
+  return actionableRules.every(rule => validateRule(rule, question, userAnswer));
 }
 
 function orderedAnswerDigitKeys(value) {
@@ -115,6 +203,11 @@ export function isAnswerCorrect(question, userAnswer) {
   const type = String(question.type || '').toLowerCase();
   const interaction = String(question.interaction || '').toLowerCase();
 
+  const ruleResult = validateRules(question, userAnswer);
+  if (ruleResult !== null) {
+    return ruleResult;
+  }
+
   if (interaction === 'balloon_tap') {
     const hitsNeeded = question.hitsNeeded || 3;
     const hits = Number(userAnswer);
@@ -188,7 +281,7 @@ export function isAnswerCorrect(question, userAnswer) {
     return validateInteractiveToolAnswer(question, userAnswer);
   }
 
-  if (type === 'mcq' || type === 'imagechoice' || type === 'multiplechoice' || type === 'visual_choice') {
+  if (type === 'mcq' || type === 'imagechoice' || type === 'multiplechoice' || type === 'visual_choice' || type === 'picture_mcq' || type === 'picture_choice' || type === 'audio_mcq' || type === 'multi_select' || type === 'hotspot_select' || type === 'hotspot') {
     const options = Array.isArray(question.options) ? question.options : [];
     const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
 

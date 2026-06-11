@@ -89,8 +89,85 @@ const drawingHelpers = {
   },
   drawItemCounter: (itemCount, itemType = 'cupcake') => {
     return COMPONENT_REGISTRY.ItemCounter({ count: itemCount, itemType });
+  },
+  drawNumberLine: (min, max, step, pointValue, pointLabel = '', markedPoints = '', jumps = '', interactive = false, color = 'blue') => {
+    return COMPONENT_REGISTRY.NumberLine({ min, max, step, pointValue, pointLabel, markedPoints, jumps, interactive, color });
+  },
+  drawHundredChart: (missing = '', highlighted = '', color = 'blue') => {
+    return COMPONENT_REGISTRY.HundredChart({ missing, highlighted, color });
+  },
+  drawRekenrek: (rows = 2, values = '0,0') => {
+    return COMPONENT_REGISTRY.Rekenrek({ rows, values });
+  },
+  drawNumberBond: (whole, left, right, missing = '') => {
+    return COMPONENT_REGISTRY.NumberBond({ whole, left, right, missing });
+  },
+  drawTallyChart: (categories, counts, showFrequency = true) => {
+    return COMPONENT_REGISTRY.TallyChart({ categories, counts, showFrequency });
+  },
+  drawFractionBar: (denominator, numerator, color = 'blue', interactive = false) => {
+    return COMPONENT_REGISTRY.FractionBar({ denominator, numerator, color, interactive });
+  },
+  drawFractionCircle: (denominator, numerator, color = 'red', interactive = false) => {
+    return COMPONENT_REGISTRY.FractionCircle({ denominator, numerator, color, interactive });
+  },
+  drawFractionGrid: (rows, cols, shaded, color = 'green', interactive = false) => {
+    return COMPONENT_REGISTRY.FractionGrid({ rows, cols, shaded, color, interactive });
+  },
+
+  drawDecimalGrid: (value, color = 'orange') => {
+    return COMPONENT_REGISTRY.DecimalGrid({ value, color });
+  },
+  drawDecimalLine: (min, max, step, markedPoint, pointLabel = '', color = 'blue') => {
+    return COMPONENT_REGISTRY.DecimalLine({ min, max, step, markedPoint, pointLabel, color });
+  },
+  drawShapeCanvas: (shape, label = '', color = 'purple') => {
+    return COMPONENT_REGISTRY.ShapeCanvas({ shape, label, color });
+  },
+  drawCoordinatePlane: (xMin, xMax, yMin, yMax, points = '', polygon = '') => {
+    return COMPONENT_REGISTRY.CoordinatePlane({ xMin, xMax, yMin, yMax, points, polygon });
+  },
+  drawProtractor: (angle) => {
+    return COMPONENT_REGISTRY.Protractor({ angle });
+  },
+  drawRuler: (length, objectLength, objectType = 'pencil') => {
+    return COMPONENT_REGISTRY.Ruler({ length, objectLength, objectType });
+  },
+  drawGeoboard: (gridSize, polygon = '', color = 'red') => {
+    return COMPONENT_REGISTRY.Geoboard({ gridSize, polygon, color });
+  },
+  drawBarGraph: (title, categories, values, yMax = undefined, color = 'blue') => {
+    return COMPONENT_REGISTRY.BarGraph({ title, categories, values, yMax, color });
+  },
+  drawPictograph: (categories, values, emoji = '🍎', key = 1, showCount = true) => {
+    return COMPONENT_REGISTRY.Pictograph({ categories, values, emoji, key, showCount });
+  },
+  drawFrequencyTable: (title, categories, values, headers = 'Category,Frequency') => {
+    return COMPONENT_REGISTRY.FrequencyTable({ title, categories, values, headers });
+  },
+  drawAnalogClock: (hour, minute, interactive = false) => {
+    return COMPONENT_REGISTRY.AnalogClock({ hour, minute, interactive });
+  },
+  drawCalendar: (month, daysInMonth, startDay, highlightDays = '') => {
+    return COMPONENT_REGISTRY.Calendar({ month, daysInMonth, startDay, highlightDays });
+  },
+  drawThermometer: (min, max, value, unit = 'C') => {
+    return COMPONENT_REGISTRY.Thermometer({ min, max, value, unit });
+  },
+  drawBalanceScale: (leftWeight, rightWeight, leftLabel = 'Box A', rightLabel = 'Box B', showStacked = false) => {
+    return COMPONENT_REGISTRY.BalanceScale({ leftWeight, rightWeight, leftLabel, rightLabel, showStacked });
+  },
+  drawMeasuringJug: (capacity, step, value) => {
+    return COMPONENT_REGISTRY.MeasuringJug({ capacity, step, value });
+  },
+  drawMoneyDisplay: (amount) => {
+    return COMPONENT_REGISTRY.MoneyDisplay({ amount });
+  },
+  drawPriceTagCompare: (itemA, priceA, itemB, priceB) => {
+    return COMPONENT_REGISTRY.PriceTagCompare({ itemA, priceA, itemB, priceB });
   }
 };
+
 
 export function resolveExpression(expr, context) {
   if (typeof expr === 'number') return expr;

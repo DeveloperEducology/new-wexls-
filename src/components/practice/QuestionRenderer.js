@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import MCQRenderer from './MCQRenderer';
 import FillInTheBlankRenderer from './FillInTheBlankRenderer';
 import PictographMCQRenderer from './PictographMCQRenderer';
+import UniversalActivityRenderer from './UniversalActivityRenderer';
 
 const LoadingRenderer = () => (
   <div style={{ padding: 24, color: '#64748b', fontWeight: 800 }}>
@@ -31,6 +32,15 @@ const RENDERERS = {
   multiplechoice: MCQRenderer,
   multipleChoice: MCQRenderer,
   dynamic_pool: MCQRenderer,
+  picture_mcq: MCQRenderer,
+  picturechoice: MCQRenderer,
+  picture_choice: MCQRenderer,
+  audiomcq: MCQRenderer,
+  audio_mcq: MCQRenderer,
+  multiselect: MCQRenderer,
+  multi_select: MCQRenderer,
+  hotspot: MCQRenderer,
+  hotspot_select: MCQRenderer,
   fillintheblank: FillInTheBlankRenderer,
   fillInTheBlank: FillInTheBlankRenderer,
   fill_in_the_blank: FillInTheBlankRenderer,
@@ -57,6 +67,34 @@ export default function QuestionRenderer({
   isAnswered,
   isCorrect,
 }) {
+  const schemaEngine = typeof question?.interaction === 'object'
+    ? question.interaction.engine || question.interaction.type
+    : question?.interactionConfig?.engine || question?.schema?.interaction?.engine || question?.universalSchema?.interaction?.engine;
+  const usesUniversalSchema = Boolean(
+    question?.schema
+    || question?.universalSchema
+    || question?.layoutConfig
+    || question?.validationRules
+    || question?.feedbackRules
+    || question?.difficultyRules
+    || question?.analyticsConfig
+    || question?.adaptiveRules
+    || ['fill_blank', 'number_input', 'text_input', 'drag_drop', 'sorting', 'matching', 'sequence', 'label_diagram', 'draw_line', 'interactive_tool'].includes(String(schemaEngine || '').toLowerCase())
+  );
+
+  if (question && usesUniversalSchema) {
+    return (
+      <UniversalActivityRenderer
+        question={question}
+        userAnswer={userAnswer}
+        onAnswer={onAnswer}
+        onSubmit={onSubmit}
+        isAnswered={isAnswered}
+        isCorrect={isCorrect}
+      />
+    );
+  }
+
   const normalizedType = String(question?.type || '').trim();
   const normalizedInteraction = String(question?.interaction || '').trim().toLowerCase();
   const Renderer = normalizedInteraction === 'pictograph_mcq'

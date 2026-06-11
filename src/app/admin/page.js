@@ -55,9 +55,41 @@ const EMPTY_FORM = {
 function slugify(value) {
   return String(value || '')
     .trim()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function parsePoolWordInput(value) {
+  const lines = String(value || '')
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) return lines;
+
+  const text = lines[0] || '';
+  if (/^[A-Za-zăĕĭŏŭĂĔĬŎŬ]+,\s*[A-Za-zăĕĭŏŭĂĔĬŎŬ]+,\s*[^,]+$/.test(text)) {
+    return [text];
+  }
+
+  return text.split(',').map(word => word.trim()).filter(Boolean);
+}
+
+function makeUniquePoolItemId(category, label, usedIds) {
+  const categoryPrefix = slugify(category.replace(/s$/, '')) || 'item';
+  const labelSlug = slugify(label) || crypto.randomUUID().slice(0, 8);
+  const base = `${categoryPrefix}_${labelSlug}`.replace(/-/g, '_');
+  let candidate = base;
+  let suffix = 2;
+  while (usedIds.has(candidate)) {
+    candidate = `${base}_${suffix}`;
+    suffix += 1;
+  }
+  usedIds.add(candidate);
+  return candidate;
 }
 
 function extractBlankIds(parts, questionText) {
@@ -842,11 +874,8 @@ export default function AdminConsolePage() {
   };
 
   const addWordsToCentralizedPool = async () => {
-    const category = poolWordCategory.trim();
-    const words = poolWordInput
-      .split(/[\n,]+/)
-      .map(word => word.trim())
-      .filter(Boolean);
+  const category = poolWordCategory.trim();
+    const words = parsePoolWordInput(poolWordInput);
     if (!poolWordManagerData || !category || words.length === 0) {
       setPoolWordManagerStatus('Choose a category and enter at least one word.');
       return;
@@ -856,10 +885,11 @@ export default function AdminConsolePage() {
       ? poolWordManagerData.pools[category]
       : [];
     const existingLabels = new Set(existingItems.map(item => String(item.label || '').trim().toLowerCase()));
+    const usedIds = new Set(existingItems.map(item => String(item.id || '').trim()).filter(Boolean));
     const additions = words
       .filter(word => !existingLabels.has(word.toLowerCase()))
       .map(word => ({
-        id: `${category.replace(/s$/, '')}_${slugify(word).replace(/-/g, '_')}`,
+        id: makeUniquePoolItemId(category, word, usedIds),
         label: word,
         active: true
       }));
@@ -915,7 +945,9 @@ export default function AdminConsolePage() {
         const response = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId.trim())}`);
         const data = await response.json();
         if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
-        const categories = [targetCategory.trim(), ...parseCategoryList(distractorCategories)].filter(Boolean);
+        const categories = targetCategory.trim() === '[random]'
+          ? selectedPoolCategories
+          : [targetCategory.trim(), ...parseCategoryList(distractorCategories)].filter(Boolean);
         auditItems = categories.flatMap(category => data.pool.pools?.[category] || []);
       }
 
@@ -5718,24 +5750,31 @@ export default function AdminConsolePage() {
           setAlert({ type: 'error', text: `Validation Error: Centralized pool "${poolId.trim()}" was not found. Select an existing pool or clear Pool ID to author an inline pool.` });
           return;
         }
-        if (!targetCategory.trim() || !selectedPoolCategories.includes(targetCategory.trim())) {
+        if (!targetCategory.trim() || (!selectedPoolCategories.includes(targetCategory.trim()) && targetCategory.trim() !== '[random]')) {
           setAlert({ type: 'error', text: 'Validation Error: Select a valid target category from the centralized pool.' });
           return;
         }
-        if (parsedDistractors.length === 0 || parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
-          setAlert({ type: 'error', text: 'Validation Error: Select at least one valid distractor category from the centralized pool.' });
-          return;
-        }
-        if (parsedDistractors.includes(targetCategory.trim())) {
-          setAlert({ type: 'error', text: 'Validation Error: The target category cannot also be a distractor category.' });
-          return;
-        }
-        const targetCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
-          ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
-          ?? 0;
-        if (targetCount === 0) {
-          setAlert({ type: 'error', text: 'Validation Error: The selected target category has no options.' });
-          return;
+        if (targetCategory.trim() !== '[random]') {
+          if (parsedDistractors.length === 0 || parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
+            setAlert({ type: 'error', text: 'Validation Error: Select at least one valid distractor category from the centralized pool.' });
+            return;
+          }
+          if (parsedDistractors.includes(targetCategory.trim())) {
+            setAlert({ type: 'error', text: 'Validation Error: The target category cannot also be a distractor category.' });
+            return;
+          }
+          const targetCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+            ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+            ?? 0;
+          if (targetCount === 0) {
+            setAlert({ type: 'error', text: 'Validation Error: The selected target category has no options.' });
+            return;
+          }
+        } else {
+          if (parsedDistractors.length > 0 && parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
+            setAlert({ type: 'error', text: 'Validation Error: Select valid distractor categories from the centralized pool.' });
+            return;
+          }
         }
       } else {
         const targets = options.filter(option => !option.isDistractorOnly);
@@ -8626,6 +8665,7 @@ export default function AdminConsolePage() {
                                         }}
                                       >
                                         <option value="">Select target category</option>
+                                        <option value="[random]">[random] (Pick a random category)</option>
                                         {selectedPoolCategories.map(category => (
                                           <option key={category} value={category}>{category}</option>
                                         ))}
@@ -8703,7 +8743,7 @@ export default function AdminConsolePage() {
                                         type="button"
                                         className={`${styles.btnOutline} ${styles.btnCompact}`}
                                         onClick={auditDynamicPoolAssets}
-                                        disabled={poolAssetAuditLoading || (poolId.trim() && (!targetCategory.trim() || parseCategoryList(distractorCategories).length === 0))}
+                                        disabled={poolAssetAuditLoading || (poolId.trim() && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
                                         style={{ padding: '6px 10px' }}
                                       >
                                         {poolAssetAuditLoading ? 'Checking…' : 'Check Images & Audio'}
@@ -15443,8 +15483,9 @@ Explanation: A question must end with a question mark.`}</pre>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(245px, 1fr))', gap: 12 }}>
                     {matchingItems.map(({ item, index }) => {
                       const audioId = `pool_${poolWordCategory}_${index}`;
+                      const itemKey = `${item.id || 'pool_item'}_${index}`;
                       return (
-                        <div key={item.id || `${poolWordCategory}_${index}`} style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 10, padding: 10, display: 'grid', gridTemplateRows: '120px auto auto', gap: 8 }}>
+                        <div key={itemKey} style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 10, padding: 10, display: 'grid', gridTemplateRows: '120px auto auto', gap: 8 }}>
                       <div style={{ background: '#f1f5f9', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.label || ''} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
