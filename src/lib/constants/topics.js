@@ -349,11 +349,11 @@ export const TOPICS = [
     ],
   },
   {
-    id: 'lkg-english',
+    id: 'english-lkg',
     title: 'LKG English',
     color: '#8b5cf6',
     subject: 'english',
-    topic: 'lkg-english',
+    topic: 'english-lkg',
     includes: ['Beginning sounds', 'Letter recognition', 'Case matching', 'Color identification', 'Sight words'],
     groups: getLkgEnglishGroups(),
   },
