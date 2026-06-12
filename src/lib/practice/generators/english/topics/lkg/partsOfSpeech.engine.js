@@ -28,17 +28,63 @@ function shuffle(random, list) {
   return result;
 }
 
-function findWord(label) {
+function findWord(label, dbPool = null) {
+  if (dbPool) {
+    for (const categoryItems of Object.values(dbPool.pools || {})) {
+      const found = categoryItems.find(item => item.label === label);
+      if (found) return found;
+    }
+    if (Array.isArray(dbPool.contextOnly)) {
+      const found = dbPool.contextOnly.find(item => item.label === label);
+      if (found) return found;
+    }
+  }
   return Object.values(ukgPartsOfSpeechPool)
     .flat()
     .find((item) => item.label === label);
+}
+
+function getCategoryItems(category, activeMode, dbPool) {
+  if (dbPool && dbPool.pools && dbPool.pools[category]) {
+    let items = [...dbPool.pools[category]];
+    const isSentenceMode = activeMode === 'sentence' || activeMode === 'complete_sentence' || activeMode === 'noun_action';
+    
+    if (isSentenceMode && Array.isArray(dbPool.contextOnly)) {
+      const singularCat = category.replace(/s$/, ''); // e.g. 'nouns' -> 'noun'
+      const contextItems = dbPool.contextOnly.filter(item => {
+        if (item.active === false) return false;
+        if (Array.isArray(item.partsOfSpeech)) {
+          return item.partsOfSpeech.includes(singularCat);
+        }
+        return item.originalCategory === category;
+      });
+      items = [...items, ...contextItems];
+    }
+    
+    items = items.filter(item => item.active !== false);
+    
+    if (!isSentenceMode) {
+      items = items.filter(item => item.excludeFromIsolatedIdentification !== true);
+    }
+    
+    const isVisual = activeMode === 'identify_visual';
+    if (isVisual) {
+      items = items.filter(item => item.imageUrl && item.assetStatus?.image !== 'needs_review');
+    }
+    
+    if (items.length > 0) {
+      return items;
+    }
+  }
+  return ukgPartsOfSpeechPool[category] || [];
 }
 
 function makeOptions(random, items, visual = false) {
   return shuffle(random, items).map((item) => ({
     id: item.id,
     label: item.label,
-    emoji: visual ? item.emoji : undefined,
+    emoji: visual ? (item.emoji || undefined) : undefined,
+    imageUrl: visual ? (item.imageUrl || undefined) : undefined,
     category: item.id.split('_')[0]
   }));
 }
@@ -60,7 +106,7 @@ function makeQuestion({
   return {
     id: `english_ukg_verbs_${mode}_${seed}`,
     type: 'mcq',
-    interaction: multiSelect ? 'multi_select' : 'choice',
+    interaction: Math.random > 0.5 && multiSelect ? 'multi_select' : (multiSelect ? 'multi_select' : 'choice'),
     multiSelect,
     questionText,
     voice: 'Puck',
@@ -94,16 +140,17 @@ function makeQuestion({
   };
 }
 
-function identifyVerb(random, seed, visual = false) {
-  const correct = pick(random, ukgPartsOfSpeechPool.verbs);
+function identifyVerb(random, seed, dbPool, visual = false) {
+  const activeMode = visual ? 'identify_visual' : 'identify_text';
+  const correct = pick(random, getCategoryItems('verbs', activeMode, dbPool));
   const options = makeOptions(random, [
     correct,
-    pick(random, ukgPartsOfSpeechPool.nouns),
-    pick(random, ukgPartsOfSpeechPool.adjectives)
+    pick(random, getCategoryItems('nouns', activeMode, dbPool)),
+    pick(random, getCategoryItems('adjectives', activeMode, dbPool))
   ], visual);
   return makeQuestion({
     seed,
-    mode: visual ? 'identify_visual' : 'identify_text',
+    mode: activeMode,
     questionText: visual ? 'Which picture shows an action?' : 'Find the verb. A verb shows an action.',
     options,
     correctIds: [correct.id],
@@ -111,11 +158,11 @@ function identifyVerb(random, seed, visual = false) {
   });
 }
 
-function findVerbInSentence(random, seed) {
+function findVerbInSentence(random, seed, dbPool) {
   const scenario = pick(random, ukgVerbScenarios);
-  const correct = findWord(scenario.correct);
-  const noun = pick(random, ukgPartsOfSpeechPool.nouns);
-  const adjective = pick(random, ukgPartsOfSpeechPool.adjectives);
+  const correct = findWord(scenario.correct, dbPool);
+  const noun = pick(random, getCategoryItems('nouns', 'sentence', dbPool));
+  const adjective = pick(random, getCategoryItems('adjectives', 'sentence', dbPool));
   return makeQuestion({
     seed,
     mode: 'sentence',
@@ -126,12 +173,12 @@ function findVerbInSentence(random, seed) {
   });
 }
 
-function scenarioQuestion(random, seed, mode, questionText) {
+function scenarioQuestion(random, seed, mode, questionText, dbPool) {
   const scenario = pick(random, ukgVerbScenarios);
-  const correct = findWord(scenario.correct);
+  const correct = findWord(scenario.correct, dbPool);
   const options = makeOptions(random, [
     correct,
-    ...scenario.distractors.slice(0, 3).map(findWord)
+    ...scenario.distractors.slice(0, 3).map(label => findWord(label, dbPool))
   ]);
   return makeQuestion({
     seed,
@@ -144,14 +191,14 @@ function scenarioQuestion(random, seed, mode, questionText) {
   });
 }
 
-function findNotVerb(random, seed) {
+function findNotVerb(random, seed, dbPool) {
   const correct = pick(random, [
-    ...ukgPartsOfSpeechPool.nouns,
-    ...ukgPartsOfSpeechPool.adjectives
+    ...getCategoryItems('nouns', 'not_verb', dbPool),
+    ...getCategoryItems('adjectives', 'not_verb', dbPool)
   ]);
   const options = makeOptions(random, [
     correct,
-    ...shuffle(random, ukgPartsOfSpeechPool.verbs).slice(0, 3)
+    ...shuffle(random, getCategoryItems('verbs', 'not_verb', dbPool)).slice(0, 3)
   ]);
   return makeQuestion({
     seed,
@@ -163,12 +210,12 @@ function findNotVerb(random, seed) {
   });
 }
 
-function findTwoVerbs(random, seed) {
-  const verbs = shuffle(random, ukgPartsOfSpeechPool.verbs).slice(0, 2);
+function findTwoVerbs(random, seed, dbPool) {
+  const verbs = shuffle(random, getCategoryItems('verbs', 'two_verbs', dbPool)).slice(0, 2);
   const options = makeOptions(random, [
     ...verbs,
-    pick(random, ukgPartsOfSpeechPool.nouns),
-    pick(random, ukgPartsOfSpeechPool.adjectives)
+    pick(random, getCategoryItems('nouns', 'two_verbs', dbPool)),
+    pick(random, getCategoryItems('adjectives', 'two_verbs', dbPool))
   ]);
   return makeQuestion({
     seed,
@@ -181,12 +228,12 @@ function findTwoVerbs(random, seed) {
   });
 }
 
-function chooseVerbOrNoun(random, seed) {
+function chooseVerbOrNoun(random, seed, dbPool) {
   const askForVerb = random() >= 0.5;
-  const correct = pick(random, askForVerb ? ukgPartsOfSpeechPool.verbs : ukgPartsOfSpeechPool.nouns);
+  const correct = pick(random, askForVerb ? getCategoryItems('verbs', 'verb_noun_review', dbPool) : getCategoryItems('nouns', 'verb_noun_review', dbPool));
   const options = makeOptions(random, [
     correct,
-    ...shuffle(random, askForVerb ? ukgPartsOfSpeechPool.nouns : ukgPartsOfSpeechPool.verbs).slice(0, 3)
+    ...shuffle(random, askForVerb ? getCategoryItems('nouns', 'verb_noun_review', dbPool) : getCategoryItems('verbs', 'verb_noun_review', dbPool)).slice(0, 3)
   ]);
   return makeQuestion({
     seed,
@@ -201,35 +248,38 @@ function chooseVerbOrNoun(random, seed) {
 }
 
 const generators = {
-  'ukg-english-find-action-verb-text': (random, seed) => identifyVerb(random, seed),
-  'ukg-english-find-action-verb-images': (random, seed) => identifyVerb(random, seed, true),
-  'ukg-english-find-verb-in-sentence': findVerbInSentence,
-  'ukg-english-complete-sentence-action-verb': (random, seed) => scenarioQuestion(
+  'ukg-english-find-action-verb-text': (random, seed, dbPool) => identifyVerb(random, seed, dbPool),
+  'ukg-english-find-action-verb-images': (random, seed, dbPool) => identifyVerb(random, seed, dbPool, true),
+  'ukg-english-find-verb-in-sentence': (random, seed, dbPool) => findVerbInSentence(random, seed, dbPool),
+  'ukg-english-complete-sentence-action-verb': (random, seed, dbPool) => scenarioQuestion(
     random,
     seed,
     'complete_sentence',
-    (scenario) => `Complete the sentence: "${scenario.subject} can ___."`
+    (scenario) => `Complete the sentence: "${scenario.subject} can ___."`,
+    dbPool
   ),
-  'ukg-english-match-verb-to-picture': (random, seed) => scenarioQuestion(
+  'ukg-english-match-verb-to-picture': (random, seed, dbPool) => scenarioQuestion(
     random,
     seed,
     'picture_match',
-    () => 'Which action word matches the picture?'
+    () => 'Which action word matches the picture?',
+    dbPool
   ),
-  'ukg-english-choose-verb-for-noun': (random, seed) => scenarioQuestion(
+  'ukg-english-choose-verb-for-noun': (random, seed, dbPool) => scenarioQuestion(
     random,
     seed,
     'noun_action',
-    (scenario) => `What can ${scenario.subject.toLowerCase()} do?`
+    (scenario) => `What can ${scenario.subject.toLowerCase()} do?`,
+    dbPool
   ),
-  'ukg-english-find-not-a-verb': findNotVerb,
-  'ukg-english-find-two-action-verbs': findTwoVerbs,
-  'ukg-english-verbs-and-nouns-review': chooseVerbOrNoun
+  'ukg-english-find-not-a-verb': (random, seed, dbPool) => findNotVerb(random, seed, dbPool),
+  'ukg-english-find-two-action-verbs': (random, seed, dbPool) => findTwoVerbs(random, seed, dbPool),
+  'ukg-english-verbs-and-nouns-review': (random, seed, dbPool) => chooseVerbOrNoun(random, seed, dbPool)
 };
 
-export function generatePartsOfSpeechQuestion(skillId, seed) {
+export function generatePartsOfSpeechQuestion(skillId, seed, dbPool = null) {
   const random = createRandom(seed);
-  const generator = generators[skillId] || ((nextRandom, nextSeed) => {
+  const generator = generators[skillId] || ((nextRandom, nextSeed, nextDbPool) => {
     const reviewGenerators = [
       identifyVerb,
       findVerbInSentence,
@@ -237,7 +287,7 @@ export function generatePartsOfSpeechQuestion(skillId, seed) {
       findTwoVerbs,
       chooseVerbOrNoun
     ];
-    return pick(nextRandom, reviewGenerators)(nextRandom, nextSeed);
+    return pick(nextRandom, reviewGenerators)(nextRandom, nextSeed, nextDbPool);
   });
-  return generator(random, seed);
+  return generator(random, seed, dbPool);
 }

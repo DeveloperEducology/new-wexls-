@@ -56,6 +56,8 @@ const CATV2_HTML_LAYOUTS = new Set([
   'table_fill',
   'diagram_slots',
   'diagram_labeling',
+  'word_completion',
+  'complete_words',
 ]);
 
 export default function CategorizationRenderer({

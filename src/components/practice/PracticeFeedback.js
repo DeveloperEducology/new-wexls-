@@ -242,6 +242,436 @@ function renderSolutionPart(part, index, context = {}) {
   );
 }
 
+function renderInteractiveSolution(question) {
+  if (!question) return null;
+
+  const type = question.type;
+  const interaction = question.interaction;
+  const layoutMode = question.layoutMode || question.htmlLayout || (question.metadata && question.metadata.layoutMode);
+
+  const isCategorization = interaction === 'categorization' || interaction === 'categorizationv2' || type === 'categorization' || type === 'categorizationv2' || layoutMode === 'category_sort';
+  const isOrdering = layoutMode === 'ordering' || type === 'ordering';
+  const isMatching = layoutMode === 'matching' || type === 'matching';
+  const isWordCompletion = layoutMode === 'word_completion' || layoutMode === 'complete_words';
+
+  if (isWordCompletion) {
+    const wordCards = question.wordCards || question.parts?.find(part => part?.layoutMode === 'word_completion' || part?.layoutMode === 'complete_words')?.wordCards || [];
+    if (!wordCards.length) return null;
+
+    return (
+      <div style={{ marginTop: 14, marginBottom: 14 }}>
+        <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 950, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Correct Words
+        </h4>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {wordCards.map((word) => (
+            <div
+              key={word.id}
+              style={{
+                background: '#ffffff',
+                border: '2px solid #bfdbfe',
+                borderRadius: 12,
+                padding: '10px 14px',
+                fontSize: 18,
+                fontWeight: 950,
+                color: '#0f172a',
+              }}
+            >
+              {word.label || `${word.initial || word.answer || ''}${word.ending || ''}`}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isCategorization) {
+    const categories = question.categories || [];
+    const items = question.items || [];
+    const answer = question.answer || question.correctAnswer || question.answerKey || {};
+
+    const grouped = {};
+    categories.forEach(cat => {
+      const catId = typeof cat === 'string' ? cat : cat.id;
+      grouped[catId] = [];
+    });
+
+    items.forEach(item => {
+      const correctCatId = answer[item.id] || item.categoryId || item.target || item.category;
+      if (correctCatId && grouped[correctCatId]) {
+        grouped[correctCatId].push(item);
+      }
+    });
+
+    // Color palettes for categories (white cards inside colored border zones)
+    const colors = [
+      { border: '#5cc4ed', bg: '#f0fafd', headerText: '#0284c7', dot: '#0284c7' }, // Blue/Teal category zone
+      { border: '#c084fc', bg: '#faf5ff', headerText: '#7e22ce', dot: '#a855f7' }, // Purple
+      { border: '#fed7aa', bg: '#fff7ed', headerText: '#c2410c', dot: '#f97316' }, // Orange
+      { border: '#a7f3d0', bg: '#ecfdf5', headerText: '#047857', dot: '#10b981' }, // Green
+      { border: '#fbcfe8', bg: '#fdf2f8', headerText: '#be185d', dot: '#ec4899' }, // Pink
+    ];
+
+    return (
+      <div style={{ marginTop: 14, marginBottom: 14 }}>
+        <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 950, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Correct Groups
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          {categories.map((cat, idx) => {
+            const catId = typeof cat === 'string' ? cat : cat.id;
+            const catLabel = typeof cat === 'string' ? cat : cat.label;
+            const catItems = grouped[catId] || [];
+            const color = colors[idx % colors.length];
+
+            return (
+              <div
+                key={catId}
+                style={{
+                  background: '#ffffff',
+                  border: `2px solid ${color.border}`,
+                  borderRadius: 12,
+                  padding: 14,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, borderBottom: `2px solid ${color.bg}`, paddingBottom: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: color.dot }} />
+                  <span style={{ fontSize: 14, fontWeight: 900, color: color.headerText }}>
+                    {catLabel}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                  {catItems.length > 0 ? (
+                    catItems.map(item => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexDirection: item.imageUrl ? 'column' : 'row',
+                          gap: 6,
+                          width: item.imageUrl ? 120 : 'auto',
+                          minHeight: 52,
+                          background: '#ffffff',
+                          border: '2px solid #5cc4ed', // Exact card border color
+                          borderRadius: 10,
+                          padding: item.imageUrl ? '8px 10px' : '8px 14px',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: '#1e293b',
+                          boxShadow: '0 6px 12px rgba(15, 23, 42, 0.05)',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {item.imageUrl && (
+                          <div style={{
+                            width: '100%',
+                            height: 64,
+                            background: '#f8fafc', // Exact image wrapper color
+                            borderRadius: 6,
+                            border: '1px solid #e2e8f0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            marginBottom: 4,
+                          }}>
+                            <img src={item.imageUrl} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                          </div>
+                        )}
+                        <span style={{ wordBreak: 'break-word' }}>{item.content || item.label}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: 12, fontStyle: 'italic', color: '#94a3b8', padding: '8px 0' }}>Empty</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (isOrdering) {
+    const targets = question.targets || [];
+    const items = question.items || [];
+    const answer = question.answer || {};
+    let orderedItems = [];
+
+    if (targets.length > 0) {
+      const sortedTargets = [...targets].sort((a, b) => (a.order || 0) - (b.order || 0));
+      sortedTargets.forEach(target => {
+        let item = items.find(it => target.accepts?.includes(it.id));
+        if (!item) {
+          item = items.find(it => answer[it.id] === target.id);
+        }
+        if (item) {
+          orderedItems.push(item);
+        }
+      });
+    }
+
+    if (orderedItems.length === 0) {
+      orderedItems = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+
+    return (
+      <div style={{ marginTop: 14, marginBottom: 14 }}>
+        <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Correct Order
+        </h4>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          {orderedItems.map((item, idx) => (
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: item.imageUrl ? 'column' : 'row',
+                  gap: 6,
+                  width: item.imageUrl ? 120 : 'auto',
+                  minHeight: 52,
+                  background: '#ffffff',
+                  border: '2px solid #0284c7', // Darker blue card border
+                  borderRadius: 10,
+                  padding: item.imageUrl ? '8px 10px' : '8px 14px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#0369a1',
+                  boxShadow: '0 6px 12px rgba(2, 132, 199, 0.06)',
+                  textAlign: 'center',
+                }}
+              >
+                {item.imageUrl && (
+                  <div style={{
+                    width: '100%',
+                    height: 64,
+                    background: '#f8fafc',
+                    borderRadius: 6,
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    marginBottom: 4,
+                  }}>
+                    <img src={item.imageUrl} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                  </div>
+                )}
+                <span style={{ wordBreak: 'break-word' }}>{item.content || item.label}</span>
+              </div>
+              {idx < orderedItems.length - 1 && (
+                <span style={{ color: '#94a3b8', fontWeight: 900, fontSize: 18 }}>→</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isMatching) {
+    const targets = question.targets || [];
+    const items = question.items || [];
+    const answer = question.answer || {};
+    const matches = [];
+
+    items.forEach(item => {
+      const targetId = answer[item.id] || item.target;
+      const target = targets.find(t => t.id === targetId);
+      if (target) {
+        matches.push({ item, target });
+      }
+    });
+
+    return (
+      <div style={{ marginTop: 14, marginBottom: 14 }}>
+        <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Correct Matches
+        </h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {matches.map(({ item, target }) => (
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* Item Card */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: item.imageUrl ? 'column' : 'row',
+                  gap: 6,
+                  width: item.imageUrl ? 120 : 'auto',
+                  minHeight: 52,
+                  background: '#ffffff',
+                  border: '2px solid #5cc4ed',
+                  borderRadius: 10,
+                  padding: item.imageUrl ? '8px 10px' : '8px 14px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#1e293b',
+                  boxShadow: '0 6px 12px rgba(15, 23, 42, 0.05)',
+                  textAlign: 'center',
+                }}
+              >
+                {item.imageUrl && (
+                  <div style={{
+                    width: '100%',
+                    height: 64,
+                    background: '#f8fafc',
+                    borderRadius: 6,
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    marginBottom: 4,
+                  }}>
+                    <img src={item.imageUrl} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                  </div>
+                )}
+                <span style={{ wordBreak: 'break-word' }}>{item.content || item.label}</span>
+              </div>
+              
+              <span style={{ color: '#64748b', fontSize: 13, fontWeight: 800 }}>── matches to ──</span>
+              
+              {/* Target Card */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: target.imageUrl ? 'column' : 'row',
+                  gap: 6,
+                  width: target.imageUrl ? 120 : 'auto',
+                  minHeight: 52,
+                  background: '#f8fafc',
+                  border: '2px solid #94a3b8',
+                  borderRadius: 10,
+                  padding: target.imageUrl ? '8px 10px' : '8px 14px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#475569',
+                  boxShadow: '0 6px 12px rgba(15, 23, 42, 0.03)',
+                  textAlign: 'center',
+                }}
+              >
+                {target.imageUrl && (
+                  <div style={{
+                    width: '100%',
+                    height: 64,
+                    background: '#ffffff',
+                    borderRadius: 6,
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    marginBottom: 4,
+                  }}>
+                    <img src={target.imageUrl} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                  </div>
+                )}
+                <span style={{ wordBreak: 'break-word' }}>{target.content || target.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function renderCorrectChoices(question) {
+  if (!question) return null;
+  const isMcq = question.type === 'mcq' || question.interaction === 'choice' || question.interaction === 'multi_select';
+  if (!isMcq) return null;
+
+  const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+  let correctIndices = [];
+  if (isMultiSelect && Array.isArray(question.correctAnswerIndices)) {
+    correctIndices = question.correctAnswerIndices;
+  } else if (isMultiSelect && Array.isArray(question.answer)) {
+    correctIndices = question.answer;
+  } else if (question.correctAnswerIndex !== undefined) {
+    correctIndices = [question.correctAnswerIndex];
+  } else if (typeof question.answer === 'number') {
+    correctIndices = [question.answer];
+  }
+
+  if (correctIndices.length === 0) return null;
+
+  const options = Array.isArray(question.options) ? question.options : [];
+
+  return (
+    <div style={{ marginTop: 14, marginBottom: 14 }}>
+      <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        Correct Option{correctIndices.length > 1 ? 's' : ''}
+      </h4>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        {correctIndices.map((idx) => {
+          const option = options[idx];
+          if (!option) return null;
+
+          const label = typeof option === 'object' ? (option.label || option.text || '') : String(option);
+          const imageUrl = typeof option === 'object' ? option.imageUrl : null;
+
+          return (
+            <div
+              key={idx}
+              style={{
+                minWidth: 140,
+                minHeight: 52,
+                padding: imageUrl ? '10px' : '12px 18px',
+                borderRadius: 12,
+                border: '2px solid #22c55e', // Green border for correct answer
+                background: '#ffffff',
+                color: '#1e293b',
+                boxShadow: '0 6px 12px rgba(22, 163, 74, 0.06)',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                fontWeight: 700,
+                fontSize: 14,
+                gap: 6,
+              }}
+            >
+              {imageUrl && (
+                <div style={{
+                  width: '100%',
+                  height: 84,
+                  background: '#f8fafc',
+                  borderRadius: 8,
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  marginBottom: 4
+                }}>
+                  <img src={imageUrl} alt={label} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                </div>
+              )}
+              <span>{label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function PracticeFeedback({
   question,
   isCorrect = false,
@@ -397,6 +827,8 @@ export default function PracticeFeedback({
           </div>
         )}
 
+        {renderInteractiveSolution(question)}
+
         {solutionSections.length > 0 && (
           <div style={{
             marginTop: 14,
@@ -459,6 +891,28 @@ export default function PracticeFeedback({
       >
         {isCorrect ? 'That answer matches the model.' : 'Review the model and try the next one.'}
       </p>
+
+      {cleanExp && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: 14,
+            background: '#ffffff',
+            borderRadius: 14,
+            border: `1px solid ${isCorrect ? 'rgba(34, 197, 94, 0.12)' : 'rgba(251, 146, 60, 0.12)'}`,
+            color: '#334155',
+            fontSize: 14,
+            fontWeight: 700,
+            lineHeight: 1.5,
+          }}
+        >
+          <InlineMarkdown text={cleanExp} />
+        </div>
+      )}
+
+      {renderInteractiveSolution(question)}
+
+      {renderCorrectChoices(question)}
 
       {solutionSections.length > 0 ? (
         <div

@@ -737,6 +737,56 @@ const REFERENCE_EXAMPLES = [
     }
   },
   {
+    id: "example-word-completion",
+    title: "Example: Word Completion (CatV2)",
+    subject: "english",
+    topic: "phonics",
+    layout: "prompt_top_visual_center_options_bottom",
+    variables: [],
+    visuals: [],
+    questionText: "Complete the words.",
+    optionsType: "categorizationv2",
+    parts: [
+      {
+        type: "categorizationv2",
+        renderer: "html",
+        layoutMode: "word_completion",
+        items: [
+          { id: "letter_f", content: "f" },
+          { id: "letter_p", content: "p" }
+        ],
+        wordCards: [
+          {
+            id: "fin_card",
+            slotId: "slot_fin_initial",
+            ending: "in",
+            answer: "fin",
+            imageUrl: "/images/phonics/fin.svg"
+          },
+          {
+            id: "pin_card",
+            slotId: "slot_pin_initial",
+            ending: "in",
+            answer: "pin",
+            imageUrl: "/images/phonics/pin.svg"
+          }
+        ]
+      }
+    ],
+    answer: {
+      slot_fin_initial: "letter_f",
+      slot_pin_initial: "letter_p"
+    },
+    explanation: {
+      sections: [
+        {
+          type: "text",
+          content: "F plus in makes fin. P plus in makes pin."
+        }
+      ]
+    }
+  },
+  {
     id: "example-visual-choice",
     title: "Example: Visual Choice",
     subject: "math",

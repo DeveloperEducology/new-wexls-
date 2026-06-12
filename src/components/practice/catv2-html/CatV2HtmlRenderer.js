@@ -8,6 +8,7 @@ import { resolveToolSvg } from '@/lib/practice/svgTools';
 import OrderingLayout from './layouts/OrderingLayout';
 import GridFillLayout from './layouts/GridFillLayout';
 import DiagramSlotsLayout from './layouts/DiagramSlotsLayout';
+import WordCompletionLayout from './layouts/WordCompletionLayout';
 
 const isInlineSvg = (url) => {
   if (typeof url !== 'string') return false;
@@ -1896,6 +1897,7 @@ export default function CatV2HtmlRenderer({
   const items = question.items || question.parts?.find((part) => part.type === 'categorization')?.items || [];
   const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
   const layoutMode = question.layoutMode || question.metadata?.layoutMode || question.htmlLayout || 'category_sort';
+  const isWordCompletion = layoutMode === 'word_completion' || layoutMode === 'complete_words';
   const cardStyle = question.cardStyle || question.behavior?.cardStyle || question.itemCardStyle || question.imageCardStyle || question.cardVariant;
   const hideItemLabels = Boolean(question.hideItemLabels || question.behavior?.hideItemLabels);
   const containerRef = useRef(null);
@@ -1917,34 +1919,50 @@ export default function CatV2HtmlRenderer({
     <section className={styles.container} ref={containerRef}>
       <div className={styles.questionCard}>
         {question.questionText ? (
-          <div className={styles.questionTextRow} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className={styles.questionTextRow} style={{ display: 'flex', alignItems: 'center', gap: isWordCompletion ? 16 : 12 }}>
             <button
               type="button"
               onClick={() => speakText(question.questionText)}
               style={{
-                background: '#e0f2fe',
+                background: isWordCompletion ? 'transparent' : '#e0f2fe',
                 border: 'none',
                 borderRadius: '50%',
-                width: '38px',
-                height: '38px',
+                width: isWordCompletion ? '45px' : '38px',
+                height: isWordCompletion ? '45px' : '38px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
                 color: '#0284c7',
-                boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+                boxShadow: isWordCompletion ? 'none' : '0 4px 10px rgba(2, 132, 199, 0.15)',
                 transition: 'transform 0.2s ease, background 0.2s ease',
                 flexShrink: 0,
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.08)';
+                e.currentTarget.style.background = isWordCompletion ? 'transparent' : '#bae6fd';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = isWordCompletion ? 'transparent' : '#e0f2fe';
+              }}
               title="Read question out loud"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
               </svg>
             </button>
-            <span className={styles.questionText}>{question.questionText}</span>
+            <span
+              className={styles.questionText}
+              style={isWordCompletion ? {
+                color: '#4f7f00',
+                fontSize: 'clamp(30px, 4vw, 36px)',
+                fontWeight: 500,
+                letterSpacing: 0,
+              } : undefined}
+            >
+              {question.questionText}
+            </span>
           </div>
         ) : null}
 
@@ -1974,6 +1992,13 @@ export default function CatV2HtmlRenderer({
             items={items}
             cardStyle={cardStyle}
             hideItemLabels={hideItemLabels}
+            onAnswer={onAnswer}
+            isAnswered={isAnswered}
+          />
+        ) : layoutMode === 'word_completion' || layoutMode === 'complete_words' ? (
+          <WordCompletionLayout
+            question={question}
+            items={items}
             onAnswer={onAnswer}
             isAnswered={isAnswered}
           />

@@ -29,6 +29,113 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
   // If the poolDoc has the new 'pools' property, use the new structure
   if (poolDoc.pools) {
+    const isWordCompletion = poolDoc.layoutMode === 'word_completion'
+      || poolDoc.metadata?.layoutMode === 'word_completion'
+      || poolDoc.mode === 'word_completion';
+
+    if (isWordCompletion) {
+      const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
+      const configuredCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
+      const wordPool = (poolDoc.pools[configuredCategory] || [])
+        .filter(option => option?.active !== false)
+        .filter(option => option?.label && option?.initial && option?.ending);
+
+      if (wordPool.length < 2) {
+        throw new Error('Word completion pool needs at least 2 words with label, initial, and ending.');
+      }
+
+      const requestedWordCount = Math.max(2, Number(poolDoc.wordCount || poolDoc.itemsPerCategory || 2) || 2);
+      const shuffledWords = seededShuffle(wordPool, prng);
+      const selectedWords = [];
+      const usedInitials = new Set();
+
+      for (const word of shuffledWords) {
+        const initialKey = String(word.initial || '').toLowerCase();
+        if (!usedInitials.has(initialKey) || selectedWords.length >= requestedWordCount - 1) {
+          selectedWords.push(word);
+          usedInitials.add(initialKey);
+        }
+        if (selectedWords.length >= requestedWordCount) break;
+      }
+
+      if (selectedWords.length < requestedWordCount) {
+        shuffledWords.forEach(word => {
+          if (selectedWords.length < requestedWordCount && !selectedWords.some(selected => selected.id === word.id)) {
+            selectedWords.push(word);
+          }
+        });
+      }
+
+      const items = selectedWords.map((word, index) => ({
+        id: `letter_${index + 1}`,
+        content: word.initial,
+        label: word.initial,
+        audioUrl: word.audioUrl && word.assetStatus?.audio !== 'needs_review'
+          ? word.audioUrl
+          : `/api/tts?voice=${voice}&text=${encodeURIComponent(word.initial)}`,
+      }));
+
+      const wordCards = selectedWords.map((word, index) => ({
+        id: `slot_${index + 1}`,
+        label: word.label,
+        imageUrl: word.imageUrl || '',
+        audioUrl: word.audioUrl && word.assetStatus?.audio !== 'needs_review'
+          ? word.audioUrl
+          : `/api/tts?voice=${voice}&text=${encodeURIComponent(word.label)}`,
+        initial: word.initial,
+        ending: word.ending,
+        answer: word.initial,
+      }));
+
+      const answer = Object.fromEntries(wordCards.map((card, index) => [card.id, items[index].id]));
+      const shuffledItems = seededShuffle(items, prng);
+      const questionText = poolDoc.questionText || 'Complete the words.';
+      const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
+      const parts = [
+        ...(poolDoc.parts || [{ type: 'text', content: questionText }]).filter(part => part.type !== 'categorizationv2' && part.type !== 'categorization'),
+        {
+          type: 'categorizationv2',
+          layoutMode: 'word_completion',
+          renderer: 'html5',
+          items: shuffledItems,
+          wordCards,
+          answerKey: answer,
+        }
+      ];
+
+      const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+      return {
+        id: `${poolDoc.id || 'word_completion_pool'}_${seed}_${selectedWords.map(word => word.id || word.label).join('_')}`,
+        type: 'categorizationv2',
+        interaction: 'categorizationv2',
+        layoutMode: 'word_completion',
+        questionText,
+        audioUrl: questionAudioUrl,
+        voice,
+        items: shuffledItems,
+        wordCards,
+        answer,
+        correctAnswer: answer,
+        explanation: poolDoc.explanation || `The missing beginning sounds are ${selectedWords.map(word => word.initial).join(' and ')}.`,
+        solution: poolDoc.solution || {
+          sections: [
+            { type: 'text', content: poolDoc.explanation || `Complete each word by matching the first sound to the picture.` }
+          ]
+        },
+        parts,
+        metadata: {
+          ...(poolDoc.metadata || {}),
+          subject: poolDoc.subject || 'english',
+          topic: poolDoc.topic || 'phonics',
+          skillId,
+          difficulty,
+          targetCategory: configuredCategory,
+          templateId: poolDoc.metadata?.templateId || 'phonics.word_completion',
+          engine: 'dynamic_pool_word_completion',
+        }
+      };
+    }
+
     const isCategorization = poolDoc.interaction === 'categorization' || poolDoc.type === 'categorization' || poolDoc.interaction === 'categorizationv2';
     if (isCategorization) {
       let categories = poolDoc.categories;
@@ -326,16 +433,21 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         .replace(/\{\{targetWord\}\}/g, targetWord)
         .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
         .replace(/\{\{targetImage\}\}/g, targetImage)
+        .replace(/\{\{voice\}\}/g, voice)
         .replace(/\{\{targetCategory\}\}/g, resolvedTargetCategory || '');
     };
 
     const questionText = interpolate(poolDoc.questionText || "Click on the button. Which word do you hear?");
     const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
 
-    const soundText = targetOption.soundText || targetWord;
-    const soundUrl = targetOption.audioUrl && targetOption.assetStatus?.audio !== 'needs_review'
-      ? targetOption.audioUrl
-      : `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`;
+    const soundText = poolDoc.soundText
+      ? interpolate(poolDoc.soundText)
+      : (targetOption.soundText || targetWord);
+    const soundUrl = poolDoc.soundText
+      ? `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`
+      : (targetOption.audioUrl && targetOption.assetStatus?.audio !== 'needs_review'
+          ? targetOption.audioUrl
+          : `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`);
 
     // Interpolate parts
     const parts = (poolDoc.parts || [
@@ -356,7 +468,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
       }
       if (newPart.audioUrl) {
-        newPart.audioUrl = newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetOption.audioUrl || '');
+        newPart.audioUrl = interpolate(newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetOption.audioUrl || ''));
       }
       return newPart;
     });

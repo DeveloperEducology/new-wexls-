@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260">
+  <defs>
+    <linearGradient id="pinMetal" x1="38" y1="226" x2="302" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d9e8f6"/>
+      <stop offset="0.35" stop-color="#86a9ca"/>
+      <stop offset="0.7" stop-color="#d9e8f6"/>
+      <stop offset="1" stop-color="#8fb0cf"/>
+    </linearGradient>
+  </defs>
+  <path d="M65 226C92 135 142 58 158 38c6-8 19-13 16 1-16 44-75 119-103 191-3 7-8 5-6-4Z" fill="#9bb7d5"/>
+  <path d="M94 221C149 190 236 108 266 71c20-24 59-14 68 20 7 26-5 48-26 67-51 47-126 104-182 115-24 5-45-25-32-52Z" fill="none" stroke="#8aa9c7" stroke-width="13" stroke-linecap="round"/>
+  <path d="M125 248C113 269 81 263 72 240c-9-22 10-45 33-40 20 4 30 30 20 48Z" fill="#eff7ff" stroke="#8aa9c7" stroke-width="9"/>
+  <path d="M255 72c12-19 45-21 63-1 20 21 17 55-7 75-13 11-34 11-45-3-12-16 3-32 20-29 18 3 32-17 19-31-12-12-30-7-39 8-7 11-20-7-11-19Z" fill="url(#pinMetal)"/>
+  <path d="M305 92c16 24 1 46-16 54M279 81c16-14 37-7 47 7" fill="none" stroke="#f7fbff" stroke-width="6" stroke-linecap="round" opacity=".55"/>
+  <path d="M106 207C169 172 242 99 267 69" fill="none" stroke="#dbeaf7" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+  <path d="M95 86C72 135 49 194 48 229c-1 17 9 30 24 38" fill="none" stroke="#dbeaf7" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+</svg>

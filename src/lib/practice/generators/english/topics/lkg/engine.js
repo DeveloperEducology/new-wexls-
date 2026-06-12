@@ -2743,7 +2743,7 @@ function generateLocPositionMultiQuestion(skillId, seed, r) {
   };
 }
 
-export function resolveLkgGenerator(skillId, config = {}) {
+export async function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
   const templateId = skillDef?.templateId || skillId;
   const template = lkgEnglishTemplateRegistry[templateId];
@@ -2751,6 +2751,20 @@ export function resolveLkgGenerator(skillId, config = {}) {
   if (!template) {
     console.warn(`Template not found for: ${templateId}`);
     return null;
+  }
+
+  // Load parts of speech vocabulary pool asynchronously from MongoDB if needed
+  let partsOfSpeechPool = null;
+  if (template.engine === 'parts_of_speech') {
+    try {
+      const { getMongoDb } = await import('../../../../../db/mongo.js');
+      const db = await getMongoDb();
+      if (db) {
+        partsOfSpeechPool = await db.collection('vocabulary_pools').findOne({ poolId: 'english-ukg-parts-of-speech-v2' });
+      }
+    } catch (err) {
+      console.error("Failed to load english-ukg-parts-of-speech-v2 from database:", err);
+    }
   }
 
   return {
@@ -2789,7 +2803,7 @@ export function resolveLkgGenerator(skillId, config = {}) {
       } else if (template.engine === 'assoc_lower_word_begins') {
         question = generatePhonicsAssoc({ seed, difficulty: config.difficulty }, config);
       } else if (template.engine === 'parts_of_speech') {
-        question = generatePartsOfSpeechQuestion(skillId, seed);
+        question = generatePartsOfSpeechQuestion(skillId, seed, partsOfSpeechPool);
       }
 
       if (question) {

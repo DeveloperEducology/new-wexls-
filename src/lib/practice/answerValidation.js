@@ -20,6 +20,16 @@ function parseMaybeJson(value, fallback = null) {
   }
 }
 
+function objectMatches(actual, expected) {
+  if (!actual || !expected || typeof actual !== 'object' || typeof expected !== 'object') return false;
+  if (Array.isArray(actual) || Array.isArray(expected)) {
+    if (!Array.isArray(actual) || !Array.isArray(expected) || actual.length !== expected.length) return false;
+    return expected.every((item, index) => normalizeText(actual[index]) === normalizeText(item));
+  }
+  const expectedKeys = Object.keys(expected);
+  return expectedKeys.every((key) => normalizeText(actual[key]) === normalizeText(expected[key]));
+}
+
 function isNumericAnswer(value) {
   return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 }
@@ -89,6 +99,11 @@ function validateRule(rule, question, userAnswer) {
 
   if (hasUnresolvedPlaceholder(expectedRaw)) {
     return true;
+  }
+
+  if (expectedRaw && typeof expectedRaw === 'object') {
+    const actualObject = userAnswer && typeof userAnswer === 'object' ? userAnswer : answerValue;
+    return objectMatches(actualObject, expectedRaw);
   }
 
   if (type === 'numeric_tolerance') {
@@ -291,6 +306,40 @@ export function isAnswerCorrect(question, userAnswer) {
     return Object.keys(expectedOrderingAnswer).every((key) => (
       normalizeText(answerObject[key]) === normalizeText(expectedOrderingAnswer[key])
     ));
+  }
+
+  if (
+    type === 'categorizationv2'
+    && (question.layoutMode === 'word_completion' || question.layoutMode === 'complete_words')
+  ) {
+    const answerObject = typeof userAnswer === 'object' && userAnswer !== null && !Array.isArray(userAnswer)
+      ? userAnswer
+      : {};
+    const expected = parseMaybeJson(question.answer ?? question.correctAnswer ?? question.answerKey, null);
+
+    if (expected && typeof expected === 'object' && !Array.isArray(expected)) {
+      return objectMatches(answerObject, expected);
+    }
+
+    const wordCards = Array.isArray(question.wordCards)
+      ? question.wordCards
+      : Array.isArray(question.parts)
+        ? question.parts.find(part => part?.layoutMode === 'word_completion' || part?.layoutMode === 'complete_words')?.wordCards || []
+        : [];
+    const items = Array.isArray(question.items)
+      ? question.items
+      : Array.isArray(question.parts)
+        ? question.parts.find(part => part?.layoutMode === 'word_completion' || part?.layoutMode === 'complete_words')?.items || []
+        : [];
+    const itemById = new Map(items.map(item => [item.id, item]));
+
+    if (!wordCards.length) return false;
+
+    return wordCards.every((card) => {
+      const placedItem = itemById.get(answerObject[card.id]);
+      const placedValue = placedItem?.content ?? placedItem?.label ?? placedItem?.letter;
+      return normalizeText(placedValue) === normalizeText(card.answer ?? card.initial);
+    });
   }
 
   if (type === 'interactivetool') {

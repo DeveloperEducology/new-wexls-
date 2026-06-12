@@ -82,10 +82,11 @@ function scrubBrowserTts(obj) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { poolId, pools } = body;
+    const { poolId } = body;
+    const pools = body.pools || body.categories;
 
     if (!poolId || !pools || typeof pools !== 'object' || Array.isArray(pools)) {
-      return NextResponse.json({ success: false, error: 'Missing poolId or pools' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Missing poolId or pools/categories' }, { status: 400 });
     }
     const invalidCategory = Object.entries(pools).find(([, items]) => !Array.isArray(items));
     if (invalidCategory) {

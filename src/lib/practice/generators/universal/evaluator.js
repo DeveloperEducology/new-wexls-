@@ -541,8 +541,22 @@ export function evaluateTemplate(originalTemplate, seed) {
           content: item.content ? interpolateString(item.content, resolvedVariables) : undefined,
           label: item.label ? interpolateString(item.label, resolvedVariables) : undefined,
           imageUrl: item.imageUrl ? interpolateString(item.imageUrl, resolvedVariables) : undefined,
+          audioUrl: item.audioUrl ? interpolateString(item.audioUrl, resolvedVariables) : undefined,
+          alt: item.alt ? interpolateString(item.alt, resolvedVariables) : undefined,
           svg: item.svg ? interpolateString(item.svg, resolvedVariables) : undefined,
           imageWidth: item.imageWidth ? resolveExpression(String(item.imageWidth), resolvedVariables) : undefined
+        }));
+      }
+
+      if (Array.isArray(resolvedPart.wordCards)) {
+        resolvedPart.wordCards = resolvedPart.wordCards.map(card => ({
+          ...card,
+          ending: card.ending ? interpolateString(card.ending, resolvedVariables) : card.ending,
+          answer: card.answer ? interpolateString(card.answer, resolvedVariables) : card.answer,
+          imageUrl: card.imageUrl ? interpolateString(card.imageUrl, resolvedVariables) : card.imageUrl,
+          svg: card.svg ? interpolateString(card.svg, resolvedVariables) : card.svg,
+          alt: card.alt ? interpolateString(card.alt, resolvedVariables) : card.alt,
+          prompt: card.prompt ? interpolateString(card.prompt, resolvedVariables) : card.prompt
         }));
       }
 
@@ -890,10 +904,24 @@ export function evaluateTemplate(originalTemplate, seed) {
   if (categorizationPart) {
     if (categorizationPart.categories) questionPayload.categories = categorizationPart.categories;
     if (categorizationPart.items) questionPayload.items = categorizationPart.items;
+    if (categorizationPart.layoutMode) questionPayload.layoutMode = categorizationPart.layoutMode;
+    if (categorizationPart.htmlLayout) questionPayload.htmlLayout = categorizationPart.htmlLayout;
+    if (categorizationPart.renderer) questionPayload.renderer = categorizationPart.renderer;
+    if (categorizationPart.wordCards) questionPayload.wordCards = categorizationPart.wordCards;
+    if (categorizationPart.words) questionPayload.words = categorizationPart.words;
+    if (categorizationPart.targets) questionPayload.targets = categorizationPart.targets;
+    if (categorizationPart.grid) questionPayload.grid = categorizationPart.grid;
   }
 
   if (resolvedAnswer !== null) {
-    if (categorizationPart && resolvedAnswer && typeof resolvedAnswer === 'object') {
+    const categorizationLayoutMode = String(categorizationPart?.layoutMode || categorizationPart?.htmlLayout || '').toLowerCase();
+    if (
+      categorizationPart
+      && resolvedAnswer
+      && typeof resolvedAnswer === 'object'
+      && categorizationLayoutMode !== 'word_completion'
+      && categorizationLayoutMode !== 'complete_words'
+    ) {
       const finalItemIds = new Set((questionPayload.items || []).map(item => item.id));
       resolvedAnswer = Object.fromEntries(
         Object.entries(resolvedAnswer).filter(([k]) => finalItemIds.has(k))

@@ -438,6 +438,46 @@ export async function GET(request) {
     }
   }
 
+  // Direct dynamic-template fallback: lets a newly saved template run by using
+  // skill=<templateId> even before a curriculum node is wired to it.
+  try {
+    const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
+    const { evaluateTemplate } = await import('../../../lib/practice/generators/universalEvaluator.js');
+    const templateDoc = await findDynamicTemplateById(resolvedTemplateId);
+
+    if (templateDoc) {
+      const resolvedTemplateDoc = await resolveTemplatePools(templateDoc);
+      const rawQuestion = evaluateTemplate(resolvedTemplateDoc, seed);
+      const question = {
+        ...rawQuestion,
+        id: `universal-template-${resolvedTemplateId}-${seed}`,
+        metadata: {
+          subject: templateDoc.subject || templateDoc.templateInfo?.subject || subject,
+          topic: templateDoc.topic || templateDoc.templateInfo?.topic || resolvedTopic,
+          skillId: templateDoc.skillId || templateDoc.templateInfo?.skillId || resolvedSkillId,
+          templateId: resolvedTemplateId,
+          engine: 'universal-template',
+          grade: templateDoc.grade || templateDoc.templateInfo?.grade || skillNode?.grade || skillNode?.metadata?.grade || '1',
+          seed
+        }
+      };
+
+      return respond(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: resolvedTemplateId,
+          logic_type: resolvedTemplateId,
+          templateId: resolvedTemplateId,
+          engine: 'universal-template'
+        }
+      }, { subject: question.metadata.subject, topic: question.metadata.topic, skill: question.metadata.skillId }));
+    }
+  } catch (err) {
+    console.error('Error generating direct dynamic template:', err);
+  }
+
   let isDbTopicActive = false;
   try {
     let topicNode = await getCurriculumNode(targetTopic);
@@ -682,8 +722,8 @@ export async function GET(request) {
     if (subject === 'english' && (['grammar', 'lkg', 'english-lkg'].includes(targetTopic) || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg')) {
       const isLkg = targetTopic === 'lkg' || targetTopic === 'english-lkg' || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg';
       const generator = isLkg
-        ? (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(resolvedSkillId, config)
-        : (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(resolvedSkillId, config);
+        ? await (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(resolvedSkillId, config)
+        : await (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(resolvedSkillId, config);
 
       if (!generator) {
         throw new Error(`Could not resolve generator for ${resolvedSkillId}`);

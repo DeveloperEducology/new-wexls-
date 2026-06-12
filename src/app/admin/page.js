@@ -118,6 +118,14 @@ function parseCategoryList(value) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }
 
+function isWordCompletionAuthoringType(value) {
+  return value === 'word_completion_pool';
+}
+
+function isPoolDrivenAuthoringType(value) {
+  return value === 'dynamic_pool' || isWordCompletionAuthoringType(value);
+}
+
 
 function hashCode(str) {
   let hash = 0;
@@ -538,6 +546,7 @@ export default function AdminConsolePage() {
   const [createPoolSaving, setCreatePoolSaving] = useState(false);
   const [poolManagerSearch, setPoolManagerSearch] = useState('');
   const [canvaDesignUrl, setCanvaDesignUrl] = useState('');
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setCanvaDesignUrl(localStorage.getItem('canva_design_url') || 'https://canva.link/w9hc0502n2fbjo9');
@@ -945,8 +954,10 @@ export default function AdminConsolePage() {
         const response = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId.trim())}`);
         const data = await response.json();
         if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
-        const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
-        const categoriesToAudit = isCat
+        const isCatLike = interaction === 'categorization' || interaction === 'categorizationv2' || interaction === 'word_completion';
+        const categoriesToAudit = interaction === 'word_completion'
+          ? [targetCategory.trim()].filter(Boolean)
+          : isCatLike
           ? (categories.length > 0 ? categories.map(c => c.id) : selectedPoolCategories)
           : (targetCategory.trim() === '[random]'
               ? selectedPoolCategories
@@ -967,30 +978,26 @@ export default function AdminConsolePage() {
     }
   };
 
+  const fetchVocabularyPools = useCallback(async () => {
+    setVocabularyPoolsLoading(true);
+    setVocabularyPoolsError('');
+    try {
+      const response = await fetch('/api/admin/vocabulary-pools');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Unable to load vocabulary pools.');
+      setVocabularyPools(Array.isArray(data.pools) ? data.pools : []);
+    } catch (error) {
+      setVocabularyPoolsError(error.message || 'Unable to load vocabulary pools.');
+    } finally {
+      setVocabularyPoolsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (type !== 'dynamic_pool' || vocabularyPools.length > 0 || vocabularyPoolsLoading || vocabularyPoolsError) return;
 
-    let cancelled = false;
-    setVocabularyPoolsLoading(true);
-    setVocabularyPoolsError('');
-    fetch('/api/admin/vocabulary-pools')
-      .then(response => response.json())
-      .then(data => {
-        if (cancelled) return;
-        if (!data.success) throw new Error(data.error || 'Unable to load vocabulary pools.');
-        setVocabularyPools(Array.isArray(data.pools) ? data.pools : []);
-      })
-      .catch(error => {
-        if (!cancelled) setVocabularyPoolsError(error.message || 'Unable to load vocabulary pools.');
-      })
-      .finally(() => {
-        if (!cancelled) setVocabularyPoolsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [type, vocabularyPools.length, vocabularyPoolsError]);
+    fetchVocabularyPools();
+  }, [type, vocabularyPools.length, vocabularyPoolsLoading, vocabularyPoolsError, fetchVocabularyPools]);
 
   // Categorization state
   const [categories, setCategories] = useState([
@@ -3986,7 +3993,12 @@ export default function AdminConsolePage() {
   const loadQuestionData = (q, mode = 'edit') => {
     ignoreDirtyChange.current = true;
     setQuestionStatus(q.status || 'active');
-    setType(q.type || 'mcq');
+    const loadedLayoutMode = q.layoutMode || q.metadata?.layoutMode || '';
+    const loadedInteraction = q.interaction || q.metadata?.interaction || '';
+    const loadedType = q.type === 'dynamic_pool' && loadedLayoutMode === 'word_completion'
+      ? 'word_completion_pool'
+      : (q.type || 'mcq');
+    setType(loadedType);
     setSubject(q.subject || '');
     setTopic(q.topic || '');
     setSkillId(q.skillId || '');
@@ -4079,8 +4091,8 @@ export default function AdminConsolePage() {
     }));
 
     // Load Universal DnD specific fields
-    setLayoutMode(q.layoutMode || '');
-    setInteraction(q.interaction || '');
+    setLayoutMode(loadedLayoutMode);
+    setInteraction(loadedInteraction);
     setTargets(q.targets || null);
     setBackgroundImage(q.backgroundImage || '');
     setCanvas(q.canvas || null);
@@ -4883,8 +4895,7 @@ export default function AdminConsolePage() {
     }
   };
 
-  // --- JSON IMPORT AND UPLOAD ---
-  const handleImportJSON = () => {
+  const handleImportJSON = async () => {
     if (!jsonTextToImport.trim()) {
       setJsonValidationError('Please enter JSON text.');
       return;
@@ -4893,6 +4904,40 @@ export default function AdminConsolePage() {
     try {
       const data = JSON.parse(jsonTextToImport);
       setJsonValidationError(null);
+      
+      // Check if it is a vocabulary pool document
+      const pools = data.pools || data.categories;
+      if (data.poolId && pools) {
+        setJsonValidationError('Saving vocabulary pool to database...');
+        try {
+          const res = await fetch('/api/admin/vocabulary-pools', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, pools })
+          });
+          const resData = await res.json();
+          if (!res.ok) {
+            throw new Error(resData.error || 'Failed to save vocabulary pool.');
+          }
+          
+          // Refresh vocabulary pools list
+          await fetchVocabularyPools();
+          
+          // Automatically switch type to dynamic_pool and prefill the poolId
+          setType('dynamic_pool');
+          setPoolId(data.poolId);
+          setTargetCategory('');
+          setDistractorCategories('');
+          setCategories([]);
+          
+          setAuthoringMode('manual');
+          setJsonValidationError(null);
+          setAlert({ type: 'success', text: `Successfully imported and saved vocabulary pool "${data.poolId}"!` });
+        } catch (dbErr) {
+          setJsonValidationError(`Database Error: ${dbErr.message}`);
+        }
+        return;
+      }
       
       const required = ['subject', 'topic', 'skillId', 'type', 'questionText'];
       const missing = required.filter(field => !data[field]);
@@ -5493,11 +5538,48 @@ export default function AdminConsolePage() {
         payload.answer = correctIdx;
         payload.parts = parts.map(p => ({ ...p }));
       }
+    } else if (type === 'word_completion_pool') {
+      const selectedCategory = targetCategory.trim();
+      payload.type = 'dynamic_pool';
+      payload.interaction = 'categorizationv2';
+      payload.layoutMode = 'word_completion';
+      payload.metadata.interaction = 'categorizationv2';
+      payload.metadata.layoutMode = 'word_completion';
+      payload.poolId = poolId.trim();
+      payload.metadata.poolId = poolId.trim();
+      payload.targetCategory = selectedCategory;
+      payload.metadata.targetCategory = selectedCategory;
+      payload.randomizeTargetCategory = false;
+      payload.wordCount = 2;
+      payload.itemsPerCategory = 2;
+      payload.hideOptionImages = false;
+      payload.hideOptionLabel = false;
+      payload.metadata.hideOptionImages = false;
+      payload.metadata.hideOptionLabel = false;
+      payload.options = [];
+      payload.answer = {};
+      payload.correctAnswer = {};
+      payload.parts = [
+        ...parts.map(p => ({ ...p })),
+        {
+          type: 'categorizationv2',
+          layoutMode: 'word_completion',
+          renderer: 'html5',
+          source: {
+            poolId: poolId.trim(),
+            category: selectedCategory,
+            count: 2
+          }
+        }
+      ];
+      payload.difficultyRules = difficultyRules;
+      payload.metadata.difficultyRules = difficultyRules;
     } else if (type === 'dynamic_pool') {
       payload.hideOptionImages = hideOptionImages;
       payload.metadata.hideOptionImages = hideOptionImages;
       payload.hideOptionLabel = hideOptionLabel;
       payload.metadata.hideOptionLabel = hideOptionLabel;
+      const isWordCompletionInteraction = interaction === 'word_completion';
       
       const correctPool = options
         .filter(opt => !opt.isDistractorOnly)
@@ -5523,7 +5605,30 @@ export default function AdminConsolePage() {
       if (poolId.trim()) {
         payload.poolId = poolId.trim();
         payload.metadata.poolId = poolId.trim();
-        if (interaction === 'categorization' || interaction === 'categorizationv2') {
+        if (isWordCompletionInteraction) {
+          payload.interaction = 'categorizationv2';
+          payload.metadata.interaction = 'categorizationv2';
+          payload.layoutMode = 'word_completion';
+          payload.metadata.layoutMode = 'word_completion';
+          payload.targetCategory = targetCategory.trim();
+          payload.metadata.targetCategory = targetCategory.trim();
+          payload.randomizeTargetCategory = false;
+          payload.wordCount = 2;
+          payload.itemsPerCategory = 2;
+          payload.parts = [
+            ...parts.map(p => ({ ...p })),
+            {
+              type: 'categorizationv2',
+              layoutMode: 'word_completion',
+              renderer: 'html5',
+              source: {
+                poolId: poolId.trim(),
+                category: targetCategory.trim(),
+                count: 2
+              }
+            }
+          ];
+        } else if (interaction === 'categorization' || interaction === 'categorizationv2') {
           payload.categories = categories.map(cat => ({ ...cat, id: cat.id, label: cat.label }));
           payload.metadata.categories = payload.categories;
         } else {
@@ -5546,7 +5651,9 @@ export default function AdminConsolePage() {
 
       payload.correctAnswerIndex = undefined;
       payload.answer = undefined;
-      payload.parts = parts.map(p => ({ ...p }));
+      if (!isWordCompletionInteraction) {
+        payload.parts = parts.map(p => ({ ...p }));
+      }
     } else if (type === 'categorizationv2' || type === 'categorization') {
       payload.options = [];
       const itemMapping = {};
@@ -5627,7 +5734,12 @@ export default function AdminConsolePage() {
       payload.layoutMode = layoutMode;
       payload.metadata.layoutMode = layoutMode;
     }
-    if (interaction) {
+    if (interaction === 'word_completion') {
+      payload.interaction = 'categorizationv2';
+      payload.metadata.interaction = 'categorizationv2';
+      payload.layoutMode = 'word_completion';
+      payload.metadata.layoutMode = 'word_completion';
+    } else if (interaction) {
       payload.interaction = interaction;
       payload.metadata.interaction = interaction;
     }
@@ -5751,8 +5863,29 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: 'Validation Error: Please select one option as the Correct Answer.' });
         return;
       }
+    } else if (type === 'word_completion_pool') {
+      if (!poolId.trim()) {
+        setAlert({ type: 'error', text: 'Validation Error: Word Completion needs a centralized Pool ID.' });
+        return;
+      }
+      if (!selectedVocabularyPool) {
+        setAlert({ type: 'error', text: `Validation Error: Centralized pool "${poolId.trim()}" was not found.` });
+        return;
+      }
+      if (!targetCategory.trim() || !selectedPoolCategories.includes(targetCategory.trim())) {
+        setAlert({ type: 'error', text: 'Validation Error: Select a valid word pool category.' });
+        return;
+      }
+      const categoryCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+        ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+        ?? 0;
+      if (categoryCount < 2) {
+        setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least 2 words in the selected category.' });
+        return;
+      }
     } else if (type === 'dynamic_pool') {
-      const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
+      const isWordCompletionInteraction = interaction === 'word_completion';
+      const isCat = interaction === 'categorization' || interaction === 'categorizationv2' || isWordCompletionInteraction;
       if (isCat && !poolId.trim()) {
         setAlert({ type: 'error', text: 'Validation Error: Categorization dynamic pools must use a Centralized Pool. Select an existing Pool ID.' });
         return;
@@ -5762,7 +5895,19 @@ export default function AdminConsolePage() {
           setAlert({ type: 'error', text: `Validation Error: Centralized pool "${poolId.trim()}" was not found. Select an existing pool or clear Pool ID to author an inline pool.` });
           return;
         }
-        if (!isCat) {
+        if (isWordCompletionInteraction) {
+          if (!targetCategory.trim() || !selectedPoolCategories.includes(targetCategory.trim())) {
+            setAlert({ type: 'error', text: 'Validation Error: Select a valid word pool category.' });
+            return;
+          }
+          const categoryCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+            ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+            ?? 0;
+          if (categoryCount < 2) {
+            setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least 2 words in the selected category.' });
+            return;
+          }
+        } else if (!isCat) {
           const parsedDistractors = parseCategoryList(distractorCategories);
           if (!targetCategory.trim() || (!selectedPoolCategories.includes(targetCategory.trim()) && targetCategory.trim() !== '[random]')) {
             setAlert({ type: 'error', text: 'Validation Error: Select a valid target category from the centralized pool.' });
@@ -6104,8 +6249,51 @@ export default function AdminConsolePage() {
     const baseParts = parts.map(p => ({ ...p }));
     let mockParts = baseParts;
     let mockItemsForDynamicCategorization = [];
+    let mockWordCompletionItems = [];
+    let mockWordCompletionCards = [];
+    let mockWordCompletionAnswer = undefined;
     if (type === 'dynamic_pool') {
+      const isWordCompletionInteraction = interaction === 'word_completion';
       const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
+      if (isWordCompletionInteraction) {
+        const activeCategory = targetCategory || selectedPoolCategories[0] || 'short_i_words';
+        const words = selectedVocabularyPool?.pools?.[activeCategory] || [];
+        const selectedWords = words
+          .filter(item => item?.label && item?.initial && item?.ending)
+          .slice(0, 2);
+        const fallbackWords = selectedWords.length >= 2 ? selectedWords : [
+          { id: 'pin', label: 'pin', initial: 'p', ending: 'in', imageUrl: '/images/phonics/pin.svg' },
+          { id: 'fin', label: 'fin', initial: 'f', ending: 'in', imageUrl: '/images/phonics/fin.svg' }
+        ];
+
+        mockWordCompletionItems = fallbackWords.map((word, idx) => ({
+          id: `letter_${idx + 1}`,
+          content: word.initial,
+          label: word.initial,
+          audioUrl: word.audioUrl || undefined
+        }));
+        mockWordCompletionCards = fallbackWords.map((word, idx) => ({
+          id: `slot_${idx + 1}`,
+          label: word.label,
+          imageUrl: word.imageUrl || '',
+          audioUrl: word.audioUrl || undefined,
+          initial: word.initial,
+          ending: word.ending,
+          answer: word.initial
+        }));
+        mockWordCompletionAnswer = Object.fromEntries(mockWordCompletionCards.map((card, idx) => [card.id, mockWordCompletionItems[idx].id]));
+        mockParts = [
+          ...baseParts,
+          {
+            type: 'categorizationv2',
+            layoutMode: 'word_completion',
+            renderer: 'html5',
+            items: mockWordCompletionItems,
+            wordCards: mockWordCompletionCards,
+            answerKey: mockWordCompletionAnswer
+          }
+        ];
+      } else
       if (isCat) {
         const cats = categories.length > 0
           ? categories.map(c => ({ ...c, id: c.id, label: c.label }))
@@ -6342,8 +6530,10 @@ export default function AdminConsolePage() {
 
     return {
       id: uniqueId,
-      type,
-      interaction: directImageSelect ? 'direct_image_select' : (interaction || undefined),
+      type: type === 'dynamic_pool' && interaction === 'word_completion' ? 'categorizationv2' : type,
+      interaction: directImageSelect
+        ? 'direct_image_select'
+        : (type === 'dynamic_pool' && interaction === 'word_completion' ? 'categorizationv2' : (interaction || undefined)),
       directImageSelect,
       questionText: questionText.trim(),
       parts: mockParts,
@@ -6370,11 +6560,14 @@ export default function AdminConsolePage() {
           : undefined,
       items: (type === 'categorizationv2' || type === 'categorization') 
         ? serializedItems 
+        : (type === 'dynamic_pool' && interaction === 'word_completion')
+          ? mockWordCompletionItems
         : (type === 'dynamic_pool' && (interaction === 'categorization' || interaction === 'categorizationv2'))
           ? mockItemsForDynamicCategorization
           : undefined,
-      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
-      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      wordCards: (type === 'dynamic_pool' && interaction === 'word_completion') ? mockWordCompletionCards : undefined,
+      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : (type === 'dynamic_pool' ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : (type === 'dynamic_pool' ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { readable, readOptions },
       // Advanced Dynamic Pool fields
       poolId: (type === 'dynamic_pool' && poolId) ? poolId.trim() : undefined,
@@ -6399,7 +6592,7 @@ export default function AdminConsolePage() {
       } : undefined,
       difficultyRules: type === 'dynamic_pool' ? difficultyRules : undefined,
       // Universal DnD fields
-      layoutMode: layoutMode || undefined,
+      layoutMode: (type === 'dynamic_pool' && interaction === 'word_completion') ? 'word_completion' : (layoutMode || undefined),
       targets: targets || undefined,
       backgroundImage: backgroundImage || undefined,
       canvas: canvas || undefined,
@@ -8649,6 +8842,15 @@ export default function AdminConsolePage() {
                                     { label: '', isCorrect: false, isDistractorOnly: true, misconceptionType: 'general_confusion', similarity: 'medium' }
                                   ]);
                                 }
+                                if (nextType === 'word_completion_pool') {
+                                  setInteraction('categorizationv2');
+                                  setLayoutMode('word_completion');
+                                  setTargetCategory(!targetCategory || targetCategory === '[random]' ? 'short_i_words' : targetCategory);
+                                  if (!questionText.trim()) {
+                                    setQuestionText('Complete the words.');
+                                  }
+                                  setCategories([]);
+                                }
                                 ignoreDirtyChange.current = false;
                                 setIsDirty(true);
                               }}
@@ -8661,12 +8863,13 @@ export default function AdminConsolePage() {
                               <option value="trueOrFalse">True / False</option>
                               <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
                               <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
+                              <option value="word_completion_pool">Word Completion / Phonics Fill (CatV2)</option>
                             </select>
                           </div>
 
-                          {(type === 'mcq' || type === 'dynamic_pool') && (
+                          {(type === 'mcq' || isPoolDrivenAuthoringType(type)) && (
                             <div className={styles.formGroup}>
-                              {type === 'dynamic_pool' && (
+                              {isPoolDrivenAuthoringType(type) && (
                                 <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                                   <h4 style={{ fontSize: 13, fontWeight: 'bold', color: '#0f766e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                                     🌐 Pool Source
@@ -8685,6 +8888,14 @@ export default function AdminConsolePage() {
                                         onChange={(e) => {
                                           const nextInteraction = e.target.value;
                                           setInteraction(nextInteraction);
+                                          if (nextInteraction === 'word_completion' || type === 'word_completion_pool') {
+                                            setLayoutMode('word_completion');
+                                            setTargetCategory(!targetCategory || targetCategory === '[random]' ? 'short_i_words' : targetCategory);
+                                            setCategories([]);
+                                            if (!questionText.trim()) {
+                                              setQuestionText('Complete the words.');
+                                            }
+                                          }
                                           setPoolAssetAudit(null);
                                           setIsDirty(true);
                                           if (nextInteraction === 'categorization' || nextInteraction === 'categorizationv2') {
@@ -8698,7 +8909,13 @@ export default function AdminConsolePage() {
                                         <option value="multi_select">Multi-Select MCQ</option>
                                         <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
                                         <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
+                                        <option value="word_completion">Word Completion / Phonics Fill</option>
                                       </select>
+                                      {(type === 'word_completion_pool' || interaction === 'word_completion') && (
+                                        <p style={{ margin: '6px 0 0', fontSize: 10, color: '#0f766e' }}>
+                                          Saves as CatV2 word_completion for IXL-style phonics cards.
+                                        </p>
+                                      )}
                                     </div>
                                     <div>
                                       <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Pool ID</label>
@@ -8740,7 +8957,31 @@ export default function AdminConsolePage() {
                                   </div>
 
                                   <div style={{ marginBottom: 8 }}>
-                                    {interaction !== 'categorization' && interaction !== 'categorizationv2' ? (
+                                    {(type === 'word_completion_pool' || interaction === 'word_completion') ? (
+                                      <div>
+                                        <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Word Pool Category</label>
+                                        <select
+                                          className={styles.formSelect}
+                                          style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                          value={targetCategory}
+                                          disabled={!selectedVocabularyPool}
+                                          onChange={(e) => {
+                                            setTargetCategory(e.target.value);
+                                            setPoolAssetAudit(null);
+                                            ignoreDirtyChange.current = false;
+                                            setIsDirty(true);
+                                          }}
+                                        >
+                                          <option value="">Select word category</option>
+                                          {selectedPoolCategories.map(category => (
+                                            <option key={category} value={category}>{category}</option>
+                                          ))}
+                                        </select>
+                                        <p style={{ fontSize: 11, color: '#0f766e', margin: '6px 0 0' }}>
+                                          The generator will pick two words from this category and use each word&apos;s <code>initial</code>, <code>ending</code>, <code>imageUrl</code>, and <code>audioUrl</code>.
+                                        </p>
+                                      </div>
+                                    ) : interaction !== 'categorization' && interaction !== 'categorizationv2' ? (
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                         <div>
                                           <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Target Category</label>
@@ -8866,7 +9107,7 @@ export default function AdminConsolePage() {
                                         type="button"
                                         className={`${styles.btnOutline} ${styles.btnCompact}`}
                                         onClick={auditDynamicPoolAssets}
-                                        disabled={poolAssetAuditLoading || (poolId.trim() && (interaction !== 'categorization' && interaction !== 'categorizationv2') && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
+                                        disabled={poolAssetAuditLoading || (poolId.trim() && (interaction !== 'categorization' && interaction !== 'categorizationv2' && interaction !== 'word_completion') && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
                                         style={{ padding: '6px 10px' }}
                                       >
                                         {poolAssetAuditLoading ? 'Checking…' : 'Check Images & Audio'}
@@ -8887,7 +9128,7 @@ export default function AdminConsolePage() {
                                   </div>
                                 </div>
                               )}
-                              {(!poolId.trim() || type !== 'dynamic_pool') && (
+                              {(!poolId.trim() || !isPoolDrivenAuthoringType(type)) && (
                                 <>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                 <label className={styles.filterLabel} style={{ marginBottom: 0 }}>
