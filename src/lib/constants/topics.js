@@ -358,11 +358,11 @@ export const TOPICS = [
     groups: getLkgEnglishGroups(),
   },
   {
-    id: 'ukg-english',
+    id: 'english-ukg',
     title: 'UKG English',
     color: '#6366f1',
     subject: 'english',
-    topic: 'ukg-english',
+    topic: 'english-ukg',
     includes: ['Verbs identification', 'Actions check', 'Nouns and verbs review'],
     groups: getUkgEnglishGroups(),
   },
