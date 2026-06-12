@@ -3149,7 +3149,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', display: 'grid', gap: 0 }}>
+    <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', display: 'grid', gap: 0, justifyContent: 'center' }}>
       <div
         ref={sceneRef}
         aria-label={`${placements.length} ${part.itemLabel || 'stickers'} placed`}
@@ -3165,7 +3165,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
           border: isOutsideDragged ? '3px dashed #fb8c00' : '2px solid #93c5fd',
           borderRadius: '18px 18px 0 0',
           background: part.sceneImageUrl
-            ? `url("${part.sceneImageUrl}") center / cover no-repeat`
+            ? `url("${part.sceneImageUrl}") center center / cover no-repeat`
             : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
           boxShadow: isOutsideDragged ? '0 0 15px rgba(251, 140, 0, 0.5), inset 0 0 20px rgba(251, 140, 0, 0.2)' : 'inset 0 -18px 0 rgba(32, 108, 43, 0.13)',
           touchAction: 'none',
