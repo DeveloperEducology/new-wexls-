@@ -3,7 +3,15 @@ import { resolveExpression } from './expressionParser.js';
 // String interpolator to replace [var_name] placeholders
 export function interpolateString(str, context) {
   if (typeof str !== 'string') return str;
-  return str.replace(/\[(.*?)\]/g, (_, name) => {
+  const withPathTokens = str.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
+    const trimmed = name.trim();
+    if (context[trimmed] !== undefined) {
+      return context[trimmed];
+    }
+    return resolveExpression(trimmed, context);
+  });
+
+  return withPathTokens.replace(/\[(.*?)\]/g, (_, name) => {
     const trimmed = name.trim();
     if (context[trimmed] !== undefined) {
       return context[trimmed];

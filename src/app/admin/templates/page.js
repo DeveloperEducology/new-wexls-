@@ -482,6 +482,7 @@ const DATA_SOURCE_TYPES = [
 
 const VARIABLE_TYPES = [
   'integer',
+  'pool_selection',
   'expression',
   'list',
   'string_template',
@@ -1625,7 +1626,7 @@ export default function VisualTemplateBuilderPage() {
     previewAsStudent: true
   });
   const [sampleSet, setSampleSet] = useState('Sample Set 1');
-  const [qaSampleCount, setQaSampleCount] = useState(50);
+  const [qaSampleCount, setQaSampleCount] = useState(20);
   const [variantQaReport, setVariantQaReport] = useState(null);
   const [variantQaRunning, setVariantQaRunning] = useState(false);
   const [aiAssistantExpanded, setAiAssistantExpanded] = useState(false);
@@ -2444,14 +2445,140 @@ export default function VisualTemplateBuilderPage() {
     ]);
   };
 
+  const addPoolSource = () => {
+    const nextNumber = (template.dataSources || []).filter(source => source.type === 'pool_selection').length + 1;
+    updateField('dataSources', [
+      ...(template.dataSources || []),
+      {
+        id: `poolSource_${nextNumber}`,
+        type: 'pool_selection',
+        poolId: '',
+        category: '',
+        count: 1,
+        variableName: `PoolItems_${nextNumber}`,
+        categories: []
+      }
+    ]);
+  };
+
   const updateDataSource = (index, key, value) => {
     const sources = [...(template.dataSources || [])];
-    sources[index] = { ...sources[index], [key]: value };
+    const nextSource = { ...sources[index], [key]: value };
+    if (key === 'category') {
+      nextSource.categories = value ? [value] : [];
+    }
+    if (key === 'poolId' && nextSource.type === 'pool_selection') {
+      nextSource.name = value;
+    }
+    sources[index] = nextSource;
     updateField('dataSources', sources);
   };
 
   const removeDataSource = (index) => {
     updateField('dataSources', (template.dataSources || []).filter((_, idx) => idx !== index));
+  };
+
+  const getPoolCategories = (poolId) => {
+    const poolDoc = loadedPools[poolId];
+    if (!poolId || !poolDoc || poolDoc === 'loading') return [];
+    return Object.keys(poolDoc.pools || {}).sort();
+  };
+
+  const getPoolItemsForSource = (source) => {
+    const poolDoc = loadedPools[source?.poolId];
+    if (!source?.poolId || !poolDoc || poolDoc === 'loading') return [];
+    return poolDoc.pools?.[source.category] || [];
+  };
+
+  const createPoolVariableFromSource = (source) => {
+    if (!source?.poolId || !source?.category) {
+      alert('Choose a pool and category before creating the variable.');
+      return;
+    }
+
+    const variableName = (source.variableName || `${source.category}_items`)
+      .trim()
+      .replace(/[^A-Za-z0-9_]/g, '_')
+      .replace(/^([0-9])/, '_$1');
+
+    const nextVariable = {
+      name: variableName || `PoolItems_${(template.variables || []).length + 1}`,
+      type: 'pool_selection',
+      source: source.id,
+      sourceId: source.id,
+      poolId: source.poolId,
+      category: source.category,
+      count: Number(source.count) || 1
+    };
+
+    const existingIndex = (template.variables || []).findIndex(variable => variable.name === nextVariable.name);
+    if (existingIndex >= 0) {
+      const variables = [...template.variables];
+      variables[existingIndex] = { ...variables[existingIndex], ...nextVariable };
+      updateField('variables', variables);
+    } else {
+      updateField('variables', [...(template.variables || []), nextVariable]);
+    }
+  };
+
+  const getVariableLabelToken = (variable) => {
+    if (variable?.type === 'pool_selection') return `[${variable.name}[0].label]`;
+    return `[${variable?.name || 'Variable'}]`;
+  };
+
+  const getVariableAssetToken = (variable, assetKey) => {
+    if (variable?.type === 'pool_selection') return `[${variable.name}[0].${assetKey}]`;
+    return `[${variable?.name || 'Variable'}]`;
+  };
+
+  const appendTextToken = (field, token) => {
+    updateField(field, `${template[field] || ''}${template[field] ? ' ' : ''}${token}`);
+  };
+
+  const appendExplanationToken = (token) => {
+    const current = template.explanation?.sections?.[0]?.content || '';
+    updateField('explanation', {
+      sections: [{ type: 'text', content: `${current}${current ? ' ' : ''}${token}` }]
+    });
+  };
+
+  const setVisualImageToken = (token, altToken) => {
+    const visuals = [...(template.visuals || [])];
+    const imageIndex = visuals.findIndex(visual => visual.component === 'Image');
+    if (imageIndex >= 0) {
+      visuals[imageIndex] = {
+        ...visuals[imageIndex],
+        props: {
+          ...(visuals[imageIndex].props || {}),
+          imageUrl: token,
+          alt: altToken
+        }
+      };
+      updateField('visuals', visuals);
+      return;
+    }
+
+    updateField('visuals', [
+      { component: 'Image', props: { imageUrl: token, alt: altToken, width: '220' } },
+      ...visuals
+    ]);
+  };
+
+  const addOptionFromToken = (token, isCorrect) => {
+    updateField('options', [
+      ...(template.options || []),
+      { label: token, isCorrect }
+    ]);
+  };
+
+  const setValidationToken = (token) => {
+    const rules = [...(template.validationRules || [])];
+    if (rules.length === 0) {
+      rules.push({ type: 'exact_match', target: 'selectedOption', value: token });
+    } else {
+      rules[0] = { ...rules[0], type: rules[0].type || 'exact_match', target: rules[0].target || 'selectedOption', value: token };
+    }
+    updateField('validationRules', rules);
   };
 
   const addValidationRule = () => {
@@ -2883,8 +3010,7 @@ export default function VisualTemplateBuilderPage() {
             const words = poolDoc.pools?.[category] || [];
             return {
               ...v,
-              type: 'list',
-              items: words.map(w => typeof w === 'string' ? w : w.label)
+              items: words
             };
           }
         }
@@ -2902,8 +3028,7 @@ export default function VisualTemplateBuilderPage() {
             const words = poolDoc.pools?.[category] || [];
             return {
               ...ds,
-              type: 'static_data',
-              items: words.map(w => typeof w === 'string' ? w : w.label)
+              items: words
             };
           }
         }
@@ -4128,16 +4253,111 @@ export default function VisualTemplateBuilderPage() {
                     <h3>Data Sources</h3>
                     <p>Connect pools, random values, curriculum datasets, asset libraries, and fact databases.</p>
                   </div>
-                  <button type="button" className={styles.btn + ' ' + styles.btnSecondary} onClick={addDataSource}>
-                    + Add Data Source
-                  </button>
+                  <div className={styles.poolSourceActions}>
+                    <button type="button" className={styles.btn + ' ' + styles.btnPrimary} onClick={addPoolSource}>
+                      + Add Pool Source
+                    </button>
+                    <button type="button" className={styles.btn + ' ' + styles.btnSecondary} onClick={addDataSource}>
+                      + Add Data Source
+                    </button>
+                  </div>
                 </div>
                 {(template.dataSources || []).length === 0 ? (
-                  <div className={styles.emptyStateText}>No data sources configured. Variables can still use static ranges or lists.</div>
+                  <div className={styles.emptyStateText}>No data sources configured. Start with "+ Add Pool Source" for vocabulary, phonics, math objects, science facts, or image/audio libraries.</div>
                 ) : (
                   <div className={styles.schemaCardList}>
                     {(template.dataSources || []).map((source, idx) => (
-                      <div key={idx} className={styles.schemaMiniCard}>
+                      <div key={idx} className={`${styles.schemaMiniCard} ${source.type === 'pool_selection' ? styles.poolSourceCard : ''}`}>
+                        {source.type === 'pool_selection' ? (
+                          <>
+                            <div className={styles.poolBuilderGrid}>
+                              <div>
+                                <label htmlFor={`ds-id-${idx}`}>Source ID</label>
+                                <input id={`ds-id-${idx}`} className={styles.input} value={source.id || ''} onChange={(e) => updateDataSource(idx, 'id', e.target.value)} />
+                              </div>
+                              <div>
+                                <label htmlFor={`ds-pool-${idx}`}>Pool ID</label>
+                                <input
+                                  id={`ds-pool-${idx}`}
+                                  className={styles.input}
+                                  value={source.poolId || ''}
+                                  placeholder="english-ukg-parts-of-speech-v2"
+                                  onChange={(e) => updateDataSource(idx, 'poolId', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={`ds-category-${idx}`}>Category</label>
+                                {getPoolCategories(source.poolId).length > 0 ? (
+                                  <select
+                                    id={`ds-category-${idx}`}
+                                    className={styles.select}
+                                    value={source.category || ''}
+                                    onChange={(e) => updateDataSource(idx, 'category', e.target.value)}
+                                  >
+                                    <option value="">Select category</option>
+                                    {getPoolCategories(source.poolId).map(category => (
+                                      <option key={category} value={category}>{category}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    id={`ds-category-${idx}`}
+                                    className={styles.input}
+                                    value={source.category || ''}
+                                    placeholder="nouns, verbs, short_a_words"
+                                    onChange={(e) => updateDataSource(idx, 'category', e.target.value)}
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <label htmlFor={`ds-count-${idx}`}>Count</label>
+                                <input
+                                  id={`ds-count-${idx}`}
+                                  type="number"
+                                  min="1"
+                                  className={styles.input}
+                                  value={source.count || 1}
+                                  onChange={(e) => updateDataSource(idx, 'count', Number(e.target.value))}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={`ds-variable-${idx}`}>Save as variable</label>
+                                <input
+                                  id={`ds-variable-${idx}`}
+                                  className={styles.input}
+                                  value={source.variableName || ''}
+                                  placeholder="TargetNoun"
+                                  onChange={(e) => updateDataSource(idx, 'variableName', e.target.value)}
+                                />
+                              </div>
+                              <div className={styles.poolBuilderButtons}>
+                                <button type="button" className={styles.btn + ' ' + styles.btnPrimary} onClick={() => createPoolVariableFromSource(source)}>
+                                  Save Variable
+                                </button>
+                                <button type="button" className={styles.btnRemoveOption} onClick={() => removeDataSource(idx)}>✕</button>
+                              </div>
+                            </div>
+                            <div className={styles.poolPreviewStrip}>
+                              {loadedPools[source.poolId] === 'loading' ? (
+                                <span>Loading pool...</span>
+                              ) : getPoolItemsForSource(source).length > 0 ? (
+                                <>
+                                  <strong>{getPoolItemsForSource(source).length} items</strong>
+                                  {getPoolItemsForSource(source).slice(0, 8).map((item, itemIdx) => (
+                                    <span key={`${source.id}-${itemIdx}`} className={styles.poolPreviewPill}>
+                                      {typeof item === 'string' ? item : (item.label || item.id || `item ${itemIdx + 1}`)}
+                                      {typeof item === 'object' && item.imageUrl ? ' · image' : ''}
+                                      {typeof item === 'object' && item.audioUrl ? ' · audio' : ''}
+                                    </span>
+                                  ))}
+                                </>
+                              ) : (
+                                <span>Enter a pool ID and category to preview items and validate count.</span>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
                         <div className={styles.schemaMiniGrid}>
                           <div>
                             <label htmlFor={`ds-id-${idx}`}>ID</label>
@@ -4163,8 +4383,50 @@ export default function VisualTemplateBuilderPage() {
                           placeholder="comma list, query, or descriptor"
                           onChange={(e) => updateDataSource(idx, 'items', e.target.value.split(',').map(item => item.trim()).filter(Boolean))}
                         />
+                          </>
+                        )}
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.schemaSectionCard}>
+                <div className={styles.schemaSectionHeader}>
+                  <div>
+                    <h3>Use Variables</h3>
+                    <p>Click tokens into prompt, visual image, options, validation answer, or feedback without hand-editing JSON.</p>
+                  </div>
+                </div>
+                {(template.variables || []).length === 0 ? (
+                  <div className={styles.emptyStateText}>Create a pool variable first, then use it across the template.</div>
+                ) : (
+                  <div className={styles.variableTokenGrid}>
+                    {(template.variables || []).map(variable => {
+                      const labelToken = getVariableLabelToken(variable);
+                      const imageToken = getVariableAssetToken(variable, 'imageUrl');
+                      const audioToken = getVariableAssetToken(variable, 'audioUrl');
+                      return (
+                        <div key={variable.name} className={styles.variableTokenCard}>
+                          <div>
+                            <strong>{variable.name}</strong>
+                            <span>{variable.type}{variable.category ? ` · ${variable.category}` : ''}{variable.count ? ` · ${variable.count}` : ''}</span>
+                          </div>
+                          <code>{labelToken}</code>
+                          <div className={styles.variableTokenActions}>
+                            <button type="button" onClick={() => appendTextToken('questionText', labelToken)}>Prompt</button>
+                            {variable.type === 'pool_selection' && (
+                              <button type="button" onClick={() => setVisualImageToken(imageToken, labelToken)}>Visual</button>
+                            )}
+                            <button type="button" onClick={() => addOptionFromToken(labelToken, true)}>Correct option</button>
+                            <button type="button" onClick={() => addOptionFromToken(labelToken, false)}>Distractor</button>
+                            <button type="button" onClick={() => setValidationToken(labelToken)}>Answer</button>
+                            <button type="button" onClick={() => appendExplanationToken(labelToken)}>Feedback</button>
+                            {variable.type === 'pool_selection' && <button type="button" onClick={() => appendExplanationToken(audioToken)}>Audio token</button>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -4274,6 +4536,49 @@ export default function VisualTemplateBuilderPage() {
                             value={variable.formula || ''}
                             onChange={(e) => updateVariable(idx, 'formula', e.target.value)}
                           />
+                        </div>
+                      )}
+
+                      {variable.type === 'pool_selection' && (
+                        <div className={styles.poolVariableFields}>
+                          <div>
+                            <label htmlFor={`var-source-${idx}`}>Source ID</label>
+                            <input
+                              id={`var-source-${idx}`}
+                              className={styles.input}
+                              value={variable.sourceId || variable.source || ''}
+                              onChange={(e) => updateVariable(idx, 'source', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`var-pool-${idx}`}>Pool ID</label>
+                            <input
+                              id={`var-pool-${idx}`}
+                              className={styles.input}
+                              value={variable.poolId || ''}
+                              onChange={(e) => updateVariable(idx, 'poolId', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`var-category-${idx}`}>Category</label>
+                            <input
+                              id={`var-category-${idx}`}
+                              className={styles.input}
+                              value={variable.category || ''}
+                              onChange={(e) => updateVariable(idx, 'category', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`var-count-${idx}`}>Count</label>
+                            <input
+                              id={`var-count-${idx}`}
+                              type="number"
+                              min="1"
+                              className={styles.input}
+                              value={variable.count || 1}
+                              onChange={(e) => updateVariable(idx, 'count', Number(e.target.value))}
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -7258,7 +7563,7 @@ export default function VisualTemplateBuilderPage() {
                         onClick={handleRunVariantQA}
                         disabled={variantQaRunning}
                       >
-                        {variantQaRunning ? 'Running QA...' : 'Run Variant QA'}
+                        {variantQaRunning ? 'Testing Seeds...' : `Test ${qaSampleCount || 20} Seeds`}
                       </button>
                     </div>
                   </div>

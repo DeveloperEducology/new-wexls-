@@ -188,6 +188,141 @@
   margin-bottom: 5px;
 }
 
+.poolSourceActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.poolSourceCard {
+  border-color: #bbf7d0;
+  background: #f7fef9;
+}
+
+.poolBuilderGrid,
+.poolVariableFields {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(220px, 1.4fr) minmax(150px, 1fr) minmax(80px, 0.45fr) minmax(150px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.poolVariableFields {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin-top: 8px;
+}
+
+.poolBuilderButtons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.poolPreviewStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #bbf7d0;
+  color: #475569;
+  font-size: 12px;
+}
+
+.poolPreviewStrip strong {
+  color: #166534;
+  font-size: 12px;
+}
+
+.poolPreviewPill {
+  border: 1px solid #bbf7d0;
+  background: #ffffff;
+  color: #166534;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.variableTokenGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.variableTokenCard {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbe3ef;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.variableTokenCard strong,
+.variableTokenCard span {
+  display: block;
+}
+
+.variableTokenCard strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.variableTokenCard span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.variableTokenCard code {
+  display: block;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.variableTokenActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.variableTokenActions button {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.variableTokenActions button:hover {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+  color: #3730a3;
+}
+
+@media (max-width: 1180px) {
+  .poolBuilderGrid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .poolBuilderButtons {
+    justify-content: flex-start;
+  }
+}
+
 .schemaControlGrid {
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   align-items: end;

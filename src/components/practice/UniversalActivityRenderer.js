@@ -33,6 +33,8 @@ const ENGINE_TYPE_MAP = {
   matching: 'categorizationv2',
   sequence: 'categorizationv2',
   label_diagram: 'categorizationv2',
+  categorization: 'categorizationv2',
+  categorizationv2: 'categorizationv2',
   hotspot: 'hotspot_select',
   interactive_tool: 'interactiveTool',
 };

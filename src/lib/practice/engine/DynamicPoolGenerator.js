@@ -29,6 +29,144 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
   // If the poolDoc has the new 'pools' property, use the new structure
   if (poolDoc.pools) {
+    const isCategorization = poolDoc.interaction === 'categorization' || poolDoc.type === 'categorization' || poolDoc.interaction === 'categorizationv2';
+    if (isCategorization) {
+      let categories = poolDoc.categories;
+      if (!categories || categories.length === 0) {
+        const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
+        categories = poolKeys.map(key => ({
+          id: key,
+          label: key.charAt(0).toUpperCase() + key.slice(1)
+        }));
+      } else {
+        categories = categories.map(cat => (typeof cat === 'string' ? { id: cat, label: cat } : cat));
+      }
+
+      const params = getDifficultyParameters(history, difficulty, grade);
+      const resolvedDifficulty = params.level;
+
+      const rules = (poolDoc.difficultyRules && poolDoc.difficultyRules[resolvedDifficulty]) || 
+                    (poolDoc.difficultyRules && poolDoc.difficultyRules.easy) || 
+                    {};
+
+      // Fallback defaults for categorization difficulty scaling
+      const defaultMaxCategories = resolvedDifficulty === 'easy' ? 2 : 3;
+      const defaultItemsPerCategory = resolvedDifficulty === 'hard' ? 3 : 2;
+
+      const maxCategories = rules.maxCategories || rules.categoryCount || defaultMaxCategories;
+      let activeCategories = [...categories];
+      if (maxCategories < activeCategories.length) {
+        activeCategories = seededShuffle(activeCategories, prng).slice(0, maxCategories);
+        activeCategories.sort((a, b) => categories.findIndex(c => c.id === a.id) - categories.findIndex(c => c.id === b.id));
+      }
+
+      const itemsPerCategory = rules.itemsPerCategory || rules.itemCount || poolDoc.itemsPerCategory || defaultItemsPerCategory;
+      const activeMode = poolDoc.mode || 'identify_text';
+      const needsImages = poolDoc.mode === 'identify_visual' || (poolDoc.hideOptionLabel && !poolDoc.hideOptionImages);
+
+      let items = [];
+      const answer = {};
+
+      activeCategories.forEach(cat => {
+        let catPool = poolDoc.pools[cat.id] || [];
+        catPool = catPool.filter(option => isAllowedForMode(option, activeMode));
+        if (needsImages) {
+          catPool = catPool.filter(o => o.imageUrl && o.assetStatus?.image !== 'needs_review');
+        }
+
+        const shuffledCatPool = seededShuffle(catPool, prng);
+        const chosenForCat = shuffledCatPool.slice(0, Math.min(itemsPerCategory, shuffledCatPool.length));
+
+        chosenForCat.forEach((opt, idx) => {
+          items.push({
+            id: opt.id || `item_${cat.id}_${idx}`,
+            content: opt.label,
+            label: opt.label,
+            ...(opt.imageUrl ? { imageUrl: opt.imageUrl } : {}),
+            ...(opt.audioUrl && opt.assetStatus?.audio !== 'needs_review'
+              ? { audioUrl: opt.audioUrl }
+              : { audioUrl: `/api/tts?voice=${voice}&text=${encodeURIComponent(opt.label)}` }),
+            target: cat.id,
+            categoryId: cat.id
+          });
+          answer[opt.id || `item_${cat.id}_${idx}`] = cat.id;
+        });
+      });
+
+      const shuffledItems = seededShuffle(items, prng);
+      if (shuffledItems.length === 0) {
+        throw new Error('Items pool for categorization is empty.');
+      }
+
+      const questionText = poolDoc.questionText || 'Sort the items into the correct categories.';
+      const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
+
+      const explanation = poolDoc.explanation || 'Drag each item into its correct group.';
+      const solution = poolDoc.solution || {
+        sections: [
+          { type: 'text', content: explanation }
+        ]
+      };
+
+      const isCatV2 = poolDoc.type === 'categorizationv2' || poolDoc.interaction === 'categorizationv2';
+      
+      const parts = poolDoc.parts ? poolDoc.parts.map(part => {
+        const newPart = { ...part };
+        if (newPart.content) {
+          newPart.content = newPart.content.replace(/\{\{questionText\}\}/g, questionText);
+        }
+        return newPart;
+      }) : [
+        { type: 'text', content: questionText }
+      ];
+
+      if (!parts.some(p => p.type === 'categorization' || p.type === 'categorizationv2')) {
+        parts.push({
+          type: isCatV2 ? 'categorizationv2' : 'categorization',
+          categories: activeCategories,
+          items: shuffledItems,
+          answerKey: answer,
+          isVertical: true
+        });
+      } else {
+        const catPartIdx = parts.findIndex(p => p.type === 'categorization' || p.type === 'categorizationv2');
+        parts[catPartIdx] = {
+          ...parts[catPartIdx],
+          categories: activeCategories,
+          items: shuffledItems,
+          answerKey: answer
+        };
+      }
+
+      const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+
+      return {
+        id: `${poolDoc.id || 'dynamic_pool'}_${seed}_sort`,
+        type: isCatV2 ? 'categorizationv2' : 'categorization',
+        interaction: isCatV2 ? 'categorizationv2' : 'categorization',
+        questionText,
+        audioUrl: questionAudioUrl,
+        voice,
+        categories: activeCategories,
+        items: shuffledItems,
+        answer,
+        correctAnswer: answer,
+        explanation,
+        solution,
+        parts,
+        metadata: {
+          ...(poolDoc.metadata || {}),
+          subject: poolDoc.subject || 'science',
+          topic: poolDoc.topic || 'general',
+          skillId,
+          difficulty: resolvedDifficulty,
+          templateId: poolDoc.metadata?.templateId || 'dynamic.categorization',
+          engine: 'generator',
+          activeCategories: activeCategories.map(c => c.id)
+        }
+      };
+    }
+
     let correctPool = [];
     let distractorPool = [];
 

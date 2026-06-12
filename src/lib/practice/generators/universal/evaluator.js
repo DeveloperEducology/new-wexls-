@@ -110,6 +110,21 @@ function pickRandom(items, rng, fallback = '') {
   return items[Math.floor(rng() * items.length)];
 }
 
+function pickRandomMany(items, count, rng) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const desiredCount = Math.max(1, Number(count) || 1);
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, Math.min(desiredCount, shuffled.length));
+}
+
+function isImageLikeUrl(value) {
+  return typeof value === 'string' && /^(https?:\/\/|\/|data:image\/)/.test(value.trim());
+}
+
 function normalizeDataSourceItems(source) {
   if (!source) return [];
   if (Array.isArray(source.items)) return source.items;
@@ -125,7 +140,8 @@ function normalizeDataSourceItems(source) {
 
 function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
   const type = String(variable?.type || '').toLowerCase();
-  const sourceItems = variable?.source ? dataSourceMap[variable.source] : null;
+  const sourceKey = variable?.source || variable?.sourceId;
+  const sourceItems = sourceKey ? dataSourceMap[sourceKey] : null;
 
   if (type === 'integer' || type === 'random_number') {
     const minVal = resolveExpression(variable.min, resolvedVariables);
@@ -155,6 +171,14 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
     if (variable.transform === 'labels') return items.map(item => item?.label ?? item);
     if (variable.pick === 'random') return pickRandom(items, rng);
     return items;
+  }
+
+  if (type === 'pool_selection') {
+    let items = Array.isArray(sourceItems) ? sourceItems : normalizeDataSourceItems(variable);
+    if (!items.length && variable.category && sourceKey && Array.isArray(dataSourceMap[`${sourceKey}:${variable.category}`])) {
+      items = dataSourceMap[`${sourceKey}:${variable.category}`];
+    }
+    return pickRandomMany(items, variable.count, rng);
   }
 
   if (type === 'list' || type === 'random_item') {
@@ -215,7 +239,9 @@ export function evaluateTemplate(originalTemplate, seed) {
     for (const source of template.dataSources) {
       const sourceId = source?.id || source?.name;
       if (!sourceId) continue;
-      if (source.type === 'random_number') {
+      if (source.type === 'pool_selection') {
+        dataSourceMap[sourceId] = pickRandomMany(normalizeDataSourceItems(source), source.count, rng);
+      } else if (source.type === 'random_number') {
         const min = Number(source.min ?? 0);
         const max = Number(source.max ?? 10);
         dataSourceMap[sourceId] = Math.floor(rng() * (Math.max(min, max) - Math.min(min, max) + 1)) + Math.min(min, max);
@@ -223,6 +249,9 @@ export function evaluateTemplate(originalTemplate, seed) {
         dataSourceMap[sourceId] = pickRandom(normalizeDataSourceItems(source), rng);
       } else {
         dataSourceMap[sourceId] = normalizeDataSourceItems(source);
+      }
+      if (source.type === 'pool_selection' && source.category) {
+        dataSourceMap[`${sourceId}:${source.category}`] = dataSourceMap[sourceId];
       }
       resolvedVariables[sourceId] = dataSourceMap[sourceId];
     }
@@ -313,7 +342,9 @@ export function evaluateTemplate(originalTemplate, seed) {
           if (resolvedVariables[rawImageUrl] !== undefined) {
             imageUrlVal = resolvedVariables[rawImageUrl];
           } else {
-            imageUrlVal = rawImageUrl;
+            imageUrlVal = typeof rawImageUrl === 'string' && rawImageUrl.includes('[')
+              ? interpolateString(rawImageUrl, resolvedVariables)
+              : rawImageUrl;
           }
         }
         
@@ -425,8 +456,22 @@ export function evaluateTemplate(originalTemplate, seed) {
   // 3. Resolve options and determine correctness
   let optionsList = [];
   if (Array.isArray(template.options)) {
+    const interactionEngine = String(
+      template.interaction?.engine
+      || template.interaction?.type
+      || template.optionsType
+      || template.type
+      || ''
+    ).toLowerCase();
+    const isPictureChoice = interactionEngine === 'picture_mcq'
+      || interactionEngine === 'picturechoice'
+      || interactionEngine === 'picture_choice';
+
     const rawOptions = template.options.map(opt => {
       const resolvedLabel = resolveLabelOrExpression(opt.label || opt.value, resolvedVariables);
+      const resolvedImageUrl = opt.imageUrl
+        ? resolveLabelOrExpression(opt.imageUrl, resolvedVariables)
+        : (isPictureChoice && isImageLikeUrl(resolvedLabel) ? resolvedLabel : undefined);
       
       let isCorrect = false;
       if (typeof opt.isCorrect === 'boolean') {
@@ -436,14 +481,19 @@ export function evaluateTemplate(originalTemplate, seed) {
         isCorrect = resolved === true || resolved === 1 || String(resolved) === 'true';
       }
       
-      return { label: resolvedLabel, isCorrect };
+      return {
+        label: isPictureChoice && resolvedImageUrl ? opt.alt || opt.text || `Option` : resolvedLabel,
+        ...(resolvedImageUrl ? { imageUrl: resolvedImageUrl } : {}),
+        isCorrect
+      };
     });
 
     const uniqueOptions = [];
     const seen = new Set();
     for (const opt of rawOptions) {
-      if (!seen.has(opt.label)) {
-        seen.add(opt.label);
+      const uniqueKey = opt.imageUrl || opt.label;
+      if (!seen.has(uniqueKey)) {
+        seen.add(uniqueKey);
         uniqueOptions.push(opt);
       }
     }
@@ -788,7 +838,12 @@ export function evaluateTemplate(originalTemplate, seed) {
     parts,
     options: isVisualChoice
       ? visualPanels.map((p, idx) => ({ id: `panel_${idx}`, label: String(p.count), isPanel: true }))
-      : optionsList.map((o, idx) => ({ id: `opt_${idx}`, label: o.label })),
+      : optionsList.map((o, idx) => ({
+        id: `opt_${idx}`,
+        label: o.label,
+        ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
+        ...(o.audioUrl ? { audioUrl: o.audioUrl } : {})
+      })),
     correctAnswerIndex: isVisualChoice
       ? (vcCorrectIndex >= 0 ? vcCorrectIndex : 0)
       : (correctAnswerIndex >= 0 ? correctAnswerIndex : 0),

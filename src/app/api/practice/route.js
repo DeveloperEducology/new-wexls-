@@ -132,8 +132,7 @@ async function resolveTemplatePools(templateDoc) {
           const words = poolDoc.pools?.[category] || [];
           return {
             ...v,
-            type: 'list',
-            items: words.map(w => typeof w === 'string' ? w : w.label)
+            items: words
           };
         }
       }
@@ -151,8 +150,7 @@ async function resolveTemplatePools(templateDoc) {
           const words = poolDoc.pools?.[category] || [];
           return {
             ...ds,
-            type: 'static_data',
-            items: words.map(w => typeof w === 'string' ? w : w.label)
+            items: words
           };
         }
       }

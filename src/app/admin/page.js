@@ -945,10 +945,13 @@ export default function AdminConsolePage() {
         const response = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId.trim())}`);
         const data = await response.json();
         if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
-        const categories = targetCategory.trim() === '[random]'
-          ? selectedPoolCategories
-          : [targetCategory.trim(), ...parseCategoryList(distractorCategories)].filter(Boolean);
-        auditItems = categories.flatMap(category => data.pool.pools?.[category] || []);
+        const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
+        const categoriesToAudit = isCat
+          ? (categories.length > 0 ? categories.map(c => c.id) : selectedPoolCategories)
+          : (targetCategory.trim() === '[random]'
+              ? selectedPoolCategories
+              : [targetCategory.trim(), ...parseCategoryList(distractorCategories)].filter(Boolean));
+        auditItems = categoriesToAudit.flatMap(category => data.pool.pools?.[category] || []);
       }
 
       const activeItems = auditItems.filter(item => item?.active !== false);
@@ -5520,11 +5523,16 @@ export default function AdminConsolePage() {
       if (poolId.trim()) {
         payload.poolId = poolId.trim();
         payload.metadata.poolId = poolId.trim();
-        payload.targetCategory = targetCategory.trim();
-        payload.metadata.targetCategory = targetCategory.trim();
-        const parsedCats = parseCategoryList(distractorCategories);
-        payload.distractorCategories = parsedCats;
-        payload.metadata.distractorCategories = parsedCats;
+        if (interaction === 'categorization' || interaction === 'categorizationv2') {
+          payload.categories = categories.map(cat => ({ ...cat, id: cat.id, label: cat.label }));
+          payload.metadata.categories = payload.categories;
+        } else {
+          payload.targetCategory = targetCategory.trim();
+          payload.metadata.targetCategory = targetCategory.trim();
+          const parsedCats = parseCategoryList(distractorCategories);
+          payload.distractorCategories = parsedCats;
+          payload.metadata.distractorCategories = parsedCats;
+        }
       } else {
         payload.pools = {
           correctPool,
@@ -5744,36 +5752,43 @@ export default function AdminConsolePage() {
         return;
       }
     } else if (type === 'dynamic_pool') {
+      const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
+      if (isCat && !poolId.trim()) {
+        setAlert({ type: 'error', text: 'Validation Error: Categorization dynamic pools must use a Centralized Pool. Select an existing Pool ID.' });
+        return;
+      }
       if (poolId.trim()) {
-        const parsedDistractors = parseCategoryList(distractorCategories);
         if (!selectedVocabularyPool) {
           setAlert({ type: 'error', text: `Validation Error: Centralized pool "${poolId.trim()}" was not found. Select an existing pool or clear Pool ID to author an inline pool.` });
           return;
         }
-        if (!targetCategory.trim() || (!selectedPoolCategories.includes(targetCategory.trim()) && targetCategory.trim() !== '[random]')) {
-          setAlert({ type: 'error', text: 'Validation Error: Select a valid target category from the centralized pool.' });
-          return;
-        }
-        if (targetCategory.trim() !== '[random]') {
-          if (parsedDistractors.length === 0 || parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
-            setAlert({ type: 'error', text: 'Validation Error: Select at least one valid distractor category from the centralized pool.' });
+        if (!isCat) {
+          const parsedDistractors = parseCategoryList(distractorCategories);
+          if (!targetCategory.trim() || (!selectedPoolCategories.includes(targetCategory.trim()) && targetCategory.trim() !== '[random]')) {
+            setAlert({ type: 'error', text: 'Validation Error: Select a valid target category from the centralized pool.' });
             return;
           }
-          if (parsedDistractors.includes(targetCategory.trim())) {
-            setAlert({ type: 'error', text: 'Validation Error: The target category cannot also be a distractor category.' });
-            return;
-          }
-          const targetCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
-            ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
-            ?? 0;
-          if (targetCount === 0) {
-            setAlert({ type: 'error', text: 'Validation Error: The selected target category has no options.' });
-            return;
-          }
-        } else {
-          if (parsedDistractors.length > 0 && parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
-            setAlert({ type: 'error', text: 'Validation Error: Select valid distractor categories from the centralized pool.' });
-            return;
+          if (targetCategory.trim() !== '[random]') {
+            if (parsedDistractors.length === 0 || parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
+              setAlert({ type: 'error', text: 'Validation Error: Select at least one valid distractor category from the centralized pool.' });
+              return;
+            }
+            if (parsedDistractors.includes(targetCategory.trim())) {
+              setAlert({ type: 'error', text: 'Validation Error: The target category cannot also be a distractor category.' });
+              return;
+            }
+            const targetCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+              ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+              ?? 0;
+            if (targetCount === 0) {
+              setAlert({ type: 'error', text: 'Validation Error: The selected target category has no options.' });
+              return;
+            }
+          } else {
+            if (parsedDistractors.length > 0 && parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
+              setAlert({ type: 'error', text: 'Validation Error: Select valid distractor categories from the centralized pool.' });
+              return;
+            }
           }
         }
       } else {
@@ -6088,40 +6103,80 @@ export default function AdminConsolePage() {
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
     const baseParts = parts.map(p => ({ ...p }));
     let mockParts = baseParts;
+    let mockItemsForDynamicCategorization = [];
     if (type === 'dynamic_pool') {
-      const extendedParts = baseParts;
-      
-      // Interpolate placeholders using the first valid non-distractor option as a mock target
-      const targetOption = options.find(o => !o.isDistractorOnly) || options[0];
-      const targetWord = targetOption?.label || 'word';
-      const targetPrompt = targetOption?.prompt || targetWord;
-      const targetImage = targetOption?.imageUrl || '';
-      const targetAudio = targetOption?.audioUrl || '';
+      const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
+      if (isCat) {
+        const cats = categories.length > 0
+          ? categories.map(c => ({ ...c, id: c.id, label: c.label }))
+          : selectedPoolCategories.map(c => ({ id: c, label: c.charAt(0).toUpperCase() + c.slice(1) }));
+        
+        if (selectedVocabularyPool) {
+          cats.forEach(cat => {
+            const catPool = selectedVocabularyPool.pools?.[cat.id] || [];
+            catPool.slice(0, 2).forEach((item, idx) => {
+              mockItemsForDynamicCategorization.push({
+                id: item.id || `mock_${cat.id}_${idx}`,
+                content: item.label,
+                label: item.label,
+                imageUrl: item.imageUrl || undefined,
+                audioUrl: item.audioUrl || undefined,
+                target: cat.id,
+                categoryId: cat.id
+              });
+            });
+          });
+        } else {
+          mockItemsForDynamicCategorization = [
+            { id: 'mock_item_1', content: 'Item 1', target: cats[0]?.id || 'cat_1', categoryId: cats[0]?.id || 'cat_1' },
+            { id: 'mock_item_2', content: 'Item 2', target: cats[1]?.id || 'cat_2', categoryId: cats[1]?.id || 'cat_2' }
+          ];
+        }
 
-      mockParts = extendedParts.map(part => {
-        const newPart = { ...part };
-        if (newPart.content) {
-          newPart.content = newPart.content
-            .replace(/\{\{target\}\}/g, targetWord)
-            .replace(/\{\{targetWord\}\}/g, targetWord)
-            .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
-            .replace(/\{\{targetImage\}\}/g, targetImage)
-            .replace(/\{\{targetAudio\}\}/g, targetAudio);
-        }
-        if (newPart.imageUrl) {
-          newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
-        }
-        if (newPart.audioUrl) {
-          newPart.audioUrl = newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetAudio);
-        }
-        if (newPart.label) {
-          newPart.label = newPart.label.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
-        }
-        if (newPart.alt) {
-          newPart.alt = newPart.alt.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
-        }
-        return newPart;
-      });
+        const isCatV2 = interaction === 'categorizationv2';
+        mockParts = [
+          ...baseParts,
+          {
+            type: isCatV2 ? 'categorizationv2' : 'categorization',
+            categories: cats,
+            items: mockItemsForDynamicCategorization
+          }
+        ];
+      } else {
+        const extendedParts = baseParts;
+        
+        // Interpolate placeholders using the first valid non-distractor option as a mock target
+        const targetOption = options.find(o => !o.isDistractorOnly) || options[0];
+        const targetWord = targetOption?.label || 'word';
+        const targetPrompt = targetOption?.prompt || targetWord;
+        const targetImage = targetOption?.imageUrl || '';
+        const targetAudio = targetOption?.audioUrl || '';
+
+        mockParts = extendedParts.map(part => {
+          const newPart = { ...part };
+          if (newPart.content) {
+            newPart.content = newPart.content
+              .replace(/\{\{target\}\}/g, targetWord)
+              .replace(/\{\{targetWord\}\}/g, targetWord)
+              .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
+              .replace(/\{\{targetImage\}\}/g, targetImage)
+              .replace(/\{\{targetAudio\}\}/g, targetAudio);
+          }
+          if (newPart.imageUrl) {
+            newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
+          }
+          if (newPart.audioUrl) {
+            newPart.audioUrl = newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetAudio);
+          }
+          if (newPart.label) {
+            newPart.label = newPart.label.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
+          }
+          if (newPart.alt) {
+            newPart.alt = newPart.alt.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
+          }
+          return newPart;
+        });
+      }
     }
 
     const serializedItems = (type === 'categorizationv2' || type === 'categorization') ? categorizationItems.map(item => {
@@ -6308,8 +6363,16 @@ export default function AdminConsolePage() {
         similarity: o.similarity || undefined,
         explanation: o.explanation || undefined
       })) : []),
-      categories: (type === 'categorizationv2' || type === 'categorization') ? categories.map(c => ({ ...c, id: c.id, label: c.label })) : undefined,
-      items: (type === 'categorizationv2' || type === 'categorization') ? serializedItems : undefined,
+      categories: (type === 'categorizationv2' || type === 'categorization') 
+        ? categories.map(c => ({ ...c, id: c.id, label: c.label })) 
+        : (type === 'dynamic_pool' && (interaction === 'categorization' || interaction === 'categorizationv2'))
+          ? (categories.length > 0 ? categories.map(c => ({ ...c, id: c.id, label: c.label })) : selectedPoolCategories.map(c => ({ id: c, label: c.charAt(0).toUpperCase() + c.slice(1) })))
+          : undefined,
+      items: (type === 'categorizationv2' || type === 'categorization') 
+        ? serializedItems 
+        : (type === 'dynamic_pool' && (interaction === 'categorization' || interaction === 'categorizationv2'))
+          ? mockItemsForDynamicCategorization
+          : undefined,
       answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : (type === 'dynamic_pool' ? undefined : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { readable, readOptions },
@@ -8611,7 +8674,32 @@ export default function AdminConsolePage() {
                                   <p style={{ fontSize: 11, color: '#0d9488', margin: '0 0 10px' }}>
                                     Select a centralized pool to reuse reviewed vocabulary, or choose Inline manual pool to store options inside this question.
                                   </p>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 1fr 1fr', gap: 12, marginBottom: 8 }}>
+                                  {/* Interaction Type Selector */}
+                                  <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <div>
+                                      <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Interaction Type</label>
+                                      <select
+                                        className={styles.formSelect}
+                                        style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                        value={interaction || 'choice'}
+                                        onChange={(e) => {
+                                          const nextInteraction = e.target.value;
+                                          setInteraction(nextInteraction);
+                                          setPoolAssetAudit(null);
+                                          setIsDirty(true);
+                                          if (nextInteraction === 'categorization' || nextInteraction === 'categorizationv2') {
+                                            if (categories.length === 2 && categories[0].id === 'cat_1') {
+                                              setCategories([]);
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <option value="choice">Multiple Choice (MCQ)</option>
+                                        <option value="multi_select">Multi-Select MCQ</option>
+                                        <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
+                                        <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
+                                      </select>
+                                    </div>
                                     <div>
                                       <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Pool ID</label>
                                       <select
@@ -8622,6 +8710,7 @@ export default function AdminConsolePage() {
                                           setPoolId(e.target.value);
                                           setTargetCategory('');
                                           setDistractorCategories('');
+                                          setCategories([]);
                                           setPoolWordManagerOpen(false);
                                           setPoolWordManagerData(null);
                                           setPoolWordCategory('');
@@ -8648,55 +8737,89 @@ export default function AdminConsolePage() {
                                         + Create New Pool
                                       </button>
                                     </div>
-                                    <div>
-                                      <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Target Category</label>
-                                      <select
-                                        className={styles.formSelect}
-                                        style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
-                                        value={targetCategory}
-                                        disabled={!selectedVocabularyPool}
-                                        onChange={(e) => {
-                                          setTargetCategory(e.target.value);
-                                          setPoolAssetAudit(null);
-                                          const nextDistractors = parseCategoryList(distractorCategories).filter(category => category !== e.target.value);
-                                          setDistractorCategories(nextDistractors.join(', '));
-                                          ignoreDirtyChange.current = false;
-                                          setIsDirty(true);
-                                        }}
-                                      >
-                                        <option value="">Select target category</option>
-                                        <option value="[random]">[random] (Pick a random category)</option>
-                                        {selectedPoolCategories.map(category => (
-                                          <option key={category} value={category}>{category}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    <div>
-                                      <label style={{ fontSize: 11, fontWeight: '600', color: '#be123c', display: 'block', marginBottom: 4 }}>Distractor Categories</label>
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, minHeight: 32, alignItems: 'center' }}>
-                                        {selectedPoolCategories.filter(category => category !== targetCategory).map(category => {
-                                          const checked = parseCategoryList(distractorCategories).includes(category);
-                                          return (
-                                            <label key={category} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
-                                              <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={() => {
-                                                  const current = parseCategoryList(distractorCategories);
-                                                  const next = checked ? current.filter(item => item !== category) : [...current, category];
-                                                  setDistractorCategories(next.join(', '));
-                                                  setPoolAssetAudit(null);
-                                                  ignoreDirtyChange.current = false;
-                                                  setIsDirty(true);
-                                                }}
-                                              />
-                                              {category}
-                                            </label>
-                                          );
-                                        })}
-                                        {selectedVocabularyPool && selectedPoolCategories.length === 0 && <span style={{ fontSize: 11, color: '#be123c' }}>No categories found</span>}
+                                  </div>
+
+                                  <div style={{ marginBottom: 8 }}>
+                                    {interaction !== 'categorization' && interaction !== 'categorizationv2' ? (
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                        <div>
+                                          <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Target Category</label>
+                                          <select
+                                            className={styles.formSelect}
+                                            style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                            value={targetCategory}
+                                            disabled={!selectedVocabularyPool}
+                                            onChange={(e) => {
+                                              setTargetCategory(e.target.value);
+                                              setPoolAssetAudit(null);
+                                              const nextDistractors = parseCategoryList(distractorCategories).filter(category => category !== e.target.value);
+                                              setDistractorCategories(nextDistractors.join(', '));
+                                              ignoreDirtyChange.current = false;
+                                              setIsDirty(true);
+                                            }}
+                                          >
+                                            <option value="">Select target category</option>
+                                            <option value="[random]">[random] (Pick a random category)</option>
+                                            {selectedPoolCategories.map(category => (
+                                              <option key={category} value={category}>{category}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label style={{ fontSize: 11, fontWeight: '600', color: '#be123c', display: 'block', marginBottom: 4 }}>Distractor Categories</label>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, minHeight: 32, alignItems: 'center' }}>
+                                            {selectedPoolCategories.filter(category => category !== targetCategory).map(category => {
+                                              const checked = parseCategoryList(distractorCategories).includes(category);
+                                              return (
+                                                <label key={category} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => {
+                                                      const current = parseCategoryList(distractorCategories);
+                                                      const next = checked ? current.filter(item => item !== category) : [...current, category];
+                                                      setDistractorCategories(next.join(', '));
+                                                      setPoolAssetAudit(null);
+                                                      ignoreDirtyChange.current = false;
+                                                      setIsDirty(true);
+                                                    }}
+                                                  />
+                                                  {category}
+                                                </label>
+                                              );
+                                            })}
+                                            {selectedVocabularyPool && selectedPoolCategories.length === 0 && <span style={{ fontSize: 11, color: '#be123c' }}>No categories found</span>}
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
+                                    ) : (
+                                      <div>
+                                        <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Categories to Include (Leave empty to use all pool categories)</label>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, minHeight: 32, alignItems: 'center' }}>
+                                          {selectedPoolCategories.map(category => {
+                                            const checked = categories.some(c => c.id === category);
+                                            return (
+                                              <label key={category} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={checked}
+                                                  onChange={() => {
+                                                    const next = checked 
+                                                      ? categories.filter(c => c.id !== category)
+                                                      : [...categories, { id: category, label: category.charAt(0).toUpperCase() + category.slice(1) }];
+                                                    setCategories(next);
+                                                    ignoreDirtyChange.current = false;
+                                                    setIsDirty(true);
+                                                  }}
+                                                />
+                                                {category}
+                                              </label>
+                                            );
+                                          })}
+                                          {selectedVocabularyPool && selectedPoolCategories.length === 0 && <span style={{ fontSize: 11, color: '#be123c' }}>No categories found</span>}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                   {vocabularyPoolsLoading && <p style={{ fontSize: 11, color: '#0d9488', margin: 0 }}>Loading centralized pools…</p>}
                                   {vocabularyPoolsError && <p style={{ fontSize: 11, color: '#be123c', margin: 0 }}>{vocabularyPoolsError}</p>}
@@ -8743,7 +8866,7 @@ export default function AdminConsolePage() {
                                         type="button"
                                         className={`${styles.btnOutline} ${styles.btnCompact}`}
                                         onClick={auditDynamicPoolAssets}
-                                        disabled={poolAssetAuditLoading || (poolId.trim() && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
+                                        disabled={poolAssetAuditLoading || (poolId.trim() && (interaction !== 'categorization' && interaction !== 'categorizationv2') && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
                                         style={{ padding: '6px 10px' }}
                                       >
                                         {poolAssetAuditLoading ? 'Checking…' : 'Check Images & Audio'}

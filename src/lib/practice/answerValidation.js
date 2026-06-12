@@ -55,6 +55,22 @@ function getAnswerPrimitive(value) {
   return value;
 }
 
+function getSelectedOptionValue(question, userAnswer) {
+  const options = Array.isArray(question?.options) ? question.options : [];
+  const primitive = getAnswerPrimitive(userAnswer);
+  const selectedIndex = getValidIndex(primitive, options.length);
+  if (selectedIndex === null) return primitive;
+  return getOptionValue(options[selectedIndex]);
+}
+
+function getRuleActualValue(rule, question, userAnswer) {
+  const target = String(rule?.target || rule?.field || '').toLowerCase();
+  if (target === 'selectedoption' || target === 'selected_option' || target === 'optionlabel' || target === 'option_label') {
+    return getSelectedOptionValue(question, userAnswer);
+  }
+  return getAnswerPrimitive(userAnswer);
+}
+
 function hasUnresolvedPlaceholder(value) {
   return /\[[A-Za-z_][A-Za-z0-9_]*\]/.test(String(value ?? ''));
 }
@@ -62,7 +78,7 @@ function hasUnresolvedPlaceholder(value) {
 function validateRule(rule, question, userAnswer) {
   if (!rule || typeof rule !== 'object') return true;
   const type = String(rule.type || 'exact_match').toLowerCase();
-  const answerValue = getAnswerPrimitive(userAnswer);
+  const answerValue = getRuleActualValue(rule, question, userAnswer);
   const expectedRaw = rule.value
     ?? rule.expected
     ?? rule.answer

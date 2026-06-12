@@ -76,7 +76,7 @@ export default function QuestionRenderer({
     || question?.layoutConfig
     || question?.validationRules
     || question?.feedbackRules
-    || question?.difficultyRules
+    || (question?.difficultyRules && question?.type !== 'dynamic_pool')
     || question?.analyticsConfig
     || question?.adaptiveRules
     || ['fill_blank', 'number_input', 'text_input', 'drag_drop', 'sorting', 'matching', 'sequence', 'label_diagram', 'draw_line', 'interactive_tool'].includes(String(schemaEngine || '').toLowerCase())
@@ -101,6 +101,8 @@ export default function QuestionRenderer({
     ? PictographMCQRenderer
     : normalizedInteraction === 'interactive_stickers'
     ? MCQRenderer
+    : (normalizedInteraction === 'categorization' || normalizedInteraction === 'categorizationv2')
+    ? CategorizationRenderer
     : RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
 
   if (!question) return null;

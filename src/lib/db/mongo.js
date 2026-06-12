@@ -10,7 +10,7 @@ export async function getMongoDb() {
   if (!hasMongoConfig()) return null;
 
   const uri = process.env.MONGODB_URI;
-  const dbName = process.env.MONGODB_DB || process.env.MONGODB_DATABASE || 'new-wexls';
+  const dbName = (process.env.MONGODB_DB || process.env.MONGODB_DATABASE || 'new-wexls').trim();
 
   if (!globalForMongo.__wexlsMongoClientPromise) {
     const client = new MongoClient(uri, {
