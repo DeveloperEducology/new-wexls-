@@ -119,6 +119,7 @@ export default function SiteHeader() {
               </button>
             </>
           ) : (
+            <>
               <Link href="/docs/option-pooling" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem' }}>
                 Option Pooling Docs
               </Link>
