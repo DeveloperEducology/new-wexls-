@@ -119,7 +119,12 @@ export default function SiteHeader() {
               </button>
             </>
           ) : (
-            <>
+              <Link href="/docs/option-pooling" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem' }}>
+                Option Pooling Docs
+              </Link>
+              <Link href="/docs/dynamic-templates" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem', marginRight: '10px' }}>
+                Template Builder Docs
+              </Link>
               {!loading && (
                 <Link href="/login" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem' }}>
                   Sign In
