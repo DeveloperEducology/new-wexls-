@@ -11,7 +11,7 @@ import { storyMathHomeGroups } from '../practice/clientCatalogs/storyMathCatalog
 import { interactiveToolsHomeGroups } from '../practice/clientCatalogs/interactiveToolsCatalog.js';
 import { cubeToolsHomeGroups } from '../practice/clientCatalogs/cubeToolsCatalog.js';
 import { ukgNumbersCountingHomeGroups } from '../practice/clientCatalogs/ukgNumbersCountingCatalog.js';
-import { lkgEnglishMicroSkillRegistry } from '../generators/english/topics/lkg/registry.js';
+import { lkgEnglishMicroSkillRegistry } from '../practice/generators/english/topics/lkg/registry.js';
 
 const gradeOrdinal = (grade) => {
   if (grade === 'remediation') return 'Remediation skills';
