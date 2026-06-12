@@ -11,6 +11,7 @@ import { storyMathHomeGroups } from '../practice/clientCatalogs/storyMathCatalog
 import { interactiveToolsHomeGroups } from '../practice/clientCatalogs/interactiveToolsCatalog.js';
 import { cubeToolsHomeGroups } from '../practice/clientCatalogs/cubeToolsCatalog.js';
 import { ukgNumbersCountingHomeGroups } from '../practice/clientCatalogs/ukgNumbersCountingCatalog.js';
+import { lkgEnglishMicroSkillRegistry } from '../generators/english/topics/lkg/registry.js';
 
 const gradeOrdinal = (grade) => {
   if (grade === 'remediation') return 'Remediation skills';
@@ -66,6 +67,36 @@ const shapesHomeGroups = Object.entries(shapesSkillsByGrade).map(([grade, skills
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
+
+// Dynamic grouping for LKG English
+const getLkgEnglishGroups = () => {
+  const chapters = {};
+  Object.entries(lkgEnglishMicroSkillRegistry).forEach(([id, skill]) => {
+    if (skill.grade !== 'LKG') return;
+    const chapterTitle = skill.chapterTitle || 'General Skills';
+    const chapterId = skill.chapterId || 'general';
+    if (!chapters[chapterId]) {
+      chapters[chapterId] = { title: chapterTitle, skills: [] };
+    }
+    chapters[chapterId].skills.push([skill.code, skill.title, id]);
+  });
+  return Object.values(chapters);
+};
+
+// Dynamic grouping for UKG English
+const getUkgEnglishGroups = () => {
+  const chapters = {};
+  Object.entries(lkgEnglishMicroSkillRegistry).forEach(([id, skill]) => {
+    if (skill.grade !== 'UKG') return;
+    const chapterTitle = skill.chapterTitle || 'General Skills';
+    const chapterId = skill.chapterId || 'general';
+    if (!chapters[chapterId]) {
+      chapters[chapterId] = { title: chapterTitle, skills: [] };
+    }
+    chapters[chapterId].skills.push([skill.code, skill.title, id]);
+  });
+  return Object.values(chapters);
+};
 
 export const TOPICS = [
   {
@@ -316,6 +347,24 @@ export const TOPICS = [
         ],
       },
     ],
+  },
+  {
+    id: 'lkg-english',
+    title: 'LKG English',
+    color: '#8b5cf6',
+    subject: 'english',
+    topic: 'lkg-english',
+    includes: ['Beginning sounds', 'Letter recognition', 'Case matching', 'Color identification', 'Sight words'],
+    groups: getLkgEnglishGroups(),
+  },
+  {
+    id: 'ukg-english',
+    title: 'UKG English',
+    color: '#6366f1',
+    subject: 'english',
+    topic: 'ukg-english',
+    includes: ['Verbs identification', 'Actions check', 'Nouns and verbs review'],
+    groups: getUkgEnglishGroups(),
   },
   {
     id: 'english-grammar',
