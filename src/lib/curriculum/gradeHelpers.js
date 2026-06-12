@@ -107,15 +107,49 @@ export function topicsFromCurriculum(data) {
 export function mergeTopics(staticTopics, dbTopics) {
   if (!dbTopics.length) return staticTopics;
 
-  const merged = new Map(staticTopics.map((topic) => [topic.id, topic]));
+  const merged = new Map(staticTopics.map((topic) => [topic.id, { ...topic, groups: topic.groups?.map(g => ({ ...g, skills: [...g.skills] })) || [] }]));
+  
   dbTopics.forEach((dbTopic) => {
     const existing = merged.get(dbTopic.id);
+    if (!existing) {
+      merged.set(dbTopic.id, dbTopic);
+      return;
+    }
+
+    const mergedGroupsMap = new Map();
+    // 1. Load existing static groups
+    (existing.groups || []).forEach(g => {
+      mergedGroupsMap.set(g.title.toLowerCase().trim(), {
+        title: g.title,
+        skills: [...g.skills]
+      });
+    });
+
+    // 2. Merge database groups
+    (dbTopic.groups || []).forEach(dbGroup => {
+      const key = dbGroup.title.toLowerCase().trim();
+      const existingGrp = mergedGroupsMap.get(key);
+      if (existingGrp) {
+        // Append unique skills only
+        const seenSkillIds = new Set(existingGrp.skills.map(([, , id]) => id));
+        dbGroup.skills.forEach(skillTuple => {
+          if (!seenSkillIds.has(skillTuple[2])) {
+            existingGrp.skills.push(skillTuple);
+          }
+        });
+      } else {
+        mergedGroupsMap.set(key, {
+          title: dbGroup.title,
+          skills: [...dbGroup.skills]
+        });
+      }
+    });
+
     merged.set(dbTopic.id, {
-      ...(existing || {}),
-      ...dbTopic,
-      color: dbTopic.color || existing?.color || '#ff951f',
-      includes: dbTopic.includes?.length ? dbTopic.includes : existing?.includes || [],
-      groups: dbTopic.groups?.length ? dbTopic.groups : existing?.groups || [],
+      ...existing,
+      color: dbTopic.color || existing.color || '#ff951f',
+      includes: [...new Set([...(existing.includes || []), ...(dbTopic.includes || [])])],
+      groups: Array.from(mergedGroupsMap.values()),
     });
   });
 
