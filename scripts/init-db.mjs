@@ -49,7 +49,8 @@ async function initDb() {
       'topics', 'competencies', 'skills', 'question_attempts', 'practice_sessions',
       'assignments', 'assignment_progress', 'student_mastery', 'student_skill_history',
       'student_analytics', 'class_analytics', 'school_analytics', 'content_analytics',
-      'teacher_notes', 'alerts', 'ai_insights', 'reports', 'audit_logs', 'feature_flags'
+      'teacher_notes', 'alerts', 'ai_insights', 'reports', 'audit_logs', 'feature_flags',
+      'tts_cache'
     ];
 
     // 1. Create Collections
@@ -122,6 +123,11 @@ async function initDb() {
     const logsColl = db.collection('audit_logs');
     await logsColl.createIndex({ createdAt: 1 }, { expireAfterSeconds: 94608000 });
     console.log("   - Audit logs TTL index set (3-year retention).");
+
+    // tts_cache TTL index (7 days = 604800 seconds)
+    const ttsColl = db.collection('tts_cache');
+    await ttsColl.createIndex({ createdAt: 1 }, { expireAfterSeconds: 604800 });
+    console.log("   - TTS cache TTL index set (7-day retention).");
 
     console.log("🎉 Database foundation setup completed successfully!");
   } catch (error) {
