@@ -6373,8 +6373,67 @@ export default function AdminConsolePage() {
             answerKey: mockWordCompletionAnswer
           }
         ];
-      } else
-      if (isCat) {
+      } else if (interaction === 'pick_from_sentence') {
+        const sentences = selectedVocabularyPool?.pools?.[targetCategory] || selectedVocabularyPool?.pools?.[selectedPoolCategories[0]] || [];
+        const activeSentence = sentences[0] || { text: "The deer wandered through the forest trail.", nouns: ["deer", "forest", "trail"] };
+        const sentenceText = activeSentence.text || activeSentence.sentence || "";
+        const targetWords = activeSentence.nouns || activeSentence.targets || activeSentence.correctAnswer || [];
+
+        const normalizeWord = (value) => String(value || '').toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+        const targetSet = new Set(targetWords.map(normalizeWord));
+
+        const tokens = sentenceText.split(/\s+/).map((rawWord, index) => {
+          const leading = rawWord.match(/^[^A-Za-z0-9]*/)?.[0] || '';
+          const trailing = rawWord.match(/[^A-Za-z0-9]*$/)?.[0] || '';
+          const text = rawWord.slice(leading.length, rawWord.length - trailing.length);
+          const normalized = normalizeWord(text);
+
+          return {
+            id: `word_${index}_${normalized || 'token'}`,
+            text,
+            display: text,
+            leading,
+            trailing,
+            selectable: true,
+            isTarget: targetSet.has(normalized)
+          };
+        });
+
+        const targetTokenIds = tokens.filter(t => t.isTarget).map(t => t.id).join('|');
+        const targetCount = tokens.filter(t => t.isTarget).length;
+        const resolvedQuestionText = questionText.trim() || (targetCount > 1 ? 'Select the correct words in the sentence.' : 'Select the correct word in the sentence.');
+
+        mockParts = [
+          {
+            type: 'text',
+            content: resolvedQuestionText,
+            isVertical: true,
+            style: {
+              fontSize: '28px',
+              fontWeight: 400,
+              color: '#000',
+              textAlign: 'left'
+            }
+          },
+          {
+            type: 'pick_from_sentence',
+            answerKey: 'selectedTokens',
+            sentence: sentenceText,
+            tokens,
+            multiSelect: targetCount > 1,
+            fontSize: 42,
+            isVertical: true,
+            style: {
+              marginTop: 18,
+              marginBottom: 8
+            }
+          }
+        ];
+
+        mockWordCompletionAnswer = {
+          selectedTokens: targetTokenIds
+        };
+      } else if (isCat) {
         const cats = categories.length > 0
           ? categories.map(c => ({ ...c, id: c.id, label: c.label }))
           : selectedPoolCategories.map(c => ({ id: c, label: c.charAt(0).toUpperCase() + c.slice(1) }));
@@ -6610,7 +6669,11 @@ export default function AdminConsolePage() {
 
     return {
       id: uniqueId,
-      type: (type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool' ? 'categorizationv2' : type,
+      type: (type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool' 
+        ? 'categorizationv2' 
+        : (type === 'dynamic_pool' && interaction === 'pick_from_sentence')
+          ? 'fillInTheBlank'
+          : type,
       interaction: directImageSelect
         ? 'direct_image_select'
         : ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool' ? 'categorizationv2' : (interaction || undefined)),
@@ -8992,6 +9055,7 @@ export default function AdminConsolePage() {
                                         <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
                                         <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
                                         <option value="word_completion">Word Completion / Phonics Fill</option>
+                                        <option value="pick_from_sentence">Select Word in Sentence</option>
                                       </select>
                                       {(type === 'word_completion_pool' || interaction === 'word_completion') && (
                                         <p style={{ margin: '6px 0 0', fontSize: 10, color: '#0f766e' }}>

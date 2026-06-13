@@ -29,6 +29,132 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
   // If the poolDoc has the new 'pools' property, use the new structure
   if (poolDoc.pools) {
+    const isPickFromSentence = poolDoc.interaction === 'pick_from_sentence'
+      || poolDoc.metadata?.interaction === 'pick_from_sentence'
+      || poolDoc.mode === 'pick_from_sentence';
+
+    if (isPickFromSentence) {
+      const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
+      const configuredCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
+      const shouldRandomizeCategory = configuredCategory === '[random]'
+        || poolDoc.randomizeTargetCategory === true
+        || poolDoc.metadata?.randomizeTargetCategory === true;
+      const eligiblePoolKeys = poolKeys.filter(key => Array.isArray(poolDoc.pools[key]) && poolDoc.pools[key].length > 0);
+      const resolvedCategory = shouldRandomizeCategory
+        ? (eligiblePoolKeys[Math.floor(prng() * eligiblePoolKeys.length)] || poolKeys[0] || '')
+        : configuredCategory;
+      const sentencePool = poolDoc.pools[resolvedCategory] || [];
+
+      if (sentencePool.length === 0) {
+        throw new Error(`Sentence pool category '${resolvedCategory}' is empty.`);
+      }
+
+      // Pick a random sentence from the pool
+      const selectedSentence = sentencePool[Math.floor(prng() * sentencePool.length)];
+      if (!selectedSentence || typeof selectedSentence !== 'object') {
+        throw new Error(`Invalid sentence object selected from category '${resolvedCategory}'.`);
+      }
+
+      const sentenceText = selectedSentence.text || selectedSentence.sentence || "";
+      const targetWords = selectedSentence.nouns || selectedSentence.targets || selectedSentence.correctAnswer || [];
+
+      // Tokenize the sentence text
+      const normalizeWord = (value) => String(value || '').toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+      const targetSet = new Set(targetWords.map(normalizeWord));
+
+      const tokens = sentenceText.split(/\s+/).map((rawWord, index) => {
+        const leading = rawWord.match(/^[^A-Za-z0-9]*/)?.[0] || '';
+        const trailing = rawWord.match(/[^A-Za-z0-9]*$/)?.[0] || '';
+        const text = rawWord.slice(leading.length, rawWord.length - trailing.length);
+        const normalized = normalizeWord(text);
+
+        return {
+          id: `word_${index}_${normalized || 'token'}`,
+          text,
+          display: text,
+          leading,
+          trailing,
+          selectable: true,
+          isTarget: targetSet.has(normalized)
+        };
+      });
+
+      const targetTokenIds = tokens.filter(t => t.isTarget).map(t => t.id).join('|');
+      const targetCount = tokens.filter(t => t.isTarget).length;
+      
+      const questionText = poolDoc.questionText || (targetCount > 1 ? 'Select the correct words in the sentence.' : 'Select the correct word in the sentence.');
+      const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
+
+      const parts = [
+        {
+          type: 'text',
+          content: questionText,
+          isVertical: true,
+          style: {
+            fontSize: '28px',
+            fontWeight: 400,
+            color: '#000',
+            textAlign: 'left'
+          }
+        },
+        {
+          type: 'pick_from_sentence',
+          answerKey: 'selectedTokens',
+          sentence: sentenceText,
+          tokens,
+          multiSelect: targetCount > 1,
+          fontSize: 42,
+          isVertical: true,
+          style: {
+            marginTop: 18,
+            marginBottom: 8
+          }
+        }
+      ];
+
+      const answer = {
+        selectedTokens: targetTokenIds
+      };
+
+      const wordList = targetWords.join(' and ');
+      const explanation = poolDoc.explanation || `The correct word${targetCount > 1 ? 's are' : ' is'} **${wordList}**.`;
+
+      const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+      return {
+        id: `${poolDoc.id || 'pick_from_sentence_pool'}_${seed}_${Math.floor(prng() * 1000000)}`,
+        type: 'fillInTheBlank',
+        interaction: 'pick_from_sentence',
+        questionText,
+        audioUrl: questionAudioUrl,
+        voice,
+        answer,
+        correctAnswer: answer,
+        correctAnswerText: JSON.stringify(answer),
+        explanation,
+        solution: poolDoc.solution || {
+          sections: [
+            { type: 'text', content: explanation }
+          ]
+        },
+        parts,
+        metadata: {
+          ...(poolDoc.metadata || {}),
+          subject: poolDoc.subject || 'english',
+          topic: poolDoc.topic || 'grammar',
+          skillId,
+          difficulty,
+          targetCategory: resolvedCategory,
+          configuredTargetCategory: configuredCategory,
+          randomizeTargetCategory: shouldRandomizeCategory,
+          templateId: poolDoc.metadata?.templateId || 'grammar.sentence.select',
+          engine: 'dynamic_pool_pick_from_sentence',
+          sentence: sentenceText,
+          targets: targetWords,
+          interaction: 'pick_from_sentence'
+        }
+      };
+    }
+
     const isWordCompletion = poolDoc.layoutMode === 'word_completion'
       || poolDoc.metadata?.layoutMode === 'word_completion'
       || poolDoc.mode === 'word_completion';
