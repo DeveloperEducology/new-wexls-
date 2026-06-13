@@ -29,11 +29,24 @@ export default function LabLayout({
     isCorrect = false,
     onNext = null,
     subject = '',
-    activeStudent = 'Alex'
+    activeStudent = 'Alex',
+    timerSeconds = 0,
+    timerActive = false
 }) {
     const [isMobile, setIsMobile] = useState(false);
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
     const [isLearningPathOpen, setIsLearningPathOpen] = useState(true);
+
+    const formatTimer = (totalSeconds) => {
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+        const pad = (num) => String(num).padStart(2, '0');
+        if (hrs > 0) {
+            return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+        }
+        return `${pad(mins)}:${pad(secs)}`;
+    };
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -216,6 +229,13 @@ export default function LabLayout({
                                 <span className={styles.mobileStatusLabel}>Streak</span>
                                 <strong className={styles.mobileStatusValue}>{levelStreak}/5</strong>
                                 <span className={styles.mobileStatusSubvalue}>Level {practiceLevel}</span>
+                            </div>
+                            <div className={styles.mobileStatusItem}>
+                                <span className={styles.mobileStatusLabel}>Time</span>
+                                <strong className={styles.mobileStatusValue}>{formatTimer(timerSeconds)}</strong>
+                                <span className={styles.mobileStatusSubvalue}>
+                                    {timerActive ? 'Running' : 'Paused'}
+                                </span>
                             </div>
                         </div>
                     </header>

@@ -3260,6 +3260,8 @@ function PracticePageContent() {
           isCorrect={isCorrect}
           onNext={handleNextQuestion}
           activeStudent={activeStudent}
+          timerSeconds={timerSeconds}
+          timerActive={timerActive}
         >
           {layoutChildren}
         </LabLayout>
