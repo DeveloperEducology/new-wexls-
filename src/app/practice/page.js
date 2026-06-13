@@ -3198,39 +3198,6 @@ function PracticePageContent() {
         </LabLayout>
       )}
 
-      {question?.id && !isMontessoriMode && (
-        <div 
-          style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            width: '100%', 
-            padding: '16px 0 24px 0', 
-            fontSize: '12px', 
-            fontWeight: 700 
-          }}
-        >
-          <a
-            href={`/practice?subject=${urlSubject || sourceConfig.subject}&topic=${urlTopic || sourceConfig.topic}&skill=${logicType}&qn=${question.id}`}
-            style={{ 
-              color: isPreK ? '#0369a1' : '#6366f1', 
-              textDecoration: 'none', 
-              background: isPreK ? 'rgba(255, 255, 255, 0.85)' : '#f1f5f9', 
-              padding: '6px 14px', 
-              borderRadius: 999, 
-              border: '1.5px solid currentColor', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            🔗 Direct Link to Question: {question.id}
-          </a>
-        </div>
-      )}
 
       {masteredOverlayEl}
       {adaptiveBannerEl}
