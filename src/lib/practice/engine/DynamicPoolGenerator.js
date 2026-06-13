@@ -55,8 +55,16 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         throw new Error(`Invalid sentence object selected from category '${resolvedCategory}'.`);
       }
 
-      const sentenceText = selectedSentence.text || selectedSentence.sentence || "";
       const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+      let sentenceText = selectedSentence.text || selectedSentence.sentence || "";
+      if (!sentenceText) {
+        const label = selectedSentence.label || "";
+        if (skillId?.includes('letter-identification') || skillId?.includes('vowel') || skillId?.includes('consonant')) {
+          sentenceText = label.split('').join(' ');
+        } else {
+          sentenceText = label;
+        }
+      }
       const targetKey = poolDoc.targetKey 
         || poolDoc.metadata?.targetKey 
         || (
