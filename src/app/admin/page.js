@@ -556,10 +556,16 @@ export default function AdminConsolePage() {
   }, []);
   const [poolManagerGeneratingId, setPoolManagerGeneratingId] = useState('');
   const [editingPoolItemKey, setEditingPoolItemKey] = useState(null); // 'category:index'
+  const [posInputs, setPosInputs] = useState({});
 
   useEffect(() => {
     setEditingPoolItemKey(null);
+    setPosInputs({});
   }, [poolWordCategory, poolManagerModalOpen]);
+
+  useEffect(() => {
+    setPosInputs({});
+  }, [editingPoolItemKey]);
 
   const [imgPickerPoolItem, setImgPickerPoolItem] = useState(null);
   const [poolAssetAudit, setPoolAssetAudit] = useState(null);
@@ -16425,9 +16431,11 @@ Explanation: A question must end with a question mark.`}</pre>
                                   <input
                                     type="text"
                                     className={styles.formInput}
-                                    value={Array.isArray(item[pos.field]) ? item[pos.field].join(', ') : (item[pos.field] || '')}
+                                    value={posInputs[pos.field] !== undefined ? posInputs[pos.field] : (Array.isArray(item[pos.field]) ? item[pos.field].join(', ') : (item[pos.field] || ''))}
                                     onChange={e => {
-                                      const arr = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                      const val = e.target.value;
+                                      setPosInputs(prev => ({ ...prev, [pos.field]: val }));
+                                      const arr = val.split(',').map(s => s.trim()).filter(Boolean);
                                       updatePoolManagerItem(poolWordCategory, index, { [pos.field]: arr });
                                     }}
                                     placeholder="e.g. dog, cat"
