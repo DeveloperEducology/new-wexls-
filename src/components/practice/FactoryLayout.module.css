@@ -4177,21 +4177,16 @@
 }
 
 .timerButtonReset {
-    padding: 8px 12px;
-    border-radius: 12px;
     border: 1px solid #e2e8f0;
     background: #ffffff;
     color: #64748b;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.2s ease;
 }
 
 .timerButtonReset:hover {
     border-color: #cbd5e1;
     color: #334155;
     background: #f8fafc;
+    transform: translateY(-1px);
 }
 
 

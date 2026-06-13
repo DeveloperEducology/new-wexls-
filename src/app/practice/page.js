@@ -2571,14 +2571,27 @@ function PracticePageContent() {
             {/* Status indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span className={`${styles.timerIndicator} ${timerActive ? styles.timerIndicatorRunning : styles.timerIndicatorPaused}`} />
-              <span style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ 
+                fontSize: '9px', 
+                fontWeight: '900', 
+                color: timerActive ? '#16a34a' : '#94a3b8', 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.05em' 
+              }}>
                 {timerActive ? 'Running' : 'Paused'}
               </span>
             </div>
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '6px 0' }}>
-            <span style={{ fontSize: '30px', fontWeight: '950', color: '#0f172a', fontFamily: 'Outfit, monospace', letterSpacing: '1px' }}>
+            <span style={{ 
+              fontSize: '34px', 
+              fontWeight: '950', 
+              color: '#0f172a', 
+              fontFamily: 'Outfit, sans-serif',
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '0.5px' 
+            }}>
               {formatTimer(timerSeconds)}
             </span>
           </div>
@@ -2594,7 +2607,7 @@ function PracticePageContent() {
             <button
               type="button"
               onClick={() => setTimerSeconds(0)}
-              className={styles.timerButtonReset}
+              className={`${styles.timerButton} ${styles.timerButtonReset}`}
             >
               ↻ Reset
             </button>
