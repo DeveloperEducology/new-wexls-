@@ -16366,13 +16366,13 @@ Explanation: A question must end with a question mark.`}</pre>
                                   const val = e.target.value;
                                   updatePoolManagerItem(poolWordCategory, index, { 
                                     label: val,
-                                    ...(item.text !== undefined ? { text: val } : {})
+                                    ...(item.text !== undefined || interaction === 'pick_from_sentence' ? { text: val } : {})
                                   });
                                 }}
                                 style={{ padding: '4px 8px', fontSize: 11, width: '100%', boxSizing: 'border-box' }}
                               />
                             </div>
-                            {(item.text !== undefined || poolWordCategory.toLowerCase().includes('sentence') || poolWordCategory.toLowerCase().includes('grammar')) && (
+                            {(item.text !== undefined || interaction === 'pick_from_sentence' || poolWordCategory.toLowerCase().includes('sentence') || poolWordCategory.toLowerCase().includes('grammar')) && (
                               <div>
                                 <label style={{ display: 'block', fontWeight: 600, color: '#475569', marginBottom: 2 }}>Sentence Text</label>
                                 <input
