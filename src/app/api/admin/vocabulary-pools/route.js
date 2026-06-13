@@ -42,15 +42,30 @@ export async function GET(request) {
       {},
       { projection: { poolId: 1, status: 1, version: 1, mode: 1, pools: 1 } }
     ).toArray();
-    const pools = poolDocuments.map(pool => ({
-      poolId: pool.poolId,
-      status: pool.status,
-      version: pool.version,
-      mode: pool.mode,
-      categoryCounts: Object.fromEntries(
-        Object.entries(pool.pools || {}).map(([category, items]) => [category, Array.isArray(items) ? items.length : 0])
-      )
-    }));
+    const pools = poolDocuments.map(pool => {
+      const categoryCounts = {};
+      const posKeys = {}; // which POS keys are annotated per category
+      const KNOWN_POS = ['verbs', 'adjectives', 'adverbs', 'prepositions', 'pronouns', 'conjunctions', 'articles'];
+      for (const [category, items] of Object.entries(pool.pools || {})) {
+        categoryCounts[category] = Array.isArray(items) ? items.length : 0;
+        if (Array.isArray(items) && items.length > 0) {
+          const available = KNOWN_POS.filter(key =>
+            items.some(item => Array.isArray(item[key]) && item[key].length > 0)
+          );
+          posKeys[category] = available;
+        } else {
+          posKeys[category] = [];
+        }
+      }
+      return {
+        poolId: pool.poolId,
+        status: pool.status,
+        version: pool.version,
+        mode: pool.mode,
+        categoryCounts,
+        posKeys,
+      };
+    });
     return NextResponse.json({ success: true, pools });
   } catch (error) {
     console.error('Fetch vocabulary pools error:', error);

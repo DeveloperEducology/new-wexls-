@@ -56,7 +56,11 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       }
 
       const sentenceText = selectedSentence.text || selectedSentence.sentence || "";
-      const targetWords = selectedSentence.nouns || selectedSentence.targets || selectedSentence.correctAnswer || [];
+      const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
+      const targetKey = poolDoc.targetKey 
+        || poolDoc.metadata?.targetKey 
+        || (skillId?.includes('verb') ? 'verbs' : skillId?.includes('adjective') ? 'adjectives' : 'nouns');
+      const targetWords = selectedSentence[targetKey] || selectedSentence.nouns || selectedSentence.targets || selectedSentence.correctAnswer || [];
 
       // Tokenize the sentence text
       const normalizeWord = (value) => String(value || '').toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
@@ -119,17 +123,23 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       const wordList = targetWords.join(' and ');
       const explanation = poolDoc.explanation || `The correct word${targetCount > 1 ? 's are' : ' is'} **${wordList}**.`;
 
-      const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
       return {
         id: `${poolDoc.id || 'pick_from_sentence_pool'}_${seed}_${Math.floor(prng() * 1000000)}`,
         type: 'fillInTheBlank',
         interaction: 'pick_from_sentence',
+        targetKey,
         questionText,
         audioUrl: questionAudioUrl,
         voice,
         answer,
         correctAnswer: answer,
         correctAnswerText: JSON.stringify(answer),
+        metaConfig: {
+          ...(poolDoc.metaConfig || {}),
+          readable: true,
+          readOptions: true,
+          hasClickToFill: true
+        },
         explanation,
         solution: poolDoc.solution || {
           sections: [
@@ -143,6 +153,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
           topic: poolDoc.topic || 'grammar',
           skillId,
           difficulty,
+          targetKey,
           targetCategory: resolvedCategory,
           configuredTargetCategory: configuredCategory,
           randomizeTargetCategory: shouldRandomizeCategory,
