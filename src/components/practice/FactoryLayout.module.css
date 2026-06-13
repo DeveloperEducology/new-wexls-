@@ -4104,3 +4104,94 @@
     align-items: center !important;
 }
 
+/* Timer Component Animations and Styles */
+@keyframes timerSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes indicatorPulse {
+    0% { opacity: 0.35; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0.35; transform: scale(0.9); }
+}
+
+.timerActiveIcon {
+    display: inline-block;
+    animation: timerSpin 4s linear infinite;
+}
+
+.timerIndicator {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.timerIndicatorRunning {
+    background-color: #16a34a;
+    box-shadow: 0 0 6px rgba(22, 163, 74, 0.4);
+    animation: indicatorPulse 1.8s infinite ease-in-out;
+}
+
+.timerIndicatorPaused {
+    background-color: #94a3b8;
+}
+
+.timerButton {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: none;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.timerButtonPrimary {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.timerButtonPrimary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+}
+
+.timerButtonSecondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.timerButtonSecondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.timerButtonReset {
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timerButtonReset:hover {
+    border-color: #cbd5e1;
+    color: #334155;
+    background: #f8fafc;
+}
+
+

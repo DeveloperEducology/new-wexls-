@@ -1091,6 +1091,33 @@ function PracticePageContent() {
   };
   const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
 
+  // Timer states and effect
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerActive, setTimerActive] = useState(true);
+
+  useEffect(() => {
+    let interval = null;
+    if (timerActive) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerActive]);
+
+  const formatTimer = (totalSeconds) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    const pad = (num) => String(num).padStart(2, '0');
+    if (hrs > 0) {
+      return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
+  };
+
   // Student Profile states
   const [activeStudent, setActiveStudent] = useState('Alex');
   const [studentList, setStudentList] = useState(['Alex', 'Sam', 'Charlie', 'Taylor']);
@@ -2531,6 +2558,46 @@ function PracticePageContent() {
                 />
               ))}
             </svg>
+          </div>
+        </div>
+
+        {/* Session Timer */}
+        <div className={styles.panel} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', borderRadius: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className={timerActive ? styles.timerActiveIcon : ''} style={{ fontSize: '18px' }}>⏱️</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a', fontFamily: 'Outfit, sans-serif' }}>Session Timer</span>
+            </div>
+            {/* Status indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span className={`${styles.timerIndicator} ${timerActive ? styles.timerIndicatorRunning : styles.timerIndicatorPaused}`} />
+              <span style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {timerActive ? 'Running' : 'Paused'}
+              </span>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '6px 0' }}>
+            <span style={{ fontSize: '30px', fontWeight: '950', color: '#0f172a', fontFamily: 'Outfit, monospace', letterSpacing: '1px' }}>
+              {formatTimer(timerSeconds)}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setTimerActive(!timerActive)}
+              className={`${styles.timerButton} ${timerActive ? styles.timerButtonSecondary : styles.timerButtonPrimary}`}
+            >
+              {timerActive ? '⏸️ Pause' : '▶️ Resume'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTimerSeconds(0)}
+              className={styles.timerButtonReset}
+            >
+              ↻ Reset
+            </button>
           </div>
         </div>
 
