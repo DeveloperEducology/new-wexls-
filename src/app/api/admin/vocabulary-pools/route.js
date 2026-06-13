@@ -45,7 +45,7 @@ export async function GET(request) {
     const pools = poolDocuments.map(pool => {
       const categoryCounts = {};
       const posKeys = {}; // which POS keys are annotated per category
-      const KNOWN_POS = ['verbs', 'adjectives', 'adverbs', 'prepositions', 'pronouns', 'conjunctions', 'articles'];
+      const KNOWN_POS = ['verbs', 'adjectives', 'adverbs', 'prepositions', 'pronouns', 'conjunctions', 'articles', 'vowels', 'consonants'];
       for (const [category, items] of Object.entries(pool.pools || {})) {
         categoryCounts[category] = Array.isArray(items) ? items.length : 0;
         if (Array.isArray(items) && items.length > 0) {

@@ -9401,6 +9401,8 @@ export default function AdminConsolePage() {
                                               <option value="pronouns">Pronouns</option>
                                               <option value="conjunctions">Conjunctions</option>
                                               <option value="articles">Articles</option>
+                                              <option value="vowels">Vowels</option>
+                                              <option value="consonants">Consonants</option>
                                             </select>
                                             {(() => {
                                               if (!selectedVocabularyPool || !targetKey || targetKey === 'nouns') return null;
@@ -16414,7 +16416,9 @@ Explanation: A question must end with a question mark.`}</pre>
                                 { label: 'Prepositions', field: 'prepositions' },
                                 { label: 'Pronouns', field: 'pronouns' },
                                 { label: 'Conjunctions', field: 'conjunctions' },
-                                { label: 'Articles', field: 'articles' }
+                                { label: 'Articles', field: 'articles' },
+                                { label: 'Vowels', field: 'vowels' },
+                                { label: 'Consonants', field: 'consonants' }
                               ].map(pos => (
                                 <div key={pos.field} style={{ marginBottom: 4 }}>
                                   <label style={{ display: 'block', fontSize: 9, fontWeight: 600, color: '#64748b', marginBottom: 1 }}>{pos.label}</label>
