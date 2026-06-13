@@ -16218,10 +16218,42 @@ Explanation: A question must end with a question mark.`}</pre>
             <button type="button" className={styles.btnOutline} onClick={() => setPoolManagerModalOpen(false)}>Close</button>
           </div>
 
-          <div style={{ padding: 14, borderBottom: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '170px 1fr auto', gap: 8, alignItems: 'center', background: '#f8fafc' }}>
-            <select className={styles.formSelect} value={poolWordCategory} onChange={event => setPoolWordCategory(event.target.value)} style={{ margin: 0 }}>
-              {Object.keys(poolWordManagerData?.pools || {}).map(category => <option key={category} value={category}>Add to {category}</option>)}
-            </select>
+          <div style={{ padding: 14, borderBottom: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 8, alignItems: 'center', background: '#f8fafc' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <select className={styles.formSelect} value={poolWordCategory} onChange={event => setPoolWordCategory(event.target.value)} style={{ margin: 0, width: 170 }}>
+                {Object.keys(poolWordManagerData?.pools || {}).map(category => <option key={category} value={category}>Add to {category}</option>)}
+              </select>
+              <button
+                type="button"
+                className={styles.btnOutline}
+                onClick={() => {
+                  const catName = window.prompt("Enter new category name:");
+                  if (!catName) return;
+                  const trimmed = catName.trim().toLowerCase().replace(/\s+/g, '_');
+                  if (!trimmed) return;
+                  if (poolWordManagerData?.pools?.[trimmed]) {
+                    alert("Category already exists!");
+                    return;
+                  }
+                  setPoolWordManagerData(curr => {
+                    if (!curr) return curr;
+                    return {
+                      ...curr,
+                      pools: {
+                        ...(curr.pools || {}),
+                        [trimmed]: []
+                      }
+                    };
+                  });
+                  setPoolWordCategory(trimmed);
+                  setPoolWordManagerStatus("Unsaved pool changes.");
+                }}
+                style={{ padding: '6px 12px', fontSize: 12, height: 38 }}
+                title="Create a new category in this pool"
+              >
+                + Category
+              </button>
+            </div>
             <input className={styles.formInput} value={poolWordInput} onChange={event => setPoolWordInput(event.target.value)} placeholder="Add words separated by commas or new lines" />
             <button type="button" className={styles.btnOutline} onClick={addWordsToCentralizedPool} disabled={!poolWordInput.trim() || poolWordManagerSaving}>Add Words</button>
           </div>
