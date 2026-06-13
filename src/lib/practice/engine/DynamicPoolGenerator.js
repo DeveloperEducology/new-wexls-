@@ -59,7 +59,13 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
       const targetKey = poolDoc.targetKey 
         || poolDoc.metadata?.targetKey 
-        || (skillId?.includes('verb') ? 'verbs' : skillId?.includes('adjective') ? 'adjectives' : 'nouns');
+        || (
+          skillId?.includes('verb') ? 'verbs' : 
+          skillId?.includes('adjective') ? 'adjectives' : 
+          skillId?.includes('vowel') ? 'vowels' : 
+          skillId?.includes('consonant') ? 'consonants' : 
+          'nouns'
+        );
       const targetWords = selectedSentence[targetKey] || selectedSentence.nouns || selectedSentence.targets || selectedSentence.correctAnswer || [];
 
       // Tokenize the sentence text
