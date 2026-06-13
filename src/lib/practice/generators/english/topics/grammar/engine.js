@@ -16,7 +16,7 @@ const ENGINES = {
   sentence: generateSentenceQuestion
 };
 
-export function resolveGrammarGenerator(skillId, config = {}) {
+export async function resolveGrammarGenerator(skillId, config = {}) {
   // Find the skill definition to get its templateId
   let skillDef = null;
   for (const gradeSkills of Object.values(grammarSkillsByGrade)) {
@@ -41,6 +41,20 @@ export function resolveGrammarGenerator(skillId, config = {}) {
     return null;
   }
 
+  // Load noun sentences pool asynchronously from MongoDB if template engine is 'noun'
+  let dbPool = null;
+  if (template.engine === 'noun') {
+    try {
+      const { getMongoDb } = await import('../../../../../db/mongo.js');
+      const db = await getMongoDb();
+      if (db) {
+        dbPool = await db.collection('vocabulary_pools').findOne({ poolId: 'english-grammar-nouns-pool' });
+      }
+    } catch (err) {
+      console.error("Failed to load english-grammar-nouns-pool from database:", err);
+    }
+  }
+
   return {
     template,
     generate: (variables = {}) => {
@@ -59,7 +73,7 @@ export function resolveGrammarGenerator(skillId, config = {}) {
       const question = engineFn(newTemplate, {
         ...variables,
         difficulty: config.difficulty || variables.difficulty
-      });
+      }, dbPool);
 
       if (question) {
         question.metaConfig = {

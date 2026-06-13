@@ -28,9 +28,14 @@ function createSentenceTokens(sentence, targetWords) {
   });
 }
 
-export function generateNounQuestion(template = {}, variables = {}) {
+export function generateNounQuestion(template = {}, variables = {}, dbPool = null) {
   const random = createSeededRandom(variables.seed || Date.now());
   const difficulty = resolveDifficulty(variables);
+  
+  let sentences = NOUN_SENTENCES;
+  if (dbPool && dbPool.pools?.noun_sentences) {
+    sentences = dbPool.pools.noun_sentences;
+  }
   
   // Decide question sub-type based on templateId
   const templateId = template.id || 'grammar.noun.identify';
@@ -133,7 +138,7 @@ export function generateNounQuestion(template = {}, variables = {}) {
   }
   
   // Pick noun words directly from a sentence.
-  const selectedSentence = pick(NOUN_SENTENCES, random);
+  const selectedSentence = pick(sentences, random);
   const tokens = createSentenceTokens(selectedSentence.text, selectedSentence.nouns);
   const targetTokenIds = tokens.filter((token) => token.isTarget).map((token) => token.id).join('|');
   const nounList = selectedSentence.nouns.join(' and ');
