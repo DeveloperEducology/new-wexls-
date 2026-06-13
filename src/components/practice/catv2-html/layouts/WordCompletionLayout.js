@@ -108,6 +108,7 @@ export default function WordCompletionLayout({
     return explicitWords.map((word, index) => ({
       id: word.id || `word_${index + 1}`,
       slotId: word.slotId || word.targetId || word.id || `slot_${index + 1}`,
+      prefix: word.prefix || word.before || word.visiblePrefix || '',
       ending: word.ending || word.suffix || word.visibleText || '',
       answer: word.answer || word.word || '',
       imageUrl: word.imageUrl || word.src,
@@ -129,7 +130,7 @@ export default function WordCompletionLayout({
   const [draggingId, setDraggingId] = useState(null);
   const [activeSlotId, setActiveSlotId] = useState(null);
   const onAnswerRef = useRef(onAnswer);
-  const wordSignature = words.map((word) => `${word.slotId}:${word.answer}:${word.ending}`).join('|');
+  const wordSignature = words.map((word) => `${word.slotId}:${word.answer}:${word.prefix}:${word.ending}`).join('|');
   const itemSignature = tileItems.map((item) => item.id).join('|');
 
   useEffect(() => {
@@ -350,6 +351,11 @@ export default function WordCompletionLayout({
                   }}
                   aria-label={`Complete ${word.answer || word.ending}`}
                 >
+                  {word.prefix ? (
+                    <span style={{ fontSize: 'clamp(24px, 5.6vw, 32px)', fontWeight: 600, letterSpacing: '0.12em' }}>
+                      {word.prefix}
+                    </span>
+                  ) : null}
                   <span
                     style={{
                       width: 'clamp(38px, 8.5vw, 50px)',

@@ -34,26 +34,95 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       || poolDoc.mode === 'word_completion';
 
     if (isWordCompletion) {
+      const resolveMissingLetterMode = () => {
+        const configured = poolDoc.missingLetterMode || poolDoc.metadata?.missingLetterMode;
+        const validConfigured = ['beginning', 'middle', 'ending'].includes(configured) ? configured : '';
+        const modeText = [
+          poolDoc.skillId,
+          poolDoc.metadata?.skillId,
+          poolDoc.id,
+          poolDoc.title,
+          poolDoc.metadata?.title,
+          poolDoc.questionText,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        const inferred = modeText.includes('ending')
+          ? 'ending'
+          : modeText.includes('middle')
+            ? 'middle'
+            : '';
+
+        if (validConfigured && validConfigured !== 'beginning') return validConfigured;
+        if (inferred) return inferred;
+        return validConfigured || 'beginning';
+      };
+      const missingLetterMode = resolveMissingLetterMode();
+      const getWordCompletionFields = (word) => {
+        const label = String(word?.label || word?.id || '').trim().toLowerCase();
+        const initial = word?.initial || label[0] || '';
+        const ending = word?.ending || label.slice(1);
+        const middle = word?.middle || (label.length >= 3 ? label[1] : label[0]) || '';
+        const endingLetter = word?.endingLetter || label[label.length - 1] || '';
+
+        if (missingLetterMode === 'middle') {
+          return {
+            answer: middle,
+            prefix: word?.middlePrefix || initial,
+            suffix: word?.middleSuffix || label.slice(2),
+            pattern: word?.middlePattern || `${initial}_${label.slice(2)}`,
+          };
+        }
+
+        if (missingLetterMode === 'ending') {
+          return {
+            answer: endingLetter,
+            prefix: word?.endingPrefix || label.slice(0, -1),
+            suffix: word?.endingSuffix || '',
+            pattern: word?.endingPattern || `${label.slice(0, -1)}_`,
+          };
+        }
+
+        return {
+          answer: initial,
+          prefix: word?.beginningPrefix || '',
+          suffix: word?.beginningSuffix || ending,
+          pattern: word?.beginningPattern || `_${ending}`,
+        };
+      };
       const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
       const configuredCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
-      const wordPool = (poolDoc.pools[configuredCategory] || [])
+      const eligiblePoolKeys = poolKeys.filter((key) => (
+        (poolDoc.pools[key] || [])
+          .filter(option => option?.active !== false)
+          .filter(option => option?.label && getWordCompletionFields(option).answer)
+          .length >= 2
+      ));
+      const shouldRandomizeCategory = configuredCategory === '[random]'
+        || poolDoc.randomizeTargetCategory === true
+        || poolDoc.metadata?.randomizeTargetCategory === true;
+      const resolvedCategory = shouldRandomizeCategory
+        ? (eligiblePoolKeys[Math.floor(prng() * eligiblePoolKeys.length)] || eligiblePoolKeys[0] || poolKeys[0] || '')
+        : configuredCategory;
+      const wordPool = (poolDoc.pools[resolvedCategory] || [])
         .filter(option => option?.active !== false)
-        .filter(option => option?.label && option?.initial && option?.ending);
+        .filter(option => option?.label && getWordCompletionFields(option).answer);
 
       if (wordPool.length < 2) {
-        throw new Error('Word completion pool needs at least 2 words with label, initial, and ending.');
+        throw new Error(`Word completion pool needs at least 2 words with labels and ${missingLetterMode} letter data.`);
       }
 
       const requestedWordCount = Math.max(2, Number(poolDoc.wordCount || poolDoc.itemsPerCategory || 2) || 2);
       const shuffledWords = seededShuffle(wordPool, prng);
       const selectedWords = [];
-      const usedInitials = new Set();
+      const usedAnswers = new Set();
 
       for (const word of shuffledWords) {
-        const initialKey = String(word.initial || '').toLowerCase();
-        if (!usedInitials.has(initialKey) || selectedWords.length >= requestedWordCount - 1) {
+        const answerKey = String(getWordCompletionFields(word).answer || '').toLowerCase();
+        if (!usedAnswers.has(answerKey) || selectedWords.length >= requestedWordCount - 1) {
           selectedWords.push(word);
-          usedInitials.add(initialKey);
+          usedAnswers.add(answerKey);
         }
         if (selectedWords.length >= requestedWordCount) break;
       }
@@ -66,14 +135,19 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         });
       }
 
-      const items = selectedWords.map((word, index) => ({
-        id: `letter_${index + 1}`,
-        content: word.initial,
-        label: word.initial,
-        audioUrl: word.audioUrl && word.assetStatus?.audio !== 'needs_review'
-          ? word.audioUrl
-          : `/api/tts?voice=${voice}&text=${encodeURIComponent(word.initial)}`,
-      }));
+      const wordFields = selectedWords.map(getWordCompletionFields);
+
+      const items = selectedWords.map((word, index) => {
+        const answer = wordFields[index].answer;
+        return {
+          id: `letter_${index + 1}`,
+          content: answer,
+          label: answer,
+          audioUrl: word.audioUrl && word.assetStatus?.audio !== 'needs_review'
+            ? word.audioUrl
+            : `/api/tts?voice=${voice}&text=${encodeURIComponent(answer)}`,
+        };
+      });
 
       const wordCards = selectedWords.map((word, index) => ({
         id: `slot_${index + 1}`,
@@ -83,8 +157,13 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
           ? word.audioUrl
           : `/api/tts?voice=${voice}&text=${encodeURIComponent(word.label)}`,
         initial: word.initial,
-        ending: word.ending,
-        answer: word.initial,
+        middle: word.middle,
+        endingLetter: word.endingLetter,
+        ending: wordFields[index].suffix,
+        prefix: wordFields[index].prefix,
+        pattern: wordFields[index].pattern,
+        answer: wordFields[index].answer,
+        missingLetterMode,
       }));
 
       const answer = Object.fromEntries(wordCards.map((card, index) => [card.id, items[index].id]));
@@ -116,10 +195,10 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         wordCards,
         answer,
         correctAnswer: answer,
-        explanation: poolDoc.explanation || `The missing beginning sounds are ${selectedWords.map(word => word.initial).join(' and ')}.`,
+        explanation: poolDoc.explanation || `The missing ${missingLetterMode} sounds are ${wordFields.map(field => field.answer).join(' and ')}.`,
         solution: poolDoc.solution || {
           sections: [
-            { type: 'text', content: poolDoc.explanation || `Complete each word by matching the first sound to the picture.` }
+            { type: 'text', content: poolDoc.explanation || `Complete each word by matching the missing ${missingLetterMode} sound to the picture.` }
           ]
         },
         parts,
@@ -129,7 +208,10 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
           topic: poolDoc.topic || 'phonics',
           skillId,
           difficulty,
-          targetCategory: configuredCategory,
+          targetCategory: resolvedCategory,
+          configuredTargetCategory: configuredCategory,
+          randomizeTargetCategory: shouldRandomizeCategory,
+          missingLetterMode,
           templateId: poolDoc.metadata?.templateId || 'phonics.word_completion',
           engine: 'dynamic_pool_word_completion',
         }

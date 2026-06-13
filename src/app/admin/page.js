@@ -529,6 +529,7 @@ export default function AdminConsolePage() {
   const [poolId, setPoolId] = useState('');
   const [targetCategory, setTargetCategory] = useState('');
   const [distractorCategories, setDistractorCategories] = useState('');
+  const [missingLetterMode, setMissingLetterMode] = useState('beginning');
   const [vocabularyPools, setVocabularyPools] = useState([]);
   const [vocabularyPoolsLoading, setVocabularyPoolsLoading] = useState(false);
   const [vocabularyPoolsError, setVocabularyPoolsError] = useState('');
@@ -956,7 +957,7 @@ export default function AdminConsolePage() {
         if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
         const isCatLike = interaction === 'categorization' || interaction === 'categorizationv2' || interaction === 'word_completion';
         const categoriesToAudit = interaction === 'word_completion'
-          ? [targetCategory.trim()].filter(Boolean)
+          ? (targetCategory.trim() === '[random]' ? selectedPoolCategories : [targetCategory.trim()].filter(Boolean))
           : isCatLike
           ? (categories.length > 0 ? categories.map(c => c.id) : selectedPoolCategories)
           : (targetCategory.trim() === '[random]'
@@ -3832,6 +3833,7 @@ export default function AdminConsolePage() {
     setPoolId('');
     setTargetCategory('');
     setDistractorCategories('');
+    setMissingLetterMode('beginning');
     setQuestionText('Is the word **frog** a person, place, animal, or thing?');
     setVoice('Puck');
     setExplanation('');
@@ -4024,6 +4026,7 @@ export default function AdminConsolePage() {
     const activePoolId = q.poolId || q.metadata?.poolId || '';
     setPoolId(activePoolId);
     setTargetCategory(q.targetCategory || q.metadata?.targetCategory || '');
+    setMissingLetterMode(q.missingLetterMode || q.metadata?.missingLetterMode || 'beginning');
     setDistractorCategories(
       Array.isArray(q.distractorCategories || q.metadata?.distractorCategories)
         ? (q.distractorCategories || q.metadata?.distractorCategories).join(', ')
@@ -4450,6 +4453,7 @@ export default function AdminConsolePage() {
     setTeacherNotes(tpl.teacherNotes || '');
     setPoolId(tpl.poolId || tpl.metadata?.poolId || '');
     setTargetCategory(tpl.targetCategory || tpl.metadata?.targetCategory || '');
+    setMissingLetterMode(tpl.missingLetterMode || tpl.metadata?.missingLetterMode || 'beginning');
     setDistractorCategories(
       Array.isArray(tpl.distractorCategories || tpl.metadata?.distractorCategories)
         ? (tpl.distractorCategories || tpl.metadata?.distractorCategories).join(', ')
@@ -5154,6 +5158,7 @@ export default function AdminConsolePage() {
           poolId,
           targetCategory,
           distractorCategories,
+          missingLetterMode,
           parts,
           categories,
           categorizationItems,
@@ -5183,7 +5188,7 @@ export default function AdminConsolePage() {
     readable, readOptions,
     options, correctAnswer, fibAnswers, teacherNotes, tags, estimatedGrade, timeEstimate,
     sourceMapping, poolId, targetCategory, distractorCategories, parts, categories, categorizationItems,
-    layoutMode, interaction, targets, backgroundImage, canvas, behavior, sourceTray,
+    missingLetterMode, layoutMode, interaction, targets, backgroundImage, canvas, behavior, sourceTray,
     cardStyle, hideItemLabels, hideOptionImages, hideOptionLabel
   ]);
 
@@ -5224,6 +5229,7 @@ export default function AdminConsolePage() {
       setPoolId(draft.poolId || '');
       setTargetCategory(draft.targetCategory || '');
       setDistractorCategories(draft.distractorCategories || '');
+      setMissingLetterMode(draft.missingLetterMode || 'beginning');
       
       setParts(draft.parts || [
         { type: 'text', content: draft.questionText || '' }
@@ -5549,7 +5555,10 @@ export default function AdminConsolePage() {
       payload.metadata.poolId = poolId.trim();
       payload.targetCategory = selectedCategory;
       payload.metadata.targetCategory = selectedCategory;
-      payload.randomizeTargetCategory = false;
+      payload.missingLetterMode = missingLetterMode;
+      payload.metadata.missingLetterMode = missingLetterMode;
+      payload.randomizeTargetCategory = selectedCategory === '[random]';
+      payload.metadata.randomizeTargetCategory = selectedCategory === '[random]';
       payload.wordCount = 2;
       payload.itemsPerCategory = 2;
       payload.hideOptionImages = false;
@@ -5568,7 +5577,9 @@ export default function AdminConsolePage() {
           source: {
             poolId: poolId.trim(),
             category: selectedCategory,
-            count: 2
+            count: 2,
+            missingLetterMode,
+            randomizeTargetCategory: selectedCategory === '[random]'
           }
         }
       ];
@@ -5612,7 +5623,10 @@ export default function AdminConsolePage() {
           payload.metadata.layoutMode = 'word_completion';
           payload.targetCategory = targetCategory.trim();
           payload.metadata.targetCategory = targetCategory.trim();
-          payload.randomizeTargetCategory = false;
+          payload.missingLetterMode = missingLetterMode;
+          payload.metadata.missingLetterMode = missingLetterMode;
+          payload.randomizeTargetCategory = targetCategory.trim() === '[random]';
+          payload.metadata.randomizeTargetCategory = targetCategory.trim() === '[random]';
           payload.wordCount = 2;
           payload.itemsPerCategory = 2;
           payload.parts = [
@@ -5624,7 +5638,9 @@ export default function AdminConsolePage() {
               source: {
                 poolId: poolId.trim(),
                 category: targetCategory.trim(),
-                count: 2
+                count: 2,
+                missingLetterMode,
+                randomizeTargetCategory: targetCategory.trim() === '[random]'
               }
             }
           ];
@@ -5739,6 +5755,8 @@ export default function AdminConsolePage() {
       payload.metadata.interaction = 'categorizationv2';
       payload.layoutMode = 'word_completion';
       payload.metadata.layoutMode = 'word_completion';
+      payload.missingLetterMode = missingLetterMode;
+      payload.metadata.missingLetterMode = missingLetterMode;
     } else if (interaction) {
       payload.interaction = interaction;
       payload.metadata.interaction = interaction;
@@ -5872,15 +5890,22 @@ export default function AdminConsolePage() {
         setAlert({ type: 'error', text: `Validation Error: Centralized pool "${poolId.trim()}" was not found.` });
         return;
       }
-      if (!targetCategory.trim() || !selectedPoolCategories.includes(targetCategory.trim())) {
+      const isRandomWordCategory = targetCategory.trim() === '[random]';
+      if (!targetCategory.trim() || (!isRandomWordCategory && !selectedPoolCategories.includes(targetCategory.trim()))) {
         setAlert({ type: 'error', text: 'Validation Error: Select a valid word pool category.' });
         return;
       }
-      const categoryCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
-        ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
-        ?? 0;
+      const categoryCount = isRandomWordCategory
+        ? Math.max(0, ...selectedPoolCategories.map(category => (
+            selectedVocabularyPool.categoryCounts?.[category]
+            ?? selectedVocabularyPool.pools?.[category]?.length
+            ?? 0
+          )))
+        : (selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+            ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+            ?? 0);
       if (categoryCount < 2) {
-        setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least 2 words in the selected category.' });
+        setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least one category with 2 words.' });
         return;
       }
     } else if (type === 'dynamic_pool') {
@@ -5896,15 +5921,22 @@ export default function AdminConsolePage() {
           return;
         }
         if (isWordCompletionInteraction) {
-          if (!targetCategory.trim() || !selectedPoolCategories.includes(targetCategory.trim())) {
+          const isRandomWordCategory = targetCategory.trim() === '[random]';
+          if (!targetCategory.trim() || (!isRandomWordCategory && !selectedPoolCategories.includes(targetCategory.trim()))) {
             setAlert({ type: 'error', text: 'Validation Error: Select a valid word pool category.' });
             return;
           }
-          const categoryCount = selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
-            ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
-            ?? 0;
+          const categoryCount = isRandomWordCategory
+            ? Math.max(0, ...selectedPoolCategories.map(category => (
+                selectedVocabularyPool.categoryCounts?.[category]
+                ?? selectedVocabularyPool.pools?.[category]?.length
+                ?? 0
+              )))
+            : (selectedVocabularyPool.categoryCounts?.[targetCategory.trim()]
+                ?? selectedVocabularyPool.pools?.[targetCategory.trim()]?.length
+                ?? 0);
           if (categoryCount < 2) {
-            setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least 2 words in the selected category.' });
+            setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least one category with 2 words.' });
             return;
           }
         } else if (!isCat) {
@@ -6228,6 +6260,7 @@ export default function AdminConsolePage() {
       readOptions,
       layoutMode,
       interaction,
+      missingLetterMode,
       JSON.stringify(targets),
       backgroundImage,
       JSON.stringify(canvas),
@@ -6252,24 +6285,66 @@ export default function AdminConsolePage() {
     let mockWordCompletionItems = [];
     let mockWordCompletionCards = [];
     let mockWordCompletionAnswer = undefined;
-    if (type === 'dynamic_pool') {
+    if (type === 'dynamic_pool' || type === 'word_completion_pool') {
       const isWordCompletionInteraction = interaction === 'word_completion';
       const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
-      if (isWordCompletionInteraction) {
-        const activeCategory = targetCategory || selectedPoolCategories[0] || 'short_i_words';
+      if (isWordCompletionInteraction || type === 'word_completion_pool') {
+        const previewEligibleCategories = selectedPoolCategories.filter(category => {
+          const count = selectedVocabularyPool?.categoryCounts?.[category]
+            ?? selectedVocabularyPool?.pools?.[category]?.length
+            ?? 0;
+          return count >= 2;
+        });
+        const randomCategoryIndex = Math.abs(hashCode(`${targetCategory}:${missingLetterMode}:${questionText}:${selectedPoolCategories.join('|')}`)) % Math.max(1, previewEligibleCategories.length);
+        const activeCategory = targetCategory === '[random]'
+          ? (previewEligibleCategories[randomCategoryIndex] || selectedPoolCategories[0] || 'short_i_words')
+          : (targetCategory || selectedPoolCategories[0] || 'short_i_words');
         const words = selectedVocabularyPool?.pools?.[activeCategory] || [];
+        const getPreviewWordFields = (word) => {
+          const label = String(word?.label || word?.id || '').trim().toLowerCase();
+          const initial = word?.initial || label[0] || '';
+          const ending = word?.ending || label.slice(1);
+          const middle = word?.middle || (label.length >= 3 ? label[1] : label[0]) || '';
+          const endingLetter = word?.endingLetter || label[label.length - 1] || '';
+
+          if (missingLetterMode === 'middle') {
+            return {
+              answer: middle,
+              prefix: word?.middlePrefix || initial,
+              suffix: word?.middleSuffix || label.slice(2),
+              pattern: word?.middlePattern || `${initial}_${label.slice(2)}`,
+            };
+          }
+
+          if (missingLetterMode === 'ending') {
+            return {
+              answer: endingLetter,
+              prefix: word?.endingPrefix || label.slice(0, -1),
+              suffix: word?.endingSuffix || '',
+              pattern: word?.endingPattern || `${label.slice(0, -1)}_`,
+            };
+          }
+
+          return {
+            answer: initial,
+            prefix: word?.beginningPrefix || '',
+            suffix: word?.beginningSuffix || ending,
+            pattern: word?.beginningPattern || `_${ending}`,
+          };
+        };
         const selectedWords = words
-          .filter(item => item?.label && item?.initial && item?.ending)
+          .filter(item => item?.label && getPreviewWordFields(item).answer)
           .slice(0, 2);
         const fallbackWords = selectedWords.length >= 2 ? selectedWords : [
-          { id: 'pin', label: 'pin', initial: 'p', ending: 'in', imageUrl: '/images/phonics/pin.svg' },
-          { id: 'fin', label: 'fin', initial: 'f', ending: 'in', imageUrl: '/images/phonics/fin.svg' }
+          { id: 'pin', label: 'pin', initial: 'p', middle: 'i', endingLetter: 'n', ending: 'in', imageUrl: '/images/phonics/pin.svg' },
+          { id: 'fin', label: 'fin', initial: 'f', middle: 'i', endingLetter: 'n', ending: 'in', imageUrl: '/images/phonics/fin.svg' }
         ];
+        const fallbackFields = fallbackWords.map(getPreviewWordFields);
 
         mockWordCompletionItems = fallbackWords.map((word, idx) => ({
           id: `letter_${idx + 1}`,
-          content: word.initial,
-          label: word.initial,
+          content: fallbackFields[idx].answer,
+          label: fallbackFields[idx].answer,
           audioUrl: word.audioUrl || undefined
         }));
         mockWordCompletionCards = fallbackWords.map((word, idx) => ({
@@ -6278,8 +6353,13 @@ export default function AdminConsolePage() {
           imageUrl: word.imageUrl || '',
           audioUrl: word.audioUrl || undefined,
           initial: word.initial,
-          ending: word.ending,
-          answer: word.initial
+          middle: word.middle,
+          endingLetter: word.endingLetter,
+          prefix: fallbackFields[idx].prefix,
+          ending: fallbackFields[idx].suffix,
+          pattern: fallbackFields[idx].pattern,
+          answer: fallbackFields[idx].answer,
+          missingLetterMode
         }));
         mockWordCompletionAnswer = Object.fromEntries(mockWordCompletionCards.map((card, idx) => [card.id, mockWordCompletionItems[idx].id]));
         mockParts = [
@@ -6530,10 +6610,10 @@ export default function AdminConsolePage() {
 
     return {
       id: uniqueId,
-      type: type === 'dynamic_pool' && interaction === 'word_completion' ? 'categorizationv2' : type,
+      type: (type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool' ? 'categorizationv2' : type,
       interaction: directImageSelect
         ? 'direct_image_select'
-        : (type === 'dynamic_pool' && interaction === 'word_completion' ? 'categorizationv2' : (interaction || undefined)),
+        : ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool' ? 'categorizationv2' : (interaction || undefined)),
       directImageSelect,
       questionText: questionText.trim(),
       parts: mockParts,
@@ -6560,14 +6640,14 @@ export default function AdminConsolePage() {
           : undefined,
       items: (type === 'categorizationv2' || type === 'categorization') 
         ? serializedItems 
-        : (type === 'dynamic_pool' && interaction === 'word_completion')
+        : ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool')
           ? mockWordCompletionItems
         : (type === 'dynamic_pool' && (interaction === 'categorization' || interaction === 'categorizationv2'))
           ? mockItemsForDynamicCategorization
           : undefined,
-      wordCards: (type === 'dynamic_pool' && interaction === 'word_completion') ? mockWordCompletionCards : undefined,
-      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : (type === 'dynamic_pool' ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
-      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : (type === 'dynamic_pool' ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      wordCards: ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool') ? mockWordCompletionCards : undefined,
+      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { readable, readOptions },
       // Advanced Dynamic Pool fields
       poolId: (type === 'dynamic_pool' && poolId) ? poolId.trim() : undefined,
@@ -6592,7 +6672,8 @@ export default function AdminConsolePage() {
       } : undefined,
       difficultyRules: type === 'dynamic_pool' ? difficultyRules : undefined,
       // Universal DnD fields
-      layoutMode: (type === 'dynamic_pool' && interaction === 'word_completion') ? 'word_completion' : (layoutMode || undefined),
+      layoutMode: ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool') ? 'word_completion' : (layoutMode || undefined),
+      missingLetterMode: ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool') ? missingLetterMode : undefined,
       targets: targets || undefined,
       backgroundImage: backgroundImage || undefined,
       canvas: canvas || undefined,
@@ -6633,7 +6714,8 @@ export default function AdminConsolePage() {
     difficultyRules,
     poolId,
     targetCategory,
-    distractorCategories
+    distractorCategories,
+    missingLetterMode
   ]);
 
   const handleCheckAnswer = () => {
@@ -8959,26 +9041,49 @@ export default function AdminConsolePage() {
                                   <div style={{ marginBottom: 8 }}>
                                     {(type === 'word_completion_pool' || interaction === 'word_completion') ? (
                                       <div>
-                                        <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Word Pool Category</label>
-                                        <select
-                                          className={styles.formSelect}
-                                          style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
-                                          value={targetCategory}
-                                          disabled={!selectedVocabularyPool}
-                                          onChange={(e) => {
-                                            setTargetCategory(e.target.value);
-                                            setPoolAssetAudit(null);
-                                            ignoreDirtyChange.current = false;
-                                            setIsDirty(true);
-                                          }}
-                                        >
-                                          <option value="">Select word category</option>
-                                          {selectedPoolCategories.map(category => (
-                                            <option key={category} value={category}>{category}</option>
-                                          ))}
-                                        </select>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                          <div>
+                                            <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Word Pool Category</label>
+                                            <select
+                                              className={styles.formSelect}
+                                              style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                              value={targetCategory}
+                                              disabled={!selectedVocabularyPool}
+                                              onChange={(e) => {
+                                                setTargetCategory(e.target.value);
+                                                setPoolAssetAudit(null);
+                                                ignoreDirtyChange.current = false;
+                                                setIsDirty(true);
+                                              }}
+                                            >
+                                              <option value="">Select word category</option>
+                                              <option value="[random]">[random] Pick a random category</option>
+                                              {selectedPoolCategories.map(category => (
+                                                <option key={category} value={category}>{category}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label style={{ fontSize: 11, fontWeight: '600', color: '#0f766e', display: 'block', marginBottom: 4 }}>Missing Letter Mode</label>
+                                            <select
+                                              className={styles.formSelect}
+                                              style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                              value={missingLetterMode}
+                                              onChange={(e) => {
+                                                setMissingLetterMode(e.target.value);
+                                                setPoolAssetAudit(null);
+                                                ignoreDirtyChange.current = false;
+                                                setIsDirty(true);
+                                              }}
+                                            >
+                                              <option value="beginning">Beginning: _at</option>
+                                              <option value="middle">Middle: c_t</option>
+                                              <option value="ending">Ending: ca_</option>
+                                            </select>
+                                          </div>
+                                        </div>
                                         <p style={{ fontSize: 11, color: '#0f766e', margin: '6px 0 0' }}>
-                                          The generator will pick two words from this category and use each word&apos;s <code>initial</code>, <code>ending</code>, <code>imageUrl</code>, and <code>audioUrl</code>.
+                                          The generator will pick two words and use <code>initial</code>, <code>middle</code>, or <code>endingLetter</code> with each word&apos;s saved pattern, image, and audio.
                                         </p>
                                       </div>
                                     ) : interaction !== 'categorization' && interaction !== 'categorizationv2' ? (

@@ -317,10 +317,6 @@ export function isAnswerCorrect(question, userAnswer) {
       : {};
     const expected = parseMaybeJson(question.answer ?? question.correctAnswer ?? question.answerKey, null);
 
-    if (expected && typeof expected === 'object' && !Array.isArray(expected)) {
-      return objectMatches(answerObject, expected);
-    }
-
     const wordCards = Array.isArray(question.wordCards)
       ? question.wordCards
       : Array.isArray(question.parts)
@@ -335,11 +331,19 @@ export function isAnswerCorrect(question, userAnswer) {
 
     if (!wordCards.length) return false;
 
-    return wordCards.every((card) => {
+    const valueMatches = wordCards.every((card) => {
       const placedItem = itemById.get(answerObject[card.id]);
       const placedValue = placedItem?.content ?? placedItem?.label ?? placedItem?.letter;
       return normalizeText(placedValue) === normalizeText(card.answer ?? card.initial);
     });
+
+    if (valueMatches) return true;
+
+    if (expected && typeof expected === 'object' && !Array.isArray(expected)) {
+      return objectMatches(answerObject, expected);
+    }
+
+    return false;
   }
 
   if (type === 'interactivetool') {

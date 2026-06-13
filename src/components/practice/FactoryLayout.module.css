@@ -204,14 +204,14 @@
 /* Grid Layout */
 .mainGrid {
     display: grid;
-    grid-template-columns: 288px minmax(0, 1fr) 254px;
+    grid-template-columns: 230px minmax(0, 1fr) 210px;
     gap: 24px;
     align-items: start;
     transition: grid-template-columns 220ms ease, gap 220ms ease;
 }
 
 .mainGridLearningPathClosed {
-    grid-template-columns: 0 minmax(0, 1fr) 254px;
+    grid-template-columns: 0 minmax(0, 1fr) 210px;
     column-gap: 0;
     row-gap: 24px;
 }
@@ -2986,6 +2986,10 @@
     }
 
     .mobileHiddenPanel {
+        display: none !important;
+    }
+
+    .practiceTopicBar {
         display: none !important;
     }
 }
