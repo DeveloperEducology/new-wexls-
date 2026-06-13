@@ -5911,8 +5911,8 @@ export default function AdminConsolePage() {
     } else if (type === 'dynamic_pool') {
       const isWordCompletionInteraction = interaction === 'word_completion';
       const isCat = interaction === 'categorization' || interaction === 'categorizationv2' || isWordCompletionInteraction;
-      if (isCat && !poolId.trim()) {
-        setAlert({ type: 'error', text: 'Validation Error: Categorization dynamic pools must use a Centralized Pool. Select an existing Pool ID.' });
+      if ((isCat || interaction === 'pick_from_sentence') && !poolId.trim()) {
+        setAlert({ type: 'error', text: 'Validation Error: Select Word in Sentence dynamic pools must use a Centralized Pool. Select an existing Pool ID.' });
         return;
       }
       if (poolId.trim()) {
@@ -5937,6 +5937,11 @@ export default function AdminConsolePage() {
                 ?? 0);
           if (categoryCount < 2) {
             setAlert({ type: 'error', text: 'Validation Error: Word Completion needs at least one category with 2 words.' });
+            return;
+          }
+        } else if (interaction === 'pick_from_sentence') {
+          if (!targetCategory.trim() || (!selectedPoolCategories.includes(targetCategory.trim()) && targetCategory.trim() !== '[random]')) {
+            setAlert({ type: 'error', text: 'Validation Error: Select a valid target category containing the sentences.' });
             return;
           }
         } else if (!isCat) {
@@ -9276,7 +9281,7 @@ export default function AdminConsolePage() {
                                         type="button"
                                         className={`${styles.btnOutline} ${styles.btnCompact}`}
                                         onClick={auditDynamicPoolAssets}
-                                        disabled={poolAssetAuditLoading || (poolId.trim() && (interaction !== 'categorization' && interaction !== 'categorizationv2' && interaction !== 'word_completion') && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
+                                        disabled={poolAssetAuditLoading || (poolId.trim() && (interaction !== 'categorization' && interaction !== 'categorizationv2' && interaction !== 'word_completion' && interaction !== 'pick_from_sentence') && (!targetCategory.trim() || (targetCategory.trim() !== '[random]' && parseCategoryList(distractorCategories).length === 0)))}
                                         style={{ padding: '6px 10px' }}
                                       >
                                         {poolAssetAuditLoading ? 'Checking…' : 'Check Images & Audio'}
