@@ -283,16 +283,22 @@ const SHOW_STUDENT_TEST_TOOLS = process.env.NEXT_PUBLIC_HIDE_STUDENT_TEST_TOOLS 
 
 function getSkillIcon(group = '') {
   const normalized = group.toLowerCase();
-  if (normalized.includes('shape')) return '◆';
-  if (normalized.includes('count')) return '●';
-  if (normalized.includes('compare')) return '↔';
-  if (normalized.includes('pattern')) return '▦';
-  if (normalized.includes('position')) return '↕';
-  if (normalized.includes('money')) return '₹';
-  if (normalized.includes('phonics')) return 'Aa';
-  if (normalized.includes('alphabet')) return 'A';
-  if (normalized.includes('vocab')) return '★';
-  return '✓';
+  if (normalized.includes('shape')) return '📐';
+  if (normalized.includes('count')) return '🔢';
+  if (normalized.includes('compare')) return '⚖️';
+  if (normalized.includes('pattern')) return '🧩';
+  if (normalized.includes('position')) return '📍';
+  if (normalized.includes('money')) return '🪙';
+  if (normalized.includes('phonics')) return '🗣️';
+  if (normalized.includes('alphabet')) return '🔤';
+  if (normalized.includes('vocab')) return '📕';
+  if (normalized.includes('grammar')) return '✍️';
+  if (normalized.includes('sentence')) return '💬';
+  if (normalized.includes('addition')) return '➕';
+  if (normalized.includes('subtraction')) return '➖';
+  if (normalized.includes('classify')) return '🗂️';
+  if (normalized.includes('measure')) return '📏';
+  return '⭐️';
 }
 
 export default function StudentDashboardPortal() {
@@ -527,6 +533,39 @@ export default function StudentDashboardPortal() {
   const activeNode = roadmapNodes.find(node => node.isActive) || roadmapNodes.find(node => node.isUnlocked);
   const completedCount = roadmapNodes.filter(node => node.isCompleted).length;
   const progressPercent = roadmapNodes.length ? Math.round((completedCount / roadmapNodes.length) * 100) : 0;
+
+  const topicGroups = useMemo(() => {
+    if (!roadmapNodes || !roadmapNodes.length) return [];
+    
+    const groupsMap = new Map();
+    roadmapNodes.forEach((node) => {
+      if (!groupsMap.has(node.group)) {
+        groupsMap.set(node.group, {
+          name: node.group,
+          skills: [],
+          completedCount: 0,
+          activeSkill: null,
+        });
+      }
+      const g = groupsMap.get(node.group);
+      g.skills.push(node);
+      if (node.isCompleted) {
+        g.completedCount += 1;
+      }
+      if (!g.activeSkill && node.isUnlocked && !node.isCompleted) {
+        g.activeSkill = node;
+      }
+    });
+
+    groupsMap.forEach((g) => {
+      if (!g.activeSkill) {
+        const firstUnlocked = g.skills.find((s) => s.isUnlocked);
+        g.activeSkill = firstUnlocked || g.skills[0];
+      }
+    });
+
+    return Array.from(groupsMap.values());
+  }, [roadmapNodes]);
 
   useEffect(() => {
     if (dashboardMode !== 'journey' || !activeNodeRef.current || !journeyContainerRef.current) return;
@@ -886,33 +925,115 @@ export default function StudentDashboardPortal() {
 	                </div>
 
               ) : (
-                /* Large Emojis Action Cards (Standard Grid) */
-                <div className={styles.kinderGrid}>
-                  <Link href="/practice?subject=math&topic=ukg-numbers-counting&skill=ukg-count3-count" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className={styles.kinderCard} style={{ borderLeft: '6px solid var(--color-success)' }}>
-                      <div className={styles.kinderCardIcon}>🧮</div>
-                      <h4 className={styles.kinderCardTitle}>Number Counting</h4>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Count stars, fruits, and shapes!</p>
-                    </div>
-                  </Link>
-
-                  <Link href="/practice?subject=english&topic=english-ukg&skill=ukg-eng-phonics-short-a" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className={styles.kinderCard} style={{ borderLeft: '6px solid var(--color-primary)' }}>
-                      <div className={styles.kinderCardIcon}>🗣️</div>
-                      <h4 className={styles.kinderCardTitle}>Phonics Sounds</h4>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Match words starting with identical letters!</p>
-                    </div>
-                  </Link>
-
-
-                  <div className={styles.kinderCard} style={{ borderLeft: '6px solid var(--color-warning)' }} onClick={() => triggerAudioGuidance("Great job! You earned three stars today!")}>
-                    <div className={styles.kinderCardIcon}>⭐</div>
-                    <h4 className={styles.kinderCardTitle}>My Star Count</h4>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--color-warning)' }}>
-                      {data.kpis.streakDays} Stars Earned!
-                    </span>
+                /* Card Grid View */
+                <>
+                  {/* Subject selector pills for Grid View */}
+                  <div className={styles.curriculumPillRow} style={{ marginBottom: '2rem' }}>
+                    {Object.entries(CURRICULUM_MAP)
+                      .filter(([key]) => {
+                        if (grade && ['LKG', 'UKG'].includes(grade)) {
+                          return CURRICULUM_GRADE_MAP[key] === grade;
+                        }
+                        return true;
+                      })
+                      .map(([key, cfg]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => handleCurriculumChange(key)}
+                          className={`${styles.curriculumPill} ${curriculumKey === key ? styles.activeCurriculumPill : ''}`}
+                          data-subject={cfg.subject}
+                        >
+                          {cfg.emoji} {cfg.label}
+                          <span>({cfg.skills.length} lessons)</span>
+                        </button>
+                      ))}
                   </div>
-                </div>
+
+                  {/* Dynamic Topic Action Cards */}
+                  <div className={styles.kinderGrid}>
+                    {topicGroups.map((group, groupIdx) => {
+                      const totalSkills = group.skills.length;
+                      const completedSkills = group.completedCount;
+                      const activeSkill = group.activeSkill;
+                      const firstThreeSkillTitles = group.skills.slice(0, 3).map(s => s.title).join(', ');
+                      
+                      const isGroupUnlocked = group.skills.some(s => s.isUnlocked);
+                      const practiceHref = `/practice?subject=${activeCurriculum.subject}&topic=${activeCurriculum.topic}&skill=${activeSkill.skillId}`;
+                      
+                      const cardContent = (
+                        <div 
+                          className={`${styles.kinderCard} ${!isGroupUnlocked ? styles.kinderCardLocked : ''}`} 
+                          style={{ borderLeft: `6px solid ${activeCurriculum.subject === 'math' ? 'var(--color-success)' : 'var(--color-primary)'}` }}
+                        >
+                          <div className={styles.kinderCardIcon}>
+                            {isGroupUnlocked ? getSkillIcon(group.name) : '🔒'}
+                          </div>
+                          <h4 className={styles.kinderCardTitle}>{group.name}</h4>
+                          <p className={styles.kinderCardPreview}>
+                            {firstThreeSkillTitles}{totalSkills > 3 ? '...' : ''}
+                          </p>
+                          
+                          {isGroupUnlocked ? (
+                            <div className={styles.kinderCardProgressRow}>
+                              <div className={styles.kinderProgressBarTrack}>
+                                <div 
+                                  className={styles.kinderProgressBarFill} 
+                                  style={{ 
+                                    width: `${(completedSkills / totalSkills) * 100}%`,
+                                    backgroundColor: activeCurriculum.subject === 'math' ? 'var(--color-success)' : 'var(--color-primary)'
+                                  }} 
+                                />
+                              </div>
+                              <span className={styles.kinderProgressText}>
+                                ⭐ {completedSkills} / {totalSkills}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className={styles.kinderCardLockedText}>Locked</span>
+                          )}
+                        </div>
+                      );
+
+                      if (isGroupUnlocked) {
+                        return (
+                          <Link 
+                            key={`${group.name}-${groupIdx}`}
+                            href={practiceHref} 
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            onClick={() => triggerAudioGuidance(`Let's practice ${group.name}!`)}
+                          >
+                            {cardContent}
+                          </Link>
+                        );
+                      } else {
+                        return (
+                          <div 
+                            key={`${group.name}-${groupIdx}`}
+                            onClick={() => triggerAudioGuidance(`Complete previous lessons to unlock ${group.name}!`)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {cardContent}
+                          </div>
+                        );
+                      }
+                    })}
+
+                    {/* Cumulative Star Count Card */}
+                    <div 
+                      className={styles.kinderCard} 
+                      style={{ borderLeft: '6px solid var(--color-warning)' }} 
+                      onClick={() => triggerAudioGuidance(`Great job! You have earned ${data.kpis.smartScore} stars total!`)}
+                    >
+                      <div className={styles.kinderCardIcon}>⭐</div>
+                      <h4 className={styles.kinderCardTitle}>My Star Count</h4>
+                      <p className={styles.kinderCardPreview}>Keep practicing to earn more stars!</p>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--color-warning)' }}>
+                        {data.kpis.smartScore} Stars Earned!
+                      </span>
+                    </div>
+                  </div>
+                </>
               )}
             </>
           ) : (
