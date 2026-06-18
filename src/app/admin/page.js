@@ -7986,13 +7986,7 @@ export default function AdminConsolePage() {
         >
           ⚙️ VISUAL TEMPLATE BUILDER
         </a>
-        <a 
-          className={styles.tabButton}
-          href="/admin/concept-videos"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
-        >
-          📹 CONCEPT VIDEO CREATOR
-        </a>
+
       </nav>
 
       {/* Active Tab View */}
