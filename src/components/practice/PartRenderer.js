@@ -2984,8 +2984,8 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     : {};
   const stickerImageUrl = part.stickerImageUrl || stickerConfig.imageUrl || '';
   const stickerContent = stickerConfig.content || part.sticker || '🦋';
-  const stickerWidth = Number(stickerConfig.widthPercent || part.commonStickerWidth || part.stickerWidthPercent || 10);
-  const stickerHeight = Number(stickerConfig.heightPercent || part.commonStickerHeight || part.stickerHeightPercent || 15);
+  const stickerWidth = Number(stickerConfig.widthPercent || part.commonStickerWidth || part.stickerWidthPercent || 20);
+  const stickerHeight = Number(stickerConfig.heightPercent || part.commonStickerHeight || part.stickerHeightPercent || 20);
 
   const initialPositions = [
     { x: 24, y: 58 }, { x: 43, y: 42 }, { x: 68, y: 58 }, { x: 78, y: 30 },

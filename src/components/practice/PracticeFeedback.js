@@ -364,8 +364,8 @@ function renderInteractiveSolution(question) {
             const sticker = placement.sticker;
             const imgUrl = sticker.imageUrl || '';
             const content = sticker.content || '🦋';
-            const sWidth = sticker.widthPercent || sticker.width || partStickersObj.commonStickerWidth || 10;
-            const sHeight = sticker.heightPercent || sticker.height || partStickersObj.commonStickerHeight || 15;
+            const sWidth = sticker.widthPercent || sticker.width || partStickersObj.commonStickerWidth || 20;
+            const sHeight = sticker.heightPercent || sticker.height || partStickersObj.commonStickerHeight || 20;
 
             return (
               <div

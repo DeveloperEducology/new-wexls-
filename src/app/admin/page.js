@@ -1705,8 +1705,8 @@ export default function AdminConsolePage() {
   const [columnSortSceneImageUrl, setColumnSortSceneImageUrl] = useState('');
   const [selectedColumnSortStickerId, setSelectedColumnSortStickerId] = useState(null);
   const [columnSortStickerDragging, setColumnSortStickerDragging] = useState(null); // {id, offsetX, offsetY}
-  const [commonStickerWidth, setCommonStickerWidth] = useState(18);
-  const [commonStickerHeight, setCommonStickerHeight] = useState(18);
+  const [commonStickerWidth, setCommonStickerWidth] = useState(20);
+  const [commonStickerHeight, setCommonStickerHeight] = useState(20);
   const [showColumnSortGrid, setShowColumnSortGrid] = useState(false);
   const [snapColumnSortGrid, setSnapColumnSortGrid] = useState(false);
   const [selectedShadowTargetId, setSelectedShadowTargetId] = useState(null);
@@ -4590,8 +4590,8 @@ export default function AdminConsolePage() {
     setColumnSortSceneImageUrl('');
     setSelectedColumnSortStickerId(null);
     setColumnSortStickerDragging(null);
-    setCommonStickerWidth(18);
-    setCommonStickerHeight(18);
+    setCommonStickerWidth(20);
+    setCommonStickerHeight(20);
     setShowColumnSortGrid(false);
     setSnapColumnSortGrid(false);
 
@@ -4670,8 +4670,8 @@ export default function AdminConsolePage() {
     setColumnSortSceneImageUrl('');
     setSelectedColumnSortStickerId(null);
     setColumnSortStickerDragging(null);
-    setCommonStickerWidth(18);
-    setCommonStickerHeight(18);
+    setCommonStickerWidth(20);
+    setCommonStickerHeight(20);
     setShowColumnSortGrid(false);
     setSnapColumnSortGrid(false);
 
@@ -5020,20 +5020,20 @@ export default function AdminConsolePage() {
           name: s.name || s.label || `Sticker ${i + 1}`,
           imageUrl: s.imageUrl || '',
           content: s.content || '',
-          widthPercent: s.widthPercent || s.width || 18,
-          heightPercent: s.heightPercent || s.height || 18,
+          widthPercent: s.widthPercent || s.width || 20,
+          heightPercent: s.heightPercent || s.height || 20,
           x: savedPlacement ? savedPlacement.x : undefined,
           y: savedPlacement ? savedPlacement.y : undefined,
         };
       }));
-      setCommonStickerWidth(columnSortPart.commonStickerWidth !== undefined ? columnSortPart.commonStickerWidth : 18);
-      setCommonStickerHeight(columnSortPart.commonStickerHeight !== undefined ? columnSortPart.commonStickerHeight : 18);
+      setCommonStickerWidth(columnSortPart.commonStickerWidth !== undefined ? columnSortPart.commonStickerWidth : 20);
+      setCommonStickerHeight(columnSortPart.commonStickerHeight !== undefined ? columnSortPart.commonStickerHeight : 20);
     } else {
       setColumnSortSceneImageUrl('');
       setColumnSortCategories([]);
       setColumnSortStickers([]);
-      setCommonStickerWidth(18);
-      setCommonStickerHeight(18);
+      setCommonStickerWidth(20);
+      setCommonStickerHeight(20);
     }
 
     setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
@@ -6184,8 +6184,8 @@ export default function AdminConsolePage() {
         type: 'interactive_stickers',
         mode: 'column_sort',
         sceneImageUrl: columnSortSceneImageUrl || '',
-        commonStickerWidth: Number(commonStickerWidth) || 18,
-        commonStickerHeight: Number(commonStickerHeight) || 18,
+        commonStickerWidth: Number(commonStickerWidth) || 20,
+        commonStickerHeight: Number(commonStickerHeight) || 20,
         categories: columnSortCategories.map(c => ({
           id: c.id,
           label: c.label,
@@ -6198,8 +6198,8 @@ export default function AdminConsolePage() {
           imageUrl: s.imageUrl || undefined,
           content: s.content || undefined,
           category: s.category,
-          width: Number(s.widthPercent) || 18,
-          height: Number(s.heightPercent) || 18,
+          width: Number(s.widthPercent) || 20,
+          height: Number(s.heightPercent) || 20,
         })),
         itemLabel: 'sticker',
       };
@@ -12178,7 +12178,7 @@ export default function AdminConsolePage() {
                                       className={styles.formInput}
                                       value={commonStickerWidth}
                                       min={5} max={50}
-                                      onChange={e => { setCommonStickerWidth(Number(e.target.value) || 18); setIsDirty(true); }}
+                                      onChange={e => { setCommonStickerWidth(Number(e.target.value) || 20); setIsDirty(true); }}
                                       style={{ width: 65, padding: '4px 8px', height: 30, fontSize: 12 }}
                                     />
                                     <span style={{ fontSize: 12, color: '#64748b' }}>%</span>
@@ -12190,7 +12190,7 @@ export default function AdminConsolePage() {
                                       className={styles.formInput}
                                       value={commonStickerHeight}
                                       min={5} max={50}
-                                      onChange={e => { setCommonStickerHeight(Number(e.target.value) || 18); setIsDirty(true); }}
+                                      onChange={e => { setCommonStickerHeight(Number(e.target.value) || 20); setIsDirty(true); }}
                                       style={{ width: 65, padding: '4px 8px', height: 30, fontSize: 12 }}
                                     />
                                     <span style={{ fontSize: 12, color: '#64748b' }}>%</span>
@@ -12201,8 +12201,8 @@ export default function AdminConsolePage() {
                                     onClick={() => {
                                       setColumnSortStickers(prev => prev.map(s => ({
                                         ...s,
-                                        widthPercent: Number(commonStickerWidth) || 18,
-                                        heightPercent: Number(commonStickerHeight) || 18
+                                        widthPercent: Number(commonStickerWidth) || 20,
+                                        heightPercent: Number(commonStickerHeight) || 20
                                       })));
                                       setIsDirty(true);
                                     }}
@@ -12511,10 +12511,10 @@ export default function AdminConsolePage() {
                                           <input
                                             type="number"
                                             className={styles.formInput}
-                                            value={sticker.widthPercent || 18}
+                                            value={sticker.widthPercent || 20}
                                             min={5} max={50}
                                             onChange={e => {
-                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, widthPercent: Number(e.target.value) || 18 } : s));
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, widthPercent: Number(e.target.value) || 20 } : s));
                                               setIsDirty(true);
                                             }}
                                             style={{ marginTop: 4, fontSize: 12 }}
@@ -12525,10 +12525,10 @@ export default function AdminConsolePage() {
                                           <input
                                             type="number"
                                             className={styles.formInput}
-                                            value={sticker.heightPercent || 18}
+                                            value={sticker.heightPercent || 20}
                                             min={5} max={50}
                                             onChange={e => {
-                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, heightPercent: Number(e.target.value) || 18 } : s));
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, heightPercent: Number(e.target.value) || 20 } : s));
                                               setIsDirty(true);
                                             }}
                                             style={{ marginTop: 4, fontSize: 12 }}
@@ -12551,8 +12551,8 @@ export default function AdminConsolePage() {
                                         category: columnSortCategories[0]?.id || '',
                                         imageUrl: '',
                                         content: '🏷️',
-                                        widthPercent: Number(commonStickerWidth) || 18,
-                                        heightPercent: Number(commonStickerHeight) || 18,
+                                        widthPercent: Number(commonStickerWidth) || 20,
+                                        heightPercent: Number(commonStickerHeight) || 20,
                                         x: 10 + (prev.length * 15) % 70,
                                         y: 30 + (prev.length * 10) % 50
                                       }
@@ -12695,8 +12695,8 @@ export default function AdminConsolePage() {
                                           }
                                           setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? {
                                             ...s,
-                                            x: Math.max(0, Math.min(100 - (s.widthPercent || 18), finalX)),
-                                            y: Math.max(0, Math.min(100 - (s.heightPercent || 18), finalY))
+                                            x: Math.max(0, Math.min(100 - (s.widthPercent || 20), finalX)),
+                                            y: Math.max(0, Math.min(100 - (s.heightPercent || 20), finalY))
                                           } : s));
                                         }}
                                         onPointerUp={() => { setColumnSortStickerDragging(null); setIsDirty(true); }}
@@ -12705,8 +12705,8 @@ export default function AdminConsolePage() {
                                           position: 'absolute',
                                           left: `${sticker.x !== undefined ? sticker.x : 10}%`,
                                           top: `${sticker.y !== undefined ? sticker.y : 25}%`,
-                                          width: `${sticker.widthPercent || 18}%`,
-                                          height: `${sticker.heightPercent || 18}%`,
+                                          width: `${sticker.widthPercent || 20}%`,
+                                          height: `${sticker.heightPercent || 20}%`,
                                           border: isSelected ? '2.5px solid #2563eb' : '1.5px solid #e2e8f0',
                                           borderRadius: '10px',
                                           backgroundColor: '#ffffff',
