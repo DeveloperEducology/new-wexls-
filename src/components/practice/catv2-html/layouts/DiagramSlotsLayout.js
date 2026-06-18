@@ -43,8 +43,6 @@ export default function DiagramSlotsLayout({
         style={{
           position: 'relative',
           width: '100%',
-          minHeight: 320,
-          aspectRatio,
           border: '2px solid #dbeafe',
           borderRadius: 14,
           background: '#ffffff',
@@ -56,15 +54,26 @@ export default function DiagramSlotsLayout({
           style={{
             position: 'relative',
             width: '100%',
-            height: '100%',
-            minWidth: 360,
-            minHeight: 320,
-            backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
-            backgroundSize: canvas.backgroundSize || 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
+            minWidth: canvas.width ? Math.max(480, Number(canvas.width)) : 600,
+            margin: '0 auto',
           }}
         >
+          {backgroundImage ? (
+            <img 
+              src={backgroundImage} 
+              alt="Diagram"
+              draggable={false}
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: 320, background: '#f8fafc' }} />
+          )}
           {targets.map((target) => {
             const item = dnd.getTargetItem(target.id);
             const active = dnd.selectedItemId && !item;

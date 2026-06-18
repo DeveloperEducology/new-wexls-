@@ -3258,19 +3258,33 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
         style={{
           position: 'relative',
           width: '100%',
-          aspectRatio: '16 / 7',
-          minHeight: 230,
+          aspectRatio: part.sceneImageUrl ? undefined : '16 / 7',
+          minHeight: part.sceneImageUrl ? undefined : 230,
           overflow: 'hidden',
           border: isOutsideDragged ? '3px dashed #fb8c00' : '2px solid #93c5fd',
           borderRadius: '18px 18px 0 0',
           background: part.sceneImageUrl
-            ? `url("${part.sceneImageUrl}") center center / cover no-repeat`
+            ? '#ffffff'
             : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
           boxShadow: isOutsideDragged ? '0 0 15px rgba(251, 140, 0, 0.5), inset 0 0 20px rgba(251, 140, 0, 0.2)' : 'inset 0 -18px 0 rgba(32, 108, 43, 0.13)',
           touchAction: 'none',
           transition: 'all 0.2s ease',
         }}
       >
+        {part.sceneImageUrl ? (
+          <img 
+            src={part.sceneImageUrl} 
+            alt="Scene"
+            draggable={false}
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        ) : null}
         {isOutsideDragged ? (
           <div
             style={{
