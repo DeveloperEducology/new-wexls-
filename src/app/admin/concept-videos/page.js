@@ -58,6 +58,8 @@ const DIVISION_TEMPLATES = [
 ];
 
 export default function ConceptVideoGeneratorPage() {
+  const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'extractor'
+
   const [script, setScript] = useState('');
   const [prompt, setPrompt] = useState('');
   const [voice, setVoice] = useState('gemini:Puck');
@@ -73,6 +75,19 @@ export default function ConceptVideoGeneratorPage() {
   const [progressLog, setProgressLog] = useState([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // YouTube-to-GIF Extractor states
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [gifStartTime, setGifStartTime] = useState('00:00:00');
+  const [gifDuration, setGifDuration] = useState(3);
+  const [gifName, setGifName] = useState('');
+  const [gifStatus, setGifStatus] = useState('idle'); // 'idle' | 'extracting' | 'completed' | 'error'
+  const [gifProgressLog, setGifProgressLog] = useState([]);
+  const [extractedGifUrl, setExtractedGifUrl] = useState('');
+  const [extractedGifData, setExtractedGifData] = useState(null);
+  const [gifErrorMsg, setGifErrorMsg] = useState('');
+  const [recentStickers, setRecentStickers] = useState([]);
+  const [loadingStickers, setLoadingStickers] = useState(false);
 
   // Asset Library
   const [libraryVideos, setLibraryVideos] = useState([]);
@@ -95,8 +110,25 @@ export default function ConceptVideoGeneratorPage() {
     }
   };
 
+  // Load recently extracted stickers
+  const fetchRecentStickers = async () => {
+    setLoadingStickers(true);
+    try {
+      const res = await fetch('/api/admin/list-images?prefix=images/stickers');
+      const data = await res.json();
+      if (data.images) {
+        setRecentStickers(data.images);
+      }
+    } catch (err) {
+      console.error('Failed to load recent stickers:', err);
+    } finally {
+      setLoadingStickers(false);
+    }
+  };
+
   useEffect(() => {
     fetchLibrary();
+    fetchRecentStickers();
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
@@ -104,6 +136,56 @@ export default function ConceptVideoGeneratorPage() {
 
   const addLog = (message) => {
     setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+  };
+
+  const addGifLog = (message) => {
+    setGifProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+  };
+
+  const handleExtractGif = async () => {
+    if (!youtubeUrl.trim()) {
+      alert('Please enter a YouTube video URL.');
+      return;
+    }
+
+    setGifStatus('extracting');
+    setExtractedGifUrl('');
+    setExtractedGifData(null);
+    setGifErrorMsg('');
+    setGifProgressLog([]);
+    addGifLog('Initializing YouTube extraction job...');
+
+    try {
+      addGifLog('Step 1: Contacting server to fetch metadata and start download...');
+      const res = await fetch('/api/admin/video/youtube-to-gif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          youtubeUrl,
+          startTime: gifStartTime,
+          duration: gifDuration,
+          name: gifName
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed to extract GIF sticker.');
+
+      addGifLog(`Success! GIF generated and uploaded to Cloudflare R2.`);
+      addGifLog(`File size: ${(data.sizeBytes / 1024).toFixed(1)} KB`);
+      addGifLog(`Dimensions: ${data.dimensions.width}x${data.dimensions.height} (Aspect Ratio: ${data.dimensions.aspectRatio})`);
+      addGifLog(`Asset Key: ${data.key}`);
+
+      setExtractedGifUrl(data.url);
+      setExtractedGifData(data);
+      setGifStatus('completed');
+      fetchRecentStickers(); // Refresh gallery
+    } catch (err) {
+      setGifErrorMsg(err.message);
+      setGifStatus('error');
+      addGifLog(`Error: ${err.message}`);
+    }
   };
 
   // Populate from template
@@ -258,12 +340,56 @@ export default function ConceptVideoGeneratorPage() {
         </Link>
       </header>
 
-      {/* Main Grid Layout */}
+      {/* Tab Switcher */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: 24,
+        display: 'flex',
+        gap: 12,
+        marginBottom: 24,
+        borderBottom: '1px solid #1e293b',
+        paddingBottom: 12
       }}>
+        <button
+          onClick={() => setActiveTab('generator')}
+          style={{
+            padding: '10px 20px',
+            borderRadius: 8,
+            background: activeTab === 'generator' ? 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)' : '#1e293b',
+            color: activeTab === 'generator' ? '#fff' : '#cbd5e1',
+            border: activeTab === 'generator' ? 'none' : '1px solid #334155',
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'generator' ? '0 4px 12px rgba(56, 189, 248, 0.25)' : 'none'
+          }}
+        >
+          🎬 Concept Video Generator
+        </button>
+        <button
+          onClick={() => setActiveTab('extractor')}
+          style={{
+            padding: '10px 20px',
+            borderRadius: 8,
+            background: activeTab === 'extractor' ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : '#1e293b',
+            color: activeTab === 'extractor' ? '#fff' : '#cbd5e1',
+            border: activeTab === 'extractor' ? 'none' : '1px solid #334155',
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'extractor' ? '0 4px 12px rgba(168, 85, 247, 0.25)' : 'none'
+          }}
+        >
+          🖼️ YouTube to GIF Sticker Extractor
+        </button>
+      </div>
+
+      {activeTab === 'generator' && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 24,
+        }}>
         
         {/* Left Panel: Creator Control Panel */}
         <div style={{
@@ -774,8 +900,469 @@ export default function ConceptVideoGeneratorPage() {
             </div>
           )}
         </div>
-        
       </div>
+      )}
+
+      {activeTab === 'extractor' && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 24,
+        }}>
+          {/* Left Panel: Extractor Control Panel */}
+          <div style={{
+            background: '#1e293b',
+            borderRadius: 16,
+            padding: 20,
+            border: '1px solid #334155',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16
+          }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#ec4899' }}>1. YouTube Input</h2>
+
+            {/* YouTube URL input */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>
+                YOUTUBE VIDEO URL
+              </label>
+              <input
+                type="text"
+                value={youtubeUrl}
+                onChange={e => setYoutubeUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                style={{
+                  width: '100%',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: 8,
+                  padding: 10,
+                  color: '#fff',
+                  fontSize: 13,
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* Start time */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>
+                START TIME (HH:MM:SS or Seconds)
+              </label>
+              <input
+                type="text"
+                value={gifStartTime}
+                onChange={e => setGifStartTime(e.target.value)}
+                placeholder="e.g. 00:00:43 or 43"
+                style={{
+                  width: '100%',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: 8,
+                  padding: 10,
+                  color: '#fff',
+                  fontSize: 13,
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* Duration slider */}
+            <div>
+              <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>
+                <span>DURATION (SECONDS)</span>
+                <span style={{ color: '#ec4899' }}>{gifDuration}s</span>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={gifDuration}
+                onChange={e => setGifDuration(parseInt(e.target.value))}
+                style={{
+                  width: '100%',
+                  accentColor: '#ec4899',
+                  cursor: 'pointer'
+                }}
+              />
+              <span style={{ fontSize: 10, color: '#64748b' }}>Capped at 10 seconds to keep sizes low and loops clean.</span>
+            </div>
+
+            {/* Sticker name override */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>
+                STICKER NAME (OPTIONAL)
+              </label>
+              <input
+                type="text"
+                value={gifName}
+                onChange={e => setGifName(e.target.value)}
+                placeholder="Defaults to video title"
+                style={{
+                  width: '100%',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: 8,
+                  padding: 10,
+                  color: '#fff',
+                  fontSize: 13,
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* Button */}
+            <button
+              type="button"
+              onClick={handleExtractGif}
+              disabled={gifStatus === 'extracting'}
+              style={{
+                width: '100%',
+                padding: '12px 20px',
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 700,
+                border: 'none',
+                cursor: gifStatus === 'extracting' ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)',
+                transition: 'all 0.2s',
+                marginTop: 8
+              }}
+              onMouseEnter={e => { if (gifStatus !== 'extracting') e.currentTarget.style.opacity = '0.9'; }}
+              onMouseLeave={e => { if (gifStatus !== 'extracting') e.currentTarget.style.opacity = '1'; }}
+            >
+              {gifStatus === 'extracting' ? '⚡ EXTRACTING STICKER...' : '🖼️ EXTRACT LOOPING GIF'}
+            </button>
+          </div>
+
+          {/* Center Panel: Output & Preview */}
+          <div style={{
+            background: '#1e293b',
+            borderRadius: 16,
+            padding: 20,
+            border: '1px solid #334155',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16
+          }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#ec4899' }}>2. Output & Preview</h2>
+
+            {/* Active Extraction screen */}
+            {gifStatus === 'extracting' && (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                background: 'rgba(15, 23, 42, 0.4)',
+                borderRadius: 12,
+                padding: 16,
+                border: '1px solid #334155'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 24, animation: 'spin 2s linear infinite' }}>⏳</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Extracting Clip</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>Running yt-dlp and ffmpeg... This will take ~10 seconds.</p>
+                  </div>
+                </div>
+
+                {/* Term log */}
+                <div style={{
+                  flex: 1,
+                  background: '#090d16',
+                  borderRadius: 8,
+                  padding: 10,
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: 10,
+                  color: '#e879f9',
+                  overflowY: 'auto',
+                  maxHeight: 250
+                }}>
+                  {gifProgressLog.map((log, i) => (
+                    <div key={i} style={{ marginBottom: 4 }}>{log}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completed Preview */}
+            {gifStatus === 'completed' && extractedGifUrl && (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12
+              }}>
+                <div style={{
+                  background: '#0f172a',
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  border: '2px solid #ec4899',
+                  boxShadow: '0 10px 30px rgba(236, 72, 153, 0.15)',
+                  minHeight: 200,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto',
+                  padding: 12
+                }}>
+                  <img
+                    src={extractedGifUrl}
+                    alt="Extracted Sticker"
+                    style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'contain' }}
+                  />
+                </div>
+
+                {/* Details list */}
+                {extractedGifData && (
+                  <div style={{
+                    background: '#0f172a',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    color: '#94a3b8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4
+                  }}>
+                    <div><strong style={{ color: '#cbd5e1' }}>Name:</strong> {extractedGifData.name}</div>
+                    <div><strong style={{ color: '#cbd5e1' }}>Dimensions:</strong> {extractedGifData.dimensions.width}x{extractedGifData.dimensions.height}</div>
+                    <div><strong style={{ color: '#cbd5e1' }}>Size:</strong> {(extractedGifData.sizeBytes / 1024).toFixed(1)} KB</div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(extractedGifUrl);
+                      alert('CDN Sticker GIF URL copied to clipboard!');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      background: '#ec4899',
+                      color: '#fff',
+                      border: 'none',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔗 Copy CDN Link
+                  </button>
+                  <a
+                    href={extractedGifUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      background: '#334155',
+                      color: '#fff',
+                      border: 'none',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    👁️ Open GIF
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Idle screen */}
+            {gifStatus === 'idle' && (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(15, 23, 42, 0.4)',
+                borderRadius: 12,
+                padding: 24,
+                border: '1px dashed #334155',
+                color: '#64748b',
+                textAlign: 'center'
+              }}>
+                <span style={{ fontSize: 32, marginBottom: 8 }}>🖼️</span>
+                <p style={{ margin: 0, fontSize: 13 }}>Enter YouTube details on the left and click extract to view your looping GIF sticker preview.</p>
+              </div>
+            )}
+
+            {/* Error screen */}
+            {gifStatus === 'error' && (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: 12,
+                padding: 16,
+                border: '1px solid #ef4444',
+                color: '#fca5a5'
+              }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#ef4444' }}>Extraction Failed</h3>
+                <p style={{ margin: '4px 0', fontSize: 12, lineHeight: 1.4 }}>{gifErrorMsg}</p>
+                <button
+                  type="button"
+                  onClick={() => setGifStatus('idle')}
+                  style={{
+                    background: '#334155',
+                    border: 'none',
+                    borderRadius: 6,
+                    color: '#fff',
+                    padding: '6px 12px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: 12,
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  Reset Extractor
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Right Panel: Stickers Gallery */}
+          <div style={{
+            background: '#1e293b',
+            borderRadius: 16,
+            padding: 20,
+            border: '1px solid #334155',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16
+          }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#a855f7' }}>3. Stickers Gallery</h2>
+
+            {loadingStickers ? (
+              <div style={{ color: '#64748b', fontSize: 12 }}>Loading gallery...</div>
+            ) : recentStickers.length === 0 ? (
+              <div style={{ color: '#64748b', fontSize: 12 }}>No extracted stickers found in R2.</div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                maxHeight: '75vh',
+                overflowY: 'auto'
+              }}>
+                {recentStickers.map((sticker) => (
+                  <div
+                    key={sticker.key}
+                    style={{
+                      background: '#0f172a',
+                      borderRadius: 10,
+                      padding: 10,
+                      border: '1px solid #334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div style={{
+                      width: 50,
+                      height: 50,
+                      background: '#1e293b',
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      border: '1px solid #334155'
+                    }}>
+                      <img
+                        src={sticker.url}
+                        alt="sticker thumbnail"
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                      />
+                    </div>
+
+                    {/* Metadata details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#f8fafc',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {sticker.linguistics?.singular || sticker.key.split('/').pop().replace(/^[0-9]+-/, '').replace(/\.gif$/, '')}
+                      </div>
+                      <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>
+                        {sticker.dimensions?.width}x{sticker.dimensions?.height} • {sticker.size ? `${(sticker.size / 1024).toFixed(1)} KB` : 'N/A'}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExtractedGifUrl(sticker.url);
+                          setExtractedGifData({
+                            name: sticker.linguistics?.singular || sticker.key.split('/').pop().replace(/^[0-9]+-/, '').replace(/\.gif$/, ''),
+                            dimensions: sticker.dimensions || { width: 300, height: 300 },
+                            sizeBytes: sticker.size || 0,
+                            key: sticker.key
+                          });
+                          setGifStatus('completed');
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#334155',
+                          color: '#e2e8f0',
+                          border: 'none',
+                          borderRadius: 4,
+                          fontSize: 9,
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        👁️ Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(sticker.url);
+                          alert('Sticker CDN URL copied!');
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#1e293b',
+                          color: '#cbd5e1',
+                          border: '1px solid #334155',
+                          borderRadius: 4,
+                          fontSize: 9,
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🔗 Link
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Spinner animation definition */}
       <style jsx global>{`
