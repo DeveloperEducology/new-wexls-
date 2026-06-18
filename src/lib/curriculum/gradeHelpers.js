@@ -226,9 +226,22 @@ export function buildGradeCurriculum(topics, activeSubject) {
     });
   });
 
-  // Convert the inner Maps back to Arrays
+  // Convert the inner Maps back to Arrays and deduplicate skills
   const formattedGrades = Array.from(gradeMap.entries()).map(([grade, topicsMap]) => {
-    return [grade, Array.from(topicsMap.values())];
+    const topicsList = Array.from(topicsMap.values()).map(topic => {
+      const seen = new Set();
+      const uniqueSkills = topic.skills.filter(s => {
+        const skillId = s[2];
+        if (seen.has(skillId)) return false;
+        seen.add(skillId);
+        return true;
+      });
+      return {
+        ...topic,
+        skills: uniqueSkills
+      };
+    });
+    return [grade, topicsList];
   });
 
   // Sort grades logically

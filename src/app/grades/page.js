@@ -80,8 +80,8 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
               <section key={group.id || `${group.title}-${index}`} className="skill-column">
                 <h2>{group.title}</h2>
                 <ol>
-                  {group.skills.map(([code, name, skill]) => (
-                    <li key={skill}>
+                  {group.skills.map(([code, name, skill], idx) => (
+                    <li key={`${skill}-${idx}`}>
                       <span>{code}</span>
                       <Link href={practiceHref(selected, skill)}>{name}</Link>
                       <small aria-hidden="true"> ✎ ⊙</small>
@@ -156,8 +156,8 @@ function GradeLevelCurriculumPage({ topics, activeSubject }) {
                          <div key={topic.id} className="topic-block" style={{'--theme-color': topic.color}}>
                            <h3 className="topic-subheading">{topic.title}</h3>
                            <div className="skill-pills">
-                             {topic.skills.map(([code, name, skill]) => (
-                               <Link key={skill} href={practiceHref(topic, skill)} className="skill-pill">
+                             {topic.skills.map(([code, name, skill], idx) => (
+                               <Link key={`${skill}-${idx}`} href={practiceHref(topic, skill)} className="skill-pill">
                                  <span className="skill-code">{code}</span>
                                  <span className="skill-name">{name}</span>
                                </Link>
