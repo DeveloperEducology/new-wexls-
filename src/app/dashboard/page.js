@@ -33,6 +33,8 @@ export default function ShowcaseDashboard({ roleLock = null, hideSwitcher = fals
   const [newUserMobile, setNewUserMobile] = useState('');
   const [newUserSchool, setNewUserSchool] = useState('');
   const [newUserClass, setNewUserClass] = useState('');
+  const [newUserGrade, setNewUserGrade] = useState('Grade 5');
+  const [classes, setClasses] = useState([]);
   const [newUserParent, setNewUserParent] = useState('');
   const [creationStatus, setCreationStatus] = useState(null);
   const [createdUsers, setCreatedUsers] = useState([]);
@@ -52,6 +54,19 @@ export default function ShowcaseDashboard({ roleLock = null, hideSwitcher = fals
   useEffect(() => {
     if (activeRole === 'admin') {
       loadUsersList();
+      
+      async function loadClasses() {
+        try {
+          const res = await fetch('/api/admin/classes');
+          const payload = await res.json();
+          if (payload.success && payload.classes) {
+            setClasses(payload.classes);
+          }
+        } catch (err) {
+          console.error("Failed to load classes:", err);
+        }
+      }
+      loadClasses();
     }
   }, [activeRole]);
 
@@ -167,7 +182,8 @@ export default function ShowcaseDashboard({ roleLock = null, hideSwitcher = fals
           mobile: newUserMobile,
           schoolId: newUserSchool,
           classId: newUserClass,
-          parentId: newUserParent
+          parentId: newUserParent,
+          grade: newUserGrade
         })
       });
       const resData = await res.json();
@@ -181,6 +197,7 @@ export default function ShowcaseDashboard({ roleLock = null, hideSwitcher = fals
         setNewUserMobile('');
         setNewUserSchool('');
         setNewUserClass('');
+        setNewUserGrade('Grade 5');
         setNewUserParent('');
         loadUsersList();
         loadStats(activeRole, activeGrade);
@@ -919,6 +936,56 @@ export default function ShowcaseDashboard({ roleLock = null, hideSwitcher = fals
                             required
                             style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', borderRadius: '8px', outline: 'none', fontWeight: 600 }}
                           />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Class</label>
+                          <select
+                            value={newUserClass}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setNewUserClass(val);
+                              if (val) {
+                                const cls = classes.find(c => c._id === val || c.classCode === val);
+                                if (cls) {
+                                  setNewUserSchool(cls.schoolId || '');
+                                  if (cls.grade) {
+                                    setNewUserGrade(cls.grade);
+                                  }
+                                }
+                              } else {
+                                setNewUserSchool('');
+                              }
+                            }}
+                            style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', borderRadius: '8px', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            <option value="">No Class (Global)</option>
+                            {classes.map(cls => (
+                              <option key={cls._id || cls.classCode} value={cls._id || cls.classCode}>
+                                {cls.classCode} ({cls.grade})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Grade</label>
+                          <select
+                            value={newUserGrade}
+                            onChange={(e) => setNewUserGrade(e.target.value)}
+                            style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', borderRadius: '8px', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            <option value="LKG">LKG</option>
+                            <option value="UKG">UKG</option>
+                            <option value="Grade 1">Grade 1</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                          </select>
                         </div>
                       </>
                     )}

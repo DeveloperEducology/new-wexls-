@@ -8,7 +8,7 @@ export async function POST(request) {
     authorizeApi(request, ['admin']);
 
     const body = await request.json();
-    const { role, name, email, password, username, pin, mobile, schoolId, classId, parentId } = body;
+    const { role, name, email, password, username, pin, mobile, schoolId, classId, parentId, grade } = body;
 
     if (!role || !name) {
       return NextResponse.json({ success: false, error: "Missing required fields: role and name" }, { status: 400 });
@@ -56,6 +56,7 @@ export async function POST(request) {
     if (hashedPin) newUserDoc.pin = hashedPin;
     if (schoolId) newUserDoc.schoolId = schoolId;
     if (classId) newUserDoc.classId = classId;
+    if (grade) newUserDoc.grade = grade;
 
     const userResult = await usersColl.insertOne(newUserDoc);
 
@@ -72,7 +73,7 @@ export async function POST(request) {
         streakDays: 0,
         totalXp: 0,
         avatar: '🐱',
-        grade: 'Grade 5'
+        grade: grade || 'Grade 5'
       });
 
       if (parentId) {
