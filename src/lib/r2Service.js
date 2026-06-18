@@ -219,4 +219,36 @@ export async function deleteR2Images(keys) {
   }
 }
 
+/**
+ * Uploads a video buffer to Cloudflare R2
+ * @param {Buffer} buffer - Raw video buffer
+ * @param {string} key - File path key inside the bucket (e.g. 'videos/backgrounds/forest.mp4')
+ * @param {string} [contentType='video/mp4'] - MIME type of the video
+ * @returns {Promise<string|null>} The public URL to the uploaded asset
+ */
+export async function uploadVideoToR2(buffer, key, contentType = 'video/mp4') {
+  if (!isR2Configured()) {
+    console.warn('Cloudflare R2 is not fully configured. Skipping video upload.');
+    return null;
+  }
+
+  const bucketName = r2BucketName;
+  const basePublicUrl = r2PublicUrl.replace(/\/$/, '');
+
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    });
+
+    await s3Client.send(command);
+    return `${basePublicUrl}/${key}`;
+  } catch (error) {
+    console.error('Failed to upload video to Cloudflare R2:', error);
+    throw error;
+  }
+}
+
 
