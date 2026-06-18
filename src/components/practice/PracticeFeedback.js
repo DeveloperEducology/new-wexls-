@@ -253,6 +253,149 @@ function renderInteractiveSolution(question) {
   const isOrdering = layoutMode === 'ordering' || type === 'ordering';
   const isMatching = layoutMode === 'matching' || type === 'matching';
   const isWordCompletion = layoutMode === 'word_completion' || layoutMode === 'complete_words';
+  const isInteractiveStickers = interaction === 'interactive_stickers' || type === 'interactive_stickers';
+
+  if (isInteractiveStickers) {
+    const partStickersObj = question.parts?.find(p => p.type === 'interactive_stickers') || {};
+    const categories = question.categories || partStickersObj.categories || [];
+    const stickers = question.stickers || partStickersObj.stickers || [];
+    const sceneImageUrl = partStickersObj.sceneImageUrl || '';
+    
+    // Automatically assign minX and maxX boundaries if missing
+    const catCount = categories.length;
+    const activeCategories = categories.map((cat, index) => {
+      const minX = Math.round((index / catCount) * 100);
+      const maxX = Math.round(((index + 1) / catCount) * 100);
+      return {
+        ...cat,
+        minX: cat.minX !== undefined ? cat.minX : minX,
+        maxX: cat.maxX !== undefined ? cat.maxX : maxX
+      };
+    });
+
+    const correctPlacements = [];
+    activeCategories.forEach((cat) => {
+      const catStickers = stickers.filter(s => s.category === cat.id);
+      const colWidth = cat.maxX - cat.minX;
+      catStickers.forEach((sticker, index) => {
+        const xOffset = catStickers.length === 1 
+          ? 0.5 
+          : (index % 2 === 0 ? 0.35 : 0.65);
+        const yOffset = catStickers.length <= 2 
+          ? (index === 0 ? 0.45 : 0.7) 
+          : (0.3 + (index / catStickers.length) * 0.45);
+        
+        const x = cat.minX + colWidth * xOffset;
+        const y = yOffset * 100;
+        correctPlacements.push({
+          id: sticker.id,
+          x,
+          y,
+          sticker
+        });
+      });
+    });
+
+    return (
+      <div style={{ marginTop: 14, marginBottom: 14 }}>
+        <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Correct Layout
+        </h4>
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            aspectRatio: '16 / 7',
+            overflow: 'hidden',
+            border: '2px solid #22c55e',
+            borderRadius: '16px',
+            background: sceneImageUrl
+              ? '#ffffff'
+              : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
+            boxShadow: '0 4px 12px rgba(22, 163, 74, 0.08)',
+          }}
+        >
+          {sceneImageUrl ? (
+            <img 
+              src={sceneImageUrl} 
+              alt="Scene" 
+              draggable={false} 
+              style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', userSelect: 'none' }} 
+            />
+          ) : null}
+
+          {activeCategories.map((cat, index) => {
+            const width = cat.maxX - cat.minX;
+            const left = cat.minX;
+            return (
+              <div
+                key={cat.id}
+                style={{
+                  position: 'absolute',
+                  left: `${left}%`,
+                  top: 0,
+                  width: `${width}%`,
+                  height: '100%',
+                  borderRight: index < activeCategories.length - 1 ? '3px dashed rgba(255, 255, 255, 0.55)' : 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '16px 8px',
+                  pointerEvents: 'none',
+                  zIndex: 2
+                }}
+              >
+                <div
+                  style={{
+                    color: '#0f172a',
+                    fontSize: 'clamp(12px, 2vw, 20px)',
+                    fontWeight: '800',
+                    textShadow: '0 2px 4px rgba(255, 255, 255, 0.8), 0 -1px 1px rgba(255, 255, 255, 0.8)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {cat.label}
+                </div>
+              </div>
+            );
+          })}
+
+          {correctPlacements.map((placement) => {
+            const sticker = placement.sticker;
+            const imgUrl = sticker.imageUrl || '';
+            const content = sticker.content || '🦋';
+            const sWidth = sticker.widthPercent || sticker.width || partStickersObj.commonStickerWidth || 10;
+            const sHeight = sticker.heightPercent || sticker.height || partStickersObj.commonStickerHeight || 15;
+
+            return (
+              <div
+                key={placement.id}
+                style={{
+                  position: 'absolute',
+                  left: `${placement.x}%`,
+                  top: `${placement.y}%`,
+                  width: `${sWidth}%`,
+                  height: `${sHeight}%`,
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {imgUrl ? (
+                  <img src={imgUrl} alt={sticker.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ fontSize: 'clamp(24px, 4vw, 44px)', lineHeight: 1 }}>{content}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   if (isWordCompletion) {
     const wordCards = question.wordCards || question.parts?.find(part => part?.layoutMode === 'word_completion' || part?.layoutMode === 'complete_words')?.wordCards || [];
@@ -703,32 +846,37 @@ export default function PracticeFeedback({
   let correctLabel = '';
   let correctImageUrl = '';
   const isMultiSelect = question?.interaction === 'multi_select' || question?.multiSelect === true;
+  const isInteractiveStickers = question?.interaction === 'interactive_stickers' || question?.type === 'interactive_stickers';
 
   if (question) {
-    let indices = [];
-    if (isMultiSelect && Array.isArray(question.correctAnswerIndices)) {
-      indices = question.correctAnswerIndices;
-    } else if (isMultiSelect && Array.isArray(question.answer)) {
-      indices = question.answer;
-    } else if (question.correctAnswerIndex !== undefined) {
-      indices = [question.correctAnswerIndex];
-    }
+    if (isInteractiveStickers) {
+      correctLabel = 'Correct sorting';
+    } else {
+      let indices = [];
+      if (isMultiSelect && Array.isArray(question.correctAnswerIndices)) {
+        indices = question.correctAnswerIndices;
+      } else if (isMultiSelect && Array.isArray(question.answer)) {
+        indices = question.answer;
+      } else if (question.correctAnswerIndex !== undefined) {
+        indices = [question.correctAnswerIndex];
+      }
 
-    if (indices.length > 0) {
-      const labels = [];
-      indices.forEach((idx) => {
-        if (Array.isArray(question.options) && question.options[idx]) {
-          const opt = question.options[idx];
-          const lbl = typeof opt === 'object' ? (opt.label || opt.text || '') : String(opt);
-          if (lbl) labels.push(lbl);
-        }
-      });
-      correctLabel = labels.join(', ');
-      
-      if (indices.length === 1) {
-        if (Array.isArray(question.hotspots) && question.hotspots[indices[0]]) {
-          const hs = question.hotspots[indices[0]];
-          correctImageUrl = hs.imageUrl || '';
+      if (indices.length > 0) {
+        const labels = [];
+        indices.forEach((idx) => {
+          if (Array.isArray(question.options) && question.options[idx]) {
+            const opt = question.options[idx];
+            const lbl = typeof opt === 'object' ? (opt.label || opt.text || '') : String(opt);
+            if (lbl) labels.push(lbl);
+          }
+        });
+        correctLabel = labels.join(', ');
+        
+        if (indices.length === 1) {
+          if (Array.isArray(question.hotspots) && question.hotspots[indices[0]]) {
+            const hs = question.hotspots[indices[0]];
+            correctImageUrl = hs.imageUrl || '';
+          }
         }
       }
     }
@@ -761,7 +909,10 @@ export default function PracticeFeedback({
   if (!question) return null;
 
   const solutionSections = Array.isArray(question?.solution?.sections)
-    ? question.solution.sections
+    ? question.solution.sections.filter(s => {
+        const secText = typeof s === 'string' ? s : (s?.content || s?.text || '');
+        return cleanText(secText) !== cleanExp;
+      })
     : [];
 
   if (isPreK) {

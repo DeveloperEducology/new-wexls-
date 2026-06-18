@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from 'react';
 import styles from './admin.module.css';
 import QuestionRenderer from '@/components/practice/QuestionRenderer';
 import { isAnswerCorrect } from '@/lib/practice/answerValidation';
@@ -1698,6 +1698,17 @@ export default function AdminConsolePage() {
   const [shadowStickers, setShadowStickers] = useState([]);
   const [shadowTargets, setShadowTargets] = useState([]);
   const [shadowSceneImageUrl, setShadowSceneImageUrl] = useState('');
+
+  // Column Sort states
+  const [columnSortStickers, setColumnSortStickers] = useState([]);
+  const [columnSortCategories, setColumnSortCategories] = useState([]);
+  const [columnSortSceneImageUrl, setColumnSortSceneImageUrl] = useState('');
+  const [selectedColumnSortStickerId, setSelectedColumnSortStickerId] = useState(null);
+  const [columnSortStickerDragging, setColumnSortStickerDragging] = useState(null); // {id, offsetX, offsetY}
+  const [commonStickerWidth, setCommonStickerWidth] = useState(18);
+  const [commonStickerHeight, setCommonStickerHeight] = useState(18);
+  const [showColumnSortGrid, setShowColumnSortGrid] = useState(false);
+  const [snapColumnSortGrid, setSnapColumnSortGrid] = useState(false);
   const [selectedShadowTargetId, setSelectedShadowTargetId] = useState(null);
   const [shadowTargetDragging, setShadowTargetDragging] = useState(null); // {id, offsetX, offsetY}
   // Preview Answer checking state
@@ -1983,6 +1994,12 @@ export default function AdminConsolePage() {
       setImgPickerHotspotId(null);
       setImgPickerOpen(false);
       setIsDirty(true);
+    } else if (typeof imgPickerHotspotId === 'string' && imgPickerHotspotId.startsWith('column_sort_sticker_')) {
+      const stickerId = imgPickerHotspotId.replace('column_sort_sticker_', '');
+      setColumnSortStickers(prev => prev.map(s => String(s.id) === stickerId ? { ...s, imageUrl: url } : s));
+      setImgPickerHotspotId(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
     } else if (imgPickerHotspotId !== null) {
       const updated = hotspots.map(h => {
         if (h.id === imgPickerHotspotId) {
@@ -2009,6 +2026,12 @@ export default function AdminConsolePage() {
     } else if (imgPickerPartIdx === -99) {
       // Special sentinel: shadow match scene / background image
       setShadowSceneImageUrl(url);
+      setImgPickerPartIdx(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
+    } else if (imgPickerPartIdx === -100) {
+      // Special sentinel: column sort scene / background image
+      setColumnSortSceneImageUrl(url);
       setImgPickerPartIdx(null);
       setImgPickerOpen(false);
       setIsDirty(true);
@@ -4562,6 +4585,15 @@ export default function AdminConsolePage() {
     setShadowTargets([]);
     setShadowSceneImageUrl('');
     setSelectedShadowTargetId(null);
+    setColumnSortStickers([]);
+    setColumnSortCategories([]);
+    setColumnSortSceneImageUrl('');
+    setSelectedColumnSortStickerId(null);
+    setColumnSortStickerDragging(null);
+    setCommonStickerWidth(18);
+    setCommonStickerHeight(18);
+    setShowColumnSortGrid(false);
+    setSnapColumnSortGrid(false);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -4633,6 +4665,15 @@ export default function AdminConsolePage() {
     setShadowTargets([]);
     setShadowSceneImageUrl('');
     setSelectedShadowTargetId(null);
+    setColumnSortStickers([]);
+    setColumnSortCategories([]);
+    setColumnSortSceneImageUrl('');
+    setSelectedColumnSortStickerId(null);
+    setColumnSortStickerDragging(null);
+    setCommonStickerWidth(18);
+    setCommonStickerHeight(18);
+    setShowColumnSortGrid(false);
+    setSnapColumnSortGrid(false);
 
     setPreviewAnswer(null);
     setPreviewCheckResult(null);
@@ -4957,6 +4998,42 @@ export default function AdminConsolePage() {
       setShadowStickers([]);
       setShadowTargets([]);
       setShadowSceneImageUrl('');
+    }
+
+    // Load column sort data
+    const columnSortPart = q.parts?.find(p => p.type === 'interactive_stickers' && p.mode === 'column_sort');
+    if (columnSortPart) {
+      setType('column_sort');
+      setColumnSortSceneImageUrl(columnSortPart.sceneImageUrl || '');
+      setColumnSortCategories((columnSortPart.categories || []).map((c, i) => ({
+        id: c.id || `col_${i}`,
+        label: c.label || `Column ${i + 1}`,
+        minX: c.minX !== undefined ? c.minX : Math.round((i / columnSortPart.categories.length) * 100),
+        maxX: c.maxX !== undefined ? c.maxX : Math.round(((i + 1) / columnSortPart.categories.length) * 100),
+      })));
+      setColumnSortStickers((columnSortPart.stickers || []).map((s, i) => {
+        // Find saved coordinates if available
+        const savedPlacement = columnSortPart.initialPlacements?.find(p => p.id === s.id);
+        return {
+          id: s.id || `sticker_${i}`,
+          category: s.category || s.type || '',
+          name: s.name || s.label || `Sticker ${i + 1}`,
+          imageUrl: s.imageUrl || '',
+          content: s.content || '',
+          widthPercent: s.widthPercent || s.width || 18,
+          heightPercent: s.heightPercent || s.height || 18,
+          x: savedPlacement ? savedPlacement.x : undefined,
+          y: savedPlacement ? savedPlacement.y : undefined,
+        };
+      }));
+      setCommonStickerWidth(columnSortPart.commonStickerWidth !== undefined ? columnSortPart.commonStickerWidth : 18);
+      setCommonStickerHeight(columnSortPart.commonStickerHeight !== undefined ? columnSortPart.commonStickerHeight : 18);
+    } else {
+      setColumnSortSceneImageUrl('');
+      setColumnSortCategories([]);
+      setColumnSortStickers([]);
+      setCommonStickerWidth(18);
+      setCommonStickerHeight(18);
     }
 
     setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
@@ -6094,6 +6171,66 @@ export default function AdminConsolePage() {
       payload.parts = [...parts.map(p => ({ ...p })), shadowMatchPart];
       payload.metadata.layoutMode = 'shadow_match';
       payload.layoutMode = 'shadow_match';
+
+    } else if (type === 'column_sort') {
+      // Serialize column sort question
+      payload.type = 'mcq';
+      payload.interaction = 'interactive_stickers';
+      payload.correctAnswerIndex = undefined;
+      payload.answer = null;
+      payload.options = [];
+
+      const columnSortPart = {
+        type: 'interactive_stickers',
+        mode: 'column_sort',
+        sceneImageUrl: columnSortSceneImageUrl || '',
+        commonStickerWidth: Number(commonStickerWidth) || 18,
+        commonStickerHeight: Number(commonStickerHeight) || 18,
+        categories: columnSortCategories.map(c => ({
+          id: c.id,
+          label: c.label,
+          minX: Number(c.minX) !== undefined ? Number(c.minX) : 0,
+          maxX: Number(c.maxX) !== undefined ? Number(c.maxX) : 100,
+        })),
+        stickers: columnSortStickers.map(s => ({
+          id: s.id,
+          name: s.name,
+          imageUrl: s.imageUrl || undefined,
+          content: s.content || undefined,
+          category: s.category,
+          width: Number(s.widthPercent) || 18,
+          height: Number(s.heightPercent) || 18,
+        })),
+        itemLabel: 'sticker',
+      };
+
+      payload.answer = {
+        placements: columnSortStickers.map(s => ({
+          id: s.id,
+          type: s.category,
+          category: s.category
+        }))
+      };
+      payload.correctAnswer = payload.answer;
+
+      const initialCoordinates = [
+        { x: 10, y: 25 }, { x: 15, y: 65 },
+        { x: 60, y: 20 }, { x: 70, y: 60 },
+        { x: 35, y: 30 }, { x: 45, y: 70 },
+        { x: 80, y: 35 }, { x: 85, y: 75 }
+      ];
+      columnSortPart.initialPlacements = columnSortStickers.map((sticker, idx) => {
+        const coord = initialCoordinates[idx % initialCoordinates.length];
+        return {
+          id: sticker.id,
+          x: sticker.x !== undefined ? sticker.x : coord.x,
+          y: sticker.y !== undefined ? sticker.y : coord.y
+        };
+      });
+
+      payload.parts = [...parts.map(p => ({ ...p })), columnSortPart];
+      payload.metadata.layoutMode = 'column_sort';
+      payload.layoutMode = 'column_sort';
 
     } else if (type === 'mcq_hotspot') {
       const activeConfig = {
@@ -10074,6 +10211,7 @@ export default function AdminConsolePage() {
                               <option value="dynamic_pool">Dynamic Option Pool</option>
                               <option value="mcq_hotspot">Multiple Choice (Hotspot Select)</option>
                               <option value="shadow_match">Shadow Match (Sticker Drag)</option>
+                              <option value="column_sort">Column Sort (Stickers Canvas)</option>
                               <option value="fillInTheBlank">Fill-In-The-Blank (FIB)</option>
                               <option value="trueOrFalse">True / False</option>
                               <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
@@ -11985,6 +12123,682 @@ export default function AdminConsolePage() {
                                     </div>
                                   </div>
                                 )}
+                              </div>
+                            </div>
+                          )}
+
+                          {type === 'column_sort' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                              {/* Header Info */}
+                              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 16px' }}>
+                                <h4 style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', margin: '0 0 4px' }}>📊 Column Sort Builder</h4>
+                                <p style={{ fontSize: 12, color: '#075985', margin: 0 }}>
+                                  Define the columns (with their unique IDs and boundary percentages), then add stickers and assign them to the correct category column. Drag the stickers on the canvas below to set their starting positions.
+                                </p>
+                              </div>
+
+                              {/* Scene Image URL */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Scene / Background Image URL</label>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                  <input
+                                    type="text"
+                                    className={styles.formInput}
+                                    value={columnSortSceneImageUrl}
+                                    onChange={e => { setColumnSortSceneImageUrl(e.target.value); setIsDirty(true); }}
+                                    placeholder="/images/prek_landscape.webp or https://..."
+                                    style={{ flex: 1 }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className={styles.btnOutline}
+                                    onClick={() => {
+                                      setImgPickerPartIdx(-100); // sentinel for column sort scene
+                                      setImgPickerTab('gallery');
+                                      setImgPickerOpen(true);
+                                    }}
+                                    style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                                  >
+                                    🖼 Browse
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Common Sticker Size Settings */}
+                              <div className={styles.formGroup} style={{ border: '1px solid #bae6fd', borderRadius: 8, padding: 14, backgroundColor: '#f0f9ff' }}>
+                                <label className={styles.filterLabel} style={{ fontSize: 13, fontWeight: 700, margin: 0, color: '#0369a1' }}>📐 Common Sticker Size</label>
+                                <span style={{ fontSize: 11, color: '#0369a1', display: 'block', marginBottom: 8 }}>
+                                  Set standard width/height that applies to newly added stickers, and optionally force it on all existing stickers.
+                                </span>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <label style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>Width:</label>
+                                    <input
+                                      type="number"
+                                      className={styles.formInput}
+                                      value={commonStickerWidth}
+                                      min={5} max={50}
+                                      onChange={e => { setCommonStickerWidth(Number(e.target.value) || 18); setIsDirty(true); }}
+                                      style={{ width: 65, padding: '4px 8px', height: 30, fontSize: 12 }}
+                                    />
+                                    <span style={{ fontSize: 12, color: '#64748b' }}>%</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <label style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>Height:</label>
+                                    <input
+                                      type="number"
+                                      className={styles.formInput}
+                                      value={commonStickerHeight}
+                                      min={5} max={50}
+                                      onChange={e => { setCommonStickerHeight(Number(e.target.value) || 18); setIsDirty(true); }}
+                                      style={{ width: 65, padding: '4px 8px', height: 30, fontSize: 12 }}
+                                    />
+                                    <span style={{ fontSize: 12, color: '#64748b' }}>%</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className={styles.btnOutline}
+                                    onClick={() => {
+                                      setColumnSortStickers(prev => prev.map(s => ({
+                                        ...s,
+                                        widthPercent: Number(commonStickerWidth) || 18,
+                                        heightPercent: Number(commonStickerHeight) || 18
+                                      })));
+                                      setIsDirty(true);
+                                    }}
+                                    style={{ padding: '5px 12px', fontSize: 12, backgroundColor: '#ffffff', color: '#0369a1', borderColor: '#bae6fd' }}
+                                  >
+                                    ⚡ Apply to All Existing Stickers
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Visual Grid Settings */}
+                              <div className={styles.formGroup} style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: 14, backgroundColor: '#f8fafc' }}>
+                                <label className={styles.filterLabel} style={{ fontSize: 13, fontWeight: 700, margin: 0, color: '#334155' }}>🌐 Canvas Positioning Grid</label>
+                                <span style={{ fontSize: 11, color: '#64748b', display: 'block', marginBottom: 8 }}>
+                                  Enable grid lines on the preview canvas to align stickers precisely. Turn on snapping to auto-align coordinates.
+                                </span>
+                                <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginTop: 4 }}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, color: '#334155', userSelect: 'none' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={showColumnSortGrid}
+                                      onChange={e => {
+                                        setShowColumnSortGrid(e.target.checked);
+                                        if (!e.target.checked) setSnapColumnSortGrid(false);
+                                      }}
+                                    />
+                                    Show 5% Grid Lines
+                                  </label>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: showColumnSortGrid ? 'pointer' : 'not-allowed', fontWeight: 600, color: showColumnSortGrid ? '#334155' : '#94a3b8', userSelect: 'none' }}>
+                                    <input
+                                      type="checkbox"
+                                      disabled={!showColumnSortGrid}
+                                      checked={snapColumnSortGrid}
+                                      onChange={e => setSnapColumnSortGrid(e.target.checked)}
+                                    />
+                                    🧲 Snap to Grid (5%)
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Columns Manager */}
+                              <div className={styles.formGroup} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, backgroundColor: '#f8fafc' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                  <label className={styles.filterLabel} style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Category Columns</label>
+                                  <div style={{ display: 'flex', gap: 8 }}>
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => {
+                                        const count = columnSortCategories.length;
+                                        if (count === 0) return;
+                                        const equalized = columnSortCategories.map((c, i) => ({
+                                          ...c,
+                                          minX: Math.round((i / count) * 100),
+                                          maxX: Math.round(((i + 1) / count) * 100)
+                                        }));
+                                        setColumnSortCategories(equalized);
+                                        setIsDirty(true);
+                                      }}
+                                      style={{ padding: '4px 10px', fontSize: 11 }}
+                                    >
+                                      📐 Equalize Widths
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => {
+                                        const newId = `col_${columnSortCategories.length}`;
+                                        setColumnSortCategories(prev => [
+                                          ...prev,
+                                          {
+                                            id: newId,
+                                            label: `Column ${prev.length + 1}`,
+                                            minX: prev.length > 0 ? prev[prev.length - 1].maxX : 0,
+                                            maxX: 100
+                                          }
+                                        ]);
+                                        setIsDirty(true);
+                                      }}
+                                      style={{ padding: '4px 10px', fontSize: 11 }}
+                                    >
+                                      + Add Column
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {columnSortCategories.length === 0 ? (
+                                  <div style={{ fontSize: 12, color: '#64748b', textAlign: 'center', padding: '12px 0' }}>No columns defined yet. Add at least one column to start.</div>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {columnSortCategories.map((col, idx) => (
+                                      <div key={col.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1fr 1fr auto', gap: 8, alignItems: 'center', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                                        <div>
+                                          <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>ID (unique)</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={col.id}
+                                            onChange={e => {
+                                              const oldId = col.id;
+                                              const newId = e.target.value;
+                                              setColumnSortCategories(prev => prev.map(c => c.id === oldId ? { ...c, id: newId } : c));
+                                              // Update stickers using this category
+                                              setColumnSortStickers(prev => prev.map(s => s.category === oldId ? { ...s, category: newId } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ fontSize: 11, padding: '4px 8px', height: 28 }}
+                                          />
+                                        </div>
+                                        <div>
+                                          <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>Display Label</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={col.label}
+                                            onChange={e => {
+                                              setColumnSortCategories(prev => prev.map(c => c.id === col.id ? { ...c, label: e.target.value } : c));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ fontSize: 11, padding: '4px 8px', height: 28 }}
+                                          />
+                                        </div>
+                                        <div>
+                                          <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>Min X (%)</label>
+                                          <input
+                                            type="number"
+                                            className={styles.formInput}
+                                            value={col.minX}
+                                            min={0} max={100}
+                                            onChange={e => {
+                                              setColumnSortCategories(prev => prev.map(c => c.id === col.id ? { ...c, minX: Number(e.target.value) || 0 } : c));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ fontSize: 11, padding: '4px 8px', height: 28 }}
+                                          />
+                                        </div>
+                                        <div>
+                                          <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>Max X (%)</label>
+                                          <input
+                                            type="number"
+                                            className={styles.formInput}
+                                            value={col.maxX}
+                                            min={0} max={100}
+                                            onChange={e => {
+                                              setColumnSortCategories(prev => prev.map(c => c.id === col.id ? { ...c, maxX: Number(e.target.value) || 0 } : c));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ fontSize: 11, padding: '4px 8px', height: 28 }}
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                          onClick={() => {
+                                            setColumnSortCategories(prev => prev.filter(c => c.id !== col.id));
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ alignSelf: 'end', height: 28, padding: '0 8px', fontSize: 11 }}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Sticker List */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Stickers (draggable items)</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                                  {columnSortStickers.map((sticker, idx) => (
+                                    <div key={sticker.id} style={{
+                                      border: '1.5px solid #e2e8f0',
+                                      borderRadius: 8,
+                                      padding: '12px 14px',
+                                      background: '#f8fafc',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: 10
+                                    }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>Sticker #{idx + 1}</span>
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                          onClick={() => {
+                                            setColumnSortStickers(prev => prev.filter(s => s.id !== sticker.id));
+                                            if (selectedColumnSortStickerId === sticker.id) {
+                                              setSelectedColumnSortStickerId(null);
+                                            }
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ padding: '3px 10px', fontSize: 11 }}
+                                        >
+                                          × Remove
+                                        </button>
+                                      </div>
+
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: 10 }}>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>ID (unique name)</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={sticker.id}
+                                            onChange={e => {
+                                              const newStickerId = e.target.value;
+                                              const oldStickerId = sticker.id;
+                                              setColumnSortStickers(prev => prev.map(s => s.id === oldStickerId ? { ...s, id: newStickerId } : s));
+                                              if (selectedColumnSortStickerId === oldStickerId) {
+                                                setSelectedColumnSortStickerId(newStickerId);
+                                              }
+                                              setIsDirty(true);
+                                            }}
+                                            placeholder="e.g. apple"
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Display Name</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={sticker.name}
+                                            onChange={e => {
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, name: e.target.value } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            placeholder="e.g. Apple"
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Correct Column</label>
+                                          <select
+                                            className={styles.formSelect}
+                                            value={sticker.category || ''}
+                                            onChange={e => {
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, category: e.target.value } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ marginTop: 4, fontSize: 12, height: 32 }}
+                                          >
+                                            <option value="">— Select Column —</option>
+                                            {columnSortCategories.map(c => (
+                                              <option key={c.id} value={c.id}>{c.label || c.id}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      {/* Emoji Content or Image picker */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Emoji Content (fallback)</label>
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={sticker.content || ''}
+                                            onChange={e => {
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, content: e.target.value } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            placeholder="e.g. 🍎"
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Image URL</label>
+                                          <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                                            {sticker.imageUrl && (
+                                              <img src={sticker.imageUrl} alt={sticker.name} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }} />
+                                            )}
+                                            <input
+                                              type="text"
+                                              className={styles.formInput}
+                                              value={sticker.imageUrl || ''}
+                                              onChange={e => {
+                                                setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, imageUrl: e.target.value } : s));
+                                                setIsDirty(true);
+                                              }}
+                                              placeholder="/images/apple.png"
+                                              style={{ flex: 1, fontSize: 12, margin: 0 }}
+                                            />
+                                            <button
+                                              type="button"
+                                              className={styles.btnOutline}
+                                              onClick={() => {
+                                                setImgPickerHotspotId(`column_sort_sticker_${sticker.id}`);
+                                                setImgPickerTab('gallery');
+                                                setImgPickerOpen(true);
+                                              }}
+                                              style={{ padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap' }}
+                                            >
+                                              🔍
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Width / Height dimensions */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Width (%)</label>
+                                          <input
+                                            type="number"
+                                            className={styles.formInput}
+                                            value={sticker.widthPercent || 18}
+                                            min={5} max={50}
+                                            onChange={e => {
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, widthPercent: Number(e.target.value) || 18 } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 11 }}>Height (%)</label>
+                                          <input
+                                            type="number"
+                                            className={styles.formInput}
+                                            value={sticker.heightPercent || 18}
+                                            min={5} max={50}
+                                            onChange={e => {
+                                              setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, heightPercent: Number(e.target.value) || 18 } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ marginTop: 4, fontSize: 12 }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => {
+                                    const nextId = `sticker_${columnSortStickers.length}`;
+                                    setColumnSortStickers(prev => [
+                                      ...prev,
+                                      {
+                                        id: nextId,
+                                        name: `Sticker ${prev.length + 1}`,
+                                        category: columnSortCategories[0]?.id || '',
+                                        imageUrl: '',
+                                        content: '🏷️',
+                                        widthPercent: Number(commonStickerWidth) || 18,
+                                        heightPercent: Number(commonStickerHeight) || 18,
+                                        x: 10 + (prev.length * 15) % 70,
+                                        y: 30 + (prev.length * 10) % 50
+                                      }
+                                    ]);
+                                    setIsDirty(true);
+                                  }}
+                                  style={{ marginTop: 10, padding: '6px 14px', alignSelf: 'flex-start' }}
+                                >
+                                  + Add Sticker
+                                </button>
+                              </div>
+
+                              {/* Live Canvas Preview */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Drag-to-Position Canvas Preview</label>
+                                <span style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 8 }}>
+                                  Drag the stickers below directly on the canvas to set their initial/starting position. Select a sticker to edit its attributes.
+                                </span>
+
+                                <div
+                                  ref={canvasRef}
+                                  style={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    maxWidth: '800px',
+                                    aspectRatio: columnSortSceneImageUrl ? 'auto' : '16/9',
+                                    minHeight: columnSortSceneImageUrl ? 'auto' : '350px',
+                                    backgroundColor: '#f8fafc',
+                                    backgroundImage: !columnSortSceneImageUrl ? 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)' : 'none',
+                                    backgroundSize: '16px 16px',
+                                    border: '2.5px dashed #cbd5e1',
+                                    borderRadius: 12,
+                                    overflow: 'hidden',
+                                    userSelect: 'none',
+                                    margin: '0 auto',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                                  }}
+                                >
+                                  {columnSortSceneImageUrl ? (
+                                    <img
+                                      src={columnSortSceneImageUrl}
+                                      alt="Scene"
+                                      style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none', userSelect: 'none' }}
+                                    />
+                                  ) : (
+                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 14, fontWeight: 500 }}>
+                                      Enter a scene image URL above to display background
+                                    </div>
+                                  )}
+
+                                  {/* Grid Lines Overlay */}
+                                  {showColumnSortGrid && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      inset: 0,
+                                      backgroundImage: 'linear-gradient(to right, rgba(148, 163, 184, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(148, 163, 184, 0.22) 1px, transparent 1px)',
+                                      backgroundSize: '5% 5%',
+                                      pointerEvents: 'none',
+                                      zIndex: 1
+                                    }} />
+                                  )}
+
+                                  {/* Render category lanes and labels */}
+                                  {columnSortCategories.map((cat, idx) => {
+                                    const isLast = idx === columnSortCategories.length - 1;
+                                    return (
+                                      <Fragment key={cat.id}>
+                                        {/* Column Label */}
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${cat.minX}%`,
+                                          width: `${cat.maxX - cat.minX}%`,
+                                          top: '12px',
+                                          textAlign: 'center',
+                                          pointerEvents: 'none',
+                                          zIndex: 2
+                                        }}>
+                                          <span style={{
+                                            background: 'rgba(255, 255, 255, 0.9)',
+                                            backdropFilter: 'blur(4px)',
+                                            padding: '6px 12px',
+                                            borderRadius: '20px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '11px',
+                                            fontWeight: '800',
+                                            color: '#0f172a',
+                                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.06)'
+                                          }}>
+                                            {cat.label || cat.id}
+                                          </span>
+                                        </div>
+
+                                        {/* lane background highlight */}
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${cat.minX}%`,
+                                          width: `${cat.maxX - cat.minX}%`,
+                                          top: 0,
+                                          bottom: 0,
+                                          borderRight: isLast ? 'none' : '2px dashed #94a3b8',
+                                          background: idx % 2 === 0 ? 'rgba(59, 130, 246, 0.015)' : 'rgba(16, 185, 129, 0.015)',
+                                          pointerEvents: 'none',
+                                          zIndex: 1
+                                        }} />
+                                      </Fragment>
+                                    );
+                                  })}
+
+                                  {/* Render stickers */}
+                                  {columnSortStickers.map(sticker => {
+                                    const isSelected = selectedColumnSortStickerId === sticker.id;
+                                    return (
+                                      <div
+                                        key={sticker.id}
+                                        data-column-sticker="true"
+                                        title={`${sticker.name} — drag to position`}
+                                        onPointerDown={e => {
+                                          e.stopPropagation();
+                                          setSelectedColumnSortStickerId(sticker.id);
+                                          const rect = canvasRef.current?.getBoundingClientRect();
+                                          if (!rect) return;
+                                          const currentX = sticker.x !== undefined ? sticker.x : 10;
+                                          const currentY = sticker.y !== undefined ? sticker.y : 25;
+                                          const offsetX = e.clientX - rect.left - (currentX / 100 * rect.width);
+                                          const offsetY = e.clientY - rect.top - (currentY / 100 * rect.height);
+                                          setColumnSortStickerDragging({ id: sticker.id, offsetX, offsetY });
+                                          e.currentTarget.setPointerCapture(e.pointerId);
+                                        }}
+                                        onPointerMove={e => {
+                                          if (!columnSortStickerDragging || columnSortStickerDragging.id !== sticker.id) return;
+                                          const rect = canvasRef.current?.getBoundingClientRect();
+                                          if (!rect) return;
+                                          const newX = parseFloat((((e.clientX - rect.left - columnSortStickerDragging.offsetX) / rect.width) * 100).toFixed(2));
+                                          const newY = parseFloat((((e.clientY - rect.top - columnSortStickerDragging.offsetY) / rect.height) * 100).toFixed(2));
+                                          let finalX = newX;
+                                          let finalY = newY;
+                                          if (snapColumnSortGrid) {
+                                            finalX = Math.round(finalX / 5) * 5;
+                                            finalY = Math.round(finalY / 5) * 5;
+                                          }
+                                          setColumnSortStickers(prev => prev.map(s => s.id === sticker.id ? {
+                                            ...s,
+                                            x: Math.max(0, Math.min(100 - (s.widthPercent || 18), finalX)),
+                                            y: Math.max(0, Math.min(100 - (s.heightPercent || 18), finalY))
+                                          } : s));
+                                        }}
+                                        onPointerUp={() => { setColumnSortStickerDragging(null); setIsDirty(true); }}
+                                        onPointerCancel={() => setColumnSortStickerDragging(null)}
+                                        style={{
+                                          position: 'absolute',
+                                          left: `${sticker.x !== undefined ? sticker.x : 10}%`,
+                                          top: `${sticker.y !== undefined ? sticker.y : 25}%`,
+                                          width: `${sticker.widthPercent || 18}%`,
+                                          height: `${sticker.heightPercent || 18}%`,
+                                          border: isSelected ? '2.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                                          borderRadius: '10px',
+                                          backgroundColor: '#ffffff',
+                                          boxShadow: isSelected ? '0 10px 15px -3px rgba(37, 99, 235, 0.25)' : '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
+                                          cursor: 'move',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          overflow: 'hidden',
+                                          touchAction: 'none',
+                                          zIndex: isSelected ? 10 : 5,
+                                          padding: '6px',
+                                          boxSizing: 'border-box'
+                                        }}
+                                      >
+                                        {sticker.imageUrl ? (
+                                          <img
+                                            src={sticker.imageUrl}
+                                            alt={sticker.name}
+                                            style={{ width: '80%', height: '80%', objectFit: 'contain', pointerEvents: 'none' }}
+                                          />
+                                        ) : (
+                                          <span style={{ fontSize: '24px', pointerEvents: 'none' }}>{sticker.content || '🏷️'}</span>
+                                        )}
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: '#475569', textAlign: 'center', marginTop: 2, pointerEvents: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
+                                          {sticker.name}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Selected Sticker Details Inspector */}
+                                {selectedColumnSortStickerId && (() => {
+                                  const activeSticker = columnSortStickers.find(s => s.id === selectedColumnSortStickerId);
+                                  if (!activeSticker) return null;
+                                  return (
+                                    <div style={{ border: '1.5px solid #bae6fd', borderRadius: 8, padding: 14, backgroundColor: '#f0f9ff', marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, fontSize: 13, color: '#0369a1' }}>Selected Sticker: {activeSticker.name}</span>
+                                        <button
+                                          type="button"
+                                          className={`${styles.btnDanger} ${styles.btnCompact}`}
+                                          onClick={() => {
+                                            setColumnSortStickers(prev => prev.filter(s => s.id !== activeSticker.id));
+                                            setSelectedColumnSortStickerId(null);
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ padding: '3px 10px', fontSize: 11 }}
+                                        >
+                                          × Delete Sticker
+                                        </button>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                                        {[['x', 'X (%)'], ['y', 'Y (%)'], ['widthPercent', 'Width (%)'], ['heightPercent', 'Height (%)']].map(([field, label]) => (
+                                          <div key={field} className={styles.formGroup}>
+                                            <label className={styles.filterLabel} style={{ fontSize: 10 }}>{label}</label>
+                                            <input
+                                              type="number"
+                                              className={styles.formInput}
+                                              value={activeSticker[field] !== undefined ? activeSticker[field] : ''}
+                                              min={0} max={100}
+                                              onChange={e => {
+                                                setColumnSortStickers(prev => prev.map(s => s.id === activeSticker.id ? { ...s, [field]: parseFloat(e.target.value) || 0 } : s));
+                                                setIsDirty(true);
+                                              }}
+                                              style={{ marginTop: 4, fontSize: 11, padding: '4px' }}
+                                            />
+                                          </div>
+                                        ))}
+                                        <div className={styles.formGroup}>
+                                          <label className={styles.filterLabel} style={{ fontSize: 10 }}>Correct Column</label>
+                                          <select
+                                            className={styles.formSelect}
+                                            value={activeSticker.category || ''}
+                                            onChange={e => {
+                                              setColumnSortStickers(prev => prev.map(s => s.id === activeSticker.id ? { ...s, category: e.target.value } : s));
+                                              setIsDirty(true);
+                                            }}
+                                            style={{ marginTop: 4, fontSize: 11, padding: '4px', height: 28 }}
+                                          >
+                                            <option value="">— Select Column —</option>
+                                            {columnSortCategories.map(c => (
+                                              <option key={c.id} value={c.id}>{c.label || c.id}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           )}

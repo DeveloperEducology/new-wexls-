@@ -388,6 +388,145 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         }
       };
     }
+    const isInteractiveStickers = poolDoc.interaction === 'interactive_stickers' || poolDoc.type === 'interactive_stickers';
+    if (isInteractiveStickers) {
+      let categories = poolDoc.categories;
+      if (!categories || categories.length === 0) {
+        const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
+        categories = poolKeys.map(key => ({
+          id: key,
+          label: key.charAt(0).toUpperCase() + key.slice(1)
+        }));
+      } else {
+        categories = categories.map(cat => (typeof cat === 'string' ? { id: cat, label: cat } : cat));
+      }
+
+      const params = getDifficultyParameters(history, difficulty, grade);
+      const resolvedDifficulty = params.level;
+
+      const rules = (poolDoc.difficultyRules && poolDoc.difficultyRules[resolvedDifficulty]) || 
+                    (poolDoc.difficultyRules && poolDoc.difficultyRules.easy) || 
+                    {};
+
+      const maxCategories = rules.maxCategories || rules.categoryCount || 2;
+      let activeCategories = [...categories];
+      if (maxCategories < activeCategories.length) {
+        activeCategories = seededShuffle(activeCategories, prng).slice(0, maxCategories);
+        activeCategories.sort((a, b) => categories.findIndex(c => c.id === a.id) - categories.findIndex(c => c.id === b.id));
+      }
+
+      // Automatically assign minX and maxX boundaries if missing
+      const catCount = activeCategories.length;
+      activeCategories = activeCategories.map((cat, index) => {
+        const minX = Math.round((index / catCount) * 100);
+        const maxX = Math.round(((index + 1) / catCount) * 100);
+        return {
+          ...cat,
+          minX: cat.minX !== undefined ? cat.minX : minX,
+          maxX: cat.maxX !== undefined ? cat.maxX : maxX
+        };
+      });
+
+      const itemsPerCategory = rules.itemsPerCategory || rules.itemCount || poolDoc.itemsPerCategory || 2;
+      const activeMode = poolDoc.mode || 'identify_text';
+      
+      let stickers = [];
+      
+      activeCategories.forEach(cat => {
+        let catPool = poolDoc.pools[cat.id] || [];
+        catPool = catPool.filter(option => option && option.active !== false);
+        const shuffledCatPool = seededShuffle(catPool, prng);
+        const chosenForCat = shuffledCatPool.slice(0, Math.min(itemsPerCategory, shuffledCatPool.length));
+
+        chosenForCat.forEach((opt, idx) => {
+          stickers.push({
+            id: opt.id || `sticker_${cat.id}_${idx}`,
+            name: opt.label || opt.name,
+            imageUrl: opt.imageUrl,
+            content: opt.content,
+            category: cat.id,
+            width: opt.width || 18,
+            height: opt.height || 18
+          });
+        });
+      });
+
+      const shuffledStickers = seededShuffle(stickers, prng);
+      if (shuffledStickers.length === 0) {
+        throw new Error('Stickers pool for interactive stickers is empty.');
+      }
+
+      const initialCoordinates = [
+        { x: 10, y: 25 }, { x: 15, y: 65 },
+        { x: 60, y: 20 }, { x: 70, y: 60 },
+        { x: 35, y: 30 }, { x: 45, y: 70 },
+        { x: 80, y: 35 }, { x: 85, y: 75 }
+      ];
+      const shuffledCoordinates = seededShuffle(initialCoordinates, prng);
+      const initialPlacements = shuffledStickers.map((item, idx) => ({
+        id: item.id,
+        x: shuffledCoordinates[idx % shuffledCoordinates.length].x,
+        y: shuffledCoordinates[idx % shuffledCoordinates.length].y
+      }));
+
+      const questionText = poolDoc.questionText || 'Drag the stickers to arrange them into correct columns.';
+      const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
+
+      const explanation = poolDoc.explanation || 'Drag each sticker into its correct column.';
+      const solution = poolDoc.solution || {
+        sections: [
+          { type: 'text', content: explanation }
+        ]
+      };
+
+      const parts = [
+        {
+          type: 'interactive_stickers',
+          mode: 'column_sort',
+          sceneImageUrl: poolDoc.sceneImageUrl || '/images/prek_landscape.webp',
+          itemLabel: poolDoc.itemLabel || 'sticker',
+          categories: activeCategories,
+          stickers: shuffledStickers,
+          initialPlacements
+        }
+      ];
+
+      const answer = {
+        placements: initialPlacements.map(p => {
+          const sticker = shuffledStickers.find(s => s.id === p.id);
+          return {
+            id: p.id,
+            type: sticker?.category,
+            category: sticker?.category
+          };
+        })
+      };
+
+      return {
+        id: `${poolDoc.id || 'dynamic_pool'}_${seed}_stickers`,
+        type: 'interactive_stickers',
+        interaction: 'interactive_stickers',
+        questionText,
+        audioUrl: questionAudioUrl,
+        voice,
+        categories: activeCategories,
+        stickers: shuffledStickers,
+        answer,
+        correctAnswer: answer,
+        explanation,
+        solution,
+        parts,
+        metadata: {
+          ...(poolDoc.metadata || {}),
+          subject: poolDoc.subject || 'science',
+          topic: poolDoc.topic || 'general',
+          skillId: poolDoc.skillId,
+          difficulty,
+          seed,
+          engine: 'dynamic_pool_interactive_stickers'
+        }
+      };
+    }
 
     const isCategorization = poolDoc.interaction === 'categorization' || poolDoc.type === 'categorization' || poolDoc.interaction === 'categorizationv2';
     if (isCategorization) {

@@ -66,7 +66,8 @@ const UKG_SCIENCE_OPTIONS = [
   { group: 'UKG', label: 'SC.2 Sort objects by two-dimensional shape', value: 'ukg-science-sort-objects-by-two-dimensional-shape' },
   { group: 'UKG', label: 'SC.3 Identify triangles', value: 'ukg-science-identify-triangles' },
   { group: 'UKG', label: 'SC.4 Identify squares', value: 'ukg-science-identify-squares' },
-  { group: 'UKG', label: 'SC.5 Identify rectangles', value: 'ukg-science-identify-rectangles' }
+  { group: 'UKG', label: 'SC.5 Identify rectangles', value: 'ukg-science-identify-rectangles' },
+  { group: 'UKG', label: 'SC.6 Sort living and non-living things (Stickers)', value: 'ukg-science-living-nonliving-stickers' }
 ];
 
 const ENGLISH_GRAMMAR_OPTIONS = Object.entries(grammarSkillsByGrade).flatMap(([grade, skills]) =>

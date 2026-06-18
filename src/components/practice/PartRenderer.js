@@ -2925,7 +2925,7 @@ function InteractiveCountingPart({ part, isAnswered }) {
 }
 
 function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
-  const isShadowMatch = part.mode === 'shadow_match';
+  const isShadowMatch = part.mode === 'shadow_match' || part.mode === 'column_sort';
   const capacity = isShadowMatch
     ? (part.stickers?.length || 3)
     : Math.max(Number(part.capacity || 5), Number(part.targetCount || 1));
@@ -2936,6 +2936,45 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
   const placementsRef = useRef([]);
   const [draggingId, setDraggingId] = useState(null);
   const [selectedTrayId, setSelectedTrayId] = useState(null);
+  const [selectedPlacementId, setSelectedPlacementId] = useState(null);
+
+  useEffect(() => {
+    if (isAnswered) {
+      setSelectedPlacementId(null);
+      setSelectedTrayId(null);
+    }
+  }, [isAnswered]);
+
+  const handleSceneClick = (event) => {
+    if (part.mode !== 'column_sort' || isAnswered) return;
+    if (selectedPlacementId !== null) {
+      const rect = sceneRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = ((event.clientX - rect.left) / rect.width) * 100;
+      const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+      const stickerInfo = part.stickers?.find(s => s.id === selectedPlacementId);
+      const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width || stickerWidth) : stickerWidth;
+      const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height || stickerHeight) : stickerHeight;
+
+      const px = Math.max(sWidth / 2, Math.min(100 - sWidth / 2, x));
+      const py = Math.max(sHeight / 2, Math.min(100 - sHeight / 2, y));
+
+      const nextPlacements = placements.map(p =>
+        p.id === selectedPlacementId ? { ...p, x: px, y: py } : p
+      );
+      placementsRef.current = nextPlacements;
+      setPlacements(nextPlacements);
+      emitPlacements(nextPlacements);
+      setSelectedPlacementId(null);
+    }
+  };
+
+  const handleStickerClick = (event, id) => {
+    if (part.mode !== 'column_sort' || isAnswered) return;
+    event.stopPropagation();
+    setSelectedPlacementId(current => current === id ? null : id);
+  };
 
   const draggedSticker = part.stickers?.find(s => s.id === draggingId);
   const isOutsideDragged = part.isVenn && draggedSticker?.type === 'outside';
@@ -2945,8 +2984,8 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     : {};
   const stickerImageUrl = part.stickerImageUrl || stickerConfig.imageUrl || '';
   const stickerContent = stickerConfig.content || part.sticker || '🦋';
-  const stickerWidth = Number(stickerConfig.widthPercent || part.stickerWidthPercent || 10);
-  const stickerHeight = Number(stickerConfig.heightPercent || part.stickerHeightPercent || 15);
+  const stickerWidth = Number(stickerConfig.widthPercent || part.commonStickerWidth || part.stickerWidthPercent || 10);
+  const stickerHeight = Number(stickerConfig.heightPercent || part.commonStickerHeight || part.stickerHeightPercent || 15);
 
   const initialPositions = [
     { x: 24, y: 58 }, { x: 43, y: 42 }, { x: 68, y: 58 }, { x: 78, y: 30 },
@@ -2975,6 +3014,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
   };
 
   const checkSnap = (id, x, y) => {
+    if (part.mode === 'column_sort') return { x, y, isSnapped: false };
     if (!isShadowMatch) return { x, y, isSnapped: false };
     const mascot = part.stickers?.find(s => s.id === id);
     if (!mascot) return { x, y, isSnapped: false };
@@ -3021,12 +3061,31 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     return { x, y, isSnapped: false, type: mascot.type };
   };
 
+  const initialPlacementsStable = useMemo(() => {
+    if (!part.initialPlacements || !Array.isArray(part.initialPlacements)) return [];
+    if (part.mode !== 'column_sort') return part.initialPlacements;
+
+    // Shuffle the association between sticker IDs and coordinates!
+    const coordinates = part.initialPlacements.map(p => ({ x: p.x, y: p.y }));
+    const shuffledCoordinates = [...coordinates];
+    for (let i = shuffledCoordinates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledCoordinates[i], shuffledCoordinates[j]] = [shuffledCoordinates[j], shuffledCoordinates[i]];
+    }
+
+    return part.initialPlacements.map((p, idx) => ({
+      ...p,
+      x: shuffledCoordinates[idx]?.x ?? p.x,
+      y: shuffledCoordinates[idx]?.y ?? p.y
+    }));
+  }, [part]);
+
   const placementsFromAnswer = () => {
     if (userAnswer && typeof userAnswer === 'object' && Array.isArray(userAnswer.placements)) {
       return userAnswer.placements;
     }
-    if (part.initialPlacements && Array.isArray(part.initialPlacements)) {
-      return part.initialPlacements;
+    if (initialPlacementsStable && Array.isArray(initialPlacementsStable)) {
+      return initialPlacementsStable;
     }
     if (isShadowMatch) {
       return [];
@@ -3044,7 +3103,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     const nextPlacements = placementsFromAnswer();
     placementsRef.current = nextPlacements;
     setPlacements(nextPlacements);
-  }, [userAnswer, capacity]);
+  }, [userAnswer, capacity, initialPlacementsStable]);
 
   const emitPlacements = (nextPlacements) => {
     if (isAnswered || !onAnswer) return;
@@ -3065,6 +3124,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
   const startDrag = (event, id, source) => {
     if (isAnswered) return;
     event.preventDefault();
+    event.stopPropagation();
     const sceneRect = sceneRef.current?.getBoundingClientRect();
     const existing = placements.find((placement) => placement.id === id);
     const centerX = existing && sceneRect ? sceneRect.left + (existing.x / 100) * sceneRect.width : event.clientX;
@@ -3110,6 +3170,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     const drag = dragRef.current;
     if (!drag || isAnswered) return;
     event.preventDefault();
+    event.stopPropagation();
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     const trayRect = trayRef.current?.getBoundingClientRect();
     const overTray = trayRect
@@ -3117,10 +3178,12 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
       && event.clientY >= trayRect.top && event.clientY <= trayRect.bottom;
     let nextPlacements = placementsRef.current;
 
-    if (overTray && drag.source === 'scene') {
+    if (overTray && drag.source === 'scene' && part.mode !== 'column_sort') {
       nextPlacements = nextPlacements.filter((placement) => placement.id !== drag.id);
     } else if (!drag.moved) {
-      if (drag.source === 'scene') {
+      if (part.mode === 'column_sort') {
+        setSelectedPlacementId(current => current === drag.id ? null : drag.id);
+      } else if (drag.source === 'scene') {
         nextPlacements = nextPlacements.filter((placement) => placement.id !== drag.id);
       } else {
         const exists = nextPlacements.some((placement) => placement.id === drag.id);
@@ -3138,6 +3201,9 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
         }
         return placement;
       });
+      if (part.mode === 'column_sort') {
+        setSelectedPlacementId(null);
+      }
     }
 
     placementsRef.current = nextPlacements;
@@ -3237,13 +3303,16 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     setDraggingId(null);
   };
 
-  const renderSticker = (label, stickerInfo) => {
+  const renderSticker = (label, stickerInfo, isSelected = false) => {
     const imgUrl = stickerInfo?.imageUrl || stickerImageUrl;
     const content = stickerInfo?.content || stickerContent;
+    const filterStyle = isSelected
+      ? 'drop-shadow(0 0 10px rgba(14, 165, 233, 0.95)) drop-shadow(0 0 3px rgba(14, 165, 233, 0.75))'
+      : 'none';
     return imgUrl ? (
-      <img src={imgUrl} alt={label} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} />
+      <img src={imgUrl} alt={label} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', filter: filterStyle }} />
     ) : (
-      <span aria-hidden="true" style={{ fontSize: 'clamp(38px, 7vw, 68px)', lineHeight: 1 }}>{content}</span>
+      <span aria-hidden="true" style={{ fontSize: 'clamp(38px, 7vw, 68px)', lineHeight: 1, filter: filterStyle }}>{content}</span>
     );
   };
 
@@ -3252,7 +3321,10 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
       <div
         ref={sceneRef}
         aria-label={`${placements.length} ${part.itemLabel || 'stickers'} placed`}
-        onPointerDown={placeSelected}
+        onPointerDown={(event) => {
+          placeSelected(event);
+          handleSceneClick(event);
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDrop={dropOnScene}
         style={{
@@ -3262,7 +3334,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
           minHeight: part.sceneImageUrl ? undefined : 230,
           overflow: 'hidden',
           border: isOutsideDragged ? '3px dashed #fb8c00' : '2px solid #93c5fd',
-          borderRadius: '18px 18px 0 0',
+          borderRadius: part.mode === 'column_sort' ? '18px' : '18px 18px 0 0',
           background: part.sceneImageUrl
             ? '#ffffff'
             : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
@@ -3285,6 +3357,43 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
             }}
           />
         ) : null}
+
+        {/* Render 2 Column Lane Labels and Separator for column_sort */}
+        {part.mode === 'column_sort' && Array.isArray(part.categories) && part.categories.map((cat, index) => {
+          const width = cat.maxX - cat.minX;
+          const left = cat.minX;
+          return (
+            <div
+              key={cat.id}
+              style={{
+                position: 'absolute',
+                left: `${left}%`,
+                top: 0,
+                width: `${width}%`,
+                height: '100%',
+                borderRight: index < part.categories.length - 1 ? '3px dashed rgba(255, 255, 255, 0.55)' : 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '24px 8px',
+                pointerEvents: 'none',
+                zIndex: 2
+              }}
+            >
+              <div
+                style={{
+                  color: '#0f172a',
+                  fontSize: 'clamp(14px, 2.5vw, 24px)',
+                  fontWeight: '800',
+                  textShadow: '0 2px 4px rgba(255, 255, 255, 0.8), 0 -1px 1px rgba(255, 255, 255, 0.8)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {cat.label}
+              </div>
+            </div>
+          );
+        })}
         {isOutsideDragged ? (
           <div
             style={{
@@ -3341,8 +3450,9 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
           const stickerInfo = isShadowMatch && part.stickers
             ? part.stickers.find(s => s.id === placement.id)
             : null;
-          const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width) : stickerWidth;
-          const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height) : stickerHeight;
+          const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width || stickerWidth) : stickerWidth;
+          const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height || stickerHeight) : stickerHeight;
+          const isSelected = selectedPlacementId === placement.id && !isAnswered;
 
           return (
             <button
@@ -3355,6 +3465,11 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
               onPointerMove={moveDrag}
               onPointerUp={endDrag}
               onPointerCancel={endDrag}
+              onClick={(event) => {
+                if (part.mode === 'column_sort') {
+                  handleStickerClick(event, placement.id);
+                }
+              }}
               style={{
                 position: 'absolute',
                 left: `${placement.x}%`,
@@ -3364,80 +3479,103 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
                 transform: `translate(-50%, -50%) scale(${draggingId === placement.id ? 1.08 : 1})`,
                 border: 0,
                 background: 'transparent',
+                outline: 'none',
                 padding: 0,
                 cursor: isAnswered ? 'default' : 'grab',
-                filter: 'drop-shadow(0 5px 3px rgba(15, 23, 42, 0.22))',
+                filter: part.mode === 'column_sort' ? 'none' : 'drop-shadow(0 5px 3px rgba(15, 23, 42, 0.22))',
                 transition: draggingId === placement.id ? 'none' : 'transform 150ms ease',
                 touchAction: 'none',
-                zIndex: draggingId === placement.id ? 3 : 1,
+                zIndex: draggingId === placement.id ? 12 : 10,
               }}
             >
-              {renderSticker(`${part.itemLabel || 'sticker'} ${placement.id + 1}`, stickerInfo)}
+              {part.mode === 'column_sort' ? (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '6px',
+                    boxShadow: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {renderSticker(`${part.itemLabel || 'sticker'} ${placement.id + 1}`, stickerInfo, isSelected)}
+                </div>
+              ) : (
+                renderSticker(`${part.itemLabel || 'sticker'} ${placement.id + 1}`, stickerInfo, isSelected)
+              )}
             </button>
           );
         })}
       </div>
 
-      <div
-        ref={trayRef}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={dropOnTray}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 'clamp(12px, 4vw, 36px)',
-          minHeight: 116,
-          padding: '14px 18px',
-          border: '2px solid #dbeafe',
-          borderTop: 0,
-          borderRadius: '0 0 18px 18px',
-          background: '#ffffff',
-        }}
-      >
-        {Array.from({ length: capacity }, (_, index) => {
-          const used = placements.some((placement) => placement.id === index);
-          const selected = selectedTrayId === index;
-          const stickerInfo = isShadowMatch && part.stickers
-            ? part.stickers[index]
-            : null;
+      {part.mode !== 'column_sort' ? (
+        <div
+          ref={trayRef}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={dropOnTray}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'clamp(12px, 4vw, 36px)',
+            minHeight: 116,
+            padding: '14px 18px',
+            border: '2px solid #dbeafe',
+            borderTop: 0,
+            borderRadius: '0 0 18px 18px',
+            background: '#ffffff',
+          }}
+        >
+          {Array.from({ length: capacity }, (_, index) => {
+            const used = placements.some((placement) => placement.id === index);
+            const selected = selectedTrayId === index;
+            const stickerInfo = isShadowMatch && part.stickers
+              ? part.stickers[index]
+              : null;
 
-          return (
-            <button
-              key={index}
-              type="button"
-              disabled={isAnswered}
-              draggable={false}
-              aria-label={used ? `${part.itemLabel || 'sticker'} placed` : `Drag ${part.itemLabel || 'sticker'} into picture`}
-              onPointerDown={(event) => {
-                if (used) return;
-                setSelectedTrayId(selected ? null : index);
-                startDrag(event, index, 'tray');
-              }}
-              onPointerMove={moveDrag}
-              onPointerUp={endDrag}
-              onPointerCancel={endDrag}
-              style={{
-                width: 'clamp(58px, 11vw, 86px)', // Larger Pre-K sizing
-                height: 'clamp(58px, 11vw, 86px)',
-                border: selected ? '3px solid #2563eb' : '2px solid transparent',
-                borderRadius: 12,
-                background: selected ? '#eff6ff' : 'transparent',
-                padding: 4,
-                cursor: isAnswered || used ? 'default' : 'grab',
-                filter: used
-                  ? 'grayscale(1) opacity(.2)'
-                  : 'drop-shadow(0 4px 3px rgba(15, 23, 42, 0.18))',
-                transform: used ? 'scale(.92)' : 'scale(1)',
-                transition: 'filter 160ms ease, transform 160ms ease',
-                touchAction: 'none',
-              }}
-            >
-              {renderSticker(part.itemLabel || 'sticker', stickerInfo)}
-            </button>
-          );
-        })}
-      </div>
+            return (
+              <button
+                key={index}
+                type="button"
+                disabled={isAnswered}
+                draggable={false}
+                aria-label={used ? `${part.itemLabel || 'sticker'} placed` : `Drag ${part.itemLabel || 'sticker'} into picture`}
+                onPointerDown={(event) => {
+                  if (used) return;
+                  setSelectedTrayId(selected ? null : index);
+                  startDrag(event, index, 'tray');
+                }}
+                onPointerMove={moveDrag}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                style={{
+                  width: 'clamp(58px, 11vw, 86px)', // Larger Pre-K sizing
+                  height: 'clamp(58px, 11vw, 86px)',
+                  border: selected ? '3px solid #2563eb' : '2px solid transparent',
+                  borderRadius: 12,
+                  background: selected ? '#eff6ff' : 'transparent',
+                  padding: 4,
+                  cursor: isAnswered || used ? 'default' : 'grab',
+                  filter: used
+                    ? 'grayscale(1) opacity(.2)'
+                    : 'drop-shadow(0 4px 3px rgba(15, 23, 42, 0.18))',
+                  transform: used ? 'scale(.92)' : 'scale(1)',
+                  transition: 'filter 160ms ease, transform 160ms ease',
+                  touchAction: 'none',
+                }}
+              >
+                {renderSticker(part.itemLabel || 'sticker', stickerInfo)}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

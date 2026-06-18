@@ -1,24 +1,27 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import styles from './stickers.module.css';
 
-// 3 Distinct Mascot stickers with increased size parameters
-const MASCOTS = [
-  { id: 0, type: 'penguin', name: 'Chubby Penguin', url: '/images/penguin.svg', width: 14, height: 14 },
-  { id: 1, type: 'rabbit', name: 'Cute Rabbit', url: '/images/rabbit.svg', width: 15, height: 15 },
-  { id: 2, type: 'alex', name: 'Alex Mascot', url: '/images/alex_avatar.png', width: 16, height: 16 },
+// 4 High-quality generated stickers
+const STICKERS = [
+  { id: 'drum', name: 'Drum', url: '/images/drum_sticker.png', category: 'non-living', width: 18, height: 18 },
+  { id: 'lion', name: 'Lion', url: '/images/lion_sticker.png', category: 'living', width: 18, height: 18 },
+  { id: 'elephant', name: 'Elephant', url: '/images/elephant_sticker.png', category: 'living', width: 20, height: 20 },
+  { id: 'stack_of_rings', name: 'Stack of Rings', url: '/images/stack_of_rings_sticker.png', category: 'non-living', width: 18, height: 18 },
 ];
 
-// Target shadows on the landscape background
-const TARGETS = [
-  { id: 't_penguin', type: 'penguin', name: 'Penguin Shadow', x: 22, y: 56, width: 14, height: 14, label: 'Penguin Area' },
-  { id: 't_alex', type: 'alex', name: 'Alex Shadow', x: 45, y: 32, width: 16, height: 16, label: 'Center Sky' },
-  { id: 't_rabbit', type: 'rabbit', name: 'Rabbit Shadow', x: 68, y: 55, width: 15, height: 15, label: 'Rabbit Area' },
+// Initial coordinates placed not in order matching the user's screenshot
+const INITIAL_PLACED_ITEMS = [
+  { id: 'drum', name: 'Drum', url: '/images/drum_sticker.png', category: 'non-living', x: 5, y: 20, width: 18, height: 18 },
+  { id: 'lion', name: 'Lion', url: '/images/lion_sticker.png', category: 'living', x: 10, y: 60, width: 18, height: 18 },
+  { id: 'elephant', name: 'Elephant', url: '/images/elephant_sticker.png', category: 'living', x: 65, y: 15, width: 20, height: 20 },
+  { id: 'stack_of_rings', name: 'Stack of Rings', url: '/images/stack_of_rings_sticker.png', category: 'non-living', x: 70, y: 55, width: 18, height: 18 },
 ];
 
 export default function StickersDemoPage() {
-  const [placedItems, setPlacedItems] = useState([]); // Array of { id: mascotId, x: percentX, y: percentY, type, isSnapped }
+  const [placedItems, setPlacedItems] = useState(INITIAL_PLACED_ITEMS);
   
   // Game states matching the IXL scoreboard widgets
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
@@ -27,13 +30,14 @@ export default function StickersDemoPage() {
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   
   // Dragging & UI states
-  const [draggedId, setDraggedId] = useState(null); // mascot ID (0, 1, or 2)
-  const [isDraggingFromCanvas, setIsDraggingFromCanvas] = useState(false);
-  const [selectedDockSticker, setSelectedDockSticker] = useState(null); // Mobile click mascot ID
-  const [feedback, setFeedback] = useState({ text: 'Match the stickers to their correct shadow shapes!', type: 'info' });
+  const [draggedId, setDraggedId] = useState(null); // sticker ID
+  const [selectedDockSticker, setSelectedDockSticker] = useState(null); // Mobile click/tap sticker ID
+  const [feedback, setFeedback] = useState({ 
+    text: 'Drag the stickers into their correct columns! Put living things on the left, and non-living things on the right.', 
+    type: 'info' 
+  });
 
   const canvasRef = useRef(null);
-  const snapAudioRef = useRef({}); // Tracks snapping per mascot type to prevent loops
 
   // Timer Tick loop
   useEffect(() => {
@@ -54,11 +58,13 @@ export default function StickersDemoPage() {
   };
 
   const generateNewQuestion = () => {
-    setPlacedItems([]);
+    setPlacedItems(INITIAL_PLACED_ITEMS);
     setSelectedDockSticker(null);
-    snapAudioRef.current = {};
-    setFeedback({ text: 'Match the stickers to their correct shadow shapes!', type: 'info' });
-    speak("Match the stickers to their correct shadow shapes in the picture!");
+    setFeedback({ 
+      text: 'Sort the stickers! Drag living things to the left, and non-living things to the right.', 
+      type: 'info' 
+    });
+    speak("Ready to play again! Sort the stickers into the correct columns.");
   };
 
   // Speaks using Web Speech synthesis
@@ -72,7 +78,7 @@ export default function StickersDemoPage() {
   };
 
   const handleReadPrompt = () => {
-    speak("Match the stickers to their correct shadow shapes in the picture!");
+    speak("Sort the stickers into the correct columns. Put living things on the left, and non-living things on the right.");
   };
 
   // Drag and drop mechanics
@@ -80,15 +86,15 @@ export default function StickersDemoPage() {
     e.preventDefault();
     if (!canvasRef.current) return;
 
-    let mascotId = draggedId;
+    let stickerId = draggedId;
     let grabOffsetX = 0;
     let grabOffsetY = 0;
 
     try {
-      const dataStr = e.dataTransfer.getData('text/plain');
+      const dataStr = e.dataTransfer.getData('application/json');
       if (dataStr) {
         const data = JSON.parse(dataStr);
-        mascotId = data.mascotId;
+        stickerId = data.stickerId;
         grabOffsetX = data.offsetX || 0;
         grabOffsetY = data.offsetY || 0;
       }
@@ -96,25 +102,22 @@ export default function StickersDemoPage() {
       // fallback
     }
 
-    if (mascotId === null) return;
+    if (!stickerId) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const clientX = e.clientX;
-    const clientY = e.clientY;
+    const relativeX = e.clientX - canvasRect.left;
+    const relativeY = e.clientY - canvasRect.top;
 
-    const relativeX = clientX - canvasRect.left;
-    const relativeY = clientY - canvasRect.top;
+    const sticker = STICKERS.find(s => s.id === stickerId);
+    if (!sticker) return;
 
-    const mascot = MASCOTS.find(m => m.id === mascotId);
-    if (!mascot) return;
-
-    // Calculate current pixel size of mascot
-    const mascotWidthPx = (mascot.width / 100) * canvasRect.width;
-    const mascotHeightPx = (mascot.height / 100) * canvasRect.height;
+    // Calculate current pixel size of sticker
+    const stickerWidthPx = (sticker.width / 100) * canvasRect.width;
+    const stickerHeightPx = (sticker.height / 100) * canvasRect.height;
 
     // Clamp grab offset to avoid offsets outside the element boundary
-    const cleanGrabX = Math.max(0, Math.min(mascotWidthPx, grabOffsetX));
-    const cleanGrabY = Math.max(0, Math.min(mascotHeightPx, grabOffsetY));
+    const cleanGrabX = Math.max(0, Math.min(stickerWidthPx, grabOffsetX));
+    const cleanGrabY = Math.max(0, Math.min(stickerHeightPx, grabOffsetY));
 
     // Align top-left of sticker by subtracting offset
     const dropLeftPx = relativeX - cleanGrabX;
@@ -124,195 +127,108 @@ export default function StickersDemoPage() {
     let py = (dropTopPx / canvasRect.height) * 100;
 
     // Clamp boundary so sticker stays inside canvas
-    px = Math.max(0, Math.min(100 - mascot.width, px));
-    py = Math.max(0, Math.min(100 - mascot.height, py));
+    px = Math.max(0, Math.min(100 - sticker.width, px));
+    py = Math.max(0, Math.min(100 - sticker.height, py));
 
-    // MAGNETIC SNAPPING CHECK
-    const target = TARGETS.find(t => t.type === mascot.type);
-    let finalX = px;
-    let finalY = py;
-    let snapped = false;
+    // Update coordinates
+    setPlacedItems(prev => prev.map(item => 
+      item.id === stickerId ? { ...item, x: px, y: py } : item
+    ));
 
-    if (target) {
-      const dx = px - target.x;
-      const dy = py - target.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const snapThreshold = 8.5; // Snap threshold percentage
-
-      if (distance < snapThreshold) {
-        finalX = target.x;
-        finalY = target.y;
-        snapped = true;
-
-        if (!snapAudioRef.current[mascot.type]) {
-          speak(`Snapped ${mascot.name}`);
-          snapAudioRef.current[mascot.type] = true;
-        }
-      } else {
-        if (snapAudioRef.current[mascot.type]) {
-          speak(`Released ${mascot.name}`);
-          snapAudioRef.current[mascot.type] = false;
-        }
-      }
-    }
-
-    if (isDraggingFromCanvas) {
-      // Repositioning already placed item
-      setPlacedItems(prev => prev.map(item => 
-        item.id === mascotId ? { ...item, x: finalX, y: finalY, isSnapped: snapped } : item
-      ));
-    } else {
-      // Dropping new item from the dock
-      setPlacedItems(prev => [
-        ...prev.filter(item => item.id !== mascotId), // Prevent duplicates
-        { id: mascotId, x: finalX, y: finalY, type: mascot.type, isSnapped: snapped }
-      ]);
-    }
+    // Speak placement feedback
+    let columnName = px < 50 ? "living things" : "Non-living things";
+    speak(`Placed ${sticker.name} in ${columnName}`);
 
     setDraggedId(null);
-    setIsDraggingFromCanvas(false);
   };
 
-  const handleDockDragStart = (e, mascotId) => {
-    setDraggedId(mascotId);
-    setIsDraggingFromCanvas(false);
-    
-    const offsetX = e.nativeEvent.offsetX || 0;
-    const offsetY = e.nativeEvent.offsetY || 0;
-    e.dataTransfer.setData('text/plain', JSON.stringify({ mascotId, offsetX, offsetY }));
-  };
-
-  const handleCanvasDragStart = (e, mascotId) => {
+  const handleCanvasDragStart = (e, stickerId) => {
     e.stopPropagation();
-    setDraggedId(mascotId);
-    setIsDraggingFromCanvas(true);
+    setDraggedId(stickerId);
     
-    const offsetX = e.nativeEvent.offsetX || 0;
-    const offsetY = e.nativeEvent.offsetY || 0;
-    e.dataTransfer.setData('text/plain', JSON.stringify({ mascotId, offsetX, offsetY }));
-  };
-
-  const handleDropToDock = (e) => {
-    e.preventDefault();
-    if (draggedId !== null && isDraggingFromCanvas) {
-      // Return to dock
-      setPlacedItems(prev => prev.filter(item => item.id !== draggedId));
-      const mascot = MASCOTS.find(m => m.id === draggedId);
-      if (mascot) {
-        speak(`Removed ${mascot.name}`);
-        snapAudioRef.current[mascot.type] = false;
-      }
-    }
-    setDraggedId(null);
-    setIsDraggingFromCanvas(false);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    e.dataTransfer.setData('application/json', JSON.stringify({ stickerId, offsetX, offsetY }));
   };
 
   // Mobile Tap Fallbacks
-  const handleDockTap = (mascotId) => {
-    const isPlaced = placedItems.some(item => item.id === mascotId);
-    if (isPlaced) return;
-
-    if (selectedDockSticker === mascotId) {
-      setSelectedDockSticker(null);
-    } else {
-      setSelectedDockSticker(mascotId);
-      const mascot = MASCOTS.find(m => m.id === mascotId);
-      if (mascot) speak(mascot.name);
-    }
-  };
-
   const handleCanvasTap = (e) => {
     if (selectedDockSticker !== null) {
       const canvasRect = canvasRef.current.getBoundingClientRect();
-      const clientX = e.clientX;
-      const clientY = e.clientY;
-
-      let relativeX = clientX - canvasRect.left;
-      let relativeY = clientY - canvasRect.top;
+      let relativeX = e.clientX - canvasRect.left;
+      let relativeY = e.clientY - canvasRect.top;
 
       let px = (relativeX / canvasRect.width) * 100;
       let py = (relativeY / canvasRect.height) * 100;
 
-      const mascot = MASCOTS.find(m => m.id === selectedDockSticker);
-      if (!mascot) return;
+      const sticker = STICKERS.find(s => s.id === selectedDockSticker);
+      if (!sticker) return;
 
-      // Adjust centered offset
-      px = Math.max(0, Math.min(100 - mascot.width, px - mascot.width / 2));
-      py = Math.max(0, Math.min(100 - mascot.height, py - mascot.height / 2));
+      // Center the sticker around the tap location
+      px = Math.max(0, Math.min(100 - sticker.width, px - sticker.width / 2));
+      py = Math.max(0, Math.min(100 - sticker.height, py - sticker.height / 2));
 
-      // Snap logic on touch
-      const target = TARGETS.find(t => t.type === mascot.type);
-      let finalX = px;
-      let finalY = py;
-      let snapped = false;
+      setPlacedItems(prev => prev.map(item => 
+        item.id === selectedDockSticker ? { ...item, x: px, y: py } : item
+      ));
+      
+      let columnName = px < 50 ? "living things" : "Non-living things";
+      speak(`Moved ${sticker.name} to ${columnName}`);
 
-      if (target) {
-        const dx = px - target.x;
-        const dy = py - target.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < 9.5) {
-          finalX = target.x;
-          finalY = target.y;
-          snapped = true;
-          speak(`Snapped to shadow`);
-          snapAudioRef.current[mascot.type] = true;
-        }
-      }
-
-      setPlacedItems(prev => [
-        ...prev.filter(item => item.id !== selectedDockSticker),
-        { id: selectedDockSticker, x: finalX, y: finalY, type: mascot.type, isSnapped: snapped }
-      ]);
       setSelectedDockSticker(null);
     }
   };
 
-  const handlePlacedItemTap = (e, mascotId) => {
+  const handlePlacedItemTap = (e, stickerId) => {
     e.stopPropagation();
-    // Return back to dock on tap inside canvas
-    const item = placedItems.find(p => p.id === mascotId);
-    setPlacedItems(prev => prev.filter(p => p.id !== mascotId));
-    if (item) {
-      speak("Returned");
-      snapAudioRef.current[item.type] = false;
+    if (selectedDockSticker === stickerId) {
+      setSelectedDockSticker(null);
+    } else {
+      setSelectedDockSticker(stickerId);
+      const sticker = STICKERS.find(s => s.id === stickerId);
+      if (sticker) speak(sticker.name);
     }
   };
 
   // Check answers
   const handleSubmit = () => {
-    const snappedItems = placedItems.filter(item => item.isSnapped);
+    const livingItems = placedItems.filter(item => item.x < 50);
+    const nonLivingItems = placedItems.filter(item => item.x >= 50);
+
+    const correctLiving = livingItems.length === 2 && 
+                         livingItems.some(i => i.id === 'lion') && 
+                         livingItems.some(i => i.id === 'elephant');
+
+    const correctNonLiving = nonLivingItems.length === 2 && 
+                            nonLivingItems.some(i => i.id === 'drum') && 
+                            nonLivingItems.some(i => i.id === 'stack_of_rings');
     
-    if (snappedItems.length === MASCOTS.length) {
-      // All 3 matched correctly!
+    if (correctLiving && correctNonLiving) {
       setFeedback({
-        text: 'Excellent work! You matched all the stickers to their correct shadows.',
+        text: 'Excellent work! You sorted all the stickers into their correct columns correctly.',
         type: 'success'
       });
       speak("Wonderful! All matched correctly.");
-      setSmartScore(prev => Math.min(100, prev + 15));
+      setSmartScore(prev => Math.min(100, prev + 20));
       setQuestionsAnswered(prev => prev + 1);
 
       setTimeout(() => {
         generateNewQuestion();
       }, 3500);
     } else {
-      // Some are missing or unsnapped
-      const placedCount = placedItems.length;
-      let errorMsg = '';
-      if (placedCount < MASCOTS.length) {
-        errorMsg = 'Some stickers are still in the dock. Place all of them on the shadows!';
-      } else {
-        errorMsg = 'Check your placements. Make sure each sticker matches the correct shadow shape!';
-      }
-
+      const errorMsg = 'Check your placements. Make sure living things (Lion, Elephant) are on the left, and non-living things (Drum, Stack of Rings) are on the right!';
       setFeedback({
         text: errorMsg,
         type: 'error'
       });
       speak(errorMsg);
-      setSmartScore(prev => Math.max(0, prev - 5));
+      setSmartScore(prev => Math.max(0, prev - 10));
     }
   };
+
+  const livingCount = placedItems.filter(item => item.x < 50).length;
+  const nonLivingCount = placedItems.filter(item => item.x >= 50).length;
 
   return (
     <div className={styles.container}>
@@ -320,28 +236,29 @@ export default function StickersDemoPage() {
       <nav className={styles.ixlNavBar}>
         <div className={styles.ixlBrand}>
           <div className={styles.ixlLogo}>
-            IX<span>L</span>
+            Klass<span>Champ</span>
           </div>
           <div className={styles.searchIcon}>🔍</div>
         </div>
         <div className={styles.navLinks}>
-          <span>Learning</span>
+          <span>Learning Path</span>
           <span>Analytics</span>
+          <span>Leaderboard</span>
         </div>
         <div className={styles.authButtons}>
-          <button type="button" className={styles.signInBtn}>Sign in</button>
-          <button type="button" className={styles.joinBtn}>Join now</button>
+          <button type="button" className={styles.signInBtn}>Dashboard</button>
+          <button type="button" className={styles.joinBtn}>Log out</button>
         </div>
       </nav>
 
       {/* Grade Breadcrumbs */}
       <header className={styles.subHeader}>
         <div className={styles.breadcrumbs}>
-          <span>Upper kindergarten</span>
+          <span>Upper kindergarten science</span>
           <span>›</span>
-          <span style={{ color: '#0f172a', fontWeight: '800' }}>A.3 Count using stickers - up to 3</span>
+          <span style={{ color: '#0f172a', fontWeight: '800' }}>Living and Non-living things classification</span>
         </div>
-        <button type="button" className={styles.shareBtn}>Share skill</button>
+        <Link href="/grades" className={styles.shareBtn}>‹ Back to Catalog</Link>
       </header>
 
       {/* Main Workspace Layout */}
@@ -364,7 +281,7 @@ export default function StickersDemoPage() {
               🔊
             </button>
             <span>
-              Match the <strong>stickers</strong> to their correct <strong>shadow shapes</strong> in the picture.
+              Drag the stickers to arrange them into <strong>living things</strong> or <strong>Non-living things</strong>.
             </span>
           </div>
 
@@ -375,34 +292,56 @@ export default function StickersDemoPage() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDropToCanvas}
             onClick={handleCanvasTap}
+            style={{
+              position: 'relative',
+              borderRadius: 16,
+              border: '2px solid #cbd5e1',
+              boxShadow: '0 4px 12px rgba(15,23,42,0.05)',
+              touchAction: 'none'
+            }}
           >
             {/* Background Hills Wallpaper */}
             <img
               src="/images/prek_landscape.webp"
               alt="Landscape scenery background"
               className={styles.canvasBg}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
 
-            {/* Render 3 Target Shadow outlines on canvas background */}
-            {TARGETS.map((target) => {
-              const matchedItem = placedItems.find(item => item.type === target.type);
-              const isSnapped = matchedItem?.isSnapped;
-              const mascot = MASCOTS.find(m => m.type === target.type);
-
+            {/* Render 2 Column Lane Labels and Separator */}
+            {[0, 1].map((index) => {
+              const leftPercent = index * 50;
+              const titles = ['living things', 'Non-living things'];
+              
               return (
                 <div
-                  key={target.id}
-                  className={`${styles.shadowTarget} ${isSnapped ? styles.shadowTargetActive : ''}`}
+                  key={index}
                   style={{
-                    left: `${target.x}%`,
-                    top: `${target.y}%`,
-                    width: `${target.width}%`,
-                    height: `${target.height}%`,
-                    backgroundImage: `url(${mascot?.url})`,
+                    position: 'absolute',
+                    left: `${leftPercent}%`,
+                    top: 0,
+                    width: '50%',
+                    height: '100%',
+                    borderRight: index === 0 ? '3px dashed rgba(255, 255, 255, 0.55)' : 'none',
+                    background: 'rgba(255, 255, 255, 0.015)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '24px 8px',
+                    pointerEvents: 'none',
+                    zIndex: 2
                   }}
                 >
-                  <div className={styles.shadowTargetLabel}>
-                    {isSnapped ? '✓ Matched' : target.label}
+                  {/* Visual Lane Header Label */}
+                  <div
+                    style={{
+                      color: '#0f172a',
+                      fontSize: '28px',
+                      fontWeight: '800',
+                      textShadow: '0 2px 4px rgba(255, 255, 255, 0.8), 0 -1px 1px rgba(255, 255, 255, 0.8)'
+                    }}
+                  >
+                    {titles[index]}
                   </div>
                 </div>
               );
@@ -410,8 +349,7 @@ export default function StickersDemoPage() {
 
             {/* Render placed active elements dragging inside canvas */}
             {placedItems.map((item) => {
-              const mascot = MASCOTS.find(m => m.id === item.id);
-              if (!mascot) return null;
+              const isSelected = selectedDockSticker === item.id;
 
               return (
                 <div
@@ -419,74 +357,66 @@ export default function StickersDemoPage() {
                   draggable
                   onDragStart={(e) => handleCanvasDragStart(e, item.id)}
                   onClick={(e) => handlePlacedItemTap(e, item.id)}
-                  className={`${styles.placedSticker} ${draggedId === item.id && isDraggingFromCanvas ? styles.placedStickerActive : ''}`}
                   style={{
+                    position: 'absolute',
                     left: `${item.x}%`,
                     top: `${item.y}%`,
-                    width: `${mascot.width}%`,
-                    height: `${mascot.height}%`,
-                    backgroundImage: `url(${mascot.url})`,
+                    width: `${item.width}%`,
+                    height: `${item.height}%`,
+                    zIndex: 10,
+                    cursor: 'grab',
+                    transition: draggedId === item.id ? 'none' : 'transform 100ms ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
-                  title="Drag to adjust, tap to return back to dock"
-                />
-              );
-            })}
-          </div>
-
-          {/* Sticker Dock Row */}
-          <div 
-            className={styles.dockPanel}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDropToDock}
-          >
-            {MASCOTS.map((m, index) => {
-              const isPlaced = placedItems.some(item => item.id === m.id);
-              const isSelected = selectedDockSticker === m.id;
-
-              return (
-                <div key={m.id} className={styles.dockSlotWrapper}>
-                  <div className={styles.dockSlot}>
-                    {isPlaced ? (
-                      /* Silhouette outline replacement */
-                      <div
-                        className={styles.silhouettePlaceholder}
-                        style={{ backgroundImage: `url(${m.url})` }}
-                      />
-                    ) : (
-                      /* Active colored sticker card card */
-                      <div
-                        draggable
-                        onDragStart={(e) => handleDockDragStart(e, m.id)}
-                        onClick={() => handleDockTap(m.id)}
-                        className={`${styles.sticker} ${draggedId === m.id && !isDraggingFromCanvas ? styles.stickerDragging : ''}`}
-                        style={{ 
-                          backgroundImage: `url(${m.url})`,
-                          border: isSelected ? '3.5px solid #0ea5e9' : 'none',
-                          borderRadius: isSelected ? '12px' : '0',
-                          boxShadow: isSelected ? '0 0 15px rgba(14,165,233,0.5)' : 'none',
-                          backgroundSize: 'contain',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                        }}
-                        title={`Drag ${m.name} onto its shadow target`}
-                      />
-                    )}
+                >
+                  {/* Sticker card container inside canvas */}
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: '#ffffff',
+                      border: isSelected ? '4.5px solid #0ea5e9' : '2px solid rgba(0,0,0,0.08)',
+                      borderRadius: '20px',
+                      padding: '8px',
+                      boxShadow: isSelected 
+                        ? '0 0 20px rgba(14,165,233,0.6), 0 4px 10px rgba(0,0,0,0.15)' 
+                        : '0 6px 16px rgba(0,0,0,0.12)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <img 
+                      src={item.url} 
+                      alt={item.name} 
+                      style={{ width: '90%', height: '90%', objectFit: 'contain', pointerEvents: 'none' }} 
+                    />
                   </div>
-                  <span className={styles.slotNumber}>{index + 1}</span>
                 </div>
               );
             })}
           </div>
 
           {/* Live placed tracking statistics */}
-          <div className={styles.dockCount}>
-            <span>Stickers in picture: <strong>{placedItems.length} / {MASCOTS.length}</strong></span>
-            <span>Correctly Snapped: <strong>{placedItems.filter(p => p.isSnapped).length}</strong></span>
+          <div className={styles.dockCount} style={{ borderRadius: 12 }}>
+            <span>Stickers Sorted: <strong>{placedItems.length} / 4</strong></span>
+            <span>Living Column: <strong>{livingCount}</strong> | Non-living Column: <strong>{nonLivingCount}</strong></span>
           </div>
 
           {/* Feedback logs alerts */}
           {feedback && (
-            <div className={`${styles.feedbackAlert} ${feedback.type === 'success' ? styles.successAlert : feedback.type === 'error' ? styles.errorAlert : styles.successAlert}`} style={{ background: feedback.type === 'info' ? '#f0f9ff' : '', borderColor: feedback.type === 'info' ? '#0ea5e9' : '', color: feedback.type === 'info' ? '#0369a1' : '' }}>
+            <div 
+              className={`${styles.feedbackAlert} ${feedback.type === 'success' ? styles.successAlert : feedback.type === 'error' ? styles.errorAlert : ''}`} 
+              style={{ 
+                background: feedback.type === 'info' ? '#f0f9ff' : '', 
+                borderColor: feedback.type === 'info' ? '#0ea5e9' : '', 
+                color: feedback.type === 'info' ? '#0369a1' : '' 
+              }}
+            >
               <span>{feedback.type === 'success' ? '✨' : feedback.type === 'error' ? '❌' : 'ℹ️'}</span>
               <p style={{ margin: 0 }}>{feedback.text}</p>
             </div>
@@ -499,22 +429,24 @@ export default function StickersDemoPage() {
               onClick={handleSubmit} 
               className={styles.submitBtn}
             >
-              Submit
+              Submit Answer
             </button>
             <div className={styles.navControls}>
-              <button type="button" onClick={generateNewQuestion} className={styles.navBtn}>Refresh Game 🔄</button>
+              <Link href="/grades" className={styles.navBtn}>Grades</Link>
+              <Link href="/practice-stickers-rearrange-demo" className={styles.navBtn}>Rearrange Demo 2</Link>
             </div>
           </div>
         </section>
 
         {/* Right Side Scoring widgets panel */}
-        <section className={styles.widgetsPanel}>
+        <aside className={styles.widgetsPanel}>
           <div className={styles.widget}>
             <div className={`${styles.widgetHeader} ${styles.questionsHeader}`}>
-              Questions Answered
+              Questions
             </div>
             <div className={styles.widgetBody}>
               <span className={styles.widgetValue}>{questionsAnswered}</span>
+              <span className={styles.widgetSubtext}>Answered</span>
             </div>
           </div>
 
@@ -540,21 +472,21 @@ export default function StickersDemoPage() {
             </div>
             <div className={styles.widgetBody}>
               <span className={styles.widgetValue} style={{ color: '#f97316' }}>{smartScore}</span>
-              <span className={styles.widgetSubtext}>out of 100</span>
+              <span className={styles.widgetSubtext}>Out of 100</span>
             </div>
           </div>
 
-          <div className={styles.scratchpadWidget} onClick={() => speak("Scratchpad clicked")}>
+          <div className={styles.scratchpadWidget} onClick={() => speak("Scratchpad active")}>
             <span className={styles.scratchpadIcon}>✏️</span>
             <span className={styles.scratchpadText}>Scratchpad</span>
           </div>
-        </section>
+        </aside>
       </main>
 
       <footer style={{ textAlign: 'center', margin: '40px 0' }}>
-        <a href="/practice-move-demo" style={{ color: '#64748b', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
+        <Link href="/practice-move-demo" style={{ color: '#64748b', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
           ← Back to Sandbox Playground
-        </a>
+        </Link>
       </footer>
     </div>
   );

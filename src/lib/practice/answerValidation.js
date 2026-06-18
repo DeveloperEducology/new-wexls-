@@ -246,7 +246,28 @@ export function isAnswerCorrect(question, userAnswer) {
   }
 
   if (interaction === 'interactive_stickers') {
-    const stickersPart = question.parts?.find((p) => p.type === 'interactive_stickers');
+    const stickersPart = question.parts?.find((p) => p.type === 'interactive_stickers') || question;
+    if (stickersPart?.mode === 'column_sort') {
+      const placements = userAnswer && typeof userAnswer === 'object' && Array.isArray(userAnswer.placements)
+        ? userAnswer.placements
+        : [];
+      const stickers = Array.isArray(stickersPart.stickers) ? stickersPart.stickers : [];
+      const categories = Array.isArray(stickersPart.categories) ? stickersPart.categories : [];
+      
+      if (placements.length < stickers.length) return false;
+
+      return placements.every(placement => {
+        const sticker = stickers.find(s => s.id === placement.id);
+        if (!sticker) return false;
+        const correctCategory = sticker.category || sticker.target || sticker.categoryId;
+        
+        const currentCategory = categories.find(cat => 
+          placement.x >= (cat.minX ?? 0) && placement.x < (cat.maxX ?? 100)
+        );
+
+        return currentCategory && currentCategory.id === correctCategory;
+      });
+    }
     if (stickersPart?.mode === 'shadow_match') {
       const placements = userAnswer && typeof userAnswer === 'object' && Array.isArray(userAnswer.placements)
         ? userAnswer.placements
