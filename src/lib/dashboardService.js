@@ -55,6 +55,58 @@ export function getCleanStudentData(studentId, grade = 'Grade 5') {
   };
 }
 
+export function getCleanParentData() {
+  return {
+    kpis: {
+      childName: 'No Child Linked',
+      accuracy: 0,
+      skillsMastered: 0,
+      weeklyGrowth: '0% accuracy delta',
+      monthlyGrowth: '0 skills mastered',
+      learningTime: '0 minutes logged'
+    },
+    strengthAreas: [],
+    improvementAreas: [],
+    teacherNotes: [],
+    weeklyReports: []
+  };
+}
+
+export function getCleanTeacherData() {
+  return {
+    kpis: {
+      totalStudents: 0,
+      activeStudents: 0,
+      absentStudents: 0,
+      avgAccuracy: 0,
+      avgMastery: 0,
+      avgGrowth: '0% weekly delta'
+    },
+    studentMonitoring: {
+      atRisk: [],
+      topPerformers: [],
+      recentlyImproved: []
+    },
+    skillAnalytics: {
+      mostDifficult: [],
+      mostFailed: [],
+      mostPracticed: [],
+      leastPracticed: []
+    },
+    interventionCenter: [],
+    classHeatmaps: {
+      studentVsSkill: [],
+      studentVsCompetency: [],
+      subjectHeatmap: [
+        { subject: 'Mathematics', completion: 0, avgAccuracy: 0 },
+        { subject: 'English', completion: 0, avgAccuracy: 0 },
+        { subject: 'Science', completion: 0, avgAccuracy: 0 }
+      ]
+    },
+    weeklyGrowth: []
+  };
+}
+
 // Fallback high-fidelity data generator for Nursery to Grade 10
 export function getMockStudentData(studentId, grade = 'Grade 5') {
   // Customize topic names, metrics based on grade-band
@@ -371,8 +423,19 @@ export async function getParentAnalytics(parentId, grade = 'Grade 5') {
     const childLinks = await linkColl.find({ parentId: parentIdFilter }).toArray();
 
     if (childLinks.length === 0) {
+      const isRealParent = await db.collection('parents').findOne({
+        $or: [
+          { _id: parentIdFilter },
+          { userId: parentIdFilter },
+          { email: parentIdFilter }
+        ]
+      });
+      if (isRealParent) {
+        return getCleanParentData();
+      }
       return getMockParentData('stud_ryan', grade);
     }
+
 
     const studentId = childLinks[0].studentId;
     const student = await db.collection('students').findOne({ _id: studentId });
@@ -481,16 +544,45 @@ export async function getTeacherAnalytics(teacherId, grade = 'Grade 5') {
     const notesColl = db.collection('teacher_notes');
     const alertsColl = db.collection('alerts');
 
-    const totalStudents = await studentsColl.countDocuments({});
-    const activeIds = await attemptsColl.distinct('userId');
+    // Find classes assigned to this teacher
+    const teacherClasses = await db.collection('classes').find({
+      $or: [
+        { teacherId: teacherId },
+        { teacherId: `teach_${teacherId}` }
+      ]
+    }).toArray();
+    const classIds = teacherClasses.map(c => c._id || c.classCode);
+
+    // Filter students to only those in the teacher's classes
+    const queryStudents = classIds.length > 0 ? { classId: { $in: classIds } } : { _id: '__none__' };
+    const listStudents = await studentsColl.find(queryStudents).toArray();
+    const totalStudents = listStudents.length;
+
+    // Return clean slate for real teachers with no students yet
+    if (totalStudents === 0) {
+      const isRealTeacher = await db.collection('teachers').findOne({
+        $or: [
+          { _id: teacherId },
+          { userId: teacherId },
+          { email: teacherId }
+        ]
+      });
+      if (isRealTeacher) {
+        return getCleanTeacherData();
+      }
+      return getMockTeacherData(teacherId || 'teach_sharma', grade);
+    }
+
+    const studentUsernames = listStudents.map(s => s.userId).filter(Boolean);
+    const queryAttempts = studentUsernames.length > 0 ? { userId: { $in: studentUsernames } } : { userId: '__none__' };
+
+    const activeIds = studentUsernames.length > 0 ? await attemptsColl.distinct('userId', queryAttempts) : [];
     
     // Group aggregates
-    const classAttempts = await attemptsColl.countDocuments({});
-    const classCorrect = await attemptsColl.countDocuments({ isCorrect: true });
+    const classAttempts = await attemptsColl.countDocuments(queryAttempts);
+    const classCorrect = await attemptsColl.countDocuments({ ...queryAttempts, isCorrect: true });
     const avgAccuracy = classAttempts > 0 ? Math.round((classCorrect / classAttempts) * 100) : 75;
 
-    // Fetch lists of students
-    const listStudents = await studentsColl.find({}).toArray();
 
     // At Risk Students (accuracy < 60%)
     const studentAccuracies = [];
