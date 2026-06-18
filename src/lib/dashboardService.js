@@ -1,5 +1,60 @@
 import { getMongoDb } from './db/mongo';
 
+export function getCleanStudentData(studentId, grade = 'Grade 5') {
+  return {
+    kpis: {
+      questionsAttempted: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      accuracyPercent: 0,
+      averageTimePerQuestion: 0,
+      hintsUsed: 0,
+      retryCount: 0,
+      streakDays: 0,
+      practiceMinutes: 0,
+      skillsStarted: 0,
+      skillsCompleted: 0,
+      skillsMastered: 0,
+      smartScore: 0,
+      learningLevel: 'Beginner',
+      badgesEarned: [],
+      dailyGoalCompletion: 0,
+      weeklyGoalCompletion: 0,
+      monthlyGoalCompletion: 0
+    },
+    charts: {
+      subjectProgress: [
+        { subject: 'Mathematics', completion: 0, accuracy: 0, mastery: 0 },
+        { subject: 'English', completion: 0, accuracy: 0, mastery: 0 },
+        { subject: 'Science', completion: 0, accuracy: 0, mastery: 0 }
+      ],
+      competencyRadar: [
+        { subject: 'Recall', value: 0 },
+        { subject: 'Application', value: 0 },
+        { subject: 'Speed', value: 0 },
+        { subject: 'Consistency', value: 0 },
+        { subject: 'Retention', value: 0 }
+      ],
+      learningTrends: [],
+      journeyMap: []
+    },
+    alerts: [],
+    recommendations: {
+      nextBestSkill: 'Choose a skill to start practicing!',
+      recommendedPractice: 'Select any skill from your roadmap',
+      weakAreas: [],
+      personalizedPath: []
+    },
+    insights: {
+      strengths: 'No practice data logged yet.',
+      weaknesses: 'No practice data logged yet.',
+      learningStyle: 'Visual & Interactive.',
+      recommendations: 'Start practicing worksheets to generate learning insights.'
+    },
+    skillsMastery: {}
+  };
+}
+
 // Fallback high-fidelity data generator for Nursery to Grade 10
 export function getMockStudentData(studentId, grade = 'Grade 5') {
   // Customize topic names, metrics based on grade-band
@@ -133,10 +188,20 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
       state: { $in: ['Learning', 'Needs Remediation', 'learning', 'needs_remediation'] }
     });
 
-    // If database stats are empty, merge with mock data so dashboard is populated
+    // If database stats are empty, check if this is a real registered student
     if (totalAttempts === 0) {
+      const isRealStudent = await db.collection('students').findOne({
+        $or: [
+          { _id: studentId },
+          { userId: studentId }
+        ]
+      });
+      if (isRealStudent) {
+        return getCleanStudentData(studentId, grade);
+      }
       return getMockStudentData(studentId, grade);
     }
+
 
     // Build timeline trends
     const recentSessions = totalSessions.slice(-14).map(s => ({
