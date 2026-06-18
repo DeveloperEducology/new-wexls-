@@ -3331,7 +3331,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
           position: 'relative',
           width: '100%',
           aspectRatio: part.sceneImageUrl ? undefined : '16 / 7',
-          minHeight: part.sceneImageUrl ? undefined : 230,
+          minHeight: part.sceneImageUrl ? 'clamp(200px, 45vw, 420px)' : 230,
           overflow: 'hidden',
           border: isOutsideDragged ? '3px dashed #fb8c00' : '2px solid #93c5fd',
           borderRadius: part.mode === 'column_sort' ? '18px' : '18px 18px 0 0',
@@ -3344,13 +3344,16 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
         }}
       >
         {part.sceneImageUrl ? (
-          <img 
-            src={part.sceneImageUrl} 
+          <img
+            src={part.sceneImageUrl}
             alt="Scene"
             draggable={false}
             style={{
+              position: 'absolute',
+              inset: 0,
               width: '100%',
-              height: 'auto',
+              height: '100%',
+              objectFit: 'cover',
               display: 'block',
               pointerEvents: 'none',
               userSelect: 'none',

@@ -306,6 +306,7 @@ function renderInteractiveSolution(question) {
             position: 'relative',
             width: '100%',
             aspectRatio: '16 / 7',
+            minHeight: 'clamp(180px, 48vw, 360px)',
             overflow: 'hidden',
             border: '2px solid #22c55e',
             borderRadius: '16px',
