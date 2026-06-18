@@ -71,8 +71,12 @@ export async function GET(request) {
       throw new Error('Google GenAI client not configured. Set GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT in your environment.');
     }
 
-    console.log(`[Video Status] Checking status on Google Cloud for job: ${operationId}`);
-    let operation = await ai.operations.get({ name: operationId });
+    let operation = await ai.operations.get({
+      operation: {
+        name: operationId,
+        _fromAPIResponse: ({ apiResponse }) => apiResponse,
+      }
+    });
 
     if (!operation.done) {
       return NextResponse.json({ status: 'processing' });
