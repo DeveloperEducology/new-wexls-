@@ -123,31 +123,26 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS, skillsMastery = {} })
   );
 }
 
-function GradeLevelCurriculumPage({ topics, activeSubject, skillsMastery = {} }) {
+function GradeLevelCurriculumPage({ topics, activeSubject, skillsMastery = {}, selectedGrade = 'all' }) {
   const sortedGrades = buildGradeCurriculum(topics, activeSubject);
+
+  const renderedGrades = selectedGrade && selectedGrade !== 'all'
+    ? sortedGrades.filter(([gradeTitle]) => gradeTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-') === selectedGrade.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+    : sortedGrades;
 
   return (
     <main className="ixl-landing-page">
       <HomeHero />
-      <SubjectTabs activeSubject={activeSubject} basePath="/grades" />
+      <SubjectTabs activeSubject={activeSubject} basePath="/grades" sortedGrades={sortedGrades} />
 
       <div className="curriculum-container">
-        <aside className="grade-sidebar">
-          <h3>Grades</h3>
-          {sortedGrades.map(([gradeTitle]) => (
-            <a key={gradeTitle} href={`#grade-${gradeTitle.split(' ').join('-')}`} className="grade-link">
-              {gradeTitle.replace(' skills', '')}
-            </a>
-          ))}
-        </aside>
-
-        <section className="grade-content">
-          {sortedGrades.length === 0 ? (
-            <p className="empty-state">No skills available for this subject yet.</p>
+        <section className="grade-content" style={{ flex: 1, width: '100%', maxWidth: '100%' }}>
+          {renderedGrades.length === 0 ? (
+            <p className="empty-state">No skills available for this subject or grade yet.</p>
           ) : (
-             sortedGrades.map(([gradeTitle, gradeTopics], index) => {
+             renderedGrades.map(([gradeTitle, gradeTopics], index) => {
                const isEarlyYears = gradeTitle === 'LKG' || gradeTitle === 'UKG' || gradeTitle === 'Pre-K';
-               const prevGrade = index > 0 ? sortedGrades[index - 1][0] : null;
+               const prevGrade = index > 0 ? renderedGrades[index - 1][0] : null;
                const prevIsEarlyYears = prevGrade === 'LKG' || prevGrade === 'UKG' || prevGrade === 'Pre-K';
                
                const showPrekHero = isEarlyYears && !prevIsEarlyYears;
@@ -223,6 +218,7 @@ export default async function GradesPage({ searchParams }) {
   const selectedTopic = params?.topic;
   const viewMode = params?.view;
   const activeSubject = params?.subject || 'math';
+  const selectedGrade = params?.grade || 'all';
 
   const dbTopics = await loadDbTopics();
   const topics = mergeTopics(TOPICS, dbTopics);
@@ -302,7 +298,7 @@ export default async function GradesPage({ searchParams }) {
       </>
     );
   } else {
-    content = <GradeLevelCurriculumPage topics={topics} activeSubject={activeSubject} skillsMastery={skillsMastery} />;
+    content = <GradeLevelCurriculumPage topics={topics} activeSubject={activeSubject} skillsMastery={skillsMastery} selectedGrade={selectedGrade} />;
   }
 
   return (

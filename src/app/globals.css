@@ -756,6 +756,29 @@ a {
   background: #e2e8f0;
 }
 
+.grade-filter-dropdown {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.grade-filter-dropdown:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.grade-filter-dropdown:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+}
+
 .view-toggle-header {
   padding: 20px 40px;
   background: white;
