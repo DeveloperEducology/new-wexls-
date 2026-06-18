@@ -191,12 +191,26 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
 
 function resolveValidationRules(rules, resolvedVariables) {
   if (!Array.isArray(rules)) return [];
+  const resolveTemplateValue = (value) => {
+    if (typeof value === 'string') return interpolateString(value, resolvedVariables);
+    if (Array.isArray(value)) return value.map(resolveTemplateValue);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, nestedValue]) => [
+          interpolateString(key, resolvedVariables),
+          resolveTemplateValue(nestedValue)
+        ])
+      );
+    }
+    return value;
+  };
+
   return rules.map(rule => {
     if (!rule || typeof rule !== 'object') return rule;
     const resolved = { ...rule };
     ['value', 'expected', 'answer', 'formula', 'target'].forEach(key => {
-      if (typeof resolved[key] === 'string') {
-        resolved[key] = interpolateString(resolved[key], resolvedVariables);
+      if (resolved[key] !== undefined) {
+        resolved[key] = resolveTemplateValue(resolved[key]);
       }
     });
     if (String(resolved.type || '').toLowerCase() === 'custom_formula' && resolved.formula) {
@@ -783,6 +797,12 @@ export function evaluateTemplate(originalTemplate, seed) {
       const builder = COMPONENT_REGISTRY[v.component];
       if (builder) {
         const resolvedProps = {};
+        const legacyPlaceValueFallbacks = {
+          thousands: { Th: 1, TH: 1, T: 1 },
+          hundreds: { H: 1 },
+          tens: { T: 2 },
+          ones: { O: 3, One: 3, Ones: 3 }
+        };
         for (const [key, val] of Object.entries(v.props || {})) {
           if (v.component === 'ItemCounter' && key === 'itemType' && resolvedVariables["_ItemCounter_resolvedType"]) {
             resolvedProps[key] = resolvedVariables["_ItemCounter_resolvedType"];
@@ -790,6 +810,12 @@ export function evaluateTemplate(originalTemplate, seed) {
             resolvedProps[key] = resolvedVariables["_Image_resolvedUrl"];
           } else if (typeof val === 'string' && resolvedVariables[val] !== undefined) {
             resolvedProps[key] = resolvedVariables[val];
+          } else if (
+            (v.component === 'PlaceValue' || v.component === 'BaseTenBlocks') &&
+            legacyPlaceValueFallbacks[key] &&
+            legacyPlaceValueFallbacks[key][String(val).trim()] !== undefined
+          ) {
+            resolvedProps[key] = legacyPlaceValueFallbacks[key][String(val).trim()];
           } else {
             resolvedProps[key] = resolveExpression(val, resolvedVariables);
           }

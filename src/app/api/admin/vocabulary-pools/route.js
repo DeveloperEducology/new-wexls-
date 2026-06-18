@@ -5,6 +5,7 @@ import { clearVocabularyPoolCache } from '@/lib/practice/questionBank/questionRe
 const OPTIONAL_POOL_FIELDS = [
   'subject',
   'topic',
+  'grade',
   'chapterId',
   'description',
   'status',

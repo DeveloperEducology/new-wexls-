@@ -36,6 +36,7 @@ export default function LabLayout({
     const [isMobile, setIsMobile] = useState(false);
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
     const [isLearningPathOpen, setIsLearningPathOpen] = useState(true);
+    const isDirectImageSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
 
     const formatTimer = (totalSeconds) => {
         const hrs = Math.floor(totalSeconds / 3600);
@@ -510,7 +511,7 @@ export default function LabLayout({
                             disabled={userAnswer === null || isSubmitting || loading}
                             className={styles.preKSubmitBtn}
                         >
-                            <span>🚀 Check My Answer</span>
+                            <span>{isDirectImageSelect && userAnswer === null ? '👆 Tap a picture' : '🚀 Check My Answer'}</span>
                         </button>
                     ) : (
                         <button

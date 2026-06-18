@@ -3,7 +3,16 @@ import { resolveExpression } from './expressionParser.js';
 // String interpolator to replace [var_name] placeholders
 export function interpolateString(str, context) {
   if (typeof str !== 'string') return str;
-  const withPathTokens = str.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
+  const blankTokens = [];
+  const protectedStr = str.replace(/\[\[[^\]]+\]\]/g, (token) => {
+    const key = `__INLINE_BLANK_${blankTokens.length}__`;
+    blankTokens.push(token);
+    return key;
+  });
+
+  const restoreBlankTokens = (value) => String(value).replace(/__INLINE_BLANK_(\d+)__/g, (_, index) => blankTokens[Number(index)] || '');
+
+  const withPathTokens = protectedStr.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
     const trimmed = name.trim();
     if (context[trimmed] !== undefined) {
       return context[trimmed];
@@ -11,7 +20,7 @@ export function interpolateString(str, context) {
     return resolveExpression(trimmed, context);
   });
 
-  return withPathTokens.replace(/\[(.*?)\]/g, (_, name) => {
+  const resolved = withPathTokens.replace(/\[(.*?)\]/g, (_, name) => {
     const trimmed = name.trim();
     if (context[trimmed] !== undefined) {
       return context[trimmed];
@@ -19,6 +28,8 @@ export function interpolateString(str, context) {
     // Try resolving as an expression directly if it's like [A - B]
     return resolveExpression(trimmed, context);
   });
+
+  return restoreBlankTokens(resolved);
 }
 
 // Resolve labels that might be expressions or variables with/without brackets

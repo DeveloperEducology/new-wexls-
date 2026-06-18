@@ -1,6 +1,7 @@
 'use client';
 
-import PartRenderer, { SvgPart } from './PartRenderer';
+import { cloneElement } from 'react';
+import PartRenderer, { SvgPart, TextWithBlanks as InlineTextWithBlanks } from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
 import { speakText, getQuestionSpeechText } from '@/lib/ttsClient';
@@ -31,18 +32,28 @@ function responsivePx(value, minPx, fallbackMaxPx) {
 
 function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
   const pieces = String(text || '').split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
+  const renderPlainTextPiece = (piece, keyPrefix) => (
+    String(piece).split('\n').map((line, lineIndex, lines) => (
+      <span key={`${keyPrefix}-${lineIndex}`}>
+        {line.replace(/^#{1,4}\s*/, '')}
+        {lineIndex < lines.length - 1 ? <br /> : null}
+      </span>
+    ))
+  );
 
   return (
     <span>
       {pieces.map((piece, index) => {
         const legacyMatch = piece.match(/^(?:\*\*)?\[blank(?::([^\]]+))?\](?:\*\*)?$/);
         const bracketMatch = piece.match(/^\[\[([^\]]+)\]\]$/);
-        const blankId = legacyMatch?.[1] || bracketMatch?.[1] || (legacyMatch ? 'blank' : null);
+        const rawBracketId = bracketMatch?.[1]?.trim();
+        const bracketBlankId = rawBracketId?.toLowerCase() === 'blank' ? 'ans' : rawBracketId;
+        const blankId = legacyMatch?.[1] || bracketBlankId || (legacyMatch ? 'blank' : null);
 
         if (!blankId) {
           const boldMatch = piece.match(/^\*\*([^*]+)\*\*$/);
           if (boldMatch) return <strong key={index}>{boldMatch[1]}</strong>;
-          return <span key={index}>{piece.replace(/^#{1,4}\s*/, '')}</span>;
+          return renderPlainTextPiece(piece, `text-${index}`);
         }
 
         return (
@@ -288,10 +299,10 @@ export default function FillInTheBlankRenderer({
   const displayParts = hasQuestionTextHeader ? parts.slice(1) : parts;
 
   const hasClickToFill = question.metaConfig?.hasClickToFill === true;
-  const hasInlineInput = displayParts.some(part => {
+  const hasBlankToken = (text) => String(text || '').includes('[blank') || /\[\[[^\]]+\]\]/.test(String(text || ''));
+  const hasInlineInput = hasBlankToken(question.questionText) || displayParts.some(part => {
     if (part.type === 'input') return true;
-    const text = part.content || part.text || '';
-    return text.includes('[blank') || /\[\[[^\]]+\]\]/.test(text);
+    return hasBlankToken(part.content || part.text || '');
   });
 
   return (
@@ -342,7 +353,13 @@ export default function FillInTheBlankRenderer({
             </svg>
           </button>
           <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
-            {question.questionText}
+            <InlineTextWithBlanks
+              text={question.questionText}
+              userAnswer={userAnswer}
+              onAnswer={onAnswer}
+              isAnswered={isAnswered}
+              question={question}
+            />
           </h2>
         </div>
       ) : null}
@@ -354,21 +371,42 @@ export default function FillInTheBlankRenderer({
 
           const flushImageRow = (key) => {
             if (currentImageRow.length > 0) {
+              const rowMode = question.imageRowMode || question.metadata?.imageRowMode || 'wrap';
+              const rowGap = Number(question.imageRowGap || question.metadata?.imageRowGap || 20);
+              const singleRow = rowMode === 'scroll';
+              const rowCount = currentImageRow.length;
+              const cardWidth = Number(question.commonImageWidth || question.metadata?.commonImageWidth || 170);
+              const rowMaxWidth = (rowCount * cardWidth) + (Math.max(0, rowCount - 1) * Math.max(8, rowGap));
               elements.push(
                 <div
                   key={`image-row-${key}`}
                   style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
+                    display: singleRow ? 'flex' : 'grid',
+                    flexDirection: singleRow ? 'row' : undefined,
+                    flexWrap: singleRow ? 'nowrap' : undefined,
+                    gridTemplateColumns: singleRow
+                      ? undefined
+                      : `repeat(${rowCount}, minmax(72px, 1fr))`,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    gap: 16,
+                    gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
                     width: '100%',
-                    margin: '10px 0'
+                    maxWidth: singleRow ? 'min(100%, 1160px)' : `min(100%, ${rowMaxWidth}px)`,
+                    margin: '10px 0',
+                    overflowX: singleRow ? 'auto' : 'visible',
+                    overflowY: 'visible',
+                    padding: '2px clamp(16px, 4vw, 44px) 8px',
+                    boxSizing: 'border-box',
                   }}
                 >
-                  {currentImageRow}
+                  {currentImageRow.map((element) => cloneElement(element, {
+                    part: {
+                      ...element.props.part,
+                      rowImageCount: rowCount,
+                      rowImageGap: rowGap,
+                      rowImageMode: rowMode,
+                    }
+                  }))}
                 </div>
               );
               currentImageRow = [];
@@ -382,7 +420,7 @@ export default function FillInTheBlankRenderer({
                 key={index}
                 part={{
                   ...part,
-                  ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180 } : {})
+                  ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180, rowImage: true } : {})
                 }}
                 question={question}
                 userAnswer={userAnswer}

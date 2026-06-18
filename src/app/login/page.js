@@ -168,12 +168,24 @@ export default function LoginPage() {
                 />
               </div>
               <div className={styles.formGroup}>
-                <label>Student PIN or Username</label>
+                <label>Student Username</label>
                 <input
                   type="text"
-                  placeholder="e.g. 1234 or ryan_p"
+                  placeholder="e.g. ryan_p"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className={styles.formInput}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>Student PIN</label>
+                <input
+                  type="password"
+                  placeholder="e.g. 1234"
+                  maxLength={4}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
                   required
                   className={styles.formInput}
                 />

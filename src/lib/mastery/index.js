@@ -253,6 +253,8 @@ export function updateMasteryState(previousState, attempt) {
     remediationNeeded: wrongStreak >= 2 || currentState === 'remediation',
     recommendedDifficulty: recommendDifficulty({ smartScore, practiceLevel, wrongStreak }),
     recentAttempts: [attempt].concat(previous.recentAttempts || []).slice(0, 10),
+    recentSeeds: [attempt.seed].concat(previous.recentSeeds || []).filter(Boolean).slice(0, 10),
+    recentQuestionIds: [attempt.questionId].concat(previous.recentQuestionIds || []).filter(Boolean).slice(0, 10),
     lastAttemptAt: attempt.createdAt,
     didLevelUp,
     streakThreshold,

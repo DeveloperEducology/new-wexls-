@@ -68,7 +68,7 @@ function StarsJar({ score, lastResult }) {
   );
 }
 
-export default function MontessoriLayout({
+export default function MontessoriLayout({ 
   title,
   subject = 'math',
   smartScore = 0,
@@ -92,6 +92,7 @@ export default function MontessoriLayout({
   lastResult = 'none'
 }) {
   const [isTrayOpen, setIsTrayOpen] = useState(false);
+  const isDirectImageSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -198,7 +199,7 @@ export default function MontessoriLayout({
                 {isSecondTry ? (
                   <span>💫 Try Again! (Self-Correct)</span>
                 ) : (
-                  <span>🚀 Check My Answer</span>
+                  <span>{isDirectImageSelect && userAnswer === null ? '👆 Tap a picture' : '🚀 Check My Answer'}</span>
                 )}
               </button>
             ) : (

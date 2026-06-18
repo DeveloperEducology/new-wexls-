@@ -1,0 +1,52 @@
+{
+  "id": "qb_sample_lkg_case_match_1",
+  "type": "mcq",
+  "interaction": "choice",
+  "questionText": "Look at this uppercase letter. Which lowercase letter matches?",
+  "shownLetter": "O",
+  "shownLetterSvg": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">O</text>\n</svg>",
+  "voice": "Kore",
+  "parts": [
+    {
+      "type": "text",
+      "content": "Look at this uppercase letter. Which lowercase letter matches?"
+    },
+    {
+      "type": "case_match_shown_letter",
+      "letter": "O",
+      "svgContent": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">O</text>\n</svg>"
+    }
+  ],
+  "options": [
+    {
+      "id": "opt_0",
+      "label": "o",
+      "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"92\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">o</text>\n</svg>",
+      "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/5e1aba0ca15fc3fa3411252e789c3add4b1091bb0bd1fee4bb53de20237dee42.wav"
+    },
+    {
+      "id": "opt_1",
+      "label": "p",
+      "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"92\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">p</text>\n</svg>",
+      "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/001a966b1794855fb7a0a54576213edebb147cc6c66acaeec7e7055cd8b49b29.wav"
+    }
+  ],
+  "answer": 0,
+  "correctAnswerIndex": 0,
+  "explanation": "The lowercase form of **O** is **o**.",
+  "solution": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "The lowercase form of **O** is **o**."
+      }
+    ]
+  },
+  "metadata": {
+    "subject": "english",
+    "topic": "lkg",
+    "skillId": "lkg-english-case-match-lower-similar",
+    "templateId": "lkg.english.case_match",
+    "engine": "case_match"
+  }
+}

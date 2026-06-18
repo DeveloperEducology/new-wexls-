@@ -173,13 +173,28 @@ export async function POST(request) {
     }
 
     // --- AUTHENTICATION SUCCESS ---
+    let studentGrade = userDoc.grade || 'Grade 5';
+    if (userDoc.role === 'student') {
+      const studentDoc = await db.collection('students').findOne({
+        $or: [
+          { userId: String(userDoc._id) },
+          { userId: userDoc.username },
+          { userId: userDoc._id }
+        ]
+      });
+      if (studentDoc && studentDoc.grade) {
+        studentGrade = studentDoc.grade;
+      }
+    }
+
     const sessionData = {
       userId: String(userDoc._id),
       role: userDoc.role,
       name: userDoc.name,
-      grade: userDoc.grade || 'Grade 5',
+      grade: studentGrade,
       schoolId: userDoc.schoolId || null
     };
+
 
     const accessToken = generateAccessToken(sessionData);
     const refreshToken = generateRefreshToken(sessionData);

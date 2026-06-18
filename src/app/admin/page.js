@@ -351,7 +351,25 @@ function TreeNode({ node, selectedId, onSelect, onChild }) {
         )}
         <button type="button" className={styles.currNodeMain} onClick={() => onSelect(node)}>
           <span className={styles.currNodeType}>{node.type}</span>
-          <span className={styles.currNodeTitle}>{node.title || node.id}</span>
+          <span className={styles.currNodeTitle}>
+            {node.title || node.id}
+            {node.status && node.status !== 'active' && (
+              <span style={{
+                marginLeft: 6,
+                fontSize: 9,
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                padding: '2px 6px',
+                borderRadius: 4,
+                backgroundColor: node.status === 'inactive' ? '#ef4444' : '#f59e0b',
+                color: '#ffffff',
+                display: 'inline-block',
+                verticalAlign: 'middle'
+              }}>
+                {node.status}
+              </span>
+            )}
+          </span>
           <span className={styles.currNodeId}>{node.id}</span>
         </button>
         {childTypes.length > 0 ? (
@@ -530,6 +548,10 @@ export default function AdminConsolePage() {
   const [targetCategory, setTargetCategory] = useState('');
   const [targetKey, setTargetKey] = useState('nouns');
   const [distractorCategories, setDistractorCategories] = useState('');
+  const [targetProperty, setTargetProperty] = useState('');
+  const [targetValue, setTargetValue] = useState('');
+  const [distractorProperty, setDistractorProperty] = useState('');
+  const [distractorValue, setDistractorValue] = useState('');
   const [missingLetterMode, setMissingLetterMode] = useState('beginning');
   const [vocabularyPools, setVocabularyPools] = useState([]);
   const [vocabularyPoolsLoading, setVocabularyPoolsLoading] = useState(false);
@@ -557,6 +579,8 @@ export default function AdminConsolePage() {
   const [poolManagerGeneratingId, setPoolManagerGeneratingId] = useState('');
   const [editingPoolItemKey, setEditingPoolItemKey] = useState(null); // 'category:index'
   const [posInputs, setPosInputs] = useState({});
+  const [newPoolFieldName, setNewPoolFieldName] = useState('');
+  const [newPoolFieldValue, setNewPoolFieldValue] = useState('');
 
   useEffect(() => {
     setEditingPoolItemKey(null);
@@ -565,6 +589,8 @@ export default function AdminConsolePage() {
 
   useEffect(() => {
     setPosInputs({});
+    setNewPoolFieldName('');
+    setNewPoolFieldValue('');
   }, [editingPoolItemKey]);
 
   const [imgPickerPoolItem, setImgPickerPoolItem] = useState(null);
@@ -596,6 +622,8 @@ export default function AdminConsolePage() {
   ]);
   const [arrangeImagesRow, setArrangeImagesRow] = useState(false);
   const [commonImageWidth, setCommonImageWidth] = useState(180);
+  const [imageRowMode, setImageRowMode] = useState('wrap');
+  const [imageRowGap, setImageRowGap] = useState(20);
   const [directImageSelect, setDirectImageSelect] = useState(false);
   const [hideOptionImages, setHideOptionImages] = useState(false);
   const [hideOptionLabel, setHideOptionLabel] = useState(false);
@@ -608,10 +636,54 @@ export default function AdminConsolePage() {
     () => vocabularyPools.find(pool => pool.poolId === poolId.trim()) || null,
     [poolId, vocabularyPools]
   );
+  const [selectedPoolDocument, setSelectedPoolDocument] = useState(null);
+  const selectedVocabularyPoolForPreview = selectedPoolDocument?.poolId === poolId.trim()
+    ? selectedPoolDocument
+    : selectedVocabularyPool;
   const selectedPoolCategories = useMemo(
-    () => Object.keys(selectedVocabularyPool?.categoryCounts || selectedVocabularyPool?.pools || {}),
-    [selectedVocabularyPool]
+    () => Object.keys(selectedVocabularyPoolForPreview?.categoryCounts || selectedVocabularyPoolForPreview?.pools || {}),
+    [selectedVocabularyPoolForPreview]
   );
+  const selectedPoolPropertyKeys = useMemo(() => {
+    const ignored = new Set(['imageUrl', 'audioUrl', 'phonicSoundUrl', 'assetStatus', 'active']);
+    const keys = new Set();
+    Object.values(selectedVocabularyPoolForPreview?.pools || {}).forEach(items => {
+      (Array.isArray(items) ? items : []).forEach(item => {
+        Object.keys(item || {}).forEach(key => {
+          if (!ignored.has(key)) keys.add(key);
+        });
+      });
+    });
+    return Array.from(keys).sort((a, b) => a.localeCompare(b));
+  }, [selectedVocabularyPoolForPreview]);
+  const itemMatchesPropertyFilter = (item, property, value) => {
+    const prop = String(property || '').trim();
+    const expected = String(value || '').trim();
+    if (!prop || !expected) return true;
+    const actual = item?.[prop];
+    if (Array.isArray(actual)) {
+      return actual.map(entry => String(entry).toLowerCase()).includes(expected.toLowerCase());
+    }
+    return String(actual ?? '').toLowerCase() === expected.toLowerCase();
+  };
+  const getPoolPropertyValues = (property, categoriesToScan = selectedPoolCategories) => {
+    const prop = String(property || '').trim();
+    if (!prop) return [];
+    const values = new Set();
+    categoriesToScan.forEach(category => {
+      (selectedVocabularyPoolForPreview?.pools?.[category] || []).forEach(item => {
+        const raw = item?.[prop];
+        if (Array.isArray(raw)) {
+          raw.forEach(value => {
+            if (value !== undefined && value !== null && String(value).trim()) values.add(String(value).trim());
+          });
+        } else if (raw !== undefined && raw !== null && String(raw).trim()) {
+          values.add(String(raw).trim());
+        }
+      });
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  };
 
   const openPoolWordManager = async () => {
     if (!poolId.trim()) return;
@@ -623,7 +695,12 @@ export default function AdminConsolePage() {
       if (!data.success || !data.pool) throw new Error(data.error || 'Unable to load pool.');
       setPoolWordManagerData(data.pool);
       const categories = Object.keys(data.pool.pools || {});
-      setPoolWordCategory(current => categories.includes(current) ? current : (targetCategory || categories[0] || ''));
+      setPoolWordCategory(current => {
+        if (categories.includes(current)) return current;
+        const targetCatTrimmed = (targetCategory || '').trim();
+        if (targetCatTrimmed && categories.includes(targetCatTrimmed)) return targetCatTrimmed;
+        return categories[0] || '';
+      });
       setPoolWordManagerStatus('');
     } catch (error) {
       setPoolWordManagerStatus(error.message || 'Unable to load pool.');
@@ -713,6 +790,259 @@ export default function AdminConsolePage() {
     setPoolWordManagerStatus('Unsaved pool changes.');
   };
 
+  const poolItemCoreFields = new Set([
+    'id',
+    'label',
+    'text',
+    'imageUrl',
+    'audioUrl',
+    'phonicPrompt',
+    'phonicSoundUrl',
+    'nouns',
+    'verbs',
+    'adjectives',
+    'adverbs',
+    'prepositions',
+    'pronouns',
+    'conjunctions',
+    'articles',
+    'vowels',
+    'consonants'
+  ]);
+
+  const poolItemPosFields = [
+    { label: 'Nouns', field: 'nouns' },
+    { label: 'Verbs', field: 'verbs' },
+    { label: 'Adjectives', field: 'adjectives' },
+    { label: 'Adverbs', field: 'adverbs' },
+    { label: 'Prepositions', field: 'prepositions' },
+    { label: 'Pronouns', field: 'pronouns' },
+    { label: 'Conjunctions', field: 'conjunctions' },
+    { label: 'Articles', field: 'articles' },
+    { label: 'Vowels', field: 'vowels' },
+    { label: 'Consonants', field: 'consonants' }
+  ];
+
+  const formatPoolFieldLabel = (field) => String(field || '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+
+  const stringifyPoolFieldValue = (value) => {
+    if (Array.isArray(value)) {
+      const isSimpleArray = value.every(item => item == null || ['string', 'number', 'boolean'].includes(typeof item));
+      return isSimpleArray ? value.join(', ') : JSON.stringify(value, null, 2);
+    }
+    if (value && typeof value === 'object') return JSON.stringify(value, null, 2);
+    return value == null ? '' : String(value);
+  };
+
+  const parsePoolFieldValue = (rawValue, currentValue) => {
+    if (Array.isArray(currentValue)) {
+      const isSimpleArray = currentValue.every(item => item == null || ['string', 'number', 'boolean'].includes(typeof item));
+      if (isSimpleArray) {
+        return rawValue.split(',').map(item => item.trim()).filter(Boolean);
+      }
+      try {
+        const parsed = JSON.parse(rawValue);
+        return Array.isArray(parsed) ? parsed : currentValue;
+      } catch {
+        return currentValue;
+      }
+    }
+    if (currentValue && typeof currentValue === 'object') {
+      try {
+        const parsed = JSON.parse(rawValue);
+        return parsed && typeof parsed === 'object' ? parsed : currentValue;
+      } catch {
+        return currentValue;
+      }
+    }
+    if (typeof currentValue === 'boolean') {
+      return rawValue === 'true';
+    }
+    if (typeof currentValue === 'number') {
+      const parsed = Number(rawValue);
+      return Number.isFinite(parsed) ? parsed : currentValue;
+    }
+    return rawValue;
+  };
+
+  const inferNewPoolFieldValue = (field, rawValue) => {
+    const key = String(field || '').trim();
+    const value = String(rawValue || '').trim();
+    if (!key) return '';
+    if (['tags', 'nouns', 'verbs', 'adjectives', 'adverbs', 'prepositions', 'pronouns', 'conjunctions', 'articles', 'vowels', 'consonants'].includes(key)) {
+      return value ? value.split(',').map(entry => entry.trim()).filter(Boolean) : [];
+    }
+    if (['active', 'isCorrect', 'correct'].includes(key)) {
+      return value ? value.toLowerCase() !== 'false' : true;
+    }
+    if (['imageWidth', 'imageHeight', 'width', 'height', 'count'].includes(key)) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : '';
+    }
+    return value;
+  };
+
+  const addPoolManagerItemField = (category, index, fieldName, rawValue = '') => {
+    const field = String(fieldName || '').trim();
+    if (!field) {
+      setPoolWordManagerStatus('Enter a field name first.');
+      return;
+    }
+    const item = poolWordManagerData?.pools?.[category]?.[index] || {};
+    if (Object.prototype.hasOwnProperty.call(item, field)) {
+      setPoolWordManagerStatus(`"${field}" already exists on this item.`);
+      return;
+    }
+    updatePoolManagerItem(category, index, {
+      [field]: inferNewPoolFieldValue(field, rawValue)
+    });
+    setNewPoolFieldName('');
+    setNewPoolFieldValue('');
+  };
+
+  const isEmptyPoolFieldValue = (value) => {
+    if (value === undefined || value === null) return true;
+    if (Array.isArray(value)) return value.length === 0;
+    if (typeof value === 'string') return value.trim() === '';
+    return false;
+  };
+
+  const enrichPoolItemWithGemini = async (category, index, item) => {
+    if (!item) return;
+    const generationKey = `enrich_${category}:${index}`;
+    setPoolManagerGeneratingId(generationKey);
+    setPoolWordManagerStatus('Asking Gemini to fill item details...');
+    try {
+      const response = await fetch('/api/admin/vocabulary-pools/enrich-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item,
+          poolId: poolWordManagerData?.poolId,
+          category,
+          subject: poolWordManagerData?.subject,
+          topic: poolWordManagerData?.topic,
+          grade: poolWordManagerData?.grade
+        })
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Gemini enrichment failed.');
+
+      const protectedFields = new Set(['id', 'label', 'imageUrl', 'audioUrl']);
+      const merged = {};
+      Object.entries(data.details || {}).forEach(([field, value]) => {
+        if (protectedFields.has(field)) return;
+        if (isEmptyPoolFieldValue(value)) return;
+        if (isEmptyPoolFieldValue(item[field])) {
+          merged[field] = value;
+        }
+      });
+
+      if (Object.keys(merged).length === 0) {
+        setPoolWordManagerStatus('Gemini returned no new empty fields to fill.');
+        return;
+      }
+
+      updatePoolManagerItem(category, index, merged);
+      const posUpdates = {};
+      poolItemPosFields.forEach(pos => {
+        if (Array.isArray(merged[pos.field])) {
+          posUpdates[pos.field] = merged[pos.field].join(', ');
+        }
+      });
+      if (Object.keys(posUpdates).length) {
+        setPosInputs(previous => ({ ...previous, ...posUpdates }));
+      }
+      setPoolWordManagerStatus(`Gemini filled ${Object.keys(merged).length} details. Review, then Save Pool Changes.`);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Gemini enrichment failed.');
+    } finally {
+      setPoolManagerGeneratingId('');
+    }
+  };
+
+  const enrichMissingPoolDetailsForCategory = async () => {
+    if (!poolWordManagerData || !poolWordCategory) return;
+    const category = poolWordCategory;
+    const items = poolWordManagerData.pools?.[category] || [];
+    const candidates = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item?.label || item?.text || item?.id);
+
+    if (candidates.length === 0) {
+      setPoolWordManagerStatus(`No items found in category "${category}".`);
+      return;
+    }
+
+    if (!confirm(`Ask Gemini to fill missing details for ${candidates.length} items in "${category}"? Existing id, label, image, and audio fields will not be overwritten.`)) {
+      return;
+    }
+
+    setPoolWordManagerSaving(true);
+    setPoolManagerGeneratingId(`bulk_enrich_${category}`);
+    setPoolWordManagerStatus(`Preparing Gemini details for ${candidates.length} items...`);
+
+    let updatedCount = 0;
+    let fieldCount = 0;
+    let failedCount = 0;
+
+    try {
+      for (let i = 0; i < candidates.length; i++) {
+        const { item, index } = candidates[i];
+        const label = item.label || item.text || item.id || `Item ${index + 1}`;
+        setPoolWordManagerStatus(`Gemini filling missing details for "${label}" (${i + 1}/${candidates.length})...`);
+
+        try {
+          const response = await fetch('/api/admin/vocabulary-pools/enrich-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item,
+              poolId: poolWordManagerData.poolId,
+              category,
+              subject: poolWordManagerData.subject,
+              topic: poolWordManagerData.topic,
+              grade: poolWordManagerData.grade
+            })
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.error || 'Gemini enrichment failed.');
+
+          const protectedFields = new Set(['id', 'label', 'imageUrl', 'audioUrl']);
+          const merged = {};
+          Object.entries(data.details || {}).forEach(([field, value]) => {
+            if (protectedFields.has(field)) return;
+            if (isEmptyPoolFieldValue(value)) return;
+            if (isEmptyPoolFieldValue(item[field])) {
+              merged[field] = value;
+            }
+          });
+
+          if (Object.keys(merged).length > 0) {
+            updatePoolManagerItem(category, index, merged);
+            updatedCount++;
+            fieldCount += Object.keys(merged).length;
+          }
+        } catch (error) {
+          console.error(`Gemini detail fill failed for "${label}":`, error);
+          failedCount++;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+
+      setPoolWordManagerStatus(`Gemini filled ${fieldCount} missing fields across ${updatedCount} items. Failed: ${failedCount}. Review, then Save Pool Changes.`);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Bulk Gemini detail fill failed.');
+    } finally {
+      setPoolManagerGeneratingId('');
+      setPoolWordManagerSaving(false);
+    }
+  };
+
   const savePoolManagerChanges = async () => {
     if (!poolWordManagerData) return;
     setPoolWordManagerSaving(true);
@@ -737,19 +1067,190 @@ export default function AdminConsolePage() {
     if (!item?.label?.trim()) return;
     setPoolManagerGeneratingId(`${category}:${index}`);
     try {
-      const response = await fetch('/api/admin/generate-audio', {
+      const response = await fetch('/api/admin/resolve-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck' })
+        body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck', generate: false })
       });
       const data = await response.json();
-      if (!data.success || !data.audioUrl) throw new Error(data.error || 'Audio generation failed.');
+      if (!data.success || !data.audioUrl) {
+        const shouldGenerate = confirm(`No existing R2 audio found for "${item.label}". Generate new audio now?`);
+        if (!shouldGenerate) {
+          setPoolWordManagerStatus(`No audio linked for "${item.label}". Generation skipped.`);
+          return;
+        }
+        const generateResponse = await fetch('/api/admin/resolve-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck', generate: true })
+        });
+        const generated = await generateResponse.json();
+        if (!generated.success || !generated.audioUrl) throw new Error(generated.error || 'Audio generation failed.');
+        updatePoolManagerItem(category, index, { audioUrl: generated.audioUrl });
+        handlePlayUrlAudio(`pool_${category}_${index}`, generated.audioUrl);
+        setPoolWordManagerStatus(`Generated and linked audio for "${item.label}".`);
+        return;
+      }
       updatePoolManagerItem(category, index, { audioUrl: data.audioUrl });
       handlePlayUrlAudio(`pool_${category}_${index}`, data.audioUrl);
+      setPoolWordManagerStatus(`Linked existing ${data.source === 'r2_existing' ? 'R2' : 'cached'} audio for "${item.label}".`);
     } catch (error) {
-      setPoolWordManagerStatus(error.message || 'Audio generation failed.');
+      setPoolWordManagerStatus(error.message || 'Audio lookup failed.');
     } finally {
       setPoolManagerGeneratingId('');
+    }
+  };
+
+  const generateItemPhonicPrompt = async (category, index, item) => {
+    const word = item.label || item.word || '';
+    if (!word.trim()) return;
+    setPoolManagerGeneratingId(`prompt_${category}:${index}`);
+    try {
+      const response = await fetch('/api/admin/generate-phonic-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: word.trim() })
+      });
+      const data = await response.json();
+      if (!data.success || !data.phonicPrompt) throw new Error(data.error || 'Failed to generate prompt.');
+      updatePoolManagerItem(category, index, { phonicPrompt: data.phonicPrompt });
+      setPoolWordManagerStatus(`Generated phonic prompt for "${word}".`);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Failed to generate prompt.');
+    } finally {
+      setPoolManagerGeneratingId('');
+    }
+  };
+
+  const generateItemPhonicAudio = async (category, index, item) => {
+    const activePrompt = item.phonicPrompt || '';
+    const word = item.label || item.word || '';
+    const textToSpeak = activePrompt.trim() || word.trim();
+    if (!textToSpeak) return;
+
+    setPoolManagerGeneratingId(`audio_${category}:${index}`);
+    try {
+      const response = await fetch('/api/admin/resolve-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToSpeak, voice: voice || 'Puck', generate: false })
+      });
+      const data = await response.json();
+      if (!data.success || !data.audioUrl) {
+        const shouldGenerate = confirm(`No existing R2 phonic audio found for "${word}". Generate new audio now?`);
+        if (!shouldGenerate) {
+          setPoolWordManagerStatus(`No phonic audio linked for "${word}". Generation skipped.`);
+          return;
+        }
+        const generateResponse = await fetch('/api/admin/resolve-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToSpeak, voice: voice || 'Puck', generate: true })
+        });
+        const generated = await generateResponse.json();
+        if (!generated.success || !generated.audioUrl) throw new Error(generated.error || 'Audio generation failed.');
+        updatePoolManagerItem(category, index, { phonicSoundUrl: generated.audioUrl });
+        handlePlayUrlAudio(`phonic_pool_${category}_${index}`, generated.audioUrl);
+        setPoolWordManagerStatus(`Generated phonic audio for "${word}".`);
+        return;
+      }
+      updatePoolManagerItem(category, index, { phonicSoundUrl: data.audioUrl });
+      handlePlayUrlAudio(`phonic_pool_${category}_${index}`, data.audioUrl);
+      setPoolWordManagerStatus(`Linked existing ${data.source === 'r2_existing' ? 'R2' : 'cached'} phonic audio for "${word}".`);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Phonic audio lookup failed.');
+    } finally {
+      setPoolManagerGeneratingId('');
+    }
+  };
+
+  const generateBulkPhonicPromptsAndAudios = async () => {
+    if (!poolWordManagerData || !poolWordCategory) return;
+    const category = poolWordCategory;
+    const items = poolWordManagerData.pools[category] || [];
+
+    const pendingItems = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.phonicPrompt || !item.phonicSoundUrl);
+
+    if (pendingItems.length === 0) {
+      setPoolWordManagerStatus(`All items in category "${category}" already have phonic prompts and audios!`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to bulk generate phonic prompts and audios for the ${pendingItems.length} items in "${category}" using Gemini? This will take a few moments.`)) {
+      return;
+    }
+
+    setPoolWordManagerStatus(`Preparing to process ${pendingItems.length} items...`);
+    setPoolWordManagerSaving(true);
+
+    let promptsGenerated = 0;
+    let audiosGenerated = 0;
+    let failedCount = 0;
+
+    try {
+      for (let i = 0; i < pendingItems.length; i++) {
+        const { item, index } = pendingItems[i];
+        const word = item.label || item.word || '';
+        if (!word.trim()) continue;
+
+        let activePrompt = item.phonicPrompt || '';
+
+        // 1. Generate Prompt if missing
+        if (!activePrompt) {
+          setPoolWordManagerStatus(`[${i + 1}/${pendingItems.length}] Generating phonic prompt for "${word}"...`);
+          try {
+            const promptRes = await fetch('/api/admin/generate-phonic-prompt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ word: word.trim() })
+            });
+            const promptData = await promptRes.json();
+            if (promptData.success && promptData.phonicPrompt) {
+              activePrompt = promptData.phonicPrompt;
+              updatePoolManagerItem(category, index, { phonicPrompt: activePrompt });
+              promptsGenerated++;
+            } else {
+              throw new Error(promptData.error || 'Prompt failed');
+            }
+          } catch (err) {
+            console.error(`Phonic prompt failed for "${word}":`, err);
+            failedCount++;
+            continue;
+          }
+        }
+
+        // 2. Generate Audio if missing
+        if (activePrompt && !item.phonicSoundUrl) {
+          setPoolWordManagerStatus(`[${i + 1}/${pendingItems.length}] Synthesizing phonic audio for "${word}"...`);
+          try {
+            const audioRes = await fetch('/api/admin/generate-audio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: activePrompt, voice: voice || 'Puck' })
+            });
+            const audioData = await audioRes.json();
+            if (audioData.success && audioData.audioUrl) {
+              updatePoolManagerItem(category, index, { phonicSoundUrl: audioData.audioUrl });
+              audiosGenerated++;
+            } else {
+              throw new Error(audioData.error || 'Audio failed');
+            }
+          } catch (err) {
+            console.error(`Phonic audio failed for "${word}":`, err);
+            failedCount++;
+          }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      setPoolWordManagerStatus(`Done! Generated ${promptsGenerated} prompts and ${audiosGenerated} audios. Failed: ${failedCount}. Click "Save Pool Changes" to save.`);
+    } catch (error) {
+      setPoolWordManagerStatus(`Bulk phonic process failed: ${error.message}`);
+    } finally {
+      setPoolWordManagerSaving(false);
     }
   };
 
@@ -767,36 +1268,67 @@ export default function AdminConsolePage() {
       return;
     }
 
-    setPoolWordManagerStatus(`Preparing to generate ${missingItems.length} missing audios...`);
+    setPoolWordManagerStatus(`Checking R2 for ${missingItems.length} missing audios...`);
     setPoolWordManagerSaving(true);
 
+    let linkedCount = 0;
     let generatedCount = 0;
     let failedCount = 0;
+    const needsGeneration = [];
 
     try {
       for (let i = 0; i < missingItems.length; i++) {
         const { item, index } = missingItems[i];
         if (!item.label?.trim()) continue;
 
-        setPoolWordManagerStatus(`Generating audio for "${item.label}" (${i + 1}/${missingItems.length})...`);
+        setPoolWordManagerStatus(`Checking R2 for "${item.label}" (${i + 1}/${missingItems.length})...`);
 
         try {
-          const response = await fetch('/api/admin/generate-audio', {
+          const response = await fetch('/api/admin/resolve-audio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck' })
+            body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck', generate: false })
           });
           const data = await response.json();
-          if (!data.success || !data.audioUrl) throw new Error(data.error || 'Failed');
+          if (!data.success || !data.audioUrl) {
+            needsGeneration.push({ item, index });
+            continue;
+          }
 
           updatePoolManagerItem(category, index, { audioUrl: data.audioUrl });
-          generatedCount++;
+          linkedCount++;
         } catch (err) {
-          console.error(`Failed to generate audio for "${item.label}":`, err);
+          console.error(`Failed to check audio for "${item.label}":`, err);
           failedCount++;
         }
       }
-      setPoolWordManagerStatus(`Done! Successfully generated ${generatedCount} audios. Failed: ${failedCount}. Click "Save Pool Changes" to save.`);
+
+      if (needsGeneration.length > 0) {
+        const shouldGenerate = confirm(`Found ${linkedCount} existing audios in R2/cache. ${needsGeneration.length} words still have no audio. Generate only those missing files now?`);
+        if (shouldGenerate) {
+          for (let i = 0; i < needsGeneration.length; i++) {
+            const { item, index } = needsGeneration[i];
+            if (!item.label?.trim()) continue;
+            setPoolWordManagerStatus(`Generating audio for "${item.label}" (${i + 1}/${needsGeneration.length})...`);
+            try {
+              const response = await fetch('/api/admin/resolve-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: item.label.trim(), voice: voice || 'Puck', generate: true })
+              });
+              const data = await response.json();
+              if (!data.success || !data.audioUrl) throw new Error(data.error || 'Failed');
+              updatePoolManagerItem(category, index, { audioUrl: data.audioUrl });
+              generatedCount++;
+            } catch (err) {
+              console.error(`Failed to generate audio for "${item.label}":`, err);
+              failedCount++;
+            }
+          }
+        }
+      }
+
+      setPoolWordManagerStatus(`Done! Linked ${linkedCount} existing audios. Generated ${generatedCount}. Still missing ${needsGeneration.length - generatedCount}. Failed: ${failedCount}. Click "Save Pool Changes" to save.`);
     } catch (error) {
       setPoolWordManagerStatus(`Bulk audio process failed: ${error.message}`);
     } finally {
@@ -897,7 +1429,7 @@ export default function AdminConsolePage() {
   };
 
   const addWordsToCentralizedPool = async () => {
-  const category = poolWordCategory.trim();
+    const category = poolWordCategory.trim();
     const words = parsePoolWordInput(poolWordInput);
     if (!poolWordManagerData || !category || words.length === 0) {
       setPoolWordManagerStatus('Choose a category and enter at least one word.');
@@ -960,6 +1492,96 @@ export default function AdminConsolePage() {
     }
   };
 
+  const addGeneratedWordsWithGemini = async () => {
+    const category = poolWordCategory.trim();
+    if (!poolWordManagerData || !category) {
+      setPoolWordManagerStatus('Choose a category before generating words.');
+      return;
+    }
+
+    const countInput = window.prompt(`How many new items should Gemini create for "${category}"?`, '10');
+    if (countInput === null) return;
+    const count = Math.max(1, Math.min(Number(countInput) || 10, 50));
+    const instruction = window.prompt('Optional instruction for Gemini, e.g. "common Indian classroom objects" or "easy pet animals"', '') || '';
+
+    const existingItems = Array.isArray(poolWordManagerData.pools?.[category])
+      ? poolWordManagerData.pools[category]
+      : [];
+    const existingLabels = new Set(existingItems.map(item => String(item.label || '').trim().toLowerCase()));
+    const usedIds = new Set(existingItems.map(item => String(item.id || '').trim()).filter(Boolean));
+
+    setPoolWordManagerSaving(true);
+    setPoolWordManagerStatus(`Asking Gemini to create ${count} item${count === 1 ? '' : 's'} for "${category}"...`);
+    try {
+      const response = await fetch('/api/admin/vocabulary-pools/generate-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          poolId: poolWordManagerData.poolId,
+          category,
+          subject: poolWordManagerData.subject,
+          topic: poolWordManagerData.topic,
+          grade: poolWordManagerData.grade,
+          existingLabels: Array.from(existingLabels),
+          count,
+          instruction
+        })
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Gemini word generation failed.');
+
+      const additions = (data.items || [])
+        .filter(item => item?.label && !existingLabels.has(String(item.label).trim().toLowerCase()))
+        .map(item => {
+          existingLabels.add(String(item.label).trim().toLowerCase());
+          return {
+            ...item,
+            id: makeUniquePoolItemId(category, item.label, usedIds),
+            label: String(item.label).trim(),
+            active: item.active !== false
+          };
+        });
+
+      if (additions.length === 0) {
+        setPoolWordManagerStatus('Gemini returned no new unique items.');
+        return;
+      }
+
+      const nextPool = {
+        ...poolWordManagerData,
+        pools: {
+          ...(poolWordManagerData.pools || {}),
+          [category]: [...existingItems, ...additions]
+        }
+      };
+
+      const saveResponse = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextPool)
+      });
+      const saveResult = await saveResponse.json();
+      if (!saveResult.success) throw new Error(saveResult.error || 'Unable to save generated items.');
+
+      setPoolWordManagerData(nextPool);
+      setVocabularyPools(current => current.map(pool => (
+        pool.poolId === nextPool.poolId
+          ? {
+              ...pool,
+              categoryCounts: Object.fromEntries(
+                Object.entries(nextPool.pools || {}).map(([name, items]) => [name, Array.isArray(items) ? items.length : 0])
+              )
+            }
+          : pool
+      )));
+      setPoolWordManagerStatus(`Gemini added and saved ${additions.length} new item${additions.length === 1 ? '' : 's'} to ${category}.`);
+    } catch (error) {
+      setPoolWordManagerStatus(error.message || 'Gemini word generation failed.');
+    } finally {
+      setPoolWordManagerSaving(false);
+    }
+  };
+
   const auditDynamicPoolAssets = async () => {
     setPoolAssetAuditLoading(true);
     try {
@@ -1012,6 +1634,30 @@ export default function AdminConsolePage() {
 
     fetchVocabularyPools();
   }, [type, vocabularyPools.length, vocabularyPoolsLoading, vocabularyPoolsError, fetchVocabularyPools]);
+
+  useEffect(() => {
+    if (type !== 'dynamic_pool' || !poolId.trim()) {
+      setSelectedPoolDocument(null);
+      return;
+    }
+
+    let cancelled = false;
+    const activePoolId = poolId.trim();
+
+    fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(activePoolId)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (cancelled) return;
+        setSelectedPoolDocument(data.success && data.pool ? data.pool : null);
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedPoolDocument(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, poolId]);
 
   // Categorization state
   const [categories, setCategories] = useState([
@@ -1081,6 +1727,7 @@ export default function AdminConsolePage() {
   const [teacherNotes, setTeacherNotes] = useState('');
   const [tags, setTags] = useState('');
   const [estimatedGrade, setEstimatedGrade] = useState('');
+  const [testForcePreK, setTestForcePreK] = useState(false);
   const [timeEstimate, setTimeEstimate] = useState('');
   const [sourceMapping, setSourceMapping] = useState('');
 
@@ -3849,6 +4496,10 @@ export default function AdminConsolePage() {
     setTargetCategory('');
     setTargetKey('nouns');
     setDistractorCategories('');
+    setTargetProperty('');
+    setTargetValue('');
+    setDistractorProperty('');
+    setDistractorValue('');
     setMissingLetterMode('beginning');
     setQuestionText('Is the word **frog** a person, place, animal, or thing?');
     setVoice('Puck');
@@ -3870,6 +4521,8 @@ export default function AdminConsolePage() {
     ]);
     setArrangeImagesRow(false);
     setCommonImageWidth(180);
+    setImageRowMode('wrap');
+    setImageRowGap(20);
     setDirectImageSelect(false);
     setHideOptionImages(false);
     setHideOptionLabel(false);
@@ -3947,6 +4600,8 @@ export default function AdminConsolePage() {
     ]);
     setArrangeImagesRow(false);
     setCommonImageWidth(180);
+    setImageRowMode('wrap');
+    setImageRowGap(20);
     setDirectImageSelect(false);
     setHideOptionImages(false);
     setCategories([]);
@@ -4043,6 +4698,10 @@ export default function AdminConsolePage() {
     setPoolId(activePoolId);
     setTargetCategory(q.targetCategory || q.metadata?.targetCategory || '');
     setTargetKey(q.targetKey || q.metadata?.targetKey || 'nouns');
+    setTargetProperty(q.targetProperty || q.metadata?.targetProperty || q.filterProperty || q.metadata?.filterProperty || '');
+    setTargetValue(q.targetValue || q.metadata?.targetValue || q.filterValue || q.metadata?.filterValue || '');
+    setDistractorProperty(q.distractorProperty || q.metadata?.distractorProperty || '');
+    setDistractorValue(q.distractorValue || q.metadata?.distractorValue || '');
     setMissingLetterMode(q.missingLetterMode || q.metadata?.missingLetterMode || 'beginning');
     setDistractorCategories(
       Array.isArray(q.distractorCategories || q.metadata?.distractorCategories)
@@ -4302,6 +4961,8 @@ export default function AdminConsolePage() {
 
     setArrangeImagesRow(Boolean(q.arrangeImagesRow || q.metadata?.arrangeImagesRow));
     setCommonImageWidth(q.commonImageWidth || q.metadata?.commonImageWidth || 180);
+    setImageRowMode(q.imageRowMode || q.metadata?.imageRowMode || 'wrap');
+    setImageRowGap(q.imageRowGap || q.metadata?.imageRowGap || 20);
     setDirectImageSelect(Boolean(q.directImageSelect || q.interaction === 'direct_image_select' || q.metadata?.directImageSelect));
     setHideOptionImages(Boolean(q.hideOptionImages || q.metadata?.hideOptionImages));
     setHideOptionLabel(Boolean(q.hideOptionLabel || q.metadata?.hideOptionLabel));
@@ -4471,6 +5132,10 @@ export default function AdminConsolePage() {
     setPoolId(tpl.poolId || tpl.metadata?.poolId || '');
     setTargetCategory(tpl.targetCategory || tpl.metadata?.targetCategory || '');
     setTargetKey(tpl.targetKey || tpl.metadata?.targetKey || 'nouns');
+    setTargetProperty(tpl.targetProperty || tpl.metadata?.targetProperty || tpl.filterProperty || tpl.metadata?.filterProperty || '');
+    setTargetValue(tpl.targetValue || tpl.metadata?.targetValue || tpl.filterValue || tpl.metadata?.filterValue || '');
+    setDistractorProperty(tpl.distractorProperty || tpl.metadata?.distractorProperty || '');
+    setDistractorValue(tpl.distractorValue || tpl.metadata?.distractorValue || '');
     setMissingLetterMode(tpl.missingLetterMode || tpl.metadata?.missingLetterMode || 'beginning');
     setDistractorCategories(
       Array.isArray(tpl.distractorCategories || tpl.metadata?.distractorCategories)
@@ -5177,6 +5842,10 @@ export default function AdminConsolePage() {
           targetCategory,
           targetKey,
           distractorCategories,
+          targetProperty,
+          targetValue,
+          distractorProperty,
+          distractorValue,
           missingLetterMode,
           parts,
           categories,
@@ -5206,7 +5875,7 @@ export default function AdminConsolePage() {
     type, questionText, voice, explanation, audioUrl, generateAudioCheckbox,
     readable, readOptions,
     options, correctAnswer, fibAnswers, teacherNotes, tags, estimatedGrade, timeEstimate,
-    sourceMapping, poolId, targetCategory, targetKey, distractorCategories, parts, categories, categorizationItems,
+    sourceMapping, poolId, targetCategory, targetKey, distractorCategories, targetProperty, targetValue, distractorProperty, distractorValue, parts, categories, categorizationItems,
     missingLetterMode, layoutMode, interaction, targets, backgroundImage, canvas, behavior, sourceTray,
     cardStyle, hideItemLabels, hideOptionImages, hideOptionLabel
   ]);
@@ -5249,6 +5918,10 @@ export default function AdminConsolePage() {
       setTargetCategory(draft.targetCategory || '');
       setTargetKey(draft.targetKey || 'nouns');
       setDistractorCategories(draft.distractorCategories || '');
+      setTargetProperty(draft.targetProperty || '');
+      setTargetValue(draft.targetValue || '');
+      setDistractorProperty(draft.distractorProperty || '');
+      setDistractorValue(draft.distractorValue || '');
       setMissingLetterMode(draft.missingLetterMode || 'beginning');
       
       setParts(draft.parts || [
@@ -5340,6 +6013,8 @@ export default function AdminConsolePage() {
       sourceMapping: sourceMapping.trim(),
       arrangeImagesRow,
       commonImageWidth: Number(commonImageWidth) || 180,
+      imageRowMode,
+      imageRowGap: Number(imageRowGap) || 20,
       directImageSelect,
       metaConfig: {
         readable,
@@ -5359,6 +6034,8 @@ export default function AdminConsolePage() {
         sourceMapping: sourceMapping.trim(),
         arrangeImagesRow,
         commonImageWidth: Number(commonImageWidth) || 180,
+        imageRowMode,
+        imageRowGap: Number(imageRowGap) || 20,
         directImageSelect,
       }
     };
@@ -5671,6 +6348,12 @@ export default function AdminConsolePage() {
         } else {
           payload.targetCategory = targetCategory.trim();
           payload.metadata.targetCategory = targetCategory.trim();
+          if (targetProperty.trim() && targetValue.trim()) {
+            payload.targetProperty = targetProperty.trim();
+            payload.targetValue = targetValue.trim();
+            payload.metadata.targetProperty = targetProperty.trim();
+            payload.metadata.targetValue = targetValue.trim();
+          }
           if (interaction === 'pick_from_sentence') {
             payload.targetKey = targetKey;
             payload.metadata.targetKey = targetKey;
@@ -5678,6 +6361,12 @@ export default function AdminConsolePage() {
           const parsedCats = parseCategoryList(distractorCategories);
           payload.distractorCategories = parsedCats;
           payload.metadata.distractorCategories = parsedCats;
+          if (distractorProperty.trim() && distractorValue.trim()) {
+            payload.distractorProperty = distractorProperty.trim();
+            payload.distractorValue = distractorValue.trim();
+            payload.metadata.distractorProperty = distractorProperty.trim();
+            payload.metadata.distractorValue = distractorValue.trim();
+          }
         }
       } else {
         payload.pools = {
@@ -5892,19 +6581,32 @@ export default function AdminConsolePage() {
     }
 
     if (type === 'mcq') {
-      if (options.length < 2) {
-        setAlert({ type: 'error', text: 'Validation Error: MCQ questions must have at least 2 options.' });
-        return;
-      }
-      const hasEmptyLabel = options.some(opt => !opt.label.trim() && !opt.imageUrl);
-      if (hasEmptyLabel) {
-        setAlert({ type: 'error', text: 'Validation Error: All MCQ options must have a text label or an image.' });
-        return;
-      }
-      const correctIndex = options.findIndex(opt => opt.isCorrect);
-      if (correctIndex === -1) {
-        setAlert({ type: 'error', text: 'Validation Error: Please select one option as the Correct Answer.' });
-        return;
+      if (directImageSelect) {
+        const imageParts = parts.filter(part => part?.type === 'image' && (part.imageUrl || part.src || part.content));
+        if (imageParts.length < 2) {
+          setAlert({ type: 'error', text: 'Validation Error: Direct Image Selection needs at least 2 image parts.' });
+          return;
+        }
+        const correctImageCount = imageParts.filter(part => part.isCorrect).length;
+        if (correctImageCount !== 1) {
+          setAlert({ type: 'error', text: 'Validation Error: Select exactly one image part as the Correct Answer.' });
+          return;
+        }
+      } else {
+        if (options.length < 2) {
+          setAlert({ type: 'error', text: 'Validation Error: MCQ questions must have at least 2 options.' });
+          return;
+        }
+        const hasEmptyLabel = options.some(opt => !opt.label.trim() && !opt.imageUrl);
+        if (hasEmptyLabel) {
+          setAlert({ type: 'error', text: 'Validation Error: All MCQ options must have a text label or an image.' });
+          return;
+        }
+        const correctIndex = options.findIndex(opt => opt.isCorrect);
+        if (correctIndex === -1) {
+          setAlert({ type: 'error', text: 'Validation Error: Please select one option as the Correct Answer.' });
+          return;
+        }
       }
     } else if (type === 'word_completion_pool') {
       if (!poolId.trim()) {
@@ -6004,6 +6706,27 @@ export default function AdminConsolePage() {
             if (targetCount === 0) {
               setAlert({ type: 'error', text: 'Validation Error: The selected target category has no options.' });
               return;
+            }
+            if (selectedVocabularyPoolForPreview?.pools) {
+              const filteredTargetCount = (selectedVocabularyPoolForPreview.pools[targetCategory.trim()] || [])
+                .filter(item => item?.active !== false)
+                .filter(item => itemMatchesPropertyFilter(item, targetProperty, targetValue))
+                .length;
+              if (filteredTargetCount === 0) {
+                setAlert({ type: 'error', text: `Validation Error: Target filter ${targetProperty.trim()}=${targetValue.trim()} found no items in "${targetCategory.trim()}".` });
+                return;
+              }
+              if (distractorProperty.trim() && distractorValue.trim()) {
+                const filteredDistractorCount = parsedDistractors
+                  .flatMap(category => selectedVocabularyPoolForPreview.pools[category] || [])
+                  .filter(item => item?.active !== false)
+                  .filter(item => itemMatchesPropertyFilter(item, distractorProperty, distractorValue))
+                  .length;
+                if (filteredDistractorCount === 0) {
+                  setAlert({ type: 'error', text: `Validation Error: Distractor filter ${distractorProperty.trim()}=${distractorValue.trim()} found no items in selected distractor categories.` });
+                  return;
+                }
+              }
             }
           } else {
             if (parsedDistractors.length > 0 && parsedDistractors.some(category => !selectedPoolCategories.includes(category))) {
@@ -6410,7 +7133,18 @@ export default function AdminConsolePage() {
       directImageSelect,
       JSON.stringify(layouts),
       activePreviewDevice,
-      hideOptionImages
+      hideOptionImages,
+      hideOptionLabel,
+      poolId,
+      targetCategory,
+      targetKey,
+      distractorCategories,
+      targetProperty,
+      targetValue,
+      distractorProperty,
+      distractorValue,
+      difficulty,
+      JSON.stringify(selectedVocabularyPoolForPreview?.pools || selectedVocabularyPoolForPreview?.categoryCounts || {})
     ].join('|');
     
     const uniqueId = `mock_q_${hashCode(stateHash)}`;
@@ -6420,13 +7154,16 @@ export default function AdminConsolePage() {
     let mockWordCompletionItems = [];
     let mockWordCompletionCards = [];
     let mockWordCompletionAnswer = undefined;
+    let mockDynamicPoolOptions = null;
+    let mockDynamicPoolAnswer = undefined;
+    let mockQuestionText = questionText.trim();
     if (type === 'dynamic_pool' || type === 'word_completion_pool') {
       const isWordCompletionInteraction = interaction === 'word_completion';
       const isCat = interaction === 'categorization' || interaction === 'categorizationv2';
       if (isWordCompletionInteraction || type === 'word_completion_pool') {
         const previewEligibleCategories = selectedPoolCategories.filter(category => {
-          const count = selectedVocabularyPool?.categoryCounts?.[category]
-            ?? selectedVocabularyPool?.pools?.[category]?.length
+          const count = selectedVocabularyPoolForPreview?.categoryCounts?.[category]
+            ?? selectedVocabularyPoolForPreview?.pools?.[category]?.length
             ?? 0;
           return count >= 2;
         });
@@ -6434,7 +7171,7 @@ export default function AdminConsolePage() {
         const activeCategory = targetCategory === '[random]'
           ? (previewEligibleCategories[randomCategoryIndex] || selectedPoolCategories[0] || 'short_i_words')
           : (targetCategory || selectedPoolCategories[0] || 'short_i_words');
-        const words = selectedVocabularyPool?.pools?.[activeCategory] || [];
+        const words = selectedVocabularyPoolForPreview?.pools?.[activeCategory] || [];
         const getPreviewWordFields = (word) => {
           const label = String(word?.label || word?.id || '').trim().toLowerCase();
           const initial = word?.initial || label[0] || '';
@@ -6509,7 +7246,7 @@ export default function AdminConsolePage() {
           }
         ];
       } else if (interaction === 'pick_from_sentence') {
-        const sentences = selectedVocabularyPool?.pools?.[targetCategory] || selectedVocabularyPool?.pools?.[selectedPoolCategories[0]] || [];
+        const sentences = selectedVocabularyPoolForPreview?.pools?.[targetCategory] || selectedVocabularyPoolForPreview?.pools?.[selectedPoolCategories[0]] || [];
         const activeSentence = sentences[0] || { text: "The deer wandered through the forest trail.", nouns: ["deer", "forest", "trail"] };
         const sentenceText = activeSentence.text || activeSentence.sentence || "";
         const targetWords = activeSentence[targetKey] || activeSentence.nouns || activeSentence.targets || activeSentence.correctAnswer || [];
@@ -6573,9 +7310,9 @@ export default function AdminConsolePage() {
           ? categories.map(c => ({ ...c, id: c.id, label: c.label }))
           : selectedPoolCategories.map(c => ({ id: c, label: c.charAt(0).toUpperCase() + c.slice(1) }));
         
-        if (selectedVocabularyPool) {
+        if (selectedVocabularyPoolForPreview) {
           cats.forEach(cat => {
-            const catPool = selectedVocabularyPool.pools?.[cat.id] || [];
+            const catPool = selectedVocabularyPoolForPreview.pools?.[cat.id] || [];
             catPool.slice(0, 2).forEach((item, idx) => {
               mockItemsForDynamicCategorization.push({
                 id: item.id || `mock_${cat.id}_${idx}`,
@@ -6606,13 +7343,57 @@ export default function AdminConsolePage() {
         ];
       } else {
         const extendedParts = baseParts;
-        
+
+        const activeTargetCategory = targetCategory.trim() === '[random]'
+          ? (selectedPoolCategories[0] || '')
+          : targetCategory.trim();
+        const targetPoolItems = (selectedVocabularyPoolForPreview?.pools?.[activeTargetCategory] || [])
+          .filter(item => item?.active !== false && (item?.label || item?.id))
+          .filter(item => itemMatchesPropertyFilter(item, targetProperty, targetValue));
+        const parsedDistractorCategories = parseCategoryList(distractorCategories);
+        const distractorPoolItems = parsedDistractorCategories
+          .flatMap(category => selectedVocabularyPoolForPreview?.pools?.[category] || [])
+          .filter(item => item?.active !== false && (item?.label || item?.id))
+          .filter(item => itemMatchesPropertyFilter(item, distractorProperty, distractorValue));
+        const targetOptionFromPool = targetPoolItems[0] ? {
+          ...targetPoolItems[0],
+          isCorrect: true,
+          isDistractorOnly: false
+        } : null;
+        const distractorOptionsFromPool = distractorPoolItems
+          .filter(item => item.id !== targetOptionFromPool?.id && item.label !== targetOptionFromPool?.label)
+          .slice(0, Math.max(1, (difficultyRules?.[difficulty]?.optionCount || 3) - 1))
+          .map(item => ({
+            ...item,
+            isCorrect: false,
+            isDistractorOnly: true
+          }));
+        const poolPreviewOptions = targetOptionFromPool
+          ? [targetOptionFromPool, ...distractorOptionsFromPool]
+          : [];
+
+        if (poolPreviewOptions.length >= 2) {
+          mockDynamicPoolOptions = poolPreviewOptions;
+          mockDynamicPoolAnswer = 0;
+        }
+
         // Interpolate placeholders using the first valid non-distractor option as a mock target
-        const targetOption = options.find(o => !o.isDistractorOnly) || options[0];
+        const targetOption = targetOptionFromPool || options.find(o => !o.isDistractorOnly) || options[0];
         const targetWord = targetOption?.label || 'word';
         const targetPrompt = targetOption?.prompt || targetWord;
         const targetImage = targetOption?.imageUrl || '';
         const targetAudio = targetOption?.audioUrl || '';
+        const targetPhonicAudio = targetOption?.phonicSoundUrl || targetOption?.audioUrl || '';
+
+        mockQuestionText = mockQuestionText
+          .replace(/\{\{target\}\}/g, targetWord)
+          .replace(/\{\{targetWord\}\}/g, targetWord)
+          .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
+          .replace(/\{\{targetImage\}\}/g, targetWord)
+          .replace(/\{\{targetCategory\}\}/g, activeTargetCategory)
+          .replace(/\{\{targetAudio\}\}/g, '')
+          .replace(/\{\{phonicSoundUrl\}\}/g, '')
+          .replace(/\{\{phonicAudioUrl\}\}/g, '');
 
         mockParts = extendedParts.map(part => {
           const newPart = { ...part };
@@ -6622,13 +7403,19 @@ export default function AdminConsolePage() {
               .replace(/\{\{targetWord\}\}/g, targetWord)
               .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
               .replace(/\{\{targetImage\}\}/g, targetImage)
-              .replace(/\{\{targetAudio\}\}/g, targetAudio);
+              .replace(/\{\{targetCategory\}\}/g, activeTargetCategory)
+              .replace(/\{\{targetAudio\}\}/g, targetAudio)
+              .replace(/\{\{phonicSoundUrl\}\}/g, targetPhonicAudio)
+              .replace(/\{\{phonicAudioUrl\}\}/g, targetPhonicAudio);
           }
           if (newPart.imageUrl) {
             newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
           }
           if (newPart.audioUrl) {
-            newPart.audioUrl = newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetAudio);
+            newPart.audioUrl = newPart.audioUrl
+              .replace(/\{\{targetAudio\}\}/g, targetAudio)
+              .replace(/\{\{phonicSoundUrl\}\}/g, targetPhonicAudio)
+              .replace(/\{\{phonicAudioUrl\}\}/g, targetPhonicAudio);
           }
           if (newPart.label) {
             newPart.label = newPart.label.replace(/\{\{targetWord\}\}/g, targetWord).replace(/\{\{targetPrompt\}\}/g, targetPrompt);
@@ -6776,6 +7563,8 @@ export default function AdminConsolePage() {
         voice,
         arrangeImagesRow,
         commonImageWidth: Number(commonImageWidth) || 180,
+        imageRowMode,
+        imageRowGap: Number(imageRowGap) || 20,
         options: hotspots.map((hs, idx) => ({ id: `opt_${idx}`, label: hs.label })),
         answer: hotspots.findIndex(hs => hs.isCorrect),
         correctAnswerIndex: hotspots.findIndex(hs => hs.isCorrect),
@@ -6817,19 +7606,21 @@ export default function AdminConsolePage() {
         ? 'direct_image_select'
         : ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool' ? 'categorizationv2' : (interaction || undefined)),
       directImageSelect,
-      questionText: questionText.trim(),
+      questionText: mockQuestionText,
       parts: mockParts,
       audioUrl,
       voice,
       arrangeImagesRow,
       commonImageWidth: Number(commonImageWidth) || 180,
-      options: directImageSelect ? [] : ((type === 'mcq' || type === 'dynamic_pool') ? options.map((o, idx) => ({
+      imageRowMode,
+      imageRowGap: Number(imageRowGap) || 20,
+      options: directImageSelect ? [] : ((type === 'mcq' || type === 'dynamic_pool') ? (mockDynamicPoolOptions || options).map((o, idx) => ({
         id: o.id || `opt_${idx}`,
         label: o.label,
         imageUrl: (type === 'dynamic_pool' && hideOptionImages) ? undefined : (o.imageUrl || undefined),
         hideLabel: (type === 'dynamic_pool' && hideOptionLabel) || o.hideLabel || undefined,
         audioUrl: o.audioUrl || undefined,
-        isCorrect: !o.isDistractorOnly,
+        isCorrect: mockDynamicPoolOptions ? idx === mockDynamicPoolAnswer : !o.isDistractorOnly,
         isDistractorOnly: o.isDistractorOnly || undefined,
         misconceptionType: o.misconceptionType || undefined,
         similarity: o.similarity || undefined,
@@ -6848,8 +7639,8 @@ export default function AdminConsolePage() {
           ? mockItemsForDynamicCategorization
           : undefined,
       wordCards: ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool') ? mockWordCompletionCards : undefined,
-      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
-      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? mockWordCompletionAnswer : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? (mockWordCompletionAnswer ?? mockDynamicPoolAnswer) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? (mockWordCompletionAnswer ?? mockDynamicPoolAnswer) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { 
         readable, 
         readOptions,
@@ -6860,6 +7651,10 @@ export default function AdminConsolePage() {
       targetCategory: (type === 'dynamic_pool' && targetCategory) ? targetCategory.trim() : undefined,
       targetKey: (type === 'dynamic_pool' && interaction === 'pick_from_sentence') ? targetKey : undefined,
       distractorCategories: (type === 'dynamic_pool' && distractorCategories) ? distractorCategories.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      targetProperty: (type === 'dynamic_pool' && targetProperty.trim()) ? targetProperty.trim() : undefined,
+      targetValue: (type === 'dynamic_pool' && targetValue.trim()) ? targetValue.trim() : undefined,
+      distractorProperty: (type === 'dynamic_pool' && distractorProperty.trim()) ? distractorProperty.trim() : undefined,
+      distractorValue: (type === 'dynamic_pool' && distractorValue.trim()) ? distractorValue.trim() : undefined,
       pools: (type === 'dynamic_pool' && !poolId) ? {
         correctPool: options.filter(o => !o.isDistractorOnly).map(o => ({
           id: o.id || o.label.replace(/\s+/g, '_').toLowerCase().trim(),
@@ -6923,7 +7718,14 @@ export default function AdminConsolePage() {
     targetCategory,
     targetKey,
     distractorCategories,
-    missingLetterMode
+    targetProperty,
+    targetValue,
+    distractorProperty,
+    distractorValue,
+    missingLetterMode,
+    selectedVocabularyPoolForPreview,
+    selectedPoolCategories,
+    difficulty
   ]);
 
   const handleCheckAnswer = () => {
@@ -7717,6 +8519,19 @@ export default function AdminConsolePage() {
                   </div>
                 )}
               </div>
+
+              <div className={styles.filterGroup} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', height: '34px', alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                <input 
+                  type="checkbox" 
+                  id="testForcePreK"
+                  checked={testForcePreK} 
+                  onChange={(e) => setTestForcePreK(e.target.checked)} 
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <label htmlFor="testForcePreK" className={styles.filterLabel} style={{ margin: 0, fontWeight: 700, cursor: 'pointer', userSelect: 'none', color: '#6366f1' }}>
+                  Force Pre-K Layout in Test Links
+                </label>
+              </div>
             </div>
 
             {libraryMode === 'questions' && (
@@ -7928,7 +8743,7 @@ export default function AdminConsolePage() {
                                   </div>
                                   <div className={styles.actionRowInline} style={{ marginTop: 4, gap: 4 }}>
                                     <a 
-                                      href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&qn=${q.id}`}
+                                      href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&qn=${q.id}${testForcePreK ? '&isprek=true' : ''}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className={`${styles.btnOutline} ${styles.btnCompact}`}
@@ -7937,7 +8752,7 @@ export default function AdminConsolePage() {
                                       Test (qn)
                                     </a>
                                     <a 
-                                      href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&id=${q.id}`}
+                                      href={`/practice?subject=${q.subject}&topic=${q.topic}&skill=${q.skillId}&id=${q.id}${testForcePreK ? '&isprek=true' : ''}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className={`${styles.btnOutline} ${styles.btnCompact}`}
@@ -9103,23 +9918,67 @@ export default function AdminConsolePage() {
                               </div>
 
                               {arrangeImagesRow && (
-                                <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <label htmlFor="commonImageWidth" className={styles.filterLabel} style={{ margin: 0, fontWeight: 700 }}>
-                                    Common Fixed Width (px)
-                                  </label>
-                                  <input
-                                    type="number"
-                                    id="commonImageWidth"
-                                    className={styles.formInput}
-                                    style={{ width: 80, height: 32, padding: '4px 8px' }}
-                                    value={commonImageWidth}
-                                    onChange={(e) => {
-                                      setCommonImageWidth(Number(e.target.value) || 180);
-                                      ignoreDirtyChange.current = false;
-                                      setIsDirty(true);
-                                    }}
-                                  />
-                                </div>
+                                <>
+                                  <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <label htmlFor="imageRowMode" className={styles.filterLabel} style={{ margin: 0, fontWeight: 700 }}>
+                                      Row Layout
+                                    </label>
+                                    <select
+                                      id="imageRowMode"
+                                      className={styles.formSelect}
+                                      style={{ width: 150, height: 32, padding: '4px 8px' }}
+                                      value={imageRowMode}
+                                      onChange={(e) => {
+                                        setImageRowMode(e.target.value);
+                                        ignoreDirtyChange.current = false;
+                                        setIsDirty(true);
+                                      }}
+                                    >
+                                      <option value="wrap">Auto wrap grid</option>
+                                      <option value="scroll">Single row scroll</option>
+                                    </select>
+                                  </div>
+
+                                  <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <label htmlFor="commonImageWidth" className={styles.filterLabel} style={{ margin: 0, fontWeight: 700 }}>
+                                      Card Width
+                                    </label>
+                                    <input
+                                      type="number"
+                                      id="commonImageWidth"
+                                      className={styles.formInput}
+                                      min="72"
+                                      max="480"
+                                      style={{ width: 80, height: 32, padding: '4px 8px' }}
+                                      value={commonImageWidth}
+                                      onChange={(e) => {
+                                        setCommonImageWidth(Number(e.target.value) || 180);
+                                        ignoreDirtyChange.current = false;
+                                        setIsDirty(true);
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <label htmlFor="imageRowGap" className={styles.filterLabel} style={{ margin: 0, fontWeight: 700 }}>
+                                      Gap
+                                    </label>
+                                    <input
+                                      type="number"
+                                      id="imageRowGap"
+                                      className={styles.formInput}
+                                      min="0"
+                                      max="64"
+                                      style={{ width: 72, height: 32, padding: '4px 8px' }}
+                                      value={imageRowGap}
+                                      onChange={(e) => {
+                                        setImageRowGap(Number(e.target.value) || 0);
+                                        ignoreDirtyChange.current = false;
+                                        setIsDirty(true);
+                                      }}
+                                    />
+                                  </div>
+                                </>
                               )}
 
                               <div className={styles.formGroup} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
@@ -9284,6 +10143,10 @@ export default function AdminConsolePage() {
                                           setPoolId(e.target.value);
                                           setTargetCategory('');
                                           setDistractorCategories('');
+                                          setTargetProperty('');
+                                          setTargetValue('');
+                                          setDistractorProperty('');
+                                          setDistractorValue('');
                                           setCategories([]);
                                           setPoolWordManagerOpen(false);
                                           setPoolWordManagerData(null);
@@ -9444,6 +10307,97 @@ export default function AdminConsolePage() {
                                             })}
                                             {selectedVocabularyPool && selectedPoolCategories.length === 0 && <span style={{ fontSize: 11, color: '#be123c' }}>No categories found</span>}
                                           </div>
+                                        </div>
+                                        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, padding: '8px 10px', border: '1px solid #bae6fd', borderRadius: 8, background: '#f0f9ff' }}>
+                                          <div>
+                                            <label style={{ fontSize: 11, fontWeight: '600', color: '#0369a1', display: 'block', marginBottom: 4 }}>Target Property</label>
+                                            <select
+                                              className={styles.formSelect}
+                                              style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                              value={targetProperty}
+                                              disabled={!selectedVocabularyPool}
+                                              onChange={(e) => {
+                                                setTargetProperty(e.target.value);
+                                                setTargetValue('');
+                                                setPoolAssetAudit(null);
+                                                ignoreDirtyChange.current = false;
+                                                setIsDirty(true);
+                                              }}
+                                            >
+                                              <option value="">No property filter</option>
+                                              {selectedPoolPropertyKeys.map(key => (
+                                                <option key={key} value={key}>{key}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label style={{ fontSize: 11, fontWeight: '600', color: '#0369a1', display: 'block', marginBottom: 4 }}>Target Value</label>
+                                            <input
+                                              className={styles.formInput}
+                                              list="target-property-values"
+                                              value={targetValue}
+                                              disabled={!targetProperty}
+                                              placeholder={targetProperty ? 'e.g. animal' : 'select property first'}
+                                              onChange={(e) => {
+                                                setTargetValue(e.target.value);
+                                                setPoolAssetAudit(null);
+                                                ignoreDirtyChange.current = false;
+                                                setIsDirty(true);
+                                              }}
+                                              style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                            />
+                                            <datalist id="target-property-values">
+                                              {getPoolPropertyValues(targetProperty, targetCategory.trim() && targetCategory.trim() !== '[random]' ? [targetCategory.trim()] : selectedPoolCategories).map(value => (
+                                                <option key={value} value={value} />
+                                              ))}
+                                            </datalist>
+                                          </div>
+                                          <div>
+                                            <label style={{ fontSize: 11, fontWeight: '600', color: '#9f1239', display: 'block', marginBottom: 4 }}>Distractor Property</label>
+                                            <select
+                                              className={styles.formSelect}
+                                              style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                              value={distractorProperty}
+                                              disabled={!selectedVocabularyPool}
+                                              onChange={(e) => {
+                                                setDistractorProperty(e.target.value);
+                                                setDistractorValue('');
+                                                setPoolAssetAudit(null);
+                                                ignoreDirtyChange.current = false;
+                                                setIsDirty(true);
+                                              }}
+                                            >
+                                              <option value="">No property filter</option>
+                                              {selectedPoolPropertyKeys.map(key => (
+                                                <option key={key} value={key}>{key}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label style={{ fontSize: 11, fontWeight: '600', color: '#9f1239', display: 'block', marginBottom: 4 }}>Distractor Value</label>
+                                            <input
+                                              className={styles.formInput}
+                                              list="distractor-property-values"
+                                              value={distractorValue}
+                                              disabled={!distractorProperty}
+                                              placeholder={distractorProperty ? 'e.g. plant' : 'select property first'}
+                                              onChange={(e) => {
+                                                setDistractorValue(e.target.value);
+                                                setPoolAssetAudit(null);
+                                                ignoreDirtyChange.current = false;
+                                                setIsDirty(true);
+                                              }}
+                                              style={{ width: '100%', margin: 0, padding: '6px 8px', fontSize: 12 }}
+                                            />
+                                            <datalist id="distractor-property-values">
+                                              {getPoolPropertyValues(distractorProperty, parseCategoryList(distractorCategories).length ? parseCategoryList(distractorCategories) : selectedPoolCategories).map(value => (
+                                                <option key={value} value={value} />
+                                              ))}
+                                            </datalist>
+                                          </div>
+                                          <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: 11, color: '#0369a1' }}>
+                                            Optional: filter by item fields such as <code>kind=animal</code>, <code>value=cold</code>, <code>sound=moo</code>, or <code>tags=living</code>. Array fields like tags use contains matching.
+                                          </p>
                                         </div>
                                       </div>
                                     ) : (
@@ -11889,6 +12843,9 @@ export default function AdminConsolePage() {
                                 onChange={(e) => setEstimatedGrade(e.target.value)}
                               >
                                 <option value="">Select Grade Level...</option>
+                                <option value="LKG">LKG</option>
+                                <option value="UKG">UKG</option>
+                                <option value="Pre-K">Pre-K</option>
                                 <option value="Kindergarten">Kindergarten</option>
                                 <option value="Grade 1">Grade 1</option>
                                 <option value="Grade 2">Grade 2</option>
@@ -12590,7 +13547,7 @@ Explanation: A question must end with a question mark.`}</pre>
                       <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#64748b', textAlign: 'center' }}>Test Saved Question</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <a 
-                          href={`/practice?subject=${subject}&topic=${topic}&skill=${skillId}&qn=${editId}`}
+                          href={`/practice?subject=${subject}&topic=${topic}&skill=${skillId}&qn=${editId}${testForcePreK ? '&isprek=true' : ''}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className={styles.btnOutline}
@@ -12599,7 +13556,7 @@ Explanation: A question must end with a question mark.`}</pre>
                           🎯 Test (qn)
                         </a>
                         <a 
-                          href={`/practice?subject=${subject}&topic=${topic}&skill=${skillId}&id=${editId}`}
+                          href={`/practice?subject=${subject}&topic=${topic}&skill=${skillId}&id=${editId}${testForcePreK ? '&isprek=true' : ''}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className={styles.btnOutline}
@@ -13087,6 +14044,7 @@ Explanation: A question must end with a question mark.`}</pre>
                       Status
                       <select name="status" value={currForm.status} onChange={updateCurrField}>
                         <option value="active">active</option>
+                        <option value="inactive">inactive</option>
                         <option value="draft">draft</option>
                         <option value="paused">paused</option>
                       </select>
@@ -16205,11 +17163,21 @@ Explanation: A question must end with a question mark.`}</pre>
             <button
               type="button"
               className={styles.btnOutline}
+              onClick={enrichMissingPoolDetailsForCategory}
+              disabled={!poolWordManagerData || poolWordManagerSaving}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+              title="Use Gemini to fill missing metadata, POS tags, science properties, facts, and image prompts for this category"
+            >
+              Fill Missing Details
+            </button>
+            <button
+              type="button"
+              className={styles.btnOutline}
               onClick={generateMissingAudiosForCategory}
               disabled={!poolWordManagerData || poolWordManagerSaving}
               style={{ display: 'flex', alignItems: 'center', gap: 4 }}
             >
-              🎙️ Generate Missing Audios
+              🎙️ Find / Generate Missing Audios
             </button>
             <button
               type="button"
@@ -16219,6 +17187,16 @@ Explanation: A question must end with a question mark.`}</pre>
               style={{ display: 'flex', alignItems: 'center', gap: 4 }}
             >
               🖼️ Generate Missing Images
+            </button>
+            <button
+              type="button"
+              className={styles.btnOutline}
+              onClick={generateBulkPhonicPromptsAndAudios}
+              disabled={!poolWordManagerData || poolWordManagerSaving}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+              title="Bulk generate phonic prompts and blended audio files via Gemini"
+            >
+              🤖 Generate Phonic Sounds
             </button>
             <button type="button" className={styles.btnOutline} onClick={savePoolManagerChanges} disabled={!poolWordManagerData || poolWordManagerSaving}>
               {poolWordManagerSaving ? 'Saving…' : 'Save Pool Changes'}
@@ -16263,7 +17241,18 @@ Explanation: A question must end with a question mark.`}</pre>
               </button>
             </div>
             <input className={styles.formInput} value={poolWordInput} onChange={event => setPoolWordInput(event.target.value)} placeholder="Add words separated by commas or new lines" />
-            <button type="button" className={styles.btnOutline} onClick={addWordsToCentralizedPool} disabled={!poolWordInput.trim() || poolWordManagerSaving}>Add Words</button>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button type="button" className={styles.btnOutline} onClick={addWordsToCentralizedPool} disabled={!poolWordInput.trim() || poolWordManagerSaving}>Add Words</button>
+              <button
+                type="button"
+                className={styles.btnSolid}
+                onClick={addGeneratedWordsWithGemini}
+                disabled={!poolWordManagerData || poolWordManagerSaving}
+                title="Ask Gemini to create new pool items for this category and save them immediately"
+              >
+                ✨ Gemini Create & Save
+              </button>
+            </div>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: '#f8fafc' }}>
@@ -16294,6 +17283,7 @@ Explanation: A question must end with a question mark.`}</pre>
                       const audioId = `pool_${poolWordCategory}_${index}`;
                       const itemKey = `${item.id || 'pool_item'}_${index}`;
                       const isEditing = editingPoolItemKey === `${poolWordCategory}:${index}`;
+                      const showInlineEditor = false;
                       return (
                         <div key={itemKey} style={{
                           background: '#fff',
@@ -16301,7 +17291,7 @@ Explanation: A question must end with a question mark.`}</pre>
                           borderRadius: 10,
                           padding: 10,
                           display: 'grid',
-                          gridTemplateRows: isEditing ? '120px auto' : '120px auto auto',
+                          gridTemplateRows: '120px auto auto',
                           gap: 8,
                           position: 'relative',
                           boxShadow: isEditing ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : 'none',
@@ -16343,14 +17333,22 @@ Explanation: A question must end with a question mark.`}</pre>
                           ✏️
                         </button>
                       </div>
-                      {isEditing ? (
+                      {showInlineEditor ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(audioId, item.audioUrl)} disabled={!item.audioUrl} style={{ flex: 1, padding: '5px 7px', fontSize: 11 }}>
-                              {item.audioUrl ? (playingAudioId === audioId ? 'Stop' : 'Play') : 'No Audio'}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                            <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(audioId, item.audioUrl)} disabled={!item.audioUrl} style={{ padding: '5px 7px', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }} title="Play standard word pronunciation">
+                              🔊 {item.audioUrl ? (playingAudioId === audioId ? 'Stop' : 'Word') : 'No Word'}
                             </button>
-                            <button type="button" className={styles.btnOutline} onClick={() => generatePoolItemAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `${poolWordCategory}:${index}`} style={{ flex: 1, padding: '5px 7px', fontSize: 11 }}>
-                              {poolManagerGeneratingId === `${poolWordCategory}:${index}` ? 'Gen…' : 'Gen Audio'}
+                            <button type="button" className={styles.btnOutline} onClick={() => generatePoolItemAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `${poolWordCategory}:${index}`} style={{ padding: '5px 7px', fontSize: 10 }}>
+                              {poolManagerGeneratingId === `${poolWordCategory}:${index}` ? 'Checking…' : 'Find/Gen Word'}
+                            </button>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                            <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(`phonic_${audioId}`, item.phonicSoundUrl)} disabled={!item.phonicSoundUrl} style={{ padding: '5px 7px', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }} title="Play phonic blended sound">
+                              🎙️ {item.phonicSoundUrl ? (playingAudioId === `phonic_${audioId}` ? 'Stop' : 'Phonic') : 'No Phonic'}
+                            </button>
+                            <button type="button" className={styles.btnOutline} onClick={() => generateItemPhonicAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `audio_${poolWordCategory}:${index}`} style={{ padding: '5px 7px', fontSize: 10 }}>
+                              {poolManagerGeneratingId === `audio_${poolWordCategory}:${index}` ? 'Gen…' : 'Gen Phonic'}
                             </button>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 8, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 11 }}>
@@ -16412,6 +17410,49 @@ Explanation: A question must end with a question mark.`}</pre>
                                 style={{ padding: '4px 8px', fontSize: 11, width: '100%', boxSizing: 'border-box' }}
                               />
                             </div>
+                            <div>
+                              <label style={{ display: 'block', fontWeight: 600, color: '#475569', marginBottom: 2 }}>Phonic Prompt</label>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <input
+                                  type="text"
+                                  className={styles.formInput}
+                                  value={item.phonicPrompt || ''}
+                                  onChange={e => updatePoolManagerItem(poolWordCategory, index, { phonicPrompt: e.target.value })}
+                                  placeholder="e.g. buh... at..."
+                                  style={{ padding: '4px 8px', fontSize: 11, flex: 1, boxSizing: 'border-box', margin: 0 }}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => generateItemPhonicPrompt(poolWordCategory, index, item)}
+                                  disabled={poolManagerGeneratingId === `prompt_${poolWordCategory}:${index}`}
+                                  style={{ padding: '4px 8px', fontSize: 10, whiteSpace: 'nowrap', height: 28 }}
+                                >
+                                  {poolManagerGeneratingId === `prompt_${poolWordCategory}:${index}` ? 'AI...' : 'Gen Prompt'}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontWeight: 600, color: '#475569', marginBottom: 2 }}>Phonic Sound URL</label>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <input
+                                  type="text"
+                                  className={styles.formInput}
+                                  value={item.phonicSoundUrl || ''}
+                                  onChange={e => updatePoolManagerItem(poolWordCategory, index, { phonicSoundUrl: e.target.value })}
+                                  style={{ padding: '4px 8px', fontSize: 11, flex: 1, boxSizing: 'border-box', margin: 0 }}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => generateItemPhonicAudio(poolWordCategory, index, item)}
+                                  disabled={poolManagerGeneratingId === `audio_${poolWordCategory}:${index}` || (!item.phonicPrompt && !item.label)}
+                                  style={{ padding: '4px 8px', fontSize: 10, whiteSpace: 'nowrap', height: 28 }}
+                                >
+                                  {poolManagerGeneratingId === `audio_${poolWordCategory}:${index}` ? 'AI...' : 'Gen Phonic'}
+                                </button>
+                              </div>
+                            </div>
                             <div style={{ marginTop: 4, padding: 6, background: '#fff', borderRadius: 6, border: '1px solid #cbd5e1' }}>
                               <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: 4, fontSize: 10 }}>POS Tags (comma separated)</div>
                               {[
@@ -16444,6 +17485,51 @@ Explanation: A question must end with a question mark.`}</pre>
                                 </div>
                               ))}
                             </div>
+                            {Object.entries(item || {}).filter(([field]) => !poolItemCoreFields.has(field)).length > 0 && (
+                              <div style={{ marginTop: 4, padding: 6, background: '#fff', borderRadius: 6, border: '1px solid #cbd5e1' }}>
+                                <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: 6, fontSize: 10 }}>Additional Fields</div>
+                                {Object.entries(item || {})
+                                  .filter(([field]) => !poolItemCoreFields.has(field))
+                                  .sort(([left], [right]) => left.localeCompare(right))
+                                  .map(([field, value]) => {
+                                    const isStructured = value && typeof value === 'object' && !(Array.isArray(value) && value.every(entry => entry == null || ['string', 'number', 'boolean'].includes(typeof entry)));
+                                    return (
+                                      <div key={field} style={{ marginBottom: 6 }}>
+                                        <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: '#64748b', marginBottom: 2 }}>
+                                          {formatPoolFieldLabel(field)}
+                                        </label>
+                                        {typeof value === 'boolean' ? (
+                                          <select
+                                            className={styles.formSelect}
+                                            value={String(value)}
+                                            onChange={event => updatePoolManagerItem(poolWordCategory, index, { [field]: event.target.value === 'true' })}
+                                            style={{ padding: '3px 6px', fontSize: 10, width: '100%', boxSizing: 'border-box', margin: 0 }}
+                                          >
+                                            <option value="true">true</option>
+                                            <option value="false">false</option>
+                                          </select>
+                                        ) : isStructured ? (
+                                          <textarea
+                                            className={styles.formInput}
+                                            value={stringifyPoolFieldValue(value)}
+                                            onChange={event => updatePoolManagerItem(poolWordCategory, index, { [field]: parsePoolFieldValue(event.target.value, value) })}
+                                            rows={4}
+                                            style={{ padding: '4px 6px', fontSize: 10, width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', resize: 'vertical' }}
+                                          />
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            className={styles.formInput}
+                                            value={stringifyPoolFieldValue(value)}
+                                            onChange={event => updatePoolManagerItem(poolWordCategory, index, { [field]: parsePoolFieldValue(event.target.value, value) })}
+                                            style={{ padding: '3px 6px', fontSize: 10, width: '100%', boxSizing: 'border-box' }}
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -16458,13 +17544,23 @@ Explanation: A question must end with a question mark.`}</pre>
                             />
                             <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.id}</div>
                           </div>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(audioId, item.audioUrl)} disabled={!item.audioUrl} style={{ flex: 1, padding: '5px 7px' }}>
-                              {item.audioUrl ? (playingAudioId === audioId ? 'Stop Audio' : 'Play Audio') : 'No Audio'}
-                            </button>
-                            <button type="button" className={styles.btnOutline} onClick={() => generatePoolItemAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `${poolWordCategory}:${index}`} style={{ flex: 1, padding: '5px 7px' }}>
-                              {poolManagerGeneratingId === `${poolWordCategory}:${index}` ? 'Generating…' : item.audioUrl ? 'Make New Audio' : 'Create Audio'}
-                            </button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(audioId, item.audioUrl)} disabled={!item.audioUrl} style={{ flex: 1, padding: '5px 7px', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                                🔊 {item.audioUrl ? (playingAudioId === audioId ? 'Stop' : 'Word') : 'No Word'}
+                              </button>
+                              <button type="button" className={styles.btnOutline} onClick={() => generatePoolItemAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `${poolWordCategory}:${index}`} style={{ flex: 1, padding: '5px 7px', fontSize: 10 }}>
+                                {poolManagerGeneratingId === `${poolWordCategory}:${index}` ? 'Checking…' : 'Find/Gen Word'}
+                              </button>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(`phonic_${audioId}`, item.phonicSoundUrl)} disabled={!item.phonicSoundUrl} style={{ flex: 1, padding: '5px 7px', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                                🎙️ {item.phonicSoundUrl ? (playingAudioId === `phonic_${audioId}` ? 'Stop' : 'Phonic') : 'No Phonic'}
+                              </button>
+                              <button type="button" className={styles.btnOutline} onClick={() => generateItemPhonicAudio(poolWordCategory, index, item)} disabled={poolManagerGeneratingId === `audio_${poolWordCategory}:${index}`} style={{ flex: 1, padding: '5px 7px', fontSize: 10 }}>
+                                {poolManagerGeneratingId === `audio_${poolWordCategory}:${index}` ? 'Gen…' : 'Gen Phonic'}
+                              </button>
+                            </div>
                           </div>
                         </>
                       )}
@@ -16476,6 +17572,314 @@ Explanation: A question must end with a question mark.`}</pre>
               })()
             )}
           </div>
+          {editingPoolItemKey && poolWordManagerData && (() => {
+            const [editingCategory, editingIndexText] = String(editingPoolItemKey).split(':');
+            const editingIndex = Number(editingIndexText);
+            const editingItem = poolWordManagerData.pools?.[editingCategory]?.[editingIndex];
+            if (!editingItem) return null;
+
+            const audioId = `pool_${editingCategory}_${editingIndex}`;
+            const additionalFields = Object.entries(editingItem || {})
+              .filter(([field]) => !poolItemCoreFields.has(field))
+              .sort(([left], [right]) => left.localeCompare(right));
+            const scienceFields = ['shape2d', 'shape3d', 'color', 'texture', 'material', 'length', 'weight', 'temperature', 'speed']
+              .filter(field => Object.prototype.hasOwnProperty.call(editingItem, field));
+            const nonScienceAdditionalFields = additionalFields.filter(([field]) => !scienceFields.includes(field));
+            const posFields = poolItemPosFields;
+            const suggestedPoolFields = [
+              'nouns',
+              'verbs',
+              'adjectives',
+              'adverbs',
+              'prepositions',
+              'pronouns',
+              'conjunctions',
+              'articles',
+              'vowels',
+              'consonants',
+              'category',
+              'kind',
+              'property',
+              'value',
+              'opposite',
+              'simpleFact',
+              'questionCue',
+              'hint',
+              'correctFeedback',
+              'incorrectFeedback',
+              'stepByStepExplanation',
+              'imagePrompt',
+              'tags',
+              'gradeBand',
+              'difficulty',
+              'sound',
+              'animal',
+              'adult',
+              'baby',
+              'shape2d',
+              'shape3d',
+              'color',
+              'texture',
+              'material',
+              'length',
+              'weight',
+              'temperature',
+              'speed'
+            ].filter(field => !Object.prototype.hasOwnProperty.call(editingItem, field));
+            const renderModalField = (field, value, label = formatPoolFieldLabel(field)) => {
+              const isStructured = value && typeof value === 'object' && !(Array.isArray(value) && value.every(entry => entry == null || ['string', 'number', 'boolean'].includes(typeof entry)));
+              return (
+                <div key={field} style={{ minWidth: 0 }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#475569', marginBottom: 4 }}>{label}</label>
+                  {typeof value === 'boolean' ? (
+                    <select
+                      className={styles.formSelect}
+                      value={String(value)}
+                      onChange={event => updatePoolManagerItem(editingCategory, editingIndex, { [field]: event.target.value === 'true' })}
+                      style={{ width: '100%', margin: 0, minHeight: 34, fontSize: 12 }}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </select>
+                  ) : isStructured ? (
+                    <textarea
+                      className={styles.formInput}
+                      value={stringifyPoolFieldValue(value)}
+                      onChange={event => updatePoolManagerItem(editingCategory, editingIndex, { [field]: parsePoolFieldValue(event.target.value, value) })}
+                      rows={4}
+                      style={{ width: '100%', margin: 0, minHeight: 82, fontSize: 12, fontFamily: 'monospace', resize: 'vertical' }}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      className={styles.formInput}
+                      value={stringifyPoolFieldValue(value)}
+                      onChange={event => updatePoolManagerItem(editingCategory, editingIndex, { [field]: parsePoolFieldValue(event.target.value, value) })}
+                      style={{ width: '100%', margin: 0, minHeight: 34, fontSize: 12 }}
+                    />
+                  )}
+                </div>
+              );
+            };
+
+            return (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Edit pool item"
+                onClick={event => { if (event.target === event.currentTarget) setEditingPoolItemKey(null); }}
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 8950,
+                  background: 'rgba(15,23,42,.38)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 18,
+                }}
+              >
+                <div
+                  onClick={event => event.stopPropagation()}
+                  style={{
+                    width: 'min(980px, 96vw)',
+                    maxHeight: 'min(720px, 92vh)',
+                    background: '#fff',
+                    borderRadius: 14,
+                    boxShadow: '0 28px 90px rgba(15,23,42,.35)',
+                    display: 'grid',
+                    gridTemplateRows: 'auto 1fr auto',
+                    overflow: 'hidden',
+                    border: '1px solid #dbeafe',
+                  }}
+                >
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: .5 }}>{editingCategory}</div>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Edit Pool Item: {editingItem.label || editingItem.id || `Item ${editingIndex + 1}`}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.btnOutline}
+                      onClick={() => setEditingPoolItemKey(null)}
+                      style={{ minWidth: 42, height: 38, padding: 0, fontSize: 18 }}
+                      aria-label="Close item editor"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', minHeight: 0 }}>
+                    <aside style={{ borderRight: '1px solid #e2e8f0', padding: 16, background: '#f8fafc', overflowY: 'auto' }}>
+                      <div style={{ height: 210, borderRadius: 12, border: '1px solid #dbeafe', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 12 }}>
+                        {editingItem.imageUrl ? (
+                          <img src={editingItem.imageUrl} alt={editingItem.label || ''} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: 13, fontWeight: 700 }}>No image</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        <button type="button" className={styles.btnOutline} onClick={() => openImgPickerForPoolItem(editingCategory, editingIndex)}>
+                          Image Search / Gallery
+                        </button>
+                        <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(audioId, editingItem.audioUrl)} disabled={!editingItem.audioUrl}>
+                          {editingItem.audioUrl ? (playingAudioId === audioId ? 'Stop Word Audio' : 'Play Word Audio') : 'No Word Audio'}
+                        </button>
+                        <button type="button" className={styles.btnOutline} onClick={() => generatePoolItemAudio(editingCategory, editingIndex, editingItem)} disabled={poolManagerGeneratingId === `${editingCategory}:${editingIndex}`}>
+                          {poolManagerGeneratingId === `${editingCategory}:${editingIndex}` ? 'Checking...' : 'Find / Generate Word Audio'}
+                        </button>
+                        <button type="button" className={styles.btnOutline} onClick={() => handlePlayUrlAudio(`phonic_${audioId}`, editingItem.phonicSoundUrl)} disabled={!editingItem.phonicSoundUrl}>
+                          {editingItem.phonicSoundUrl ? (playingAudioId === `phonic_${audioId}` ? 'Stop Phonic Audio' : 'Play Phonic Audio') : 'No Phonic Audio'}
+                        </button>
+                        <button type="button" className={styles.btnOutline} onClick={() => generateItemPhonicAudio(editingCategory, editingIndex, editingItem)} disabled={poolManagerGeneratingId === `audio_${editingCategory}:${editingIndex}` || (!editingItem.phonicPrompt && !editingItem.label)}>
+                          {poolManagerGeneratingId === `audio_${editingCategory}:${editingIndex}` ? 'Checking...' : 'Find / Generate Phonic Audio'}
+                        </button>
+                      </div>
+                    </aside>
+
+                    <section style={{ padding: 16, overflowY: 'auto', minHeight: 0 }}>
+                      <div style={{ display: 'grid', gap: 18 }}>
+                        <div>
+                          <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#0f172a' }}>Basic</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                            {renderModalField('id', editingItem.id || '', 'Item ID')}
+                            {renderModalField('label', editingItem.label || '', 'Label')}
+                            {(editingItem.text !== undefined || editingCategory.toLowerCase().includes('sentence') || editingCategory.toLowerCase().includes('grammar')) && renderModalField('text', editingItem.text || '', 'Sentence Text')}
+                            {renderModalField('imageUrl', editingItem.imageUrl || '', 'Image URL')}
+                            {renderModalField('audioUrl', editingItem.audioUrl || '', 'Audio URL')}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#0f172a' }}>Audio & Phonics</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                            {renderModalField('phonicPrompt', editingItem.phonicPrompt || '', 'Phonic Prompt')}
+                            {renderModalField('phonicSoundUrl', editingItem.phonicSoundUrl || '', 'Phonic Sound URL')}
+                          </div>
+                        </div>
+
+                        <div style={{ border: '1px solid #dbeafe', borderRadius: 10, padding: 12, background: '#f8fbff' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 900, color: '#0f172a' }}>Add Details</h4>
+                            <button
+                              type="button"
+                              className={styles.btnSolid}
+                              onClick={() => enrichPoolItemWithGemini(editingCategory, editingIndex, editingItem)}
+                              disabled={poolManagerGeneratingId === `enrich_${editingCategory}:${editingIndex}`}
+                              style={{ minHeight: 30, padding: '5px 10px', fontSize: 11 }}
+                            >
+                              {poolManagerGeneratingId === `enrich_${editingCategory}:${editingIndex}` ? 'Filling...' : 'Fill with Gemini'}
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                            {suggestedPoolFields.slice(0, 24).map(field => (
+                              <button
+                                key={field}
+                                type="button"
+                                className={styles.btnOutline}
+                                onClick={() => addPoolManagerItemField(editingCategory, editingIndex, field)}
+                                style={{ minHeight: 28, padding: '4px 8px', fontSize: 11, borderRadius: 999 }}
+                              >
+                                + {field}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 180px) 1fr auto', gap: 8, alignItems: 'end' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#475569', marginBottom: 4 }}>Field Name</label>
+                              <input
+                                className={styles.formInput}
+                                value={newPoolFieldName}
+                                onChange={event => setNewPoolFieldName(event.target.value)}
+                                placeholder="e.g. simpleFact"
+                                style={{ width: '100%', margin: 0, minHeight: 34, fontSize: 12 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#475569', marginBottom: 4 }}>Value</label>
+                              <input
+                                className={styles.formInput}
+                                value={newPoolFieldValue}
+                                onChange={event => setNewPoolFieldValue(event.target.value)}
+                                placeholder="For tags, use comma separated values"
+                                style={{ width: '100%', margin: 0, minHeight: 34, fontSize: 12 }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.btnSolid}
+                              onClick={() => addPoolManagerItemField(editingCategory, editingIndex, newPoolFieldName, newPoolFieldValue)}
+                              style={{ minHeight: 34, padding: '6px 12px', fontSize: 12 }}
+                            >
+                              Add Field
+                            </button>
+                          </div>
+                          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 11 }}>
+                            Use these fields later in Dynamic Option Pool filters, for example <code>kind=animal</code>, <code>value=hot</code>, <code>sound=moo</code>, or <code>tags=living</code>.
+                          </p>
+                        </div>
+
+                        <div>
+                          <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#0f172a' }}>POS Tags</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                            {posFields.map(pos => (
+                              <div key={pos.field} style={{ minWidth: 0 }}>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#475569', marginBottom: 4 }}>{pos.label}</label>
+                                <input
+                                  type="text"
+                                  className={styles.formInput}
+                                  value={posInputs[pos.field] !== undefined ? posInputs[pos.field] : (Array.isArray(editingItem[pos.field]) ? editingItem[pos.field].join(', ') : (editingItem[pos.field] || ''))}
+                                  onChange={event => {
+                                    const value = event.target.value;
+                                    setPosInputs(previous => ({ ...previous, [pos.field]: value }));
+                                    updatePoolManagerItem(editingCategory, editingIndex, {
+                                      [pos.field]: value.split(',').map(entry => entry.trim()).filter(Boolean)
+                                    });
+                                  }}
+                                  placeholder="comma separated words"
+                                  style={{ width: '100%', margin: 0, minHeight: 34, fontSize: 12 }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {scienceFields.length > 0 && (
+                          <div>
+                            <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#0f172a' }}>Science Properties</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+                              {scienceFields.map(field => renderModalField(field, editingItem[field]))}
+                            </div>
+                          </div>
+                        )}
+
+                        {nonScienceAdditionalFields.length > 0 && (
+                          <div>
+                            <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#0f172a' }}>Additional Fields</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                              {nonScienceAdditionalFields.map(([field, value]) => renderModalField(field, value))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  </div>
+
+                  <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#f8fafc' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Changes stay local until you click Save Pool Changes.</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" className={styles.btnOutline} onClick={() => setEditingPoolItemKey(null)}>Done</button>
+                      <button type="button" className={styles.btnSolid} onClick={savePoolManagerChanges} disabled={poolWordManagerSaving}>
+                        {poolWordManagerSaving ? 'Saving...' : 'Save Pool Changes'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           <div style={{ padding: '10px 16px', borderTop: '1px solid #e2e8f0', fontSize: 11, color: poolWordManagerStatus === 'Pool changes saved.' ? '#047857' : '#64748b' }}>
             {poolWordManagerStatus || 'Review labels, images, and audio. Save changes when finished.'}
           </div>

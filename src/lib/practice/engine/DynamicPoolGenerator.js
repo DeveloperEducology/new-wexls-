@@ -26,6 +26,26 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     if (!Array.isArray(option?.allowedModes) || option.allowedModes.length === 0) return true;
     return option.allowedModes.includes(mode);
   };
+  const matchesPropertyFilter = (option, property, value) => {
+    const prop = String(property || '').trim();
+    const expected = String(value || '').trim();
+    if (!prop || !expected) return true;
+    const actual = option?.[prop];
+    if (Array.isArray(actual)) {
+      return actual.map(entry => String(entry).toLowerCase()).includes(expected.toLowerCase());
+    }
+    return String(actual ?? '').toLowerCase() === expected.toLowerCase();
+  };
+  const optionIdentity = (option = {}) => {
+    const id = String(option.id || '').trim().toLowerCase();
+    const label = String(option.label || option.text || '').trim().toLowerCase();
+    return id || label;
+  };
+  const sameOption = (a, b) => {
+    const aId = optionIdentity(a);
+    const bId = optionIdentity(b);
+    return Boolean(aId && bId && aId === bId);
+  };
 
   // If the poolDoc has the new 'pools' property, use the new structure
   if (poolDoc.pools) {
@@ -510,9 +530,9 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     let correctPool = [];
     let distractorPool = [];
 
-    let resolvedTargetCategory = poolDoc.targetCategory || '';
+    let resolvedTargetCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || '';
     const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
-    const shouldRandomize = poolDoc.randomizeTargetCategory || poolDoc.targetCategory === '[random]' || (!poolDoc.targetCategory && poolKeys.length > 1);
+    const shouldRandomize = poolDoc.randomizeTargetCategory || resolvedTargetCategory === '[random]' || (!resolvedTargetCategory && poolKeys.length > 1);
 
     if (shouldRandomize && poolKeys.length > 0) {
       const randIdx = Math.floor(prng() * poolKeys.length);
@@ -532,6 +552,32 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     } else {
       correctPool = poolDoc.pools.correctPool || [];
       distractorPool = poolDoc.pools.distractorPool || [];
+    }
+
+    const targetProperty = poolDoc.targetProperty || poolDoc.metadata?.targetProperty || poolDoc.filterProperty || poolDoc.metadata?.filterProperty || '';
+    const targetValue = poolDoc.targetValue || poolDoc.metadata?.targetValue || poolDoc.filterValue || poolDoc.metadata?.filterValue || '';
+    const distractorProperty = poolDoc.distractorProperty || poolDoc.metadata?.distractorProperty || '';
+    const distractorValue = poolDoc.distractorValue || poolDoc.metadata?.distractorValue || '';
+    correctPool = correctPool.filter(option => matchesPropertyFilter(option, targetProperty, targetValue));
+    distractorPool = distractorPool.filter(option => matchesPropertyFilter(option, distractorProperty, distractorValue));
+
+    // Property-mode skills such as "Which one is hot?" should not get stuck on
+    // one item just because the selected category is narrow. If the chosen
+    // category has too little variety, expand across the pool while preserving
+    // the requested target property/value.
+    if (targetProperty && targetValue && correctPool.length < 2) {
+      const seen = new Set(correctPool.map(optionIdentity).filter(Boolean));
+      const expandedCorrect = poolKeys
+        .flatMap(cat => poolDoc.pools[cat] || [])
+        .filter(option => option?.active !== false)
+        .filter(option => matchesPropertyFilter(option, targetProperty, targetValue))
+        .filter(option => {
+          const key = optionIdentity(option);
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      correctPool = [...correctPool, ...expandedCorrect];
     }
 
     const activeMode = poolDoc.mode || 'identify_text';
@@ -616,13 +662,14 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
     // Filter remaining candidates from distractorPool
     let remainingCandidates = distractorPool.filter(
-      d => !targetOptions.some(to => to.id === d.id) && !selectedDistractors.some(sel => sel.id === d.id)
+      d => !targetOptions.some(to => sameOption(to, d)) && !selectedDistractors.some(sel => sameOption(sel, d))
     );
 
     // Fallback: if we don't have enough distractors, pull candidates from correctPool
     if (remainingCandidates.length + selectedDistractors.length < neededDistractorCount) {
       const extraCandidates = correctPool
-        .filter(c => !targetOptions.some(to => to.id === c.id) && !selectedDistractors.some(sel => sel.id === c.id))
+        .filter(c => !targetOptions.some(to => sameOption(to, c)) && !selectedDistractors.some(sel => sameOption(sel, c)))
+        .filter(c => !(targetProperty && targetValue && matchesPropertyFilter(c, targetProperty, targetValue)))
         .map(c => ({
           ...c,
           isDistractorOnly: true // Treat as distractor for this dynamic variant
@@ -701,7 +748,12 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
       }
       if (newPart.audioUrl) {
-        newPart.audioUrl = interpolate(newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetOption.audioUrl || ''));
+        newPart.audioUrl = interpolate(
+          newPart.audioUrl
+            .replace(/\{\{targetAudio\}\}/g, targetOption.audioUrl || '')
+            .replace(/\{\{phonicSoundUrl\}\}/g, targetOption.phonicSoundUrl || targetOption.audioUrl || '')
+            .replace(/\{\{phonicAudioUrl\}\}/g, targetOption.phonicSoundUrl || targetOption.audioUrl || '')
+        );
       }
       return newPart;
     });
@@ -722,7 +774,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       imageUrl: poolDoc.hideOptionImages || opt.assetStatus?.image === 'needs_review'
         ? null
         : (opt.imageUrl || null),
-      isCorrect: targetOptions.some(to => to.id === opt.id),
+      isCorrect: targetOptions.some(to => sameOption(to, opt)),
       hideLabel: hasExplicitLabelDisplay ? hideLabels : (hideLabels || opt.hideLabel || false),
       misconceptionType: opt.misconceptionType || null
     }));
@@ -864,7 +916,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
   const questionAudioUrl = poolDoc.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(questionText)}`;
 
   const soundText = targetOption.soundText || targetWord;
-  const soundUrl = targetOption.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`;
+  const soundUrl = targetOption.phonicSoundUrl || targetOption.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`;
 
   const parts = (poolDoc.parts || [
     { type: 'text', content: '{{questionText}}' },
@@ -884,7 +936,10 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
       newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
     }
     if (newPart.audioUrl) {
-      newPart.audioUrl = newPart.audioUrl.replace(/\{\{targetAudio\}\}/g, targetOption.audioUrl || '');
+      newPart.audioUrl = newPart.audioUrl
+        .replace(/\{\{targetAudio\}\}/g, targetOption.audioUrl || '')
+        .replace(/\{\{phonicSoundUrl\}\}/g, targetOption.phonicSoundUrl || targetOption.audioUrl || '')
+        .replace(/\{\{phonicAudioUrl\}\}/g, targetOption.phonicSoundUrl || targetOption.audioUrl || '');
     }
     return newPart;
   });

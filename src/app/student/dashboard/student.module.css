@@ -205,3 +205,1263 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
 }
+
+/* View Mode Toggles */
+.viewModeToggleRow {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+  padding: 0 1rem;
+}
+
+.toggleBtn {
+  background: #ffffff;
+  border: 3px solid var(--border-color);
+  color: #1e293b;
+  padding: 0.75rem 1.75rem;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.toggleBtn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.activeToggle {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* Winding Journey Pathway */
+.journeyContainer {
+  background-image: url('/images/jungle_bg.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-attachment: scroll;
+  border: 4px solid var(--border-color);
+  border-radius: 36px;
+  padding: 3rem 1.5rem;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  margin-bottom: 2.5rem;
+  min-height: 480px; /* Give vertical space for the up-and-down wave */
+  height: 480px; /* Force explicit height in normal mode */
+  display: flex;
+  align-items: stretch;
+}
+
+.journeyContainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 85%, rgba(13, 68, 46, 0.25), transparent 26%),
+    radial-gradient(circle at 88% 16%, rgba(255, 255, 255, 0.16), transparent 22%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.18));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.journeyScrollArea {
+  position: absolute;
+  inset: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-padding-inline: min(42vw, 360px);
+  display: flex;
+  align-items: stretch;
+  scrollbar-width: auto;
+  scrollbar-color: #b45309 rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+.journeyScrollArea::-webkit-scrollbar {
+  height: 12px;
+}
+
+.journeyScrollArea::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.journeyScrollArea::-webkit-scrollbar-thumb {
+  background-color: #b45309;
+  border-radius: 6px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+}
+
+.journeyPath {
+  position: relative;
+  /* width is set dynamically via inline style on the element */
+  min-width: 100%;
+  max-width: none;
+  flex-shrink: 0;
+  height: 100%;
+  margin: 0;
+}
+
+/* absolute overlay SVG road styles */
+.journeySvgPath {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 12px rgba(30, 18, 8, 0.38));
+}
+
+.trailShadow {
+  opacity: 0.42;
+}
+
+.trailMain {
+  filter: drop-shadow(0 7px 0 rgba(74, 43, 18, 0.75));
+}
+
+.trailHighlight {
+  opacity: 0.7;
+}
+
+/* Circular stepping stones absolute wrappers */
+.journeyNodeWrapper {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+  perspective: 600px;
+}
+
+.journeyNode {
+  appearance: none;
+  border: 0;
+  width: 86px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 950;
+  color: #ffffff;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select: none;
+  z-index: 2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: rotateX(14deg);
+  overflow: visible;
+}
+
+.journeyNode::before {
+  content: '';
+  position: absolute;
+  inset: 9px 5px -13px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(0,0,0,0.25));
+  transform: translateY(12px);
+  z-index: -1;
+}
+
+.journeyNode::after {
+  content: '';
+  position: absolute;
+  inset: 7px 12px auto;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.28);
+  filter: blur(1px);
+}
+
+.nodeIcon {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.24);
+}
+
+.journeyNode:focus-visible {
+  outline: 4px solid #fef08a;
+  outline-offset: 6px;
+}
+
+.completedNode {
+  background: radial-gradient(circle at 35% 20%, #86efac 0 12%, #4ade80 24%, #15803d 76%);
+  border: 5px solid #dcfce7;
+  box-shadow: inset 0 10px 0 rgba(255,255,255,0.24),
+              inset 0 -10px 0 rgba(20, 83, 45, 0.55),
+              0 13px 0 #14532d,
+              0 22px 28px rgba(5, 46, 22, 0.34);
+}
+
+.completedNode:hover {
+  transform: rotateX(14deg) scale(1.08) translateY(-4px);
+}
+
+.activeNode {
+  background: radial-gradient(circle at 35% 20%, #93c5fd 0 13%, #3b82f6 28%, #1d4ed8 76%);
+  border: 5px solid #ffffff;
+  box-shadow: inset 0 10px 0 rgba(255,255,255,0.28),
+              inset 0 -10px 0 rgba(30, 64, 175, 0.65),
+              0 13px 0 #1e3a8a,
+              0 0 0 10px rgba(59, 130, 246, 0.22),
+              0 0 42px rgba(96, 165, 250, 0.72);
+  animation: activePulse 2s infinite ease-in-out;
+}
+
+.activeNode:hover {
+  transform: rotateX(14deg) scale(1.1) translateY(-4px);
+}
+
+.lockedNode {
+  background: radial-gradient(circle at 35% 20%, #737373 0 16%, #44403c 40%, #1c1917 78%);
+  border: 5px solid #a8a29e;
+  box-shadow: inset 0 8px 0 rgba(255,255,255,0.14),
+              inset 0 -9px 0 rgba(0,0,0,0.48),
+              0 12px 0 #292524,
+              0 19px 22px rgba(0,0,0,0.28);
+  cursor: not-allowed;
+  color: #d6d3d1;
+  opacity: 0.88;
+}
+
+/* Wood-plank style lesson label tags */
+.nodeLabel {
+  margin-top: 1rem;
+  font-weight: 900;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: #fef08a;
+  text-align: center;
+  max-width: 118px;
+  background: linear-gradient(180deg, #92400e 0%, #451a03 100%);
+  padding: 6px 11px 7px;
+  border-radius: 11px;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 5px 0 #5f2507, 0 12px 16px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+
+/* Absolute Node Badges */
+.nodeStatusBadge {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  border: 3px solid var(--border-color);
+  z-index: 3;
+  transform: rotateX(-14deg);
+}
+
+.starBadge {
+  top: -8px;
+  right: -8px;
+  background: #fef08a;
+  border-color: #eab308;
+}
+
+.checkmarkBadge {
+  bottom: 0px;
+  right: -10px;
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.lockBadge {
+  top: -8px;
+  right: -8px;
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.activeBadge {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 950;
+  width: auto;
+  min-width: 48px;
+  height: 24px;
+  border-radius: 999px;
+  top: -14px;
+  right: 50%;
+  transform: translateX(50%);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+  padding: 0 8px;
+  letter-spacing: 0;
+}
+
+/* Mascot helper standing underneath active node */
+.pathMascot {
+  position: absolute;
+  left: 50%;
+  top: 155%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.pathMascotBubble {
+  background: #1e293b;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  position: relative;
+  animation: floatBubble 3s infinite ease-in-out;
+}
+
+.pathMascotBubble::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 7px;
+  border-style: solid;
+  border-color: transparent transparent #1e293b transparent;
+}
+
+.pathMascotAvatar {
+  font-size: 2.75rem;
+  animation: bounceMascot 2s infinite ease-in-out;
+}
+
+@keyframes activePulse {
+  0%, 100% {
+    transform: rotateX(14deg) scale(1);
+    box-shadow: inset 0 10px 0 rgba(255,255,255,0.28),
+                inset 0 -10px 0 rgba(30, 64, 175, 0.65),
+                0 13px 0 #1e3a8a,
+                0 0 0 8px rgba(59, 130, 246, 0.2),
+                0 0 34px rgba(96, 165, 250, 0.66);
+  }
+  50% {
+    transform: rotateX(14deg) scale(1.06) translateY(-3px);
+    box-shadow: inset 0 10px 0 rgba(255,255,255,0.32),
+                inset 0 -10px 0 rgba(30, 64, 175, 0.65),
+                0 15px 0 #1e3a8a,
+                0 0 0 15px rgba(59, 130, 246, 0.28),
+                0 0 52px rgba(96, 165, 250, 0.84);
+  }
+}
+
+@keyframes floatBubble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Mobile responsive constraints */
+@media (max-width: 600px) {
+  .viewModeToggleRow {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .toggleBtn {
+    width: 100%;
+    justify-content: center;
+  }
+  .journeyContainer {
+    padding: 2rem 1rem;
+    border-radius: 24px;
+  }
+  .journeyScrollArea {
+    inset: 0;
+  }
+  .journeyNode {
+    width: 68px;
+    height: 68px;
+    font-size: 1.35rem;
+  }
+  .nodeLabel {
+    max-width: 96px;
+    font-size: 0.65rem;
+  }
+  .nodeStatusBadge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Fullscreen Game Mode Canvas Overrides */
+.fullscreenMode {
+  padding: 0 !important;
+  background-color: #e0f2fe; /* Match the sky blue in the panorama background */
+}
+
+.studentContainer.fullscreenMode {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+.fullscreenMode .headerRow,
+.fullscreenMode .mascotPanel,
+.fullscreenMode .viewModeToggleRow {
+  display: none !important; /* Hide dashboard headers when game is fullscreen */
+}
+
+.fullscreenMode .journeyContainer {
+  position: fixed;
+  inset: 0;
+  min-height: 100dvh;
+  height: 100dvh;
+  width: 100vw;
+  border-radius: 0;
+  border: none;
+  margin-bottom: 0;
+  padding: 0;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.currentQuestCard {
+  position: absolute;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 12;
+  width: min(620px, calc(100vw - 2rem));
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border-radius: 22px;
+  border: 2px solid rgba(255,255,255,0.72);
+  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(236,253,245,0.82));
+  box-shadow: 0 18px 40px rgba(15,23,42,0.28), inset 0 1px 0 rgba(255,255,255,0.7);
+  backdrop-filter: blur(12px);
+}
+
+.currentQuestBadge {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-weight: 950;
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  box-shadow: inset 0 4px 0 rgba(255,255,255,0.22), 0 8px 0 #1e3a8a, 0 16px 22px rgba(30,64,175,0.28);
+}
+
+.currentQuestCard strong {
+  display: block;
+  color: #10223f;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.currentQuestCard small,
+.currentQuestEyebrow {
+  display: block;
+  color: #476071;
+  font-weight: 850;
+  font-size: 0.72rem;
+}
+
+.currentQuestEyebrow {
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.15rem;
+}
+
+.currentQuestStart {
+  min-width: 94px;
+  min-height: 48px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 950;
+  background: linear-gradient(145deg, #22c55e, #16a34a);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,0.25), 0 7px 0 #166534, 0 14px 18px rgba(22,101,52,0.25);
+}
+
+/* Floating overlay buttons on top of full-screen map */
+.floatingPathHeader {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+  z-index: 10;
+  max-width: 90%;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 28px;
+  padding: 0.55rem;
+  backdrop-filter: blur(8px);
+}
+
+.curriculumPillRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.curriculumPill {
+  padding: 0.45rem 1.1rem;
+  border-radius: 24px;
+  font-weight: 900;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 3px solid rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.9);
+  color: #1e293b;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.curriculumPill span {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.curriculumPill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.16);
+}
+
+.activeCurriculumPill {
+  border-color: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.activeCurriculumPill[data-subject='math'] {
+  background: linear-gradient(135deg,#1d4ed8,#2563eb);
+}
+
+.activeCurriculumPill[data-subject='english'] {
+  background: linear-gradient(135deg,#065f46,#047857);
+}
+
+.journeyProgressStrip {
+  width: min(460px, calc(100vw - 2rem));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  color: #1e293b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.journeyProgressTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.journeyProgressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #facc15);
+  transition: width 0.35s ease;
+}
+
+.floatingActionRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.floatingToggleBtn {
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid #1e293b;
+  color: #1e293b;
+  padding: 0.6rem 1.4rem;
+  border-radius: 24px;
+  font-size: 0.9rem;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.floatingToggleBtn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  background: #ffffff;
+}
+
+.testUnlockBtn {
+  background: #fef08a;
+  border-color: #ca8a04;
+  color: #854d0e;
+}
+
+@media (max-width: 760px) {
+  .floatingPathHeader {
+    top: 0.6rem;
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+    padding: 0.45rem;
+    border-radius: 20px;
+  }
+
+  .curriculumPill {
+    padding: 0.38rem 0.7rem;
+    font-size: 0.72rem;
+    border-width: 2px;
+  }
+
+  .curriculumPill span {
+    display: none;
+  }
+
+  .floatingToggleBtn {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.75rem;
+    border-width: 2px;
+  }
+
+  .journeyProgressStrip {
+    width: min(360px, calc(100vw - 2rem));
+    font-size: 0.65rem;
+  }
+
+  .currentQuestCard {
+    grid-template-columns: auto 1fr;
+    bottom: 0.65rem;
+    padding: 0.65rem;
+  }
+
+  .currentQuestStart {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 42px;
+  }
+}
+
+/* Premium Journey Map HUD */
+.playerHud,
+.livesHud {
+  position: absolute;
+  z-index: 14;
+  top: max(1rem, env(safe-area-inset-top));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 72px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 28px;
+  border: 2px solid rgba(255,255,255,0.28);
+  background: linear-gradient(135deg, rgba(16, 45, 46, 0.86), rgba(15, 23, 42, 0.78));
+  color: #ffffff;
+  box-shadow: 0 18px 36px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.25);
+  backdrop-filter: blur(12px);
+}
+
+.playerHud {
+  left: max(1.25rem, env(safe-area-inset-left));
+}
+
+.livesHud {
+  right: max(1.25rem, env(safe-area-inset-right));
+}
+
+.playerAvatar {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 2rem;
+  background: radial-gradient(circle at 35% 20%, #fef3c7, #60a5fa 58%, #1e3a8a);
+  border: 4px solid rgba(255,255,255,0.85);
+  box-shadow: inset 0 -5px 0 rgba(0,0,0,0.14), 0 8px 16px rgba(0,0,0,0.22);
+}
+
+.playerHud strong,
+.livesHud strong {
+  display: block;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.playerHud small,
+.livesHud small {
+  display: block;
+  font-weight: 900;
+  opacity: 0.9;
+  font-size: 0.75rem;
+}
+
+.hudDivider {
+  width: 1px;
+  height: 38px;
+  background: rgba(255,255,255,0.26);
+}
+
+.notificationBell {
+  position: relative;
+  font-size: 1.65rem;
+}
+
+.notificationBell b {
+  position: absolute;
+  right: -9px;
+  top: -10px;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.72rem;
+  border: 2px solid #ffffff;
+}
+
+.fullscreenMode .journeyContainer {
+  background:
+    radial-gradient(circle at 46% 58%, rgba(255,255,255,0.06), transparent 27%),
+    linear-gradient(180deg, rgba(5, 31, 37, 0.06), rgba(1, 21, 17, 0.18)),
+    url('/images/jungle_bg.png');
+  background-size: cover;
+  background-position: center center;
+  overflow: hidden;
+}
+
+.fullscreenMode .journeyContainer::before {
+  background:
+    radial-gradient(circle at 50% 52%, rgba(255,255,255,0.22), transparent 20%),
+    linear-gradient(180deg, rgba(4, 15, 23, 0.1), rgba(4, 15, 23, 0.18));
+}
+
+.floatingPathHeader {
+  width: min(840px, calc(100vw - 420px));
+  min-height: 172px;
+  gap: 0.75rem;
+  padding: 0.85rem 1.2rem 1rem;
+  border-radius: 34px;
+  border: 2px solid rgba(255,255,255,0.32);
+  background: linear-gradient(135deg, rgba(255,255,255,0.72), rgba(241,245,249,0.48));
+  box-shadow: 0 24px 44px rgba(15,23,42,0.22), inset 0 1px 0 rgba(255,255,255,0.72);
+  backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.fullscreenMode .playerHud {
+  position: absolute !important;
+  left: max(1.5rem, env(safe-area-inset-left)) !important;
+  top: max(1.35rem, env(safe-area-inset-top)) !important;
+  z-index: 30 !important;
+}
+
+.fullscreenMode .livesHud {
+  position: absolute !important;
+  right: max(1.5rem, env(safe-area-inset-right)) !important;
+  top: max(1.35rem, env(safe-area-inset-top)) !important;
+  z-index: 30 !important;
+}
+
+.fullscreenMode .floatingPathHeader {
+  position: absolute !important;
+  top: max(1.15rem, env(safe-area-inset-top)) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 25 !important;
+}
+
+.fullscreenMode .journeyScrollArea {
+  position: absolute !important;
+  inset: 0 !important;
+  padding-top: 210px;
+  padding-bottom: 150px;
+  z-index: 1;
+}
+
+.fullscreenMode .journeyMascotPanel {
+  position: absolute !important;
+  left: max(1.6rem, env(safe-area-inset-left)) !important;
+  bottom: max(1.1rem, env(safe-area-inset-bottom)) !important;
+  z-index: 28 !important;
+}
+
+.fullscreenMode .journeyToolDock {
+  position: absolute !important;
+  right: max(1.6rem, env(safe-area-inset-right)) !important;
+  bottom: max(1.3rem, env(safe-area-inset-bottom)) !important;
+  z-index: 28 !important;
+}
+
+.curriculumPillRow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(118px, 1fr));
+  gap: 0.7rem;
+}
+
+.curriculumPill {
+  min-height: 54px;
+  justify-content: center;
+  font-size: 0.95rem;
+  border-radius: 28px;
+  border-color: rgba(255,255,255,0.82);
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86));
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.8), 0 8px 0 rgba(15,23,42,0.14), 0 14px 22px rgba(15,23,42,0.12);
+}
+
+.activeCurriculumPill {
+  transform: translateY(-2px);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,0.32), 0 8px 0 #1e3a8a, 0 16px 28px rgba(37,99,235,0.24);
+}
+
+.journeyProgressStrip {
+  width: 100%;
+  grid-template-columns: auto minmax(160px, 1fr) auto auto;
+  gap: 1rem;
+  color: #0f2a3c;
+  font-size: 0.78rem;
+}
+
+.journeyProgressStrip > span:first-child {
+  justify-self: end;
+  letter-spacing: 0.06em;
+}
+
+.journeyProgressTrack {
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.14);
+  box-shadow: inset 0 3px 7px rgba(0,0,0,0.16);
+}
+
+.journeyProgressFill {
+  background: linear-gradient(180deg, #60a5fa, #2563eb 72%, #1d4ed8);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.32), 0 3px 10px rgba(37,99,235,0.25);
+}
+
+.levelPill {
+  min-width: 122px;
+  text-transform: none;
+  color: #0f2a3c;
+  font-size: 0.88rem;
+}
+
+.floatingActionRow {
+  gap: 0.9rem;
+}
+
+.floatingToggleBtn {
+  min-width: 150px;
+  justify-content: center;
+  border-radius: 26px;
+  border-color: rgba(15,23,42,0.9);
+  background: linear-gradient(180deg, #ffffff, #f3eee4);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.9), 0 7px 0 rgba(15,23,42,0.22), 0 14px 20px rgba(0,0,0,0.13);
+}
+
+.testUnlockBtn {
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  border-color: #92400e;
+  color: #5f2a04;
+}
+
+.journeyPath {
+  height: 100%;
+}
+
+.journeySvgPath {
+  top: 86px;
+  height: calc(100% - 180px);
+  opacity: 0.78;
+}
+
+.trailShadow {
+  stroke-width: 46;
+  stroke: rgba(54, 35, 17, 0.74);
+}
+
+.trailMain {
+  stroke-width: 38;
+  stroke: #b99768;
+  filter: drop-shadow(0 10px 0 rgba(73, 43, 18, 0.48));
+}
+
+.trailHighlight {
+  stroke-width: 10;
+  opacity: 0.44;
+}
+
+.pathMascot {
+  display: none;
+}
+
+.journeyNodeWrapper {
+  width: 144px;
+  min-height: 174px;
+  justify-content: flex-start;
+}
+
+.journeyNodeWrapper::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 56px;
+  width: 154px;
+  height: 66px;
+  transform: translateX(-50%) rotateX(58deg);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 22%, rgba(255,255,255,0.5), transparent 16%),
+    radial-gradient(circle at 50% 50%, #d8c08b 0 44%, #a47b48 45% 69%, #6b4424 70% 100%);
+  border: 6px solid rgba(250, 235, 190, 0.82);
+  box-shadow: 0 18px 0 rgba(92, 55, 24, 0.68), 0 34px 34px rgba(35, 19, 7, 0.34);
+  z-index: 0;
+}
+
+.journeyNode {
+  width: 92px;
+  height: 92px;
+  margin-top: 2px;
+  border-radius: 50%;
+  font-size: 1.85rem;
+  transform: none;
+  border-width: 6px;
+}
+
+.journeyNode::before {
+  inset: 8px;
+  transform: translateY(16px);
+  border-radius: 50%;
+  background: rgba(0,0,0,0.26);
+}
+
+.journeyNode::after {
+  inset: 9px 14px auto;
+  height: 26px;
+  background: rgba(255,255,255,0.34);
+}
+
+.completedNode {
+  background: radial-gradient(circle at 36% 20%, #bbf7d0 0 12%, #7ddf49 26%, #229520 72%);
+  border-color: #d9f99d;
+  box-shadow: inset 0 9px 0 rgba(255,255,255,0.26), inset 0 -12px 0 rgba(20,83,45,0.42), 0 9px 0 #166534, 0 0 28px rgba(132,204,22,0.75);
+}
+
+.activeNode {
+  background: radial-gradient(circle at 36% 20%, #93c5fd 0 13%, #2563eb 30%, #4338ca 76%);
+  border-color: #dbeafe;
+  box-shadow: inset 0 10px 0 rgba(255,255,255,0.28), inset 0 -12px 0 rgba(49,46,129,0.56), 0 9px 0 #1e3a8a, 0 0 0 11px rgba(14,165,233,0.22), 0 0 38px rgba(56,189,248,0.9);
+}
+
+.lockedNode {
+  background: radial-gradient(circle at 35% 20%, #d6d3d1 0 10%, #8a8178 32%, #45403b 75%);
+  border-color: #e7e5e4;
+  box-shadow: inset 0 8px 0 rgba(255,255,255,0.2), inset 0 -11px 0 rgba(0,0,0,0.34), 0 9px 0 #292524;
+}
+
+.nodeIcon {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08));
+  font-size: 1.1rem;
+}
+
+.completedNode .nodeIcon {
+  color: #fde047;
+  font-size: 1.7rem;
+}
+
+.nodeLabel {
+  margin-top: 1.05rem;
+  width: 120px;
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  color: #fef3c7;
+  background: linear-gradient(180deg, #9a4b14, #552406);
+  border-color: #d97706;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.16), 0 5px 0 #3b1804, 0 14px 18px rgba(0,0,0,0.26);
+}
+
+.nodeStatusBadge {
+  transform: none;
+}
+
+.activeBadge {
+  top: -28px;
+  right: 50%;
+  transform: translateX(50%);
+  min-width: 58px;
+  height: 30px;
+  background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.journeyMascotPanel {
+  position: absolute;
+  left: max(2rem, env(safe-area-inset-left));
+  bottom: max(1.35rem, env(safe-area-inset-bottom));
+  z-index: 13;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.9rem;
+}
+
+.journeyMascot {
+  font-size: clamp(4rem, 8vw, 7rem);
+  filter: drop-shadow(0 18px 18px rgba(0,0,0,0.25));
+  animation: bounceMascot 2.8s infinite ease-in-out;
+}
+
+.journeySpeechBubble {
+  max-width: 270px;
+  padding: 1.1rem 1.25rem;
+  border-radius: 26px;
+  color: #17324a;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,250,235,0.9));
+  border: 2px solid rgba(255,255,255,0.85);
+  box-shadow: 0 18px 32px rgba(0,0,0,0.18);
+  position: relative;
+}
+
+.journeySpeechBubble::before {
+  content: '';
+  position: absolute;
+  left: -17px;
+  bottom: 36px;
+  border-width: 13px 18px 13px 0;
+  border-style: solid;
+  border-color: transparent rgba(255,250,235,0.95) transparent transparent;
+}
+
+.journeySpeechBubble strong {
+  display: block;
+  color: #166534;
+  font-size: 1.35rem;
+  font-weight: 950;
+  margin-bottom: 0.3rem;
+}
+
+.journeySpeechBubble span {
+  display: block;
+  font-weight: 850;
+  line-height: 1.28;
+}
+
+.journeyToolDock {
+  position: absolute;
+  right: max(2rem, env(safe-area-inset-right));
+  bottom: max(1.7rem, env(safe-area-inset-bottom));
+  z-index: 13;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border-radius: 34px;
+  border: 2px solid rgba(255,255,255,0.28);
+  background: linear-gradient(135deg, rgba(16,45,46,0.88), rgba(15,23,42,0.82));
+  color: #ffffff;
+  box-shadow: 0 20px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
+  backdrop-filter: blur(12px);
+}
+
+.journeyToolDock button {
+  appearance: none;
+  border: 0;
+  border-right: 1px solid rgba(255,255,255,0.22);
+  background: transparent;
+  color: inherit;
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: 0.2rem;
+  place-items: center;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.journeyToolDock button:last-child {
+  border-right: 0;
+}
+
+.journeyToolDock button:hover {
+  background: rgba(255,255,255,0.09);
+}
+
+.journeyToolDock button span {
+  font-size: 2rem;
+}
+
+.journeyToolDock button small {
+  font-weight: 850;
+  opacity: 0.88;
+}
+
+@media (max-width: 1100px) {
+  .fullscreenMode .floatingPathHeader {
+    width: min(760px, calc(100vw - 2rem));
+    top: 5.4rem !important;
+  }
+
+  .fullscreenMode .playerHud,
+  .fullscreenMode .livesHud {
+    min-height: 58px;
+    border-radius: 22px;
+  }
+
+  .playerAvatar {
+    width: 46px;
+    height: 46px;
+    font-size: 1.55rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .fullscreenMode .playerHud,
+  .fullscreenMode .livesHud {
+    top: 0.55rem !important;
+    padding: 0.42rem 0.58rem;
+    min-height: 48px;
+    gap: 0.45rem;
+  }
+
+  .fullscreenMode .playerHud {
+    left: 0.55rem !important;
+  }
+
+  .fullscreenMode .livesHud {
+    right: 0.55rem !important;
+  }
+
+  .playerAvatar {
+    width: 38px;
+    height: 38px;
+    font-size: 1.3rem;
+    border-width: 3px;
+  }
+
+  .fullscreenMode .floatingPathHeader {
+    top: 4.35rem !important;
+    min-height: 128px;
+    width: calc(100vw - 1rem);
+  }
+
+  .curriculumPillRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .journeyProgressStrip {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    text-align: center;
+  }
+
+  .journeyProgressStrip > span:first-child {
+    justify-self: center;
+  }
+
+  .levelPill {
+    min-width: 0;
+  }
+
+  .journeyNodeWrapper {
+    width: 126px;
+  }
+
+  .journeyNodeWrapper::before {
+    width: 132px;
+  }
+
+  .fullscreenMode .journeyScrollArea {
+    padding-top: 245px;
+    padding-bottom: 116px;
+  }
+
+  .fullscreenMode .journeyMascotPanel {
+    left: 0.8rem !important;
+    bottom: 0.75rem !important;
+  }
+
+  .journeySpeechBubble {
+    display: none;
+  }
+
+  .fullscreenMode .journeyToolDock {
+    right: 0.75rem !important;
+    bottom: 0.8rem !important;
+    grid-template-columns: repeat(3, 72px);
+    border-radius: 24px;
+  }
+
+  .journeyToolDock button {
+    padding: 0.65rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .journeyToolDock button span {
+    font-size: 1.45rem;
+  }
+
+  .journeyToolDock button small {
+    display: none;
+  }
+}

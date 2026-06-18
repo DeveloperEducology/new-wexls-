@@ -91,9 +91,9 @@ Return:
         }
       });
     } catch (primaryError) {
-      console.warn('[questions-generate] gemini-2.5-flash failed, falling back to gemini-2.0-flash. Error:', primaryError);
+      console.warn('[questions-generate] gemini-2.5-flash failed, falling back to gemini-2.5-flash-lite. Error:', primaryError);
       response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         contents: generationPrompt,
         config: {
           responseMimeType: 'application/json',

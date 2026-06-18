@@ -67,6 +67,7 @@ function makePracticeCacheKey(searchParams, fallbackSeed) {
 }
 
 function readPracticeCache(cacheKey) {
+  if (process.env.NODE_ENV === 'development') return null;
   const entry = practiceQuestionCache.get(cacheKey);
   if (!entry) return null;
   if (Date.now() - entry.createdAt > PRACTICE_CACHE_TTL_MS) {
@@ -259,6 +260,13 @@ export async function GET(request) {
     }
   } catch (error) {
     console.error('Practice DB skill node lookup error:', error);
+  }
+
+  if (skillNode && skillNode.status && skillNode.status !== 'active') {
+    return NextResponse.json(
+      { success: false, error: `Skill "${skillNode.title || skill}" is currently ${skillNode.status}.` },
+      { status: 403 }
+    );
   }
 
   // Centralized template and topic resolution

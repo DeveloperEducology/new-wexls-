@@ -40,25 +40,9 @@ export function stopAllSpeech() {
 }
 
 function fallbackToWebSpeech(plainText, originalText) {
-  const isPhonics = (typeof window !== 'undefined' && window.location.href.includes('phonics'));
-  if (isPhonics) {
-    console.log('[TTS] Browser Web Speech fallback disabled on phonics page.');
-    return;
-  }
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(plainText);
-    utterance.rate = 0.85; // kid-friendly slightly slower speech rate
-    utterance.onend = () => {
-      if (activeText === originalText) {
-        activeText = null;
-      }
-    };
-    utterance.onerror = () => {
-      if (activeText === originalText) {
-        activeText = null;
-      }
-    };
-    window.speechSynthesis.speak(utterance);
+  console.log('[TTS] Browser Web Speech fallback (speechSynthesis) is disabled completely.');
+  if (activeText === originalText) {
+    activeText = null;
   }
 }
 
@@ -145,8 +129,7 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
         if (activeAudio === audio) activeAudio = null;
         if (activeText === text) {
           activeText = null;
-          // Fall back to server-side synthesis (native browser synthesis is blocked inside fallbackToWebSpeech for Phonics)
-          speakText(text, voice, null);
+          // Fail silently since fallback / dynamic server TTS is disabled
         }
       });
 
@@ -162,7 +145,7 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
           if (activeAudio === audio) activeAudio = null;
           if (activeText === text) {
             activeText = null;
-            speakText(text, voice, null);
+            // Fail silently since fallback / dynamic server TTS is disabled
           }
         });
       }

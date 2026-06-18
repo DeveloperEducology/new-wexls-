@@ -1047,17 +1047,34 @@ function PracticePageContent() {
   const [logicType, setLogicType] = useState(initialLogicType || 'addition-g1-e3-model-match-to-10');
   const [question, setQuestion] = useState(null);
   const isPreK = useMemo(() => {
+    const checkPreK = (str) => {
+      if (!str) return false;
+      const s = String(str).toLowerCase().trim();
+      return (
+        s === 'lkg' || s === 'prek' || s === 'ukg' ||
+        s.includes('ukg') || s.includes('lkg') || s.includes('prek') ||
+        s.includes('pre-k') || s.includes('kindergarten') ||
+        s.includes('letter-identification') || s.includes('letter-recognition') ||
+        s.includes('rhyming') || s.includes('phonics') || s.includes('short-vowel') ||
+        s.includes('cvc')
+      );
+    };
+
     const t = String(urlTopic || '').toLowerCase().trim();
-    if (t === 'lkg' || t === 'prek' || t === 'ukg' || t.includes('ukg') || t.includes('lkg') || t.includes('prek')) return true;
+    if (checkPreK(t)) return true;
     
-    if (logicType && (logicType.toLowerCase().includes('lkg') || logicType.toLowerCase().includes('prek') || logicType.toLowerCase().includes('ukg'))) return true;
+    if (logicType && checkPreK(logicType.toLowerCase())) return true;
     
-    const skillGrade = question?.metadata?.grade || question?.grade;
+    const skillGrade = question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade;
     const g = String(skillGrade || '').toLowerCase().trim();
-    if (g === 'lkg' || g === 'prek' || g === 'ukg' || g.includes('lkg') || g.includes('prek') || g.includes('ukg')) return true;
+    if (checkPreK(g)) return true;
+
+    // Check query params manually (allows explicitly forcing via URL query strings)
+    const routeSearch = searchParams ? searchParams.toString().toLowerCase() : '';
+    if (checkPreK(routeSearch)) return true;
     
     return false;
-  }, [urlTopic, logicType, question]);
+  }, [urlTopic, logicType, question, searchParams]);
   const [templateJson, setTemplateJson] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1141,6 +1158,26 @@ function PracticePageContent() {
         }
       }
     }
+  }, []);
+
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data.success && data.session?.userId) {
+          const uId = data.session.userId;
+          setActiveStudent(uId);
+          setStudentList((prev) => {
+            if (prev.includes(uId)) return prev;
+            return [uId, ...prev];
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to load session in practice page:', err);
+      }
+    }
+    loadSession();
   }, []);
 
   // ── Adaptive Engine State ─────────────────────────────────────────────────
@@ -1576,7 +1613,7 @@ function PracticePageContent() {
     });
   }, [sourceKey, logicType, difficulty, urlSubject, urlTopic, curriculumLoading, activeStudent]);
 
-  const handleSubmit = (answerOverride = undefined) => {
+  const handleSubmit = async (answerOverride = undefined) => {
     const answerToCheck = answerOverride === undefined ? userAnswer : answerOverride;
     if (!question || answerToCheck === null || answerToCheck === undefined || isAnswered || submittingRef.current) return;
 
@@ -1615,31 +1652,97 @@ function PracticePageContent() {
       smartScoreAfter: newSmartScore,
       startedAt: questionStartedAt,
     });
-    const previousMastery = loadMasteryState(attempt);
-    const nextMastery = updateMasteryState(previousMastery, attempt);
-    saveMasteryState(attempt, nextMastery);
-    appendAttempt(attempt);
 
-    // Send attempt to server-side MongoDB analytics
-    fetch('/api/practice/analytics', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attempt }),
-    }).catch((err) => {
-      console.warn('Analytics logging skipped (offline/network issue):', err.message);
-    });
+    // 1. Instant local/provisional updates
+    setSmartScore(newSmartScore);
+    setIsCorrect(correct);
+    setIsAnswered(true);
+    setLastResult(correct ? 'correct' : 'incorrect');
 
-    const nextCorrectStreak = nextMastery.correctStreak;
-    const nextPracticeLevel = nextMastery.practiceLevel;
-    const finalLevelStreak = nextMastery.levelStreak;
-    const didLevelUp = nextMastery.didLevelUp;
-    const currentThreshold = nextMastery.streakThreshold || 5;
-    const adaptiveAction = nextMastery.nextAction; // 'stay' | 'promote' | 'fallback' | 'bridge_back' | 'remediating'
+    let praiseMsgObj = null;
+    if (correct) {
+      const provisionalNextMastery = updateMasteryState(loadMasteryState(attempt), attempt);
+      const nextCorrectStreak = provisionalNextMastery.correctStreak;
+      const finalLevelStreak = provisionalNextMastery.levelStreak;
+      const nextPracticeLevel = provisionalNextMastery.practiceLevel;
+      const didLevelUp = provisionalNextMastery.didLevelUp;
+      const currentThreshold = provisionalNextMastery.streakThreshold || 5;
 
-    setSkillState(nextMastery.state || 'practicing');
-    setSmartScore(nextMastery.smartScore);
+      const praisePool = didLevelUp
+        ? ['Level up!', 'Brilliant streak!', 'You are moving up!']
+        : nextCorrectStreak >= 4
+          ? ['Fantastic!', 'Sharp work!', 'Great streak!']
+          : ['Well done!', 'Nice work!', 'Correct!'];
+
+      praiseMsgObj = {
+        title: praisePool[nextCorrectStreak % praisePool.length],
+        subtitle: didLevelUp
+          ? `${currentThreshold} in a row. Now Level ${nextPracticeLevel}.`
+          : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
+      };
+      setPraiseMessage(praiseMsgObj);
+      setTransitionState('praise');
+    }
+
+    // 2. Call the server endpoint and await results
+    let serverData = null;
+    try {
+      const response = await fetch('/api/adaptive/submit-and-next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: activeStudent,
+          userId: activeStudent,
+          questionId: question.id || question._id || question.metadata?.questionId || null,
+          question,
+          seed: attempt.seed,
+          userAnswer: answerToCheck,
+          subject: attempt.subject,
+          topic: attempt.topic,
+          skillId: attempt.skillId,
+          competencyId: attempt.competencyId,
+          difficulty,
+          practiceLevel,
+          smartScoreBefore: smartScore,
+          startedAt: questionStartedAt,
+          streakThreshold,
+        }),
+      });
+      if (response.ok) {
+        serverData = await response.json();
+      }
+    } catch (err) {
+      console.warn('Adaptive server sync failed (using local fallback):', err.message);
+    }
+
+    // 3. Resolve canonical state
+    let canonicalMastery;
+    let canonicalCorrect = correct;
+
+    if (serverData && serverData.success) {
+      canonicalMastery = serverData.mastery;
+      canonicalCorrect = serverData.isCorrect;
+    } else {
+      // Offline/error fallback logic
+      const previousMastery = loadMasteryState(attempt);
+      canonicalMastery = updateMasteryState(previousMastery, attempt);
+      saveMasteryState(attempt, canonicalMastery);
+      appendAttempt(attempt);
+    }
+
+    // 4. Update the actual states with canonical values
+    const nextCorrectStreak = canonicalMastery.correctStreak;
+    const nextPracticeLevel = canonicalMastery.practiceLevel;
+    const finalLevelStreak = canonicalMastery.levelStreak;
+    const didLevelUp = canonicalMastery.didLevelUp;
+    const currentThreshold = canonicalMastery.streakThreshold || 5;
+    const adaptiveAction = canonicalMastery.nextAction;
+
+    setSkillState(canonicalMastery.state || 'practicing');
+    setSmartScore(canonicalMastery.smartScore);
     setCorrectStreak(nextCorrectStreak);
     setStreakThreshold(currentThreshold);
+
     if (didLevelUp) {
       setPracticeLevel(nextPracticeLevel);
       setLevelStreak(finalLevelStreak);
@@ -1656,20 +1759,20 @@ function PracticePageContent() {
       setPracticeLevel(nextPracticeLevel);
       setLevelStreak(finalLevelStreak);
     }
-    setLastResult(correct ? 'correct' : 'incorrect');
-    setIsCorrect(correct);
-    setIsAnswered(true);
+
+    setLastResult(canonicalCorrect ? 'correct' : 'incorrect');
+    setIsCorrect(canonicalCorrect);
+
     setHistory((prev) => [{
       type: question.metadata?.skillId || logicType,
-      isCorrect: correct,
-      scoreChange: nextMastery.smartScore - smartScore,
-      smartScoreAfter: nextMastery.smartScore,
+      isCorrect: canonicalCorrect,
+      scoreChange: canonicalMastery.smartScore - smartScore,
+      smartScoreAfter: canonicalMastery.smartScore,
       timestamp: new Date().toLocaleTimeString(),
     }, ...prev].slice(0, 5));
 
     // ── Adaptive Action Routing ─────────────────────────────────────────────
     if (adaptiveAction === 'promote') {
-      // Skill mastered — show overlay, queue next unlocking skills
       const nextSkills = getNextUnlockingSkills(
         urlSubject || sourceConfig.subject,
         urlTopic || sourceConfig.topic,
@@ -1681,12 +1784,12 @@ function PracticePageContent() {
       });
       setAdaptiveBanner(null);
       setIsSubmitting(false);
+      submittingRef.current = false;
       return;
     }
 
     if (adaptiveAction === 'fallback') {
-      // Needs prerequisite review — redirect URL to fallback skill
-      const fallbackSkillId = nextMastery.fallbackSkillId;
+      const fallbackSkillId = canonicalMastery.fallbackSkillId;
       if (fallbackSkillId) {
         const fallbackLabel = sourceConfig.options.find((o) => o.value === fallbackSkillId)?.label || fallbackSkillId;
         setAdaptiveBanner({
@@ -1701,12 +1804,12 @@ function PracticePageContent() {
         }, 1800);
       }
       setIsSubmitting(false);
+      submittingRef.current = false;
       return;
     }
 
     if (adaptiveAction === 'bridge_back') {
-      // Prerequisite mastered — navigate back to original skill
-      const targetSkillId = nextMastery.sourceSkillId || logicType;
+      const targetSkillId = canonicalMastery.sourceSkillId || logicType;
       const targetLabel = sourceConfig.options.find((o) => o.value === targetSkillId)?.label || targetSkillId;
       setAdaptiveBanner({
         type: 'bridge_back',
@@ -1720,6 +1823,7 @@ function PracticePageContent() {
         setAdaptiveBanner(null);
       }, 2000);
       setIsSubmitting(false);
+      submittingRef.current = false;
       return;
     }
 
@@ -1732,7 +1836,7 @@ function PracticePageContent() {
       setAdaptiveBanner(null);
     }
 
-    if (correct) {
+    if (canonicalCorrect) {
       if (urlQn) {
         const params = new URLSearchParams(window.location.search);
         params.delete('qn');
@@ -1740,6 +1844,7 @@ function PracticePageContent() {
         params.delete('id');
         router.replace(`/practice?${params.toString()}`, { scroll: false });
       }
+
       const nextQuestionSession = {
         correctStreak: nextCorrectStreak,
         practiceLevel: nextPracticeLevel,
@@ -1749,10 +1854,17 @@ function PracticePageContent() {
         keepTransition: true,
         slideIn: true,
       };
-      const nextQuestionPromise = fetchQuestionPayload(nextQuestionSession).catch((error) => {
-        console.warn('Next question preload skipped:', error.message);
-        return null;
-      });
+
+      let nextQuestionPromise;
+      if (serverData && serverData.success && serverData.nextPayload?.success) {
+        nextQuestionPromise = Promise.resolve(serverData.nextPayload);
+      } else {
+        nextQuestionPromise = fetchQuestionPayload(nextQuestionSession).catch((error) => {
+          console.warn('Next question preload skipped:', error.message);
+          return null;
+        });
+      }
+
       const praisePool = didLevelUp
         ? ['Level up!', 'Brilliant streak!', 'You are moving up!']
         : nextCorrectStreak >= 4
@@ -1765,7 +1877,6 @@ function PracticePageContent() {
           ? `${currentThreshold} in a row. Now Level ${nextPracticeLevel}.`
           : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
       });
-      setTransitionState('praise');
 
       window.setTimeout(() => {
         nextQuestionPromise.then((preloadedData) => {
@@ -1792,6 +1903,7 @@ function PracticePageContent() {
       }, 950);
     } else {
       setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -2940,6 +3052,8 @@ function PracticePageContent() {
   })();
 
   // ── Mastered Overlay Component ────────────────────────────────────────────
+  const isUkgOrLkg = (logicType && (logicType.startsWith('ukg-') || logicType.startsWith('lkg-'))) || (urlTopic && (urlTopic.startsWith('ukg-') || urlTopic.startsWith('lkg-')));
+
   const masteredOverlayEl = masteredOverlay ? (
     <div
       role="dialog"
@@ -3056,69 +3170,140 @@ function PracticePageContent() {
           </div>
         )}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            type="button"
-            onClick={() => {
-              setMasteredOverlay(null);
-              fetchQuestion(true);
-            }}
-            style={isMontessoriMode ? {
-              flex: 1,
-              border: '2.5px solid #dcd1c4',
-              background: '#ffffff',
-              color: '#6d4c41',
-              borderRadius: 16,
-              padding: '12px 16px',
-              fontSize: 13,
-              fontWeight: 900,
-              cursor: 'pointer',
-              boxShadow: '0 4px 0 #dcd1c4',
-              transition: 'all 0.15s ease',
-              fontFamily: 'var(--font-outfit, sans-serif)',
-            } : {
-              flex: 1,
-              border: '1px solid #334155',
-              background: 'transparent',
-              color: '#94a3b8',
-              borderRadius: 12,
-              padding: '10px 14px',
-              fontSize: 12,
-              fontWeight: 900,
-              cursor: 'pointer',
-            }}
-          >
-            Practice Again
-          </button>
-          {masteredOverlay.nextSkills?.length === 0 && (
-            <button
-              type="button"
-              onClick={() => setMasteredOverlay(null)}
-              style={isMontessoriMode ? {
-                flex: 1,
-                border: 0,
-                background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-                color: '#ffffff',
-                borderRadius: 16,
-                padding: '12px 16px',
-                fontSize: 13,
-                fontWeight: 900,
-                cursor: 'pointer',
-                boxShadow: '0 4px 0 #b45309',
-                fontFamily: 'var(--font-outfit, sans-serif)',
-              } : {
-                flex: 1,
-                border: 0,
-                background: 'linear-gradient(90deg, #2563eb, #38bdf8)',
-                color: '#ffffff',
-                borderRadius: 12,
-                padding: '10px 14px',
-                fontSize: 12,
-                fontWeight: 900,
-                cursor: 'pointer',
-              }}
-            >
-              Continue
-            </button>
+          {isUkgOrLkg ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setMasteredOverlay(null);
+                  fetchQuestion(true);
+                }}
+                style={isMontessoriMode ? {
+                  flex: 1,
+                  border: '2.5px solid #dcd1c4',
+                  background: '#ffffff',
+                  color: '#6d4c41',
+                  borderRadius: 16,
+                  padding: '12px 16px',
+                  fontSize: 13,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 0 #dcd1c4',
+                  transition: 'all 0.15s ease',
+                  fontFamily: 'var(--font-outfit, sans-serif)',
+                } : {
+                  flex: 1,
+                  border: '1px solid #334155',
+                  background: 'transparent',
+                  color: '#94a3b8',
+                  borderRadius: 12,
+                  padding: '10px 14px',
+                  fontSize: 12,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                Practice More
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = '/student/dashboard';
+                }}
+                style={isMontessoriMode ? {
+                  flex: 1,
+                  border: 0,
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                  color: '#ffffff',
+                  borderRadius: 16,
+                  padding: '12px 16px',
+                  fontSize: 13,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 0 #b45309',
+                  fontFamily: 'var(--font-outfit, sans-serif)',
+                } : {
+                  flex: 1,
+                  border: 0,
+                  background: 'linear-gradient(90deg, #2563eb, #38bdf8)',
+                  color: '#ffffff',
+                  borderRadius: 12,
+                  padding: '10px 14px',
+                  fontSize: 12,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                Move to Next Lesson
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setMasteredOverlay(null);
+                  fetchQuestion(true);
+                }}
+                style={isMontessoriMode ? {
+                  flex: 1,
+                  border: '2.5px solid #dcd1c4',
+                  background: '#ffffff',
+                  color: '#6d4c41',
+                  borderRadius: 16,
+                  padding: '12px 16px',
+                  fontSize: 13,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 0 #dcd1c4',
+                  transition: 'all 0.15s ease',
+                  fontFamily: 'var(--font-outfit, sans-serif)',
+                } : {
+                  flex: 1,
+                  border: '1px solid #334155',
+                  background: 'transparent',
+                  color: '#94a3b8',
+                  borderRadius: 12,
+                  padding: '10px 14px',
+                  fontSize: 12,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                Practice Again
+              </button>
+              {masteredOverlay.nextSkills?.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMasteredOverlay(null)}
+                  style={isMontessoriMode ? {
+                    flex: 1,
+                    border: 0,
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                    color: '#ffffff',
+                    borderRadius: 16,
+                    padding: '12px 16px',
+                    fontSize: 13,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 0 #b45309',
+                    fontFamily: 'var(--font-outfit, sans-serif)',
+                  } : {
+                    flex: 1,
+                    border: 0,
+                    background: 'linear-gradient(90deg, #2563eb, #38bdf8)',
+                    color: '#ffffff',
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Continue
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

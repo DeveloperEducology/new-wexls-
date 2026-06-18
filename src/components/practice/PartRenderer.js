@@ -124,16 +124,26 @@ function InlineMarkdown({ text }) {
 
 function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
   const pieces = String(text || '').split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
+  const renderTextPiece = (piece, keyPrefix) => (
+    String(piece).split('\n').map((line, lineIndex, lines) => (
+      <span key={`${keyPrefix}-${lineIndex}`}>
+        <InlineMarkdown text={line} />
+        {lineIndex < lines.length - 1 ? <br /> : null}
+      </span>
+    ))
+  );
 
   return (
     <span>
       {pieces.map((piece, index) => {
         const legacyMatch = piece.match(/^(?:\*\*)?\[blank(?::([^\]]+))?\](?:\*\*)?$/);
         const bracketMatch = piece.match(/^\[\[([^\]]+)\]\]$/);
-        const blankId = legacyMatch?.[1] || bracketMatch?.[1] || (legacyMatch ? 'blank' : null);
+        const rawBracketId = bracketMatch?.[1]?.trim();
+        const bracketBlankId = rawBracketId?.toLowerCase() === 'blank' ? 'ans' : rawBracketId;
+        const blankId = legacyMatch?.[1] || bracketBlankId || (legacyMatch ? 'blank' : null);
 
         if (!blankId) {
-          return <InlineMarkdown key={index} text={piece} />;
+          return renderTextPiece(piece, `text-${index}`);
         }
 
         // Check if this is an MCQ/choice question to render the selected option as text instead of input
@@ -258,13 +268,16 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
 
   const isPreK = useMemo(() => {
     const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
-    const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+    const grade = getSafeString(question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade).toLowerCase();
     const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
-    return (
-      topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
-      grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
-      skillId.includes('lkg') || skillId.includes('prek') || skillId.includes('ukg')
+    const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
+    const checkPreK = (s) => (
+      s.includes('lkg') || s.includes('prek') || s.includes('ukg') || s.includes('pre-k') ||
+      s.includes('letter-identification') || s.includes('letter-recognition') ||
+      s.includes('rhyming') || s.includes('phonics') || s.includes('kindergarten') ||
+      s.includes('short-vowel') || s.includes('cvc')
     );
+    return checkPreK(topic) || checkPreK(grade) || checkPreK(skillId) || checkPreK(routeSearch);
   }, [question]);
 
   const cleanSpokenText = useMemo(() => {
@@ -391,7 +404,7 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
           title="Click to listen"
         >
           <span style={{ fontSize: '48px', display: 'block', transform: 'scaleX(-1)' }}>{mascotEmoji}</span>
-          <div className={styles.preKMascotSpeechTag}>Tap me! 🔊</div>
+          <div className={styles.preKMascotSpeechTag}>Listen</div>
         </button>
         
         <div className={styles.preKMascotBubble}>
@@ -615,14 +628,15 @@ function drawInteractiveBalanceScaleSVG({ leftWeight, rightWeight, leftLabel = '
 function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAnswered, partIndex }) {
   const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
   const questionTopic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
-  const questionGrade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+  const questionGrade = getSafeString(question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade).toLowerCase();
   const questionSkillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
-  const isPreK = [routeSearch, questionTopic, questionGrade, questionSkillId].some((value) => (
-    value.includes('lkg') ||
-    value.includes('ukg') ||
-    value.includes('pre-k') ||
-    value.includes('prek')
-  ));
+  const checkPreK = (s) => (
+    s.includes('lkg') || s.includes('prek') || s.includes('ukg') || s.includes('pre-k') ||
+    s.includes('letter-identification') || s.includes('letter-recognition') ||
+    s.includes('rhyming') || s.includes('phonics') || s.includes('kindergarten') ||
+    s.includes('short-vowel') || s.includes('cvc')
+  );
+  const isPreK = [routeSearch, questionTopic, questionGrade, questionSkillId].some(checkPreK);
 
   const src = part.imageUrl || part.src || part.content || null;
   if (!src) {
@@ -680,12 +694,30 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
 
   const rawCommonImageWidth = part.commonImageWidth || question?.commonImageWidth || question?.metadata?.commonImageWidth;
   const partMaxWidth = part.maxWidth || part.style?.maxWidth;
+  const hasPercent = (val) => typeof val === 'string' && val.includes('%');
+  const parsedMaxWidth = partMaxWidth && !hasPercent(partMaxWidth) ? toPixelNumber(partMaxWidth) : undefined;
+
+  const defaultMax = 360;
+  const hasExplicitWidth = rawCommonImageWidth && rawCommonImageWidth !== 180;
+  const specifiedMax = Math.max(
+    hasExplicitWidth ? toPixelNumber(rawCommonImageWidth) : 0, 
+    parsedMaxWidth || 0
+  );
+  const rawCommonNumeric = rawCommonImageWidth ? toPixelNumber(rawCommonImageWidth) : 0;
   const commonImageWidth = isPreK
-    ? Math.min(Math.max(toPixelNumber(rawCommonImageWidth), toPixelNumber(partMaxWidth), 260), 360)
-    : rawCommonImageWidth;
+    ? (rawCommonNumeric || Math.max(specifiedMax || defaultMax, 260))
+    : (rawCommonNumeric || specifiedMax || rawCommonImageWidth);
   const isFixedWidth = !!commonImageWidth;
+  const minImageWidth = isPreK ? (part.rowImage ? 72 : 180) : 100;
+  const preferredViewportWidth = isPreK ? (part.rowImage ? 24 : 70) : 42;
+  const rowImageCount = Math.max(1, Number(part.rowImageCount) || 1);
+  const rowImageGap = Math.max(0, Number(part.rowImageGap) || 0);
+  const rowGapTotal = Math.max(0, rowImageCount - 1) * rowImageGap;
+  const fitRowBasis = part.rowImage
+    ? `min(${commonImageWidth}px, calc((100% - ${rowGapTotal}px) / ${rowImageCount}))`
+    : null;
   const widthVal = isFixedWidth
-    ? `clamp(${isPreK ? 180 : 100}px, ${isPreK ? 36 : 42}vw, ${commonImageWidth}px)`
+    ? (part.rowImage && part.rowImageMode !== 'scroll' ? '100%' : `clamp(${minImageWidth}px, ${preferredViewportWidth}vw, ${commonImageWidth}px)`)
     : (inGroup ? 'auto' : '100%');
   const maxWidthVal = partMaxWidth 
     ? (typeof partMaxWidth === 'number' ? `${partMaxWidth}px` : partMaxWidth) 
@@ -693,10 +725,12 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
 
   const cardBorder = isSelected 
     ? '4px solid #22c55e' 
-    : '2.5px solid #f1f5f9';
+    : (isDirectSelect ? '3px solid rgba(56, 189, 248, 0.42)' : '2.5px solid #f1f5f9');
   const cardShadow = isSelected 
     ? '0 0 0 6px rgba(34, 197, 94, 0.2), 0 16px 40px rgba(34, 197, 94, 0.15)' 
-    : '0 12px 28px rgba(15, 23, 42, 0.06), 0 4px 10px rgba(15, 23, 42, 0.03)';
+    : (isDirectSelect
+      ? '0 8px 22px rgba(14, 165, 233, 0.08), 0 0 0 4px rgba(255, 255, 255, 0.45)'
+      : '0 12px 28px rgba(15, 23, 42, 0.06), 0 4px 10px rgba(15, 23, 42, 0.03)');
   const cardTransform = isSelected ? 'scale(1.03)' : 'none';
 
   const showSpeakerOnLeft = canPlaySound && !isDirectSelect;
@@ -745,9 +779,10 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         boxShadow: part.transparent ? 'none' : cardShadow,
         padding: part.transparent ? '0' : '12px',
         boxSizing: 'border-box',
-        aspectRatio: part.transparent ? 'auto' : '1.15 / 1',
+        aspectRatio: part.transparent ? 'auto' : (part.style?.height ? 'auto' : '1.15 / 1'),
         maxHeight: part.maxHeight ? (typeof part.maxHeight === 'number' ? `${part.maxHeight}px` : part.maxHeight) : undefined,
-        transition: 'border 0.2s ease, box-shadow 0.2s ease',
+        transition: 'border 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
+        ...(part.style?.height ? { height: part.style.height } : {}),
       }}
     >
       <img
@@ -755,14 +790,15 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         alt={part.alt || ''}
         style={{
           width: '100%',
-          height: '100%',
+          height: part.style?.height ? '100%' : 'auto',
           maxHeight: '100%',
-          objectFit: 'contain',
+          objectFit: part.style?.objectFit || 'contain',
           borderRadius: isTransparent ? undefined : 14,
           transition: 'transform 0.2s ease, filter 0.2s ease',
           filter: (part.transparent && isSelected)
             ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
             : 'none',
+          ...(part.style || {}),
         }}
         onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
         onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
@@ -826,10 +862,23 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   return (
     <div
       onClick={handleImageClick}
+      onMouseEnter={(e) => {
+        if (isDirectSelect && !isAnswered) {
+          e.currentTarget.style.transform = `${cardTransform === 'none' ? '' : cardTransform} translateY(-3px)`.trim();
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (isDirectSelect && !isAnswered) {
+          e.currentTarget.style.transform = cardTransform;
+        }
+      }}
       style={{
         width: widthVal,
         maxWidth: maxWidthVal,
-        flex: isFixedWidth ? `0 1 ${commonImageWidth}px` : (inGroup ? '0 0 auto' : 'initial'),
+        flex: part.rowImage && fitRowBasis
+          ? `1 1 ${fitRowBasis}`
+          : (isFixedWidth ? `0 1 ${commonImageWidth}px` : (inGroup ? '0 0 auto' : 'initial')),
+        minWidth: part.rowImage ? `${minImageWidth}px` : undefined,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -840,7 +889,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
         transform: cardTransform,
         ...(part.style || {}),
-        ...(isPreK ? { flex: '0 0 auto', height: 'auto', minHeight: 'auto' } : {}),
+        ...(isPreK ? { flex: part.rowImage && part.rowImageMode !== 'scroll' ? 'initial' : '0 0 auto', height: 'auto', minHeight: 'auto' } : {}),
       }}
     >
       {showSpeakerOnLeft ? (
@@ -1408,52 +1457,98 @@ function FunctionMachinePart({ part }) {
 }
 
 function BaseTenBlocksPart({ part }) {
-  const number = Number(part.number ?? 34);
-  const hundreds = Math.floor(number / 100);
-  const tens = Math.floor((number % 100) / 10);
-  const ones = number % 10;
-  const showHundreds = part.showHundreds !== false && hundreds > 0;
+  const hasExplicitPlaces = ['thousands', 'hundreds', 'tens', 'ones', 'thousandCubes', 'hundredSquares', 'tenRods', 'unitCubes', 'units']
+    .some((key) => part[key] !== undefined && part[key] !== '');
+  const number = Math.max(0, Number(part.number ?? part.value ?? 34) || 0);
+  const count = (primary, aliases = []) => {
+    const raw = [primary, ...aliases].map((key) => part[key]).find((value) => value !== undefined && value !== '');
+    return Math.max(0, Math.floor(Number(raw) || 0));
+  };
+  const thousands = hasExplicitPlaces ? count('thousands', ['thousandCubes', 'cubesCount']) : Math.floor(number / 1000);
+  const hundreds = hasExplicitPlaces ? count('hundreds', ['hundredSquares', 'flatsCount']) : Math.floor((number % 1000) / 100);
+  const tens = hasExplicitPlaces ? count('tens', ['tenRods', 'rodsCount']) : Math.floor((number % 100) / 10);
+  const ones = hasExplicitPlaces ? count('ones', ['unitCubes', 'units', 'blocksCount']) : number % 10;
+  const limitedThousands = Math.min(thousands, 4);
+  const limitedHundreds = Math.min(hundreds, 6);
+  const limitedTens = Math.min(tens, 10);
+  const limitedOnes = Math.min(ones, 20);
+
+  const drawThousand = (x, y, index) => (
+    <g key={`thousand-${index}`} transform={`translate(${x} ${y})`}>
+      <polygon points="18,18 82,0 146,18 82,36" fill="#bfdbfe" stroke="#1d4ed8" strokeWidth="2" />
+      <polygon points="18,18 82,36 82,102 18,82" fill="#60a5fa" stroke="#1d4ed8" strokeWidth="2" />
+      <polygon points="82,36 146,18 146,82 82,102" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="2" />
+      {Array.from({ length: 4 }).map((_, line) => (
+        <line key={`grid-${line}`} x1={31 + line * 12} y1={22 + line * 3} x2={31 + line * 12} y2={86 + line * 2} stroke="#dbeafe" strokeWidth="1" opacity="0.75" />
+      ))}
+      <text x="82" y="132" textAnchor="middle" fontSize="15" fontWeight="900" fill="#1e3a8a">1000</text>
+    </g>
+  );
+
+  const drawHundred = (x, y, index) => (
+    <g key={`hundred-${index}`} transform={`translate(${x} ${y})`}>
+      <rect x="0" y="0" width="86" height="86" rx="8" fill="#fef3c7" stroke="#d97706" strokeWidth="3" />
+      {Array.from({ length: 9 }).map((_, line) => (
+        <g key={`hundred-grid-${line}`}>
+          <line x1={(line + 1) * 8.6} y1="0" x2={(line + 1) * 8.6} y2="86" stroke="#f59e0b" strokeWidth="1" opacity="0.55" />
+          <line x1="0" y1={(line + 1) * 8.6} x2="86" y2={(line + 1) * 8.6} stroke="#f59e0b" strokeWidth="1" opacity="0.55" />
+        </g>
+      ))}
+      <text x="43" y="110" textAnchor="middle" fontSize="15" fontWeight="900" fill="#92400e">100</text>
+    </g>
+  );
+
+  const drawTen = (x, y, index) => (
+    <g key={`ten-${index}`} transform={`translate(${x} ${y})`}>
+      <rect x="0" y="0" width="22" height="124" rx="5" fill="#5eead4" stroke="#0f766e" strokeWidth="3" />
+      {Array.from({ length: 9 }).map((_, tick) => (
+        <line key={`ten-tick-${tick}`} x1="0" y1={12 + tick * 12} x2="22" y2={12 + tick * 12} stroke="#ccfbf1" strokeWidth="1.5" />
+      ))}
+      <text x="11" y="150" textAnchor="middle" fontSize="15" fontWeight="900" fill="#115e59">10</text>
+    </g>
+  );
+
+  const drawOne = (x, y, index) => (
+    <g key={`one-${index}`} transform={`translate(${x} ${y})`}>
+      <rect x="0" y="0" width="22" height="22" rx="5" fill="#93c5fd" stroke="#2563eb" strokeWidth="3" />
+      <text x="11" y="44" textAnchor="middle" fontSize="15" fontWeight="900" fill="#1d4ed8">1</text>
+    </g>
+  );
 
   return (
-    <div style={{ width: '100%', display: 'flex', justifyContent: 'center', ...(part.style || {}) }}>
-      <svg width="100%" height="190" viewBox="0 0 620 190" style={{ maxWidth: 620 }}>
-        <rect x="16" y="16" width="588" height="158" rx="18" fill="#f8fafc" stroke="#dbeafe" strokeWidth="2" />
-        {showHundreds ? Array.from({ length: hundreds }).map((_, index) => {
-          const x = 42 + index * 82;
-          return (
-            <g key={`hundred-${index}`}>
-              <rect x={x} y="42" width="62" height="62" rx="8" fill="#fef3c7" stroke="#d97706" strokeWidth="3" />
-              {Array.from({ length: 9 }).map((__, gridIndex) => (
-                <line
-                  key={gridIndex}
-                  x1={x + ((gridIndex % 3) + 1) * 15.5}
-                  y1="42"
-                  x2={x + ((gridIndex % 3) + 1) * 15.5}
-                  y2="104"
-                  stroke="#f59e0b"
-                  strokeWidth="1"
-                  opacity="0.55"
-                />
-              ))}
-            </g>
-          );
-        }) : null}
-        {Array.from({ length: tens }).map((_, index) => {
-          const x = 46 + (showHundreds ? hundreds * 82 + 18 : 0) + index * 24;
-          return (
-            <g key={`ten-${index}`}>
-              <rect x={x} y="44" width="14" height="96" rx="3" fill="#5eead4" stroke="#0f766e" strokeWidth="2" />
-              {Array.from({ length: 9 }).map((__, tick) => (
-                <line key={tick} x1={x} y1={54 + tick * 9} x2={x + 14} y2={54 + tick * 9} stroke="#ccfbf1" strokeWidth="1" />
-              ))}
-            </g>
-          );
-        })}
-        {Array.from({ length: ones }).map((_, index) => {
-          const x = 46 + (showHundreds ? hundreds * 82 + 18 : 0) + tens * 24 + 22 + (index % 10) * 18;
-          const y = 110 + Math.floor(index / 10) * 18;
-          return <rect key={`one-${index}`} x={x} y={y} width="12" height="12" rx="3" fill="#93c5fd" stroke="#2563eb" strokeWidth="2" />;
-        })}
+    <div style={{ width: '100%', display: 'flex', justifyContent: 'center', overflowX: 'auto', ...(part.style || {}) }}>
+      <svg width="100%" height="310" viewBox="0 0 760 310" style={{ maxWidth: 760, minWidth: 420 }}>
+        <rect x="16" y="16" width="728" height="270" rx="18" fill="#f8fafc" stroke="#dbeafe" strokeWidth="2" />
+        <text x="42" y="46" fontSize="16" fontWeight="900" fill="#334155">Base Ten Blocks</text>
+        {limitedThousands > 0 && (
+          <g>
+            <text x="88" y="76" textAnchor="middle" fontSize="13" fontWeight="900" fill="#64748b">Thousands</text>
+            {Array.from({ length: limitedThousands }).map((_, index) => drawThousand(26 + index * 58, 92 - index * 4, index))}
+          </g>
+        )}
+        {limitedHundreds > 0 && (
+          <g>
+            <text x="312" y="76" textAnchor="middle" fontSize="13" fontWeight="900" fill="#64748b">Hundreds</text>
+            {Array.from({ length: limitedHundreds }).map((_, index) => drawHundred(258 + (index % 3) * 96, 94 + Math.floor(index / 3) * 118, index))}
+          </g>
+        )}
+        {limitedTens > 0 && (
+          <g>
+            <text x="526" y="76" textAnchor="middle" fontSize="13" fontWeight="900" fill="#64748b">Tens</text>
+            {Array.from({ length: limitedTens }).map((_, index) => drawTen(470 + (index % 5) * 34, 92 + Math.floor(index / 5) * 158, index))}
+          </g>
+        )}
+        {limitedOnes > 0 && (
+          <g>
+            <text x="662" y="76" textAnchor="middle" fontSize="13" fontWeight="900" fill="#64748b">Ones</text>
+            {Array.from({ length: limitedOnes }).map((_, index) => drawOne(612 + (index % 5) * 28, 102 + Math.floor(index / 5) * 52, index))}
+          </g>
+        )}
+        {(thousands > limitedThousands || hundreds > limitedHundreds || tens > limitedTens || ones > limitedOnes) && (
+          <text x="380" y="274" textAnchor="middle" fontSize="13" fontWeight="800" fill="#64748b">
+            Showing a compact sample of {thousands} thousands, {hundreds} hundreds, {tens} tens, {ones} ones
+          </text>
+        )}
       </svg>
     </div>
   );
@@ -6477,6 +6572,11 @@ const PART_RENDERERS = {
   bar_model: BarModelPart,
   function_machine: FunctionMachinePart,
   base_ten_blocks: BaseTenBlocksPart,
+  baseTenBlocks: BaseTenBlocksPart,
+  BaseTenBlocks: BaseTenBlocksPart,
+  place_value: BaseTenBlocksPart,
+  placeValue: BaseTenBlocksPart,
+  PlaceValue: BaseTenBlocksPart,
   clock: ClockPart,
   fraction_model: FractionModelPart,
   interactive_fraction_model: InteractiveFractionModelPart,
@@ -6605,13 +6705,16 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
 
   const isPreK = useMemo(() => {
     const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
-    const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+    const grade = getSafeString(question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade).toLowerCase();
     const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
-    return (
-      topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
-      grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
-      skillId.includes('lkg') || skillId.includes('prek') || skillId.includes('ukg')
+    const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
+    const checkPreK = (s) => (
+      s.includes('lkg') || s.includes('prek') || s.includes('ukg') || s.includes('pre-k') ||
+      s.includes('letter-identification') || s.includes('letter-recognition') ||
+      s.includes('rhyming') || s.includes('phonics') || s.includes('kindergarten') ||
+      s.includes('short-vowel') || s.includes('cvc')
     );
+    return checkPreK(topic) || checkPreK(grade) || checkPreK(skillId) || checkPreK(routeSearch);
   }, [question]);
 
   // Resolve layouts object

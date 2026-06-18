@@ -806,9 +806,21 @@
         font-size: 32px !important;
     }
 
-    .preKMascotSpeechTag {
-        display: none !important;
-    }
+.preKMascotSpeechTag {
+    position: absolute;
+    right: -4px;
+    bottom: -8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 2px solid rgba(168, 85, 247, 0.25);
+    color: #7e22ce;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: 0 4px 10px rgba(124, 58, 237, 0.14);
+    pointer-events: none;
+}
 
     .preKMascotBubble {
         padding: 10px 12px 10px 48px !important;
@@ -1723,6 +1735,22 @@
 
 .preKMascotAvatar:active {
     transform: scale(0.95);
+}
+
+.preKMascotSpeechTag {
+    position: absolute;
+    right: -4px;
+    bottom: -8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 2px solid rgba(168, 85, 247, 0.25);
+    color: #7e22ce;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: 0 4px 10px rgba(124, 58, 237, 0.14);
+    pointer-events: none;
 }
 
 @keyframes preKMascotBounce {
@@ -4188,5 +4216,3 @@
     background: #f8fafc;
     transform: translateY(-1px);
 }
-
-

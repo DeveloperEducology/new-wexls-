@@ -85,6 +85,11 @@ export function getMockStudentData(studentId, grade = 'Grade 5') {
       weaknesses: 'Pacing slows down when moving from pictorial fraction models to word problems.',
       learningStyle: 'Highly Visual & Kinesthetic. Excels when utilizing dragging blocks or interactive grids.',
       recommendations: 'Dedicate 5 minutes to verbal explanations before initiating multi-step equations.'
+    },
+    skillsMastery: {
+      'ukg-count3-learn': { score: 95, state: 'Mastered' },
+      'ukg-count3-count': { score: 85, state: 'Mastered' },
+      'ukg-count3-stickers': { score: 45, state: 'Learning' }
     }
   };
 }
@@ -101,13 +106,14 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
 
     // Retrieve active student attempt statistics
     const attemptsColl = db.collection('question_attempts');
+    const studentAttemptsColl = db.collection('student_attempts');
     const sessionsColl = db.collection('practice_sessions');
     const masteryColl = db.collection('student_mastery');
     const alertsColl = db.collection('alerts');
     const insightsColl = db.collection('ai_insights');
 
-    const totalAttempts = await attemptsColl.countDocuments(query);
-    const correctAttempts = await attemptsColl.countDocuments({ ...query, isCorrect: true });
+    const totalAttempts = (await attemptsColl.countDocuments(query)) + (await studentAttemptsColl.countDocuments(query));
+    const correctAttempts = (await attemptsColl.countDocuments({ ...query, isCorrect: true })) + (await studentAttemptsColl.countDocuments({ ...query, isCorrect: true }));
     const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
 
     const totalSessions = await sessionsColl.find(query).toArray();
@@ -116,15 +122,15 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
 
     const masteredSkills = await masteryColl.countDocuments({ 
       ...(userId ? { userId } : {}), 
-      state: 'Mastered' 
+      state: { $in: ['Mastered', 'mastered'] }
     });
     const developingSkills = await masteryColl.countDocuments({ 
       ...(userId ? { userId } : {}), 
-      state: 'Developing' 
+      state: { $in: ['Developing', 'Proficient', 'proficient'] }
     });
     const learningSkills = await masteryColl.countDocuments({ 
       ...(userId ? { userId } : {}), 
-      state: 'Learning' 
+      state: { $in: ['Learning', 'Needs Remediation', 'learning', 'needs_remediation'] }
     });
 
     // If database stats are empty, merge with mock data so dashboard is populated
@@ -151,6 +157,50 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
       { subject: 'English', completion: 75, accuracy: 80, mastery: 60 },
       { subject: 'Science', completion: 40, accuracy: 70, mastery: 30 }
     ];
+
+    // Fetch all attempts to calculate dynamic accuracy per skill
+    const studentAttempts = userId ? await attemptsColl.find({ userId }).toArray() : [];
+    const extraAttempts = userId ? await studentAttemptsColl.find({ userId }).toArray() : [];
+    const allAttempts = [...studentAttempts, ...extraAttempts];
+
+    const skillScores = {};
+    allAttempts.forEach(att => {
+      const sId = att.skillId;
+      if (!sId) return;
+      if (!skillScores[sId]) {
+        skillScores[sId] = { correct: 0, total: 0 };
+      }
+      skillScores[sId].total++;
+      if (att.isCorrect) {
+        skillScores[sId].correct++;
+      }
+    });
+
+    const calculatedMastery = {};
+    Object.entries(skillScores).forEach(([sId, stats]) => {
+      if (stats.total > 0) {
+        const accuracy = Math.round((stats.correct / stats.total) * 100);
+        calculatedMastery[sId] = {
+          score: accuracy,
+          state: accuracy >= 80 ? 'Mastered' : 'Learning'
+        };
+      }
+    });
+
+    const dbMastery = Object.fromEntries(
+      (userId ? await masteryColl.find({ userId }).toArray() : []).map(m => [
+        m.skillId,
+        {
+          score: m.score ?? m.smartScore ?? m.masteryScore ?? 0,
+          state: m.state || m.masteryState || m.status || 'Learning'
+        }
+      ])
+    );
+
+    const skillsMastery = {
+      ...calculatedMastery,
+      ...dbMastery
+    };
 
     return {
       kpis: {
@@ -206,7 +256,8 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
         weaknesses: 'Addition involving carrying digits over columns shows slightly high time duration.',
         learningStyle: 'Kinesthetic. Benefits from visual blocks manipulatives.',
         recommendations: insightDoc?.recommendations?.join(', ') || 'Practice with interactive blocks helper.'
-      }
+      },
+      skillsMastery
     };
   } catch (err) {
     console.error("Error in getStudentAnalytics service:", err);

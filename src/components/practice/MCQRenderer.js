@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useEffect } from 'react';
+import { cloneElement, useMemo, useRef, useEffect } from 'react';
 import PartRenderer from './PartRenderer';
 import KaTeXRenderer from './KaTeXRenderer';
 import styles from './FactoryLayout.module.css';
@@ -431,13 +431,16 @@ export default function MCQRenderer({
       return String(val);
     };
     const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
-    const grade = getSafeString(question?.metadata?.grade || question?.grade).toLowerCase();
+    const grade = getSafeString(question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade).toLowerCase();
     const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
-    return (
-      topic.includes('lkg') || topic.includes('prek') || topic.includes('ukg') ||
-      grade.includes('lkg') || grade.includes('prek') || grade.includes('ukg') ||
-      skillId.includes('lkg') || skillId.includes('prek') || skillId.includes('ukg')
+    const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
+    const checkPreK = (s) => (
+      s.includes('lkg') || s.includes('prek') || s.includes('ukg') || s.includes('pre-k') ||
+      s.includes('letter-identification') || s.includes('letter-recognition') ||
+      s.includes('rhyming') || s.includes('phonics') || s.includes('kindergarten') ||
+      s.includes('short-vowel') || s.includes('cvc')
     );
+    return checkPreK(topic) || checkPreK(grade) || checkPreK(skillId) || checkPreK(routeSearch);
   }, [question]);
 
   const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
@@ -593,21 +596,42 @@ export default function MCQRenderer({
 
               const flushImageRow = (key) => {
                 if (currentImageRow.length > 0) {
+                  const rowMode = question.imageRowMode || question.metadata?.imageRowMode || 'wrap';
+                  const rowGap = Number(question.imageRowGap || question.metadata?.imageRowGap || 20);
+                  const singleRow = rowMode === 'scroll';
+                  const rowCount = currentImageRow.length;
+                  const cardWidth = Number(question.commonImageWidth || question.metadata?.commonImageWidth || 170);
+                  const rowMaxWidth = (rowCount * cardWidth) + (Math.max(0, rowCount - 1) * Math.max(8, rowGap));
                   elements.push(
                     <div
                       key={`image-row-${key}`}
                       style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
+                        display: singleRow ? 'flex' : 'grid',
+                        flexDirection: singleRow ? 'row' : undefined,
+                        flexWrap: singleRow ? 'nowrap' : undefined,
+                        gridTemplateColumns: singleRow
+                          ? undefined
+                          : `repeat(${rowCount}, minmax(72px, 1fr))`,
                         justifyContent: 'center',
                         alignItems: 'center',
-                        gap: 16,
+                        gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
                         width: '100%',
-                        margin: '10px 0'
+                        maxWidth: singleRow ? 'min(100%, 1160px)' : `min(100%, ${rowMaxWidth}px)`,
+                        margin: '10px 0',
+                        overflowX: singleRow ? 'auto' : 'visible',
+                        overflowY: 'visible',
+                        padding: '2px clamp(16px, 4vw, 44px) 8px',
+                        boxSizing: 'border-box',
                       }}
                     >
-                      {currentImageRow}
+                      {currentImageRow.map((element) => cloneElement(element, {
+                        part: {
+                          ...element.props.part,
+                          rowImageCount: rowCount,
+                          rowImageGap: rowGap,
+                          rowImageMode: rowMode,
+                        }
+                      }))}
                     </div>
                   );
                   currentImageRow = [];
@@ -621,7 +645,7 @@ export default function MCQRenderer({
                     key={index}
                     part={{
                       ...part,
-                      ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180 } : {})
+                      ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180, rowImage: true } : {})
                     }}
                     question={question}
                     userAnswer={userAnswer}

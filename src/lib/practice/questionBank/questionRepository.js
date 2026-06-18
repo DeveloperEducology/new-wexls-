@@ -327,6 +327,7 @@ export async function saveStoredPracticeQuestion(input, { mode = 'upsert' } = {}
   };
 }
 
+// In-memory cache for loaded vocabulary pools (hot-reloads will clear this)
 const poolCache = new Map();
 
 export function clearVocabularyPoolCache(poolId) {

@@ -14,7 +14,7 @@ function readFilters(request) {
     chapterId: searchParams.get('chapterId') || searchParams.get('chapter') || '',
     parentId: searchParams.get('parentId') || '',
     skillId: searchParams.get('skillId') || searchParams.get('skill') || '',
-    status: searchParams.get('status') || 'active',
+    status: searchParams.get('status') || '',
     search: searchParams.get('search') || '',
     limit: searchParams.get('limit') || '',
   };

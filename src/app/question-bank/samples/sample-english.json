@@ -1,0 +1,320 @@
+[
+  {
+    "id": "qb_sample_lkg_case_match_lower_similar",
+    "type": "mcq",
+    "interaction": "choice",
+    "questionText": "Look at this uppercase letter. Which lowercase letter matches?",
+    "shownLetter": "O",
+    "shownLetterSvg": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">O</text>\n</svg>",
+    "voice": "Kore",
+    "parts": [
+      {
+        "type": "text",
+        "content": "Look at this uppercase letter. Which lowercase letter matches?"
+      },
+      {
+        "type": "case_match_shown_letter",
+        "letter": "O",
+        "svgContent": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">O</text>\n</svg>"
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "o",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"92\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">o</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_o.wav"
+      },
+      {
+        "id": "opt_1",
+        "label": "c",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"92\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">c</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_c.wav"
+      }
+    ],
+    "answer": 0,
+    "correctAnswerIndex": 0,
+    "explanation": "The lowercase form of **O** is **o**.",
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "The lowercase form of **O** is **o**."
+        }
+      ]
+    },
+    "metadata": {
+      "subject": "english",
+      "topic": "english-lkg",
+      "skillId": "lkg-english-case-match-lower-similar",
+      "templateId": "lkg.english.case_match",
+      "engine": "lkg"
+    }
+  },
+  {
+    "id": "qb_sample_lkg_case_match_lower_different",
+    "type": "mcq",
+    "interaction": "choice",
+    "questionText": "Look at this uppercase letter. Which lowercase letter matches?",
+    "shownLetter": "T",
+    "shownLetterSvg": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">T</text>\n</svg>",
+    "voice": "Kore",
+    "parts": [
+      {
+        "type": "text",
+        "content": "Look at this uppercase letter. Which lowercase letter matches?"
+      },
+      {
+        "type": "case_match_shown_letter",
+        "letter": "T",
+        "svgContent": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">T</text>\n</svg>"
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "t",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">t</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_t.wav"
+      },
+      {
+        "id": "opt_1",
+        "label": "f",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">f</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_f.wav"
+      }
+    ],
+    "answer": 0,
+    "correctAnswerIndex": 0,
+    "explanation": "The lowercase form of **T** is **t**.",
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "The lowercase form of **T** is **t**."
+        }
+      ]
+    },
+    "metadata": {
+      "subject": "english",
+      "topic": "english-lkg",
+      "skillId": "lkg-english-case-match-lower-different",
+      "templateId": "lkg.english.case_match",
+      "engine": "lkg"
+    }
+  },
+  {
+    "id": "qb_sample_lkg_case_match_lower_distinct",
+    "type": "mcq",
+    "interaction": "choice",
+    "questionText": "Look at this uppercase letter. Which lowercase letter matches?",
+    "shownLetter": "A",
+    "shownLetterSvg": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">A</text>\n</svg>",
+    "voice": "Kore",
+    "parts": [
+      {
+        "type": "text",
+        "content": "Look at this uppercase letter. Which lowercase letter matches?"
+      },
+      {
+        "type": "case_match_shown_letter",
+        "letter": "A",
+        "svgContent": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"147.25\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">A</text>\n</svg>"
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "a",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"92\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">a</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_a.wav"
+      },
+      {
+        "id": "opt_1",
+        "label": "b",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">b</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_b.wav"
+      }
+    ],
+    "answer": 0,
+    "correctAnswerIndex": 0,
+    "explanation": "The lowercase form of **A** is **a**.",
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "The lowercase form of **A** is **a**."
+        }
+      ]
+    },
+    "metadata": {
+      "subject": "english",
+      "topic": "english-lkg",
+      "skillId": "lkg-english-case-match-lower-distinct",
+      "templateId": "lkg.english.case_match",
+      "engine": "lkg"
+    }
+  },
+  {
+    "id": "qb_sample_lkg_case_match_upper_similar",
+    "type": "mcq",
+    "interaction": "choice",
+    "questionText": "Look at this lowercase letter. Which uppercase letter matches?",
+    "shownLetter": "u",
+    "shownLetterSvg": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"101.85714285714286\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">u</text>\n</svg>",
+    "voice": "Kore",
+    "parts": [
+      {
+        "type": "text",
+        "content": "Look at this lowercase letter. Which uppercase letter matches?"
+      },
+      {
+        "type": "case_match_shown_letter",
+        "letter": "u",
+        "svgContent": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"101.85714285714286\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">u</text>\n</svg>"
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "U",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">U</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_cap_u.wav"
+      },
+      {
+        "id": "opt_1",
+        "label": "V",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">V</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_cap_v.wav"
+      }
+    ],
+    "answer": 0,
+    "correctAnswerIndex": 0,
+    "explanation": "The uppercase form of **u** is **U**.",
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "The uppercase form of **u** is **U**."
+        }
+      ]
+    },
+    "metadata": {
+      "subject": "english",
+      "topic": "english-lkg",
+      "skillId": "lkg-english-case-match-upper-similar",
+      "templateId": "lkg.english.case_match",
+      "engine": "lkg"
+    }
+  },
+  {
+    "id": "qb_sample_lkg_case_match_upper-different",
+    "type": "mcq",
+    "interaction": "choice",
+    "questionText": "Look at this lowercase letter. Which uppercase letter matches?",
+    "shownLetter": "m",
+    "shownLetterSvg": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"101.85714285714286\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">m</text>\n</svg>",
+    "voice": "Kore",
+    "parts": [
+      {
+        "type": "text",
+        "content": "Look at this lowercase letter. Which uppercase letter matches?"
+      },
+      {
+        "type": "case_match_shown_letter",
+        "letter": "m",
+        "svgContent": "<svg viewBox=\"0 0 220 155\" width=\"220\" height=\"155\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"220\" height=\"155\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"24.357142857142858\" x2=\"208\" y2=\"24.357142857142858\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"77.5\" x2=\"208\" y2=\"77.5\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"130.64285714285714\" x2=\"208\" y2=\"130.64285714285714\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"110\" y=\"130.64285714285714\" font-size=\"101.85714285714286\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">m</text>\n</svg>"
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "M",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">M</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_cap_m.wav"
+      },
+      {
+        "id": "opt_1",
+        "label": "L",
+        "content": "<svg viewBox=\"0 0 176 140\" width=\"176\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"176\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"164\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"164\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"164\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"88\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">L</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_cap_l.wav"
+      }
+    ],
+    "answer": 0,
+    "correctAnswerIndex": 0,
+    "explanation": "The uppercase form of **m** is **M**.",
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "The uppercase form of **m** is **M**."
+        }
+      ]
+    },
+    "metadata": {
+      "subject": "english",
+      "topic": "english-lkg",
+      "skillId": "lkg-english-case-match-upper-different",
+      "templateId": "lkg.english.case_match",
+      "engine": "lkg"
+    }
+  },
+  {
+    "id": "qb_sample_lkg_case_find_all_uppercase",
+    "type": "mcq",
+    "interaction": "multi_select",
+    "multiSelect": true,
+    "questionText": "Find **all** the uppercase letters.",
+    "voice": "Kore",
+    "parts": [
+      {
+        "type": "text",
+        "content": "Find **all** the uppercase letters."
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "Z",
+        "content": "<svg viewBox=\"0 0 200 140\" width=\"200\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"200\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"188\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"188\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"188\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"100\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">Z</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_cap_z.wav"
+      },
+      {
+        "id": "opt_1",
+        "label": "g",
+        "content": "<svg viewBox=\"0 0 200 140\" width=\"200\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"200\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"188\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"188\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"188\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"100\" y=\"118\" font-size=\"92\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">g</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_g.wav"
+      },
+      {
+        "id": "opt_2",
+        "label": "K",
+        "content": "<svg viewBox=\"0 0 200 140\" width=\"200\" height=\"140\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"200\" height=\"140\" rx=\"12\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"22\" x2=\"188\" y2=\"22\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <line x1=\"12\" y1=\"70\" x2=\"188\" y2=\"70\" stroke=\"#f87171\" stroke-width=\"1.5\" stroke-dasharray=\"6,4\"/>\n  <line x1=\"12\" y1=\"118\" x2=\"188\" y2=\"118\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n  <text x=\"100\" y=\"118\" font-size=\"133\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" dominant-baseline=\"alphabetic\" fill=\"#111827\">K</text>\n</svg>",
+        "audioUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/lkg/mock_cap_k.wav"
+      }
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "correctAnswerIndices": [
+      0,
+      2
+    ],
+    "explanation": "The uppercase letters are: **Z, K**.",
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "The uppercase letters are: **Z, K**."
+        }
+      ]
+    },
+    "metadata": {
+      "subject": "english",
+      "topic": "english-lkg",
+      "skillId": "lkg-english-case-find-all-uppercase",
+      "templateId": "lkg.english.case_match",
+      "engine": "lkg"
+    }
+  }
+]

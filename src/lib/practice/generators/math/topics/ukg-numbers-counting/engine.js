@@ -1349,7 +1349,7 @@ function generateVennDiagramQuestion(skill, random, mode) {
     }
 
     return {
-      type: 'mcq',
+      type: 'interactive_stickers',
       interaction: 'interactive_stickers',
       questionText,
       parts: [
@@ -1551,7 +1551,7 @@ function generateProgressionQuestion(skill, random, config = {}) {
     const itemLabel = targetCount === 1 ? selectedSticker.singular : selectedSticker.plural;
     const questionText = `Put ${targetCount} ${itemLabel} in the picture.`;
     return {
-      type: useCatV2Contract ? 'categorizationv2' : 'mcq',
+      type: useCatV2Contract ? 'categorizationv2' : 'interactive_stickers',
       interaction: 'interactive_stickers',
       ...(useCatV2Contract ? { layoutMode: 'sticker_scene', renderer: 'html' } : {}),
       questionText,
@@ -1577,7 +1577,7 @@ function generateProgressionQuestion(skill, random, config = {}) {
     const assets = shadowAssets.ukgNumbersShadowMatch;
     const questionText = 'Match the stickers to their correct shadow shapes in the picture.';
     return {
-      type: 'mcq',
+      type: 'interactive_stickers',
       interaction: 'interactive_stickers',
       questionText,
       parts: [
@@ -2649,7 +2649,7 @@ function generateUkgMeasurementQuestion(skill, random, config) {
       : (isFirstLong ? 'option_b' : 'option_a');
       
     return {
-      type: 'mcq',
+      type: 'interactive_stickers',
       questionText,
       parts: [{ type: 'text', content: questionText }],
       options: [

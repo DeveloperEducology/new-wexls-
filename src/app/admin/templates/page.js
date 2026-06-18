@@ -111,10 +111,10 @@ const VISUAL_COMPONENTS = [
     value: 'PlaceValue',
     mathOnly: true,
     props: {
-      thousands: 'Th',
-      hundreds: 'H',
-      tens: 'T',
-      ones: 'O',
+      thousands: '1',
+      hundreds: '1',
+      tens: '2',
+      ones: '3',
       showChart: 'true'
     }
   },
@@ -123,10 +123,10 @@ const VISUAL_COMPONENTS = [
     value: 'BaseTenBlocks',
     mathOnly: true,
     props: {
-      thousands: '0',
-      hundreds: 'H',
-      tens: 'T',
-      ones: 'O',
+      thousands: '1',
+      hundreds: '1',
+      tens: '2',
+      ones: '3',
       showChart: 'false',
       color: 'blue'
     }
@@ -1431,7 +1431,65 @@ const getImageUrlPreview = (value) => {
 
 const normalizeOptionLabel = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
 
-const hasUnresolvedPlaceholder = (value) => /\[[A-Za-z_][A-Za-z0-9_]*\]|\[\[[^\]]+\]\]/.test(String(value ?? ''));
+const hasBlankToken = (value) => /\[\[[^\]]+\]\]|\[blank(?::[^\]]+)?\]/.test(String(value ?? ''));
+
+const hasUnresolvedPlaceholder = (value) => {
+  const valueWithoutInlineBlanks = String(value ?? '').replace(/\[\[[^\]]+\]\]|\[blank(?::[^\]]+)?\]/g, '');
+  return /\[[A-Za-z_][A-Za-z0-9_]*\]/.test(valueWithoutInlineBlanks);
+};
+
+const getPreviewBlankValue = (question, rawKey) => {
+  const key = String(rawKey || '').trim().toLowerCase() === 'blank' ? 'ans' : String(rawKey || '').trim();
+  const answerMap = question?.answer && typeof question.answer === 'object' ? question.answer : null;
+  const correctAnswerMap = question?.correctAnswer && typeof question.correctAnswer === 'object' ? question.correctAnswer : null;
+  const scalarAnswer = question?.answer && typeof question.answer !== 'object'
+    ? question.answer
+    : (question?.correctAnswer && typeof question.correctAnswer !== 'object' ? question.correctAnswer : '');
+
+  return answerMap?.[key] ?? correctAnswerMap?.[key] ?? (key === 'ans' ? scalarAnswer : '');
+};
+
+const renderPreviewTextWithBlanks = (text, question) => {
+  const value = String(text ?? '');
+  const renderPreviewPlainText = (chunk, keyPrefix) => (
+    String(chunk).split('\n').map((line, lineIndex, lines) => (
+      <span key={`${keyPrefix}-${lineIndex}`}>
+        {line}
+        {lineIndex < lines.length - 1 ? <br /> : null}
+      </span>
+    ))
+  );
+
+  if (!value.includes('[[')) return renderPreviewPlainText(value, 'preview-text');
+
+  return (
+    <span>
+      {value.split(/(\[\[[^\]]+\]\])/g).map((chunk, index) => {
+        if (!chunk.startsWith('[[') || !chunk.endsWith(']]')) return renderPreviewPlainText(chunk, `preview-chunk-${index}`);
+        const correctVal = getPreviewBlankValue(question, chunk.slice(2, -2));
+        return (
+          <input
+            key={`preview-blank-${index}`}
+            type="text"
+            value={correctVal}
+            disabled
+            style={{
+              width: `${Math.max(String(correctVal ?? '').length * 10 + 20, 60)}px`,
+              padding: '4px 8px',
+              margin: '0 4px',
+              border: '2px solid #22c55e',
+              borderRadius: '6px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              color: '#15803d',
+              background: '#f0fdf4'
+            }}
+          />
+        );
+      })}
+    </span>
+  );
+};
 
 const getTemplateMode = (template) => {
   const partType = template.parts?.[0]?.type || '';
@@ -1511,7 +1569,8 @@ const analyzeVariantQuestion = (template, question, seed) => {
   }
 
   if (mode === 'fillInTheBlank') {
-    const hasBlank = Array.isArray(question.parts) && question.parts.some(part => String(part.content || '').includes('[['));
+    const hasBlank = hasBlankToken(question.questionText)
+      || (Array.isArray(question.parts) && question.parts.some(part => hasBlankToken(part.content || part.text)));
     if (!question.answer && !question.correctAnswer && !hasBlank) {
       issues.push('Fill-in-the-blank variant is missing an answer mapping or blank content.');
     }
@@ -5183,7 +5242,7 @@ export default function VisualTemplateBuilderPage() {
                   )}
 
                   {/* PlaceValue props */}
-                  {template.visuals[0].component === 'PlaceValue' && (
+                  {(template.visuals[0].component === 'PlaceValue' || template.visuals[0].component === 'BaseTenBlocks') && (
                     <>
                       <div className={styles.propRow}>
                         <label htmlFor="pv-thousands">Thousands (variable or number)</label>
@@ -5244,7 +5303,7 @@ export default function VisualTemplateBuilderPage() {
                     </>
                   )}
 
-                  {!['TenFrame', 'JarOfMarbles', 'Spinner', 'ItemCounter', 'Image', 'VisualChoice', 'PlaceValue'].includes(template.visuals[0].component) && (
+                  {!['TenFrame', 'JarOfMarbles', 'Spinner', 'ItemCounter', 'Image', 'VisualChoice', 'PlaceValue', 'BaseTenBlocks'].includes(template.visuals[0].component) && (
                     <div className={styles.schemaSectionCard} style={{ marginTop: 12, marginBottom: 0 }}>
                       <div className={styles.schemaSectionHeader}>
                         <div>
@@ -6662,7 +6721,7 @@ export default function VisualTemplateBuilderPage() {
                     return (
                       <>
                         <div className={styles.railPrompt}>
-                          {q.questionText || 'Preview question text appears here.'}
+                          {renderPreviewTextWithBlanks(q.questionText || 'Preview question text appears here.', q)}
                         </div>
 
                         {visualParts.length > 0 && (
@@ -6826,7 +6885,7 @@ export default function VisualTemplateBuilderPage() {
                   <div className={`${styles.deviceContainer} ${styles[previewDevice] || ''}`}>
                     <div className={styles.previewContainer}>
                       <div className={styles.practicePrompt}>
-                    {evaluatedQuestion.question.questionText}
+                    {renderPreviewTextWithBlanks(evaluatedQuestion.question.questionText, evaluatedQuestion.question)}
                   </div>
 
                   {/* Render Visual Parts (SVG / image / visual_panel / categorization / fill-in-the-blank) */}
@@ -7128,8 +7187,7 @@ export default function VisualTemplateBuilderPage() {
                                       <span>
                                         {p.content.split(/(\[\[.*?\]\])/g).map((chunk, cIdx) => {
                                           if (chunk.startsWith('[[') && chunk.endsWith(']]')) {
-                                            const key = chunk.slice(2, -2).trim();
-                                            const correctVal = q.answer?.[key] || q.correctAnswer?.[key] || '';
+                                            const correctVal = getPreviewBlankValue(q, chunk.slice(2, -2));
                                             return (
                                               <input
                                                 key={cIdx}

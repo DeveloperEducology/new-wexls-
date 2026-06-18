@@ -213,7 +213,7 @@ export function generate(variables = {}, config = {}) {
     voice: 'Puck',
     generateAudio: 'all',
     soundText, // triggers autoplay letter sound triggers in Pre-K view
-    soundUrl: targetWordObj.audioUrl, // fallbacks to pre-recorded phonics WAV audio
+    soundUrl: targetWordObj.phonicSoundUrl || targetWordObj.audioUrl, // fallbacks to pre-recorded phonics WAV audio
     options: activeOptions.map((opt, idx) => ({
       id: `opt_${idx}`,
       label: opt.label,

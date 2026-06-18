@@ -33,71 +33,255 @@ export async function POST(request) {
     }
 
     const generationPrompt = `
-You are a curriculum developer and math/english educational template builder.
-Create a dynamic question template based on the following user instructions:
+You are a senior curriculum architect for a production learning platform similar to IXL, Khan Academy Kids, and Duolingo.
+Create one metadata-driven Universal Learning Activity Template from the user's instruction.
+
+User instruction:
 "${prompt}"
 
-Required metadata context to embed:
-- Subject: ${subject || 'math'}
-- Topic: ${topic || 'general'}
+Context:
+- Default subject: ${subject || 'math'}
+- Default topic: ${topic || 'general'}
 
-Dynamic Question Template JSON Schema:
-The output must be a single valid JSON object representing the dynamic question template recipe. 
-Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the JSON object.
+Return ONLY one valid JSON object. Do not wrap it in markdown. Do not include comments.
 
-Template fields to populate:
+The template must be schema-based and reusable across Kindergarten through Grade 10.
+It should support any subject:
+- english
+- math
+- science
+- general_knowledge
+- social_studies
+- coding
+- logical_reasoning
+
+Use this exact top-level shape whenever possible:
 {
-  "id": "Descriptive kebab-case ID, e.g. 'math-addition-counting-apples'",
-  "title": "A short, engaging title for this template",
+  "id": "kebab-case-template-id",
+  "templateId": "same-as-id",
+  "title": "Short template title",
+  "description": "What this activity teaches",
   "subject": "${subject || 'math'}",
   "topic": "${topic || 'general'}",
-  "layout": "prompt_top_visual_center_options_bottom", // Choose layout: 'prompt_top_visual_center_options_bottom' (default), 'prompt_left_options_right_visual_center', or similar.
-  "variables": [
-    // Array of dynamic variables. Types can be:
-    // - "integer": must have "min" and "max" (number strings or formulas like "A - 1")
-    // - "list": must have "items" (array of strings or numbers)
-    // - "expression": must have "formula" (javascript expression using other variables, e.g. "A + B")
-    // Example: { "name": "A", "type": "integer", "min": "5", "max": "10" }
-  ],
-  "visuals": [
-    // Optional array of visual component definitions. Supported components:
-    // - "TenFrame": props: { "filledCount": "A", "crossedOutCount": "B" (optional), "color": "red" }
-    // - "JarOfMarbles": props: { "colorA": "blue", "countA": "A", "colorB": "red", "countB": "B" }
-    // - "Spinner": props: { "colorA": "blue", "sectorsA": "A", "colorB": "green", "sectorsB": "B" }
-    // - "ItemCounter": props: { "count": "A", "itemType": "cupcake" (use standard items like apple, frog, cookie, star) }
-    // - "VisualChoice": props: { "correctCount": "A", "itemType": "cupcake", "distractorMode": "auto" }
-    // - "Image": props: { "imageUrl": "URL to R2 image asset", "width": "200" }
-    // Example: { "component": "TenFrame", "props": { "filledCount": "A", "color": "blue" } }
-  ],
-  "questionText": "The question prompt. Include variable placeholders in square brackets, e.g. 'What is [A] plus [B]?'",
-  "optionsType": "mcq" | "fillInTheBlank" | "categorizationv2" | "visual_choice",
-  "options": [
-    // For MCQ: Array of 4 choices. One choice must have "isCorrect": true. Use variables like "[Result]"
-    // Example: [ { "label": "[Result]", "isCorrect": true }, { "label": "[Result] + 1", "isCorrect": false }, ... ]
-  ],
-  "parts": [
-    // For Fill-in-the-blank or Categorization.
-    // If fillInTheBlank: { "type": "text", "content": "Sentence containing double bracket blank, e.g., 'The sum is [[ans]].'" }
-    // If categorizationv2: { "type": "categorizationv2", "categories": [ { "id": "even", "label": "Even" }, ... ], "items": [ { "id": "item1", "content": "[A]" }, ... ] }
-  ],
-  "answer": {
-    // For FIB: { "ans": "[Result]" }
-    // For Categorization: { "item1": "even", "item2": "odd" }
+  "grade": "K, UKG, 1, 2, ... or 10",
+  "skillId": "kebab-case-skill-id",
+  "competencyId": "kebab-case-competency-id",
+  "difficultyLevel": "easy",
+  "tags": ["short", "searchable", "tags"],
+
+  "dataSources": [],
+  "variables": [],
+  "constraints": {
+    "uniqueOptions": true,
+    "preventDuplicateWords": true,
+    "minOptionCount": 3,
+    "maxOptionCount": 6,
+    "distractorSimilarity": "medium"
   },
+  "layoutConfig": {
+    "mode": "prompt_top",
+    "responsiveTarget": "mobile_first",
+    "density": "balanced",
+    "showWorkArea": false
+  },
+  "visuals": [],
+  "interaction": {
+    "engine": "mcq",
+    "inputMode": "choice",
+    "options": []
+  },
+  "validationRules": [],
+  "feedbackRules": {
+    "correct_message": "Correct!",
+    "incorrect_message": "Try again.",
+    "hints": [],
+    "step_by_step_explanation": "",
+    "misconception_feedback": {}
+  },
+  "difficultyRules": {
+    "easy": {
+      "optionCount": 3,
+      "distractorSimilarity": "low",
+      "hintVisibility": "high",
+      "visualSupport": "high",
+      "answerComplexity": "low"
+    },
+    "medium": {
+      "optionCount": 4,
+      "distractorSimilarity": "medium",
+      "hintVisibility": "medium",
+      "visualSupport": "medium",
+      "answerComplexity": "medium"
+    },
+    "hard": {
+      "optionCount": 5,
+      "distractorSimilarity": "high",
+      "hintVisibility": "low",
+      "visualSupport": "low",
+      "answerComplexity": "high"
+    }
+  },
+  "analyticsConfig": {
+    "attempts": true,
+    "time_spent": true,
+    "hints_used": true,
+    "first_try_correct": true,
+    "mastery_score": true,
+    "smart_score": true,
+    "confidence_score": true
+  },
+  "adaptiveRules": {
+    "correct": { "route": "next_skill", "targetSkillId": "" },
+    "incorrect": { "route": "remediation_skill", "targetSkillId": "" },
+    "masteryAchieved": { "route": "harder_template", "targetTemplateId": "" }
+  },
+
+  "questionText": "Student-facing prompt using [VariableName] placeholders",
+  "optionsType": "mcq",
+  "options": [],
+  "parts": [],
+  "answer": "",
   "explanation": {
     "sections": [
-      { "type": "text", "content": "A detailed explanation of how to solve the question, referencing variables in square brackets, e.g. '[A] + [B] = [Result] because...'" }
+      { "type": "text", "content": "Student-friendly explanation." }
     ]
   }
 }
 
-Constraint checklist:
-1. Ensure all mathematical expressions are mathematically sound.
-2. For MCQ, generate exactly 4 options.
-3. For FIB, use double brackets like [[ans]] in parts and specify the target mapping in "answer".
-4. Choose the most relevant visual component (TenFrame, Spinner, ItemCounter, etc.) to match the question topic.
+Supported dataSources.type values:
+- "pool_selection"
+- "random_number"
+- "random_item"
+- "static_data"
+- "curriculum_dataset"
+- "image_library"
+- "audio_library"
+- "svg_library"
+- "facts_database"
 
-Return ONLY a valid JSON object. Do not output any other text or wrapping.
+Data source examples:
+- Pool selection: { "id": "source_words", "name": "WordsPool", "type": "pool_selection", "poolId": "english-class1-short-i-words", "category": "short_i_words", "count": 3 }
+- Random number: { "id": "source_a", "name": "A", "type": "random_number", "min": 1, "max": 10 }
+- Static data: { "id": "source_facts", "name": "Facts", "type": "static_data", "items": [{ "label": "Sun", "category": "star" }] }
+
+Supported variable types:
+- "integer" with "min" and "max"
+- "list" with "items"
+- "expression" with "formula"
+- "computed" with "formula"
+- "string_template" with "template"
+- "array_transform" with "source" and "transform"
+- "conditional" with "condition", "whenTrue", "whenFalse"
+- "pool_selection" with "poolId", "category", "count"
+
+Use square-bracket interpolation in prompts/options/visual props:
+- [A]
+- [B]
+- [Result]
+- [WordsPool[0].label]
+- [TargetWord]
+
+Supported layoutConfig.mode values:
+- "prompt_top"
+- "prompt_left"
+- "visual_center"
+- "split_screen"
+- "reading_passage"
+- "worksheet"
+- "mobile_first"
+- "tablet_first"
+- "desktop_first"
+
+Supported visuals.component values:
+- "Text"
+- "Image"
+- "Audio"
+- "SVG"
+- "Video"
+- "TenFrame"
+- "JarOfMarbles"
+- "Spinner"
+- "ItemCounter"
+- "SceneComposer"
+- "PlaceValue"
+- "BaseTenBlocks"
+- "NumberLine"
+- "HundredChart"
+- "Rekenrek"
+- "NumberBond"
+- "TallyChart"
+- "FractionBar"
+- "FractionCircle"
+- "FractionGrid"
+- "DecimalGrid"
+- "DecimalLine"
+- "ShapeCanvas"
+- "CoordinatePlane"
+- "Protractor"
+- "Ruler"
+- "Geoboard"
+- "BarGraph"
+- "Pictograph"
+- "FrequencyTable"
+- "AnalogClock"
+- "Calendar"
+- "Thermometer"
+- "BalanceScale"
+- "MeasuringJug"
+- "MoneyDisplay"
+- "PriceTagCompare"
+- "Clock"
+- "MeasuringCup"
+- "GeometryCanvas"
+- "DragCanvas"
+- "ReadingPassage"
+
+Supported interaction.engine values:
+- "mcq"
+- "picture_mcq"
+- "audio_mcq"
+- "multi_select"
+- "drag_drop"
+- "sorting"
+- "matching"
+- "fill_blank"
+- "number_input"
+- "text_input"
+- "sequence"
+- "hotspot"
+- "draw_line"
+- "label_diagram"
+- "interactive_tool"
+- "categorizationv2"
+
+Supported validationRules.type values:
+- "exact_match"
+- "case_insensitive"
+- "numeric_tolerance"
+- "multi_answer"
+- "regex_validation"
+- "custom_formula"
+
+Subject-aware guidance:
+- English: vocabulary, phonics, grammar, reading; prefer pools, sentence parts, Image/Audio, categorizationv2, fill_blank, matching, picture_mcq.
+- Math: arithmetic, fractions, geometry, measurement; prefer random_number variables and visuals like TenFrame, NumberLine, FractionBar, BaseTenBlocks, CoordinatePlane, Ruler, Clock.
+- Science: diagrams, labels, experiments; prefer label_diagram, hotspot, Image/SVG, facts_database.
+- General knowledge: facts, image matching, associations; prefer static_data/facts_database and picture_mcq/matching.
+- Social studies: maps, timelines, civics; prefer hotspot, sequence, matching, reading_passage.
+- Coding: sequencing, debugging, logic; prefer sequence, sorting, text_input, interactive_tool.
+- Logical reasoning: patterns, analogy, classification; prefer sequence, sorting, matching, pattern visuals.
+
+Important output rules:
+1. Always include a usable "questionText".
+2. Always include "interaction.engine" and matching "optionsType".
+3. Always include at least one validation rule.
+4. For MCQ/picture_mcq/audio_mcq, include 3-5 options and mark exactly one with "isCorrect": true unless multi_select.
+5. For fill_blank, include a part with a [[blankId]] and answer mapping like { "blankId": "[CorrectAnswer]" }.
+6. For categorizationv2/sorting, include categories, items, and answer mapping.
+7. For dynamic pool templates, prefer dataSources and variables over hardcoded options.
+8. Avoid custom React code. Use metadata, visuals, variables, and interaction config.
+9. Keep IDs kebab-case and stable.
+10. Return only JSON.
 `;
 
     let response;
@@ -110,9 +294,9 @@ Return ONLY a valid JSON object. Do not output any other text or wrapping.
         }
       });
     } catch (primaryError) {
-      console.warn('[templates-generate] gemini-2.5-flash failed, falling back to gemini-2.0-flash. Error:', primaryError);
+      console.warn('[templates-generate] gemini-2.5-flash failed, falling back to gemini-2.5-flash-lite. Error:', primaryError);
       response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         contents: generationPrompt,
         config: {
           responseMimeType: 'application/json',

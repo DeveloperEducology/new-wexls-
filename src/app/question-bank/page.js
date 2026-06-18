@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import styles from './question-bank.module.css';
 
 const SAMPLE_JSON = `{
@@ -40,6 +40,40 @@ export default function QuestionBankPage() {
   const [mode, setMode] = useState('upsert');
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [samples, setSamples] = useState([]);
+  const [selectedSample, setSelectedSample] = useState('');
+
+  useEffect(() => {
+    async function loadSamplesList() {
+      try {
+        const res = await fetch('/api/question-bank/samples');
+        const data = await res.json();
+        if (data.success) {
+          setSamples(data.samples || []);
+        }
+      } catch (err) {
+        console.error('Failed to load question bank samples:', err);
+      }
+    }
+    loadSamplesList();
+  }, []);
+
+  async function handleLoadSample(filename) {
+    setSelectedSample(filename);
+    if (!filename) return;
+
+    try {
+      const res = await fetch(`/api/question-bank/samples?file=${filename}`);
+      const data = await res.json();
+      if (data.success) {
+        setRawJson(JSON.stringify(data.content, null, 2));
+      } else {
+        console.error('Failed to retrieve sample contents:', data.error);
+      }
+    } catch (err) {
+      console.error('Failed to load sample:', err);
+    }
+  }
 
   const parsedState = useMemo(() => {
     try {
@@ -51,10 +85,15 @@ export default function QuestionBankPage() {
   }, [rawJson]);
 
   const question = parsedState.ok ? parsedState.question : null;
-  const subject = question ? readPath(question, 'metadata.subject', question.subject) : '';
-  const topic = question ? readPath(question, 'metadata.topic', question.topic) : '';
-  const skillId = question ? readPath(question, 'metadata.skillId', question.skillId || question.microSkillId) : '';
-  const templateId = question ? readPath(question, 'metadata.templateId', question.templateId) : '';
+  const isArrayPayload = Array.isArray(question);
+  
+  // Display preview using first item if it is a list
+  const previewQuestion = isArrayPayload ? question[0] : question;
+
+  const subject = previewQuestion ? readPath(previewQuestion, 'metadata.subject', previewQuestion.subject) : '';
+  const topic = previewQuestion ? readPath(previewQuestion, 'metadata.topic', previewQuestion.topic) : '';
+  const skillId = previewQuestion ? readPath(previewQuestion, 'metadata.skillId', previewQuestion.skillId || previewQuestion.microSkillId) : '';
+  const templateId = previewQuestion ? readPath(previewQuestion, 'metadata.templateId', previewQuestion.templateId) : '';
 
   async function handleSave() {
     setSaving(true);
@@ -79,10 +118,17 @@ export default function QuestionBankPage() {
         throw new Error(data.error || 'Question save failed.');
       }
 
-      setStatus({
-        type: 'success',
-        message: `${data.result.mode === 'insert' ? 'Saved' : 'Updated'} question ${data.result.id}.`,
-      });
+      if (data.result.mode === 'bulk') {
+        setStatus({
+          type: 'success',
+          message: `Bulk saved ${data.result.count} questions successfully (${data.result.inserted} inserted, ${data.result.updated} updated).`,
+        });
+      } else {
+        setStatus({
+          type: 'success',
+          message: `${data.result.mode === 'insert' ? 'Saved' : 'Updated'} question ${data.result.id}.`,
+        });
+      }
     } catch (error) {
       setStatus({
         type: 'error',
@@ -119,9 +165,23 @@ export default function QuestionBankPage() {
                 <option value="insert">Always insert new document</option>
               </select>
             </label>
-            <button type="button" onClick={() => setRawJson(SAMPLE_JSON)}>
-              Load sample
-            </button>
+            {samples.length > 0 ? (
+              <label>
+                Load sample
+                <select value={selectedSample} onChange={(event) => handleLoadSample(event.target.value)}>
+                  <option value="">-- Choose sample file --</option>
+                  {samples.map((s) => (
+                    <option key={s.filename} value={s.filename}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <button type="button" onClick={() => setRawJson(SAMPLE_JSON)}>
+                Load sample
+              </button>
+            )}
           </div>
 
           <textarea
@@ -146,13 +206,13 @@ export default function QuestionBankPage() {
         </div>
 
         <aside className={styles.previewCard}>
-          <p className={styles.eyebrow}>Preview</p>
-          <h2>{question?.questionText || question?.question_text || 'No valid question yet'}</h2>
+          <p className={styles.eyebrow}>Preview {isArrayPayload ? `(1 of ${question.length})` : ''}</p>
+          <h2>{previewQuestion?.questionText || previewQuestion?.question_text || 'No valid question yet'}</h2>
 
           <dl className={styles.metaList}>
             <div>
               <dt>Type</dt>
-              <dd>{question?.type || '-'}</dd>
+              <dd>{previewQuestion?.type || '-'}</dd>
             </div>
             <div>
               <dt>Subject</dt>
@@ -172,11 +232,11 @@ export default function QuestionBankPage() {
             </div>
             <div>
               <dt>Options</dt>
-              <dd>{Array.isArray(question?.options) ? question.options.length : 0}</dd>
+              <dd>{Array.isArray(previewQuestion?.options) ? previewQuestion.options.length : 0}</dd>
             </div>
             <div>
               <dt>Parts</dt>
-              <dd>{Array.isArray(question?.parts) ? question.parts.length : 0}</dd>
+              <dd>{Array.isArray(previewQuestion?.parts) ? previewQuestion.parts.length : 0}</dd>
             </div>
           </dl>
 

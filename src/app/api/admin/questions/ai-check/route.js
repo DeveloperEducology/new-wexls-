@@ -120,17 +120,22 @@ Question payload:
 ${JSON.stringify(payload, null, 2)}
 `;
 
+    const configuredModel = String(process.env.GEMINI_QA_MODEL || 'gemini-2.5-flash').trim();
+    const primaryModel = configuredModel === 'gemini-2.0-flash' || configuredModel === 'gemini-2.0-flash-001'
+      ? 'gemini-2.5-flash'
+      : configuredModel;
+
     let response;
     try {
       response = await ai.models.generateContent({
-        model: process.env.GEMINI_QA_MODEL || 'gemini-2.5-flash',
+        model: primaryModel,
         contents: prompt,
         config: { responseMimeType: 'application/json' },
       });
     } catch (primaryError) {
-      console.warn('[questions-ai-check] primary model failed, falling back to gemini-2.0-flash:', primaryError);
+      console.warn('[questions-ai-check] primary model failed, falling back to gemini-2.5-flash-lite:', primaryError);
       response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         contents: prompt,
         config: { responseMimeType: 'application/json' },
       });
