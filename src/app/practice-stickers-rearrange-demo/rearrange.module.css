@@ -1,0 +1,718 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  color: #1e293b;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Navigation Bar */
+.ixlNavBar {
+  background: #7ecb00; /* Distinct IXL Green */
+  height: 60px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  z-index: 10;
+}
+
+.ixlBrand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ixlLogo {
+  height: 32px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #4b0082;
+  font-size: 20px;
+  letter-spacing: -0.05em;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ixlLogo span {
+  color: #ff8c00;
+}
+
+.searchIcon {
+  width: 28px;
+  height: 28px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.navLinks {
+  display: flex;
+  gap: 24px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.navLinks span {
+  cursor: pointer;
+  opacity: 0.95;
+  transition: opacity 0.2s;
+}
+
+.navLinks span:hover {
+  opacity: 1;
+}
+
+.authButtons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.signInBtn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.joinBtn {
+  background: #ffffff;
+  color: #0284c7;
+  border: 1px solid #0284c7;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Breadcrumb Sub-Header */
+.subHeader {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.shareBtn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Main Layout Grid */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 32px;
+  max-width: 1120px;
+  width: 100%;
+  margin: 24px auto;
+  padding: 0 20px;
+  align-items: start;
+}
+
+/* Practice Card Container */
+.practiceCard {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid rgba(15,23,42,0.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Reset Button / Helper Pill */
+.learnExample {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  background: #f0f9ff;
+  border: 1px dashed #0ea5e9;
+  color: #0369a1;
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.learnExample:hover {
+  background: #e0f2fe;
+  transform: translateY(-1px);
+}
+
+/* Question Prompt */
+.promptRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.speakerBtn {
+  background: #0ea5e9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);
+  transition: transform 0.1s;
+}
+
+.speakerBtn:active {
+  transform: scale(0.92);
+}
+
+/* 3-Column Dropzone Container */
+.columnsContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  min-height: 340px;
+  margin-top: 8px;
+}
+
+/* Individual Column Layout */
+.columnCard {
+  background: rgba(248, 250, 252, 0.6);
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.columnCardActive {
+  background: rgba(239, 246, 255, 0.85);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.columnHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--theme-color, #e2e8f0);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.columnHeader h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.columnBadge {
+  background: var(--theme-color-light, #f1f5f9);
+  color: var(--theme-color, #475569);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--theme-color-border, #e2e8f0);
+}
+
+/* Column drop area content list */
+.columnDropArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 240px;
+}
+
+/* Empty State Placeholder inside column */
+.columnPlaceholder {
+  flex: 1;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 20px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Drag insertion line indicator */
+.dragIndicatorLine {
+  height: 4px;
+  background: #3b82f6;
+  border-radius: 2px;
+  margin: -2px 0;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* Placed Sticker Item Card inside Column */
+.placedStickerItem {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: grab;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.placedStickerItem:hover {
+  transform: translateY(-1.5px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+}
+
+.placedStickerItemDragging {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.placedStickerItemActive {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.stickerIconWrapper {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.stickerIconImage {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.stickerIconEmoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.stickerInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stickerName {
+  font-size: 13px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.stickerDragHandle {
+  color: #cbd5e1;
+  cursor: grab;
+  font-size: 16px;
+  user-select: none;
+  padding: 4px;
+}
+
+.stickerRemoveBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stickerRemoveBtn:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* Sticker Tray at the bottom */
+.dockPanel {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-height: 110px;
+}
+
+.dockPanelActive {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.dockSlotWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dockSlot {
+  width: 80px;
+  height: 80px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.dockSlot:hover {
+  transform: translateY(-2px) scale(1.03);
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 10px rgba(0,0,0,0.04);
+}
+
+.dockSlotSelected {
+  border: 3px solid #0ea5e9 !important;
+  box-shadow: 0 0 15px rgba(14,165,233,0.4) !important;
+}
+
+.dockSlotDragging {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.dockStickerImage {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.dockStickerEmoji {
+  font-size: 40px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.silhouettePlaceholder {
+  width: 80px;
+  height: 80px;
+  background: #f1f5f9;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.silhouetteInner {
+  font-size: 28px;
+  filter: grayscale(1) opacity(0.35);
+}
+
+.slotNumber {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  background: #f1f5f9;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+}
+
+/* Statistics tracking footer */
+.dockCount {
+  display: flex;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  margin-top: -21px;
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.dockCount strong {
+  color: #7ecb00;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+/* Feedback Row Alert */
+.feedbackAlert {
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.successAlert {
+  background: #ecfdf5;
+  border: 1.5px solid #10b981;
+  color: #047857;
+}
+
+.errorAlert {
+  background: #fef2f2;
+  border: 1.5px solid #ef4444;
+  color: #b91c1c;
+}
+
+/* Action Rows */
+.actionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.submitBtn {
+  background: #7ecb00;
+  color: #ffffff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #5fa300;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.submitBtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #5fa300;
+}
+
+.navControls {
+  display: flex;
+  gap: 12px;
+}
+
+.navBtn {
+  background: rgba(30, 41, 59, 0.05);
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  color: #475569;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.navBtn:hover {
+  background: rgba(30, 41, 59, 0.08);
+}
+
+/* Right Panel Scoreboard Widgets (IXL Mirror) */
+.widgetsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.widget {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.widgetHeader {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.questionsHeader {
+  background: #7ecb00;
+}
+
+.timeHeader {
+  background: #0ea5e9;
+}
+
+.scoreHeader {
+  background: #f97316;
+}
+
+.widgetBody {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.widgetValue {
+  font-size: 28px;
+  font-weight: 900;
+  color: #334155;
+}
+
+.widgetSubtext {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.scratchpadWidget {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.scratchpadIcon {
+  font-size: 24px;
+  color: #0ea5e9;
+}
+
+.scratchpadText {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* Responsive configurations */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .widgetsPanel {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .widget {
+    flex: 1;
+  }
+
+  .columnsContainer {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .columnDropArea {
+    min-height: 120px;
+  }
+}
+
+@media (max-width: 500px) {
+  .ixlNavBar {
+    padding: 0 16px;
+  }
+  .navLinks {
+    display: none;
+  }
+  .practiceCard {
+    padding: 16px;
+  }
+  .promptRow {
+    font-size: 16px;
+  }
+}
