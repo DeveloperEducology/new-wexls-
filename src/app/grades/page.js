@@ -1,6 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { cookies } from 'next/headers';
+import { verifyAccessToken } from '@/lib/authService';
+import { getMongoDb } from '@/lib/db/mongo';
 import { TOPICS } from '../../lib/constants/topics';
 import {
   loadDbTopics,
@@ -49,7 +52,7 @@ function TopicCatalog({ topics = TOPICS }) {
   );
 }
 
-function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
+function TopicSkillsPage({ selectedTopic, topics = TOPICS, skillsMastery = {} }) {
   const selected = topics.find((topic) => topic.id === selectedTopic || topic.topic === selectedTopic) || topics[0];
 
   return (
@@ -80,13 +83,32 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
               <section key={group.id || `${group.title}-${index}`} className="skill-column">
                 <h2>{group.title}</h2>
                 <ol>
-                  {group.skills.map(([code, name, skill], idx) => (
-                    <li key={`${skill}-${idx}`}>
-                      <span>{code}</span>
-                      <Link href={practiceHref(selected, skill)}>{name}</Link>
-                      <small aria-hidden="true"> ✎ ⊙</small>
-                    </li>
-                  ))}
+                  {group.skills.map(([code, name, skill], idx) => {
+                    const mastery = skillsMastery[skill];
+                    const score = mastery?.score || 0;
+                    const isMastered = mastery?.state === 'Mastered' || score >= 80;
+
+                    return (
+                      <li key={`${skill}-${idx}`}>
+                        <span>{code}</span>
+                        <Link href={practiceHref(selected, skill)}>{name}</Link>
+                        {isMastered ? (
+                          <span style={{ marginLeft: '8px', fontSize: '1rem', color: '#f59e0b' }} title="Mastered">⭐</span>
+                        ) : score > 0 ? (
+                          <span style={{
+                            marginLeft: '8px',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            background: 'rgba(99, 102, 241, 0.12)',
+                            color: '#4f46e5',
+                            padding: '1px 6px',
+                            borderRadius: '10px'
+                          }} title={`Score: ${score}`}>{score}</span>
+                        ) : null}
+                        <small aria-hidden="true"> ✎ ⊙</small>
+                      </li>
+                    );
+                  })}
                 </ol>
               </section>
             ))
@@ -101,7 +123,7 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS }) {
   );
 }
 
-function GradeLevelCurriculumPage({ topics, activeSubject }) {
+function GradeLevelCurriculumPage({ topics, activeSubject, skillsMastery = {} }) {
   const sortedGrades = buildGradeCurriculum(topics, activeSubject);
 
   return (
@@ -156,12 +178,31 @@ function GradeLevelCurriculumPage({ topics, activeSubject }) {
                          <div key={topic.id} className="topic-block" style={{'--theme-color': topic.color}}>
                            <h3 className="topic-subheading">{topic.title}</h3>
                            <div className="skill-pills">
-                             {topic.skills.map(([code, name, skill], idx) => (
-                               <Link key={`${skill}-${idx}`} href={practiceHref(topic, skill)} className="skill-pill">
-                                 <span className="skill-code">{code}</span>
-                                 <span className="skill-name">{name}</span>
-                               </Link>
-                             ))}
+                             {topic.skills.map(([code, name, skill], idx) => {
+                               const mastery = skillsMastery[skill];
+                               const score = mastery?.score || 0;
+                               const isMastered = mastery?.state === 'Mastered' || score >= 80;
+
+                               return (
+                                 <Link key={`${skill}-${idx}`} href={practiceHref(topic, skill)} className="skill-pill">
+                                   <span className="skill-code">{code}</span>
+                                   <span className="skill-name">{name}</span>
+                                   {isMastered ? (
+                                     <span className="skill-progress-star" style={{ marginLeft: 'auto', fontSize: '1.2rem', color: '#f59e0b' }} title="Mastered">⭐</span>
+                                   ) : score > 0 ? (
+                                     <span className="skill-progress-score" style={{ 
+                                       marginLeft: 'auto', 
+                                       fontSize: '0.75rem', 
+                                       fontWeight: 800,
+                                       background: 'rgba(99, 102, 241, 0.12)',
+                                       color: '#4f46e5',
+                                       padding: '2px 8px',
+                                       borderRadius: '20px'
+                                     }} title={`Score: ${score}`}>{score}</span>
+                                   ) : null}
+                                 </Link>
+                               );
+                             })}
                            </div>
                          </div>
                        ))}
@@ -186,9 +227,71 @@ export default async function GradesPage({ searchParams }) {
   const dbTopics = await loadDbTopics();
   const topics = mergeTopics(TOPICS, dbTopics);
 
+  // Load session and fetch student mastery progress from MongoDB
+  let skillsMastery = {};
+  try {
+    const cookieStore = await cookies();
+    const accessCookie = cookieStore.get('klasschamp_access');
+    let session = null;
+    if (accessCookie) {
+      session = verifyAccessToken(accessCookie.value);
+    }
+
+    if (session?.userId) {
+      const db = await getMongoDb();
+      if (db) {
+        // Resolve user doc first
+        let userDoc = null;
+        const { ObjectId } = require('mongodb');
+        if (ObjectId.isValid(session.userId)) {
+          userDoc = await db.collection('users').findOne({ _id: new ObjectId(session.userId) });
+        }
+        if (!userDoc) {
+          userDoc = await db.collection('users').findOne({ username: session.userId });
+        }
+
+        const userIds = [session.userId];
+        if (userDoc) {
+          userIds.push(userDoc.username);
+          userIds.push(String(userDoc._id));
+
+          // Resolve student profile
+          const studentDoc = await db.collection('students').findOne({
+            $or: [
+              { userId: userDoc.username },
+              { _id: `stud_${userDoc._id}` }
+            ]
+          });
+          if (studentDoc) {
+            userIds.push(studentDoc.userId);
+            userIds.push(studentDoc._id);
+          }
+        }
+
+        const queryIds = [...new Set(userIds.filter(Boolean))];
+
+        const masteries = await db.collection('student_mastery').find({
+          userId: { $in: queryIds }
+        }).toArray();
+
+        skillsMastery = Object.fromEntries(
+          masteries.map(m => [
+            m.skillId,
+            {
+              score: m.score ?? m.smartScore ?? m.masteryScore ?? 0,
+              state: m.state || 'Learning'
+            }
+          ])
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Error loading student mastery on grades page:", err);
+  }
+
   let content;
   if (selectedTopic) {
-    content = <TopicSkillsPage selectedTopic={selectedTopic} topics={topics} />;
+    content = <TopicSkillsPage selectedTopic={selectedTopic} topics={topics} skillsMastery={skillsMastery} />;
   } else if (viewMode === 'topics') {
     content = (
       <>
@@ -199,7 +302,7 @@ export default async function GradesPage({ searchParams }) {
       </>
     );
   } else {
-    content = <GradeLevelCurriculumPage topics={topics} activeSubject={activeSubject} />;
+    content = <GradeLevelCurriculumPage topics={topics} activeSubject={activeSubject} skillsMastery={skillsMastery} />;
   }
 
   return (
