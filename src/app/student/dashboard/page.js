@@ -561,10 +561,16 @@ export default function StudentDashboardPortal() {
       
       {/* 1. Header Row */}
       <header className={styles.headerRow}>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
           <h1>
             {isEarlyYears ? '🎈 Welcome to KlassChamp! 🎈' : 'My Student Dashboard'}
           </h1>
+          {!isEarlyYears && (
+            <nav className={styles.dashboardNav}>
+              <span className={styles.navTabActive}>My Path</span>
+              <Link href="/grades" className={styles.navTab}>Explore Curriculum</Link>
+            </nav>
+          )}
         </div>
         <div>
           <select value={grade} onChange={(e) => handleGradeChange(e.target.value)} className={styles.gradeSelector}>
@@ -578,6 +584,7 @@ export default function StudentDashboardPortal() {
           </select>
         </div>
       </header>
+
 
       {loading || !data ? (
         <div style={{ textAlign: 'center', padding: '4rem' }}>
@@ -929,13 +936,13 @@ export default function StudentDashboardPortal() {
               </div>
 
               {/* Journey paths & Recommendations */}
-              <div className={styles.standardGrid} style={{ gridTemplateColumns: '2fr 1fr' }}>
+              <div className={styles.standardGrid}>
                 
                 {/* Renders Next skill recommendation */}
-                <div className={styles.glassCard} style={{ borderLeft: '4px solid var(--color-success)', gap: '0.5rem' }}>
+                <div className={styles.glassCard} style={{ borderLeft: '4px solid var(--color-success)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <h4 style={{ margin: 0, textTransform: 'uppercase', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>💡 Recommended Practice Skill</h4>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>{data.recommendations?.nextBestSkill}</h3>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', flexGrow: 1 }}>
                     Recommended next step for your math curriculum.
                   </p>
                   
@@ -944,8 +951,21 @@ export default function StudentDashboardPortal() {
                   </Link>
                 </div>
 
+                {/* Curriculum Directory Card */}
+                <div className={styles.glassCard} style={{ borderLeft: '4px solid var(--color-primary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <h4 style={{ margin: 0, textTransform: 'uppercase', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📚 Curriculum Directory</h4>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Explore All Grades</h3>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', flexGrow: 1 }}>
+                    Practice math, English, and science skills from Kindergarten to Grade 10.
+                  </p>
+                  
+                  <Link href="/grades" className={styles.btnSecondary} style={{ width: 'fit-content', marginTop: '0.5rem', textDecoration: 'none', textAlign: 'center' }}>
+                    🔍 Browse Topics
+                  </Link>
+                </div>
+
                 {/* Badges Earned */}
-                <div className={styles.glassCard}>
+                <div className={styles.glassCard} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <h4 style={{ margin: '0 0 0.75rem 0', textTransform: 'uppercase', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>🏆 Unlocked Badges</h4>
                   <div className={styles.badgeShelf}>
                     {data.kpis.badgesEarned?.map((badge, idx) => (
