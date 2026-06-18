@@ -653,21 +653,28 @@ export default function StudentDashboardPortal() {
                   </div>
 
                   {/* Floating Overlay Header */}
-                  <div className={styles.floatingPathHeader}>
+                  <div className={styles.floatingPathHeader} id="floating-path-header">
                     {/* Row 1: Subject selector pills */}
                     <div className={styles.curriculumPillRow}>
-                      {Object.entries(CURRICULUM_MAP).map(([key, cfg]) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => handleCurriculumChange(key)}
+                      {Object.entries(CURRICULUM_MAP)
+                        .filter(([key]) => {
+                          if (grade && ['LKG', 'UKG'].includes(grade)) {
+                            return CURRICULUM_GRADE_MAP[key] === grade;
+                          }
+                          return true;
+                        })
+                        .map(([key, cfg]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => handleCurriculumChange(key)}
                             className={`${styles.curriculumPill} ${curriculumKey === key ? styles.activeCurriculumPill : ''}`}
                             data-subject={cfg.subject}
-                        >
-                          {cfg.emoji} {cfg.label}
-                          <span>({cfg.skills.length} lessons)</span>
-                        </button>
-                      ))}
+                          >
+                            {cfg.emoji} {cfg.label}
+                            <span>({cfg.skills.length} lessons)</span>
+                          </button>
+                        ))}
                     </div>
 
                     <div className={styles.journeyProgressStrip} aria-label={`${progressPercent}% of this path completed`}>
