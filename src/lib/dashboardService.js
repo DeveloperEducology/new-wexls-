@@ -208,7 +208,62 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
   }
 
   try {
-    const userId = studentId === 'all' ? null : studentId;
+    // 1. Resolve identity: map studentId (which could be user _id string, student _id string, or username)
+    // to the actual username (resolvedUserId) and student profile doc.
+    let resolvedUserId = studentId === 'all' ? null : studentId;
+    let resolvedStudentId = studentId;
+    let resolvedStudent = null;
+    let isRealStudent = false;
+
+    if (studentId && studentId !== 'all') {
+      // Try to find by user _id first (if ObjectId string)
+      let userDoc = null;
+      try {
+        const { ObjectId } = require('mongodb');
+        if (ObjectId.isValid(studentId)) {
+          userDoc = await db.collection('users').findOne({ _id: new ObjectId(studentId) });
+        }
+      } catch (e) {}
+
+      if (!userDoc) {
+        // Try to find by username
+        userDoc = await db.collection('users').findOne({ username: studentId });
+      }
+
+      if (userDoc) {
+        resolvedUserId = userDoc.username || String(userDoc._id);
+        isRealStudent = (userDoc.role === 'student');
+        
+        resolvedStudent = await db.collection('students').findOne({
+          $or: [
+            { userId: resolvedUserId },
+            { _id: `stud_${userDoc._id}` }
+          ]
+        });
+      } else {
+        // Check if studentId is a student profile _id or student profile userId directly
+        resolvedStudent = await db.collection('students').findOne({
+          $or: [
+            { _id: studentId },
+            { userId: studentId }
+          ]
+        });
+        if (resolvedStudent) {
+          resolvedUserId = resolvedStudent.userId;
+          isRealStudent = true;
+        }
+      }
+    }
+
+    if (resolvedStudent) {
+      isRealStudent = true;
+      resolvedStudentId = resolvedStudent._id;
+      if (resolvedStudent.grade) {
+        grade = resolvedStudent.grade;
+      }
+    }
+
+    const userId = resolvedUserId;
     const query = userId ? { userId } : {};
 
     // Retrieve active student attempt statistics
@@ -242,16 +297,10 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
 
     // If database stats are empty, check if this is a real registered student
     if (totalAttempts === 0) {
-      const isRealStudent = await db.collection('students').findOne({
-        $or: [
-          { _id: studentId },
-          { userId: studentId }
-        ]
-      });
       if (isRealStudent) {
-        return getCleanStudentData(studentId, grade);
+        return getCleanStudentData(userId || studentId, grade);
       }
-      return getMockStudentData(studentId, grade);
+      return getMockStudentData(userId || studentId, grade);
     }
 
 
@@ -268,12 +317,19 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
     // Fetch AI insights
     const insightDoc = await insightsColl.findOne({ ...(userId ? { userId } : {}), role: 'student' });
 
-    // Fetch subject breakdown
-    const subjectProgress = [
-      { subject: 'Mathematics', completion: 65, accuracy, mastery: Math.round(masteredSkills * 8) || 45 },
-      { subject: 'English', completion: 75, accuracy: 80, mastery: 60 },
-      { subject: 'Science', completion: 40, accuracy: 70, mastery: 30 }
-    ];
+    // Fetch dynamic journey map and recommendations based on grade band
+    const isEarlyYears = ['Nursery', 'LKG', 'UKG'].includes(grade);
+    const subjectProgress = isEarlyYears 
+      ? [
+          { subject: 'Mathematics', completion: Math.round(masteredSkills * 10) || 0, accuracy, mastery: Math.round(masteredSkills * 10) },
+          { subject: 'English', completion: 0, accuracy: 0, mastery: 0 },
+          { subject: 'Science', completion: 0, accuracy: 0, mastery: 0 }
+        ]
+      : [
+          { subject: 'Mathematics', completion: 65, accuracy, mastery: Math.round(masteredSkills * 8) || 45 },
+          { subject: 'English', completion: 75, accuracy: 80, mastery: 60 },
+          { subject: 'Science', completion: 40, accuracy: 70, mastery: 30 }
+        ];
 
     // Fetch all attempts to calculate dynamic accuracy per skill
     const studentAttempts = userId ? await attemptsColl.find({ userId }).toArray() : [];
@@ -319,60 +375,68 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
       ...dbMastery
     };
 
+    const journeyMap = isEarlyYears
+      ? [
+          { id: 1, title: 'Learn to Count', type: 'Concept', status: 'Learning', desc: 'Identify groups up to 3' },
+          { id: 2, title: 'Compare Quantities', type: 'Practice', status: 'Not Started', desc: 'Match equal groups' },
+          { id: 3, title: 'Visual Phonics', type: 'Practice', status: 'Not Started', desc: 'Identify letter sounds' }
+        ]
+      : [
+          { id: 1, title: 'Visual Counting', type: 'Concept', status: 'Mastered', desc: 'Count items within boxes' },
+          { id: 2, title: 'Expanded Place Value', type: 'Practice', status: 'Proficient', desc: 'Decompose numeric shapes' },
+          { id: 3, title: 'Fraction Manipulatives', type: 'Practice', status: 'Learning', desc: 'Shading fraction pies' },
+          { id: 4, title: 'Summative Arithmetic', type: 'Benchmark', status: 'Not Started', desc: 'Topic-end quiz assessment' }
+        ];
+
     return {
       kpis: {
         questionsAttempted: totalAttempts,
         correctAnswers: correctAttempts,
         incorrectAnswers: totalAttempts - correctAttempts,
         accuracyPercent: accuracy,
-        averageTimePerQuestion: 15.4,
+        averageTimePerQuestion: isEarlyYears ? 8.4 : 15.4,
         hintsUsed: Math.round(totalAttempts * 0.08),
         retryCount: Math.round(totalAttempts * 0.15),
-        streakDays: 5,
-        practiceMinutes: practiceMinutes || 45,
+        streakDays: resolvedStudent?.streakDays || 0,
+        practiceMinutes: practiceMinutes || (isRealStudent ? 0 : 45),
         skillsStarted: masteredSkills + developingSkills + learningSkills,
         skillsCompleted: masteredSkills + developingSkills,
-        skillsMastered: masteredSkills || 2,
-        smartScore: xpEarned || 400,
-        learningLevel: 'Active Learner',
-        badgesEarned: ['First Step', 'Practice Champ'],
-        dailyGoalCompletion: 75,
-        weeklyGoalCompletion: 80,
-        monthlyGoalCompletion: 90
+        skillsMastered: masteredSkills || (isRealStudent ? 0 : 2),
+        smartScore: resolvedStudent?.totalXp || xpEarned || (isRealStudent ? 0 : 400),
+        learningLevel: isRealStudent ? (resolvedStudent?.totalXp > 1000 ? 'Active Learner' : 'Beginner') : 'Active Learner',
+        badgesEarned: resolvedStudent?.badges || (isRealStudent ? [] : ['First Step', 'Practice Champ']),
+        dailyGoalCompletion: isRealStudent ? 0 : 75,
+        weeklyGoalCompletion: isRealStudent ? 0 : 80,
+        monthlyGoalCompletion: isRealStudent ? 0 : 90
       },
       charts: {
         subjectProgress,
         competencyRadar: [
           { subject: 'Recall', value: accuracy },
-          { subject: 'Application', value: 70 },
-          { subject: 'Speed', value: 80 },
-          { subject: 'Consistency', value: 85 },
-          { subject: 'Retention', value: 75 }
+          { subject: 'Application', value: isRealStudent ? 0 : 70 },
+          { subject: 'Speed', value: isRealStudent ? 0 : 80 },
+          { subject: 'Consistency', value: isRealStudent ? 0 : 85 },
+          { subject: 'Retention', value: isRealStudent ? 0 : 75 }
         ],
-        learningTrends: recentSessions.length > 0 ? recentSessions : Array.from({ length: 14 }).map((_, idx) => ({
+        learningTrends: recentSessions.length > 0 ? recentSessions : (isRealStudent ? [] : Array.from({ length: 14 }).map((_, idx) => ({
           date: `Day ${idx + 1}`,
           attempts: 10,
           correct: 8
-        })),
-        journeyMap: [
-          { id: 1, title: 'Visual Counting', type: 'Concept', status: 'Mastered', desc: 'Count items within boxes' },
-          { id: 2, title: 'Expanded Place Value', type: 'Practice', status: 'Proficient', desc: 'Decompose numeric shapes' },
-          { id: 3, title: 'Fraction Manipulatives', type: 'Practice', status: 'Learning', desc: 'Shading fraction pies' },
-          { id: 4, title: 'Summative Arithmetic', type: 'Benchmark', status: 'Not Started', desc: 'Topic-end quiz assessment' }
-        ]
+        }))),
+        journeyMap
       },
       alerts: alerts.map(a => ({ id: String(a._id), type: a.type, severity: a.severity, message: a.message })),
       recommendations: {
-        nextBestSkill: 'Practice Visual Fraction Shading',
-        recommendedPractice: 'Place Value Comparisons Level 2',
-        weakAreas: ['Fraction Denominators'],
-        personalizedPath: ['Shade fraction parts', 'Compare unlike denoms']
+        nextBestSkill: isEarlyYears ? 'Practice Visual Counting to 3' : 'Practice Visual Fraction Shading',
+        recommendedPractice: isEarlyYears ? 'Identify groups in ten frames' : 'Place Value Comparisons Level 2',
+        weakAreas: isEarlyYears ? [] : ['Fraction Denominators'],
+        personalizedPath: isEarlyYears ? ['Count items', 'Match sounds'] : ['Shade fraction parts', 'Compare unlike denoms']
       },
       insights: {
-        strengths: insightDoc?.summary || 'Good progress in place value numeric expansions.',
-        weaknesses: 'Addition involving carrying digits over columns shows slightly high time duration.',
+        strengths: insightDoc?.summary || (isRealStudent ? 'Practice more to generate strengths overview.' : 'Good progress in place value numeric expansions.'),
+        weaknesses: isRealStudent ? 'Practice more to generate weak areas overview.' : 'Addition involving carrying digits over columns shows slightly high time duration.',
         learningStyle: 'Kinesthetic. Benefits from visual blocks manipulatives.',
-        recommendations: insightDoc?.recommendations?.join(', ') || 'Practice with interactive blocks helper.'
+        recommendations: insightDoc?.recommendations?.join(', ') || (isRealStudent ? 'Continue practicing daily worksheets!' : 'Practice with interactive blocks helper.')
       },
       skillsMastery
     };
@@ -394,7 +458,7 @@ export function getMockParentData(childId, grade = 'Grade 5') {
       learningTime: `${studentStats.kpis.practiceMinutes} minutes completed`
     },
     strengthAreas: [
-      { subject: 'Mathematics', details: 'Top 10% in place value expand forms, rapid correct solvers.' },
+      { subject: 'Mathematics', details: 'Top 10% in place value expand forms, raw correct solvers.' },
       { subject: 'Phonics', details: 'Exceptional visual noun matches accuracy.' }
     ],
     improvementAreas: [
@@ -436,7 +500,6 @@ export async function getParentAnalytics(parentId, grade = 'Grade 5') {
       return getMockParentData('stud_ryan', grade);
     }
 
-
     const studentId = childLinks[0].studentId;
     const student = await db.collection('students').findOne({ _id: studentId });
     const studentStats = await getStudentAnalytics(student?.userId || 'ryan_p', grade);
@@ -451,7 +514,7 @@ export async function getParentAnalytics(parentId, grade = 'Grade 5') {
         skillsMastered: studentStats.kpis.skillsMastered,
         weeklyGrowth: '+6% Accuracy delta',
         monthlyGrowth: `+${studentStats.kpis.skillsMastered} Mastered skills`,
-        learningTime: `${studentStats.kpis.practiceMinutes} minutes total`
+        learningTime: `${studentStats.kpis.practiceMinutes || 0} minutes total`
       },
       strengthAreas: [
         { subject: 'Numbers Arithmetic', details: studentStats.insights.strengths || 'Very fast arithmetic operations' }
