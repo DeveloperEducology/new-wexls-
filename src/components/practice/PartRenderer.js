@@ -3317,7 +3317,7 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', display: 'grid', gap: 0, justifyContent: 'center' }}>
+    <div style={{ width: '100%', maxWidth: 900, margin: '0 auto' }}>
       <div
         ref={sceneRef}
         aria-label={`${placements.length} ${part.itemLabel || 'stickers'} placed`}
