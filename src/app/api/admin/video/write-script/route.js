@@ -3,6 +3,22 @@ import { GoogleGenAI } from '@google/genai';
 
 export const runtime = 'nodejs';
 
+function getGeminiClient() {
+  if (process.env.GEMINI_API_KEY) {
+    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+
+  const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+  const location = process.env.GOOGLE_CLOUD_LOCATION || process.env.GOOGLE_CLOUD_REGION || 'us-central1';
+  if (!project) return null;
+
+  return new GoogleGenAI({
+    enterprise: true,
+    project,
+    location,
+  });
+}
+
 export async function POST(request) {
   try {
     const { topic } = await request.json();
@@ -11,8 +27,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Topic is required.' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || '';
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = getGeminiClient();
+    if (!ai) {
+      throw new Error('Google GenAI client not configured. Set GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT in your environment.');
+    }
 
     const systemPrompt = `
       You are an elite educational content creator for preschool kids (5 years old).
