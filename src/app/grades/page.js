@@ -16,6 +16,72 @@ import SiteHeader from '../../components/layout/SiteHeader';
 import HomeHero from '../../components/home/HomeHero';
 import SubjectTabs from '../../components/home/SubjectTabs';
 
+function SkillProgress({ score, isMastered, isCompact = false }) {
+  const isCompleted = score === 100;
+  
+  if (isMastered || isCompleted) {
+    const starColor = isCompleted ? '#22c55e' : '#eab308';
+    const titleText = isCompleted ? 'Completed (100%)' : `Mastered (${score || 80}%)`;
+    
+    return (
+      <svg 
+        className="skill-progress-star" 
+        viewBox="0 0 24 24" 
+        width={isCompact ? 16 : 20} 
+        height={isCompact ? 16 : 20} 
+        fill={starColor} 
+        style={{ 
+          marginLeft: isCompact ? '8px' : 'auto', 
+          flexShrink: 0,
+          display: 'inline-block',
+          verticalAlign: 'middle'
+        }}
+        title={titleText}
+      >
+        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+      </svg>
+    );
+  }
+
+  if (score > 0) {
+    let bgColor, textColor;
+    if (score >= 70) {
+      // Near Mastery / Proficient: Indigo
+      bgColor = 'rgba(99, 102, 241, 0.12)';
+      textColor = '#4f46e5';
+    } else if (score >= 40) {
+      // Progressing: Teal
+      bgColor = 'rgba(20, 184, 166, 0.12)';
+      textColor = '#0d9488';
+    } else {
+      // Practicing: Orange
+      bgColor = 'rgba(249, 115, 22, 0.12)';
+      textColor = '#ea580c';
+    }
+
+    return (
+      <span className="skill-progress-score" style={{ 
+        marginLeft: isCompact ? '8px' : 'auto', 
+        fontSize: isCompact ? '0.7rem' : '0.75rem', 
+        fontWeight: 800,
+        background: bgColor,
+        color: textColor,
+        padding: isCompact ? '1px 6px' : '2px 8px',
+        borderRadius: isCompact ? '10px' : '20px',
+        flexShrink: 0,
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        textAlign: 'center',
+        lineHeight: 1
+      }} title={`Score: ${score}%`}>
+        {score}
+      </span>
+    );
+  }
+
+  return null;
+}
+
 export const dynamic = 'force-dynamic';
 
 function TopicCatalog({ topics = TOPICS }) {
@@ -92,19 +158,7 @@ function TopicSkillsPage({ selectedTopic, topics = TOPICS, skillsMastery = {} })
                       <li key={`${skill}-${idx}`}>
                         <span>{code}</span>
                         <Link href={practiceHref(selected, skill)}>{name}</Link>
-                        {isMastered ? (
-                          <span style={{ marginLeft: '8px', fontSize: '1rem', color: '#f59e0b' }} title="Mastered">⭐</span>
-                        ) : score > 0 ? (
-                          <span style={{
-                            marginLeft: '8px',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            background: 'rgba(99, 102, 241, 0.12)',
-                            color: '#4f46e5',
-                            padding: '1px 6px',
-                            borderRadius: '10px'
-                          }} title={`Score: ${score}`}>{score}</span>
-                        ) : null}
+                        <SkillProgress score={score} isMastered={isMastered} isCompact={true} />
                         <small aria-hidden="true"> ✎ ⊙</small>
                       </li>
                     );
@@ -182,19 +236,7 @@ function GradeLevelCurriculumPage({ topics, activeSubject, skillsMastery = {}, s
                                  <Link key={`${skill}-${idx}`} href={practiceHref(topic, skill)} className="skill-pill">
                                    <span className="skill-code">{code}</span>
                                    <span className="skill-name">{name}</span>
-                                   {isMastered ? (
-                                     <span className="skill-progress-star" style={{ marginLeft: 'auto', fontSize: '1.2rem', color: '#f59e0b' }} title="Mastered">⭐</span>
-                                   ) : score > 0 ? (
-                                     <span className="skill-progress-score" style={{ 
-                                       marginLeft: 'auto', 
-                                       fontSize: '0.75rem', 
-                                       fontWeight: 800,
-                                       background: 'rgba(99, 102, 241, 0.12)',
-                                       color: '#4f46e5',
-                                       padding: '2px 8px',
-                                       borderRadius: '20px'
-                                     }} title={`Score: ${score}`}>{score}</span>
-                                   ) : null}
+                                   <SkillProgress score={score} isMastered={isMastered} isCompact={false} />
                                  </Link>
                                );
                              })}
