@@ -93,18 +93,26 @@ export async function GET(request) {
     }
 
     // Video generation succeeded!
-    console.log(`[Video Status] Generation complete. Merging audio and video for job: ${operationId}`);
-    const generatedVideo = operation.response?.generatedVideos?.[0];
-    if (!generatedVideo || !generatedVideo.video?.uri) {
-      throw new Error('GCP reported completion but did not return video URI.');
+    console.log(`[Video Status] Generation complete. Extracting video track for job: ${operationId}`);
+    
+    let videoBuffer;
+    const vertexVideo = operation.response?.videos?.[0];
+    const studioVideo = operation.response?.generatedVideos?.[0];
+
+    if (vertexVideo && vertexVideo.bytesBase64Encoded) {
+      console.log('[Video Status] Extracting video bytes from inline Vertex AI response.');
+      videoBuffer = Buffer.from(vertexVideo.bytesBase64Encoded, 'base64');
+    } else if (studioVideo && studioVideo.video?.uri) {
+      console.log(`[Video Status] Downloading video file from Studio URI: ${studioVideo.video.uri}`);
+      const videoFetch = await fetch(studioVideo.video.uri);
+      if (!videoFetch.ok) {
+        throw new Error(`Failed to download video file from Google storage: ${videoFetch.statusText}`);
+      }
+      videoBuffer = Buffer.from(await videoFetch.arrayBuffer());
+    } else {
+      console.error('[Video Status] Unexpected operation response shape:', JSON.stringify(operation.response));
+      throw new Error('GCP reported completion but no video bytes or URI was found in the response.');
     }
-
-    const videoUri = generatedVideo.video.uri;
-
-    // 1. Download video bytes (silent mp4)
-    const videoFetch = await fetch(videoUri);
-    if (!videoFetch.ok) throw new Error(`Failed to download video file from Google storage: ${videoFetch.statusText}`);
-    const videoBuffer = Buffer.from(await videoFetch.arrayBuffer());
 
     // 2. Download audio bytes (wav) from R2
     const audioFetch = await fetch(job.audioUrl);
