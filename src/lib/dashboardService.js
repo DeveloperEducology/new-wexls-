@@ -264,7 +264,19 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
     }
 
     const userId = resolvedUserId;
-    const query = userId ? { userId } : {};
+    let userIds = [];
+    if (resolvedUserId) {
+      userIds.push(resolvedUserId);
+    }
+    if (studentId && studentId !== 'all') {
+      userIds.push(studentId);
+      if (resolvedStudent && resolvedStudent._id) {
+        userIds.push(resolvedStudent._id);
+        userIds.push(resolvedStudent._id.replace(/^stud_/, ''));
+      }
+    }
+    userIds = [...new Set(userIds.filter(Boolean))];
+    const query = userIds.length > 0 ? { userId: { $in: userIds } } : {};
 
     // Retrieve active student attempt statistics
     const attemptsColl = db.collection('question_attempts');
@@ -283,15 +295,15 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
     const xpEarned = totalSessions.reduce((sum, s) => sum + (s.xpEarned || 0), 0);
 
     const masteredSkills = await masteryColl.countDocuments({ 
-      ...(userId ? { userId } : {}), 
+      ...(userIds.length > 0 ? { userId: { $in: userIds } } : {}), 
       state: { $in: ['Mastered', 'mastered'] }
     });
     const developingSkills = await masteryColl.countDocuments({ 
-      ...(userId ? { userId } : {}), 
+      ...(userIds.length > 0 ? { userId: { $in: userIds } } : {}), 
       state: { $in: ['Developing', 'Proficient', 'proficient'] }
     });
     const learningSkills = await masteryColl.countDocuments({ 
-      ...(userId ? { userId } : {}), 
+      ...(userIds.length > 0 ? { userId: { $in: userIds } } : {}), 
       state: { $in: ['Learning', 'Needs Remediation', 'learning', 'needs_remediation'] }
     });
 
@@ -315,7 +327,7 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
     const alerts = await alertsColl.find(query).limit(5).toArray();
 
     // Fetch AI insights
-    const insightDoc = await insightsColl.findOne({ ...(userId ? { userId } : {}), role: 'student' });
+    const insightDoc = await insightsColl.findOne({ ...(userIds.length > 0 ? { userId: { $in: userIds } } : {}), role: 'student' });
 
     // Fetch dynamic journey map and recommendations based on grade band
     const isEarlyYears = ['Nursery', 'LKG', 'UKG'].includes(grade);
@@ -332,8 +344,8 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
         ];
 
     // Fetch all attempts to calculate dynamic accuracy per skill
-    const studentAttempts = userId ? await attemptsColl.find({ userId }).toArray() : [];
-    const extraAttempts = userId ? await studentAttemptsColl.find({ userId }).toArray() : [];
+    const studentAttempts = userIds.length > 0 ? await attemptsColl.find({ userId: { $in: userIds } }).toArray() : [];
+    const extraAttempts = userIds.length > 0 ? await studentAttemptsColl.find({ userId: { $in: userIds } }).toArray() : [];
     const allAttempts = [...studentAttempts, ...extraAttempts];
 
     const skillScores = {};
@@ -352,16 +364,16 @@ export async function getStudentAnalytics(studentId, grade = 'Grade 5') {
     const calculatedMastery = {};
     Object.entries(skillScores).forEach(([sId, stats]) => {
       if (stats.total > 0) {
-        const accuracy = Math.round((stats.correct / stats.total) * 100);
+        const accuracyVal = Math.round((stats.correct / stats.total) * 100);
         calculatedMastery[sId] = {
-          score: accuracy,
-          state: accuracy >= 80 ? 'Mastered' : 'Learning'
+          score: accuracyVal,
+          state: accuracyVal >= 80 ? 'Mastered' : 'Learning'
         };
       }
     });
 
     const dbMastery = Object.fromEntries(
-      (userId ? await masteryColl.find({ userId }).toArray() : []).map(m => [
+      (userIds.length > 0 ? await masteryColl.find({ userId: { $in: userIds } }).toArray() : []).map(m => [
         m.skillId,
         {
           score: m.score ?? m.smartScore ?? m.masteryScore ?? 0,
