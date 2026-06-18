@@ -80,7 +80,7 @@ export async function POST(request) {
     // Step 3: Trigger Veo video generation (non-blocking call)
     console.log(`[Video Generator] Initiating video generation via Veo with prompt: ${visualPrompt}`);
     const operation = await ai.models.generateVideos({
-      model: 'veo-3.1-generate-preview',
+      model: 'veo-2.0-generate-001',
       prompt: visualPrompt,
       config: {
         aspectRatio: aspectRatio,
