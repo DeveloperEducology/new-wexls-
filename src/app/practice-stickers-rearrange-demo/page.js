@@ -4,22 +4,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import styles from './rearrange.module.css';
 
-// Initial 6 Stickers (3 image-based, 3 emoji-based)
+// 6 Stickers (3 image-based, 3 emoji-based)
 const INITIAL_STICKERS = [
-  { id: 'st-1', name: 'Penguin', url: '/images/penguin.svg', type: 'image', category: 'animals' },
-  { id: 'st-2', name: 'Rabbit', url: '/images/rabbit.svg', type: 'image', category: 'animals' },
-  { id: 'st-3', name: 'Alex', url: '/images/alex_avatar.png', type: 'image', category: 'mascots' },
-  { id: 'st-4', name: 'Gift', content: '🎁', type: 'emoji', category: 'emojis' },
-  { id: 'st-5', name: 'Heart', content: '❤️', type: 'emoji', category: 'emojis' },
-  { id: 'st-6', name: 'Star', content: '⭐', type: 'emoji', category: 'emojis' },
+  { id: 'st-1', name: 'Penguin', url: '/images/penguin.svg', type: 'image', category: 'animals', width: 14, height: 14 },
+  { id: 'st-2', name: 'Rabbit', url: '/images/rabbit.svg', type: 'image', category: 'animals', width: 14, height: 14 },
+  { id: 'st-3', name: 'Alex', url: '/images/alex_avatar.png', type: 'image', category: 'mascots', width: 15, height: 15 },
+  { id: 'st-4', name: 'Gift', content: '🎁', type: 'emoji', category: 'emojis', width: 14, height: 14 },
+  { id: 'st-5', name: 'Heart', content: '❤️', type: 'emoji', category: 'emojis', width: 14, height: 14 },
+  { id: 'st-6', name: 'Star', content: '⭐', type: 'emoji', category: 'emojis', width: 14, height: 14 },
 ];
 
 export default function StickersRearrangeDemoPage() {
   const [dockItems, setDockItems] = useState(INITIAL_STICKERS);
   const [columns, setColumns] = useState({
-    col1: { id: 'col1', title: 'Animals (A-Z)', category: 'animals', items: [], themeColor: '#3b82f6', bgColorLight: '#eff6ff', borderColor: '#bfdbfe' },
-    col2: { id: 'col2', title: 'Mascots', category: 'mascots', items: [], themeColor: '#8b5cf6', bgColorLight: '#f5f3ff', borderColor: '#ddd6fe' },
-    col3: { id: 'col3', title: 'Emojis (A-Z)', category: 'emojis', items: [], themeColor: '#10b981', bgColorLight: '#ecfdf5', borderColor: '#a7f3d0' }
+    col1: { id: 'col1', title: 'Animals (A-Z)', category: 'animals', items: [], centerX: 16.67, themeColor: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.04)', activeBgColor: 'rgba(59, 130, 246, 0.12)' },
+    col2: { id: 'col2', title: 'Mascots', category: 'mascots', items: [], centerX: 50, themeColor: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.04)', activeBgColor: 'rgba(139, 92, 246, 0.12)' },
+    col3: { id: 'col3', title: 'Emojis (A-Z)', category: 'emojis', items: [], centerX: 83.33, themeColor: '#10b981', bgColor: 'rgba(16, 185, 129, 0.04)', activeBgColor: 'rgba(16, 185, 129, 0.12)' }
   });
 
   // Scoreboard / Game state
@@ -31,15 +31,17 @@ export default function StickersRearrangeDemoPage() {
   // Dragging and UI states
   const [draggedItemInfo, setDraggedItemInfo] = useState(null); // { item, source, colId, index }
   const [selectedDockId, setSelectedDockId] = useState(null); // Mobile click select state
-  const [selectedPlacedInfo, setSelectedPlacedInfo] = useState(null); // Mobile placed select state: { colId, index }
+  const [selectedPlacedId, setSelectedPlacedId] = useState(null); // Mobile placed select state: sticker ID
   const [feedback, setFeedback] = useState({ 
-    text: 'Sort the stickers: Animals in Column 1, Mascots in Column 2, and Emojis in Column 3. Make sure to arrange them in alphabetical order (A-Z)!', 
+    text: 'Drag stickers onto the picture columns! Column 1 is for Animals, Column 2 is for Mascots, and Column 3 is for Emojis. Rearrange them vertically inside the columns to put them in A-Z order!', 
     type: 'info' 
   });
-  const [hoveredGap, setHoveredGap] = useState(null); // { colId, index } for drag-over line highlights
-  const [activeColumnCard, setActiveColumnCard] = useState(null); // Highlight column when dragging over empty areas
+  const [activeColumnId, setActiveColumnId] = useState(null); // Tracks which column is currently hovered under drag
+  const [dragHoveredIndex, setDragHoveredIndex] = useState(null); // Index within active column for insertion highlight
 
-  // Timer Tick loop
+  const canvasRef = useRef(null);
+
+  // Timer loop
   useEffect(() => {
     let interval = null;
     if (!isTimerPaused) {
@@ -68,7 +70,7 @@ export default function StickersRearrangeDemoPage() {
   };
 
   const handleReadPrompt = () => {
-    speak("Sort the stickers: Animals in Column 1, Mascots in Column 2, and Emojis in Column 3. Make sure to arrange them in alphabetical order from A to Z.");
+    speak("Drag stickers onto the picture columns. Column 1 is for Animals, Column 2 is for Mascots, and Column 3 is for Emojis. Rearrange them vertically in alphabetical order from A to Z.");
   };
 
   const handleReset = () => {
@@ -79,42 +81,72 @@ export default function StickersRearrangeDemoPage() {
       col3: { ...columns.col3, items: [] }
     });
     setSelectedDockId(null);
-    setSelectedPlacedInfo(null);
+    setSelectedPlacedId(null);
     setFeedback({
-      text: 'Sort the stickers: Animals in Column 1, Mascots in Column 2, and Emojis in Column 3. Make sure to arrange them in alphabetical order (A-Z)!',
+      text: 'Drag stickers onto the picture columns! Column 1 is for Animals, Column 2 is for Mascots, and Column 3 is for Emojis. Rearrange them vertically inside the columns to put them in A-Z order!',
       type: 'info'
     });
-    speak("Ready to play again! Sort the stickers and arrange them in alphabetical order.");
+    speak("Ready to play again! Sort the stickers on the picture and rearrange them in alphabetical order.");
   };
 
-  // HTML5 Drag and Drop Handlers
+  // Stack Y positions helper
+  const getYCoordinate = (idx, totalItems) => {
+    if (totalItems <= 1) return 50;
+    if (totalItems === 2) {
+      return idx === 0 ? 32 : 68;
+    }
+    // 3 or more items
+    if (idx === 0) return 22;
+    if (idx === 1) return 50;
+    return 78;
+  };
+
+  // Drag Start
   const handleDragStart = (e, item, source, colId = null, index = null) => {
-    const dragPayload = { item, source, colId, index };
-    setDraggedItemInfo(dragPayload);
+    const payload = { item, source, colId, index };
+    setDraggedItemInfo(payload);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
+    e.dataTransfer.setData('application/json', JSON.stringify(payload));
   };
 
-  const handleDragEnd = () => {
-    setDraggedItemInfo(null);
-    setHoveredGap(null);
-    setActiveColumnCard(null);
-  };
-
-  const handleDragOverGap = (e, colId, index) => {
+  // Drag Over Canvas
+  const handleDragOverCanvas = (e) => {
     e.preventDefault();
-    setHoveredGap({ colId, index });
-    setActiveColumnCard(colId);
-  };
+    if (!canvasRef.current) return;
 
-  const handleDragLeaveGap = () => {
-    setHoveredGap(null);
-  };
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-  const handleDropOnGap = (e, targetColId, targetIndex) => {
-    e.preventDefault();
-    e.stopPropagation();
+    // Resolve column
+    let colId = 'col1';
+    if (x > 66.6) colId = 'col3';
+    else if (x > 33.3) colId = 'col2';
     
+    setActiveColumnId(colId);
+
+    // Resolve insertion index based on vertical Y position
+    const colItems = columns[colId].items;
+    const L = colItems.length;
+    let targetIndex = L;
+
+    if (L > 0) {
+      if (y < 35) {
+        targetIndex = 0;
+      } else if (y < 65) {
+        targetIndex = Math.min(1, L);
+      } else {
+        targetIndex = L;
+      }
+    }
+    setDragHoveredIndex(targetIndex);
+  };
+
+  // Drop on Canvas
+  const handleDropOnCanvas = (e) => {
+    e.preventDefault();
+    if (!canvasRef.current) return;
+
     let payload = draggedItemInfo;
     if (!payload) {
       try {
@@ -126,13 +158,40 @@ export default function StickersRearrangeDemoPage() {
     }
 
     if (!payload || !payload.item) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    // Resolve target column
+    let targetColId = 'col1';
+    if (x > 66.6) targetColId = 'col3';
+    else if (x > 33.3) targetColId = 'col2';
+
+    // Resolve target index
+    const colItems = columns[targetColId].items;
+    const L = colItems.length;
+    let targetIndex = L;
+
+    if (L > 0) {
+      if (y < 35) {
+        targetIndex = 0;
+      } else if (y < 65) {
+        targetIndex = Math.min(1, L);
+      } else {
+        targetIndex = L;
+      }
+    }
+
     moveItem(payload.item, payload.source, payload.colId, payload.index, targetColId, targetIndex);
     
+    // Clear drag state
     setDraggedItemInfo(null);
-    setHoveredGap(null);
-    setActiveColumnCard(null);
+    setActiveColumnId(null);
+    setDragHoveredIndex(null);
   };
 
+  // Drop on Dock (Returning stickers back)
   const handleDropOnDock = (e) => {
     e.preventDefault();
     let payload = draggedItemInfo;
@@ -158,7 +217,7 @@ export default function StickersRearrangeDemoPage() {
       };
     });
 
-    // Add back to dock
+    // Add back to dock items
     setDockItems(prev => {
       if (prev.some(d => d.id === payload.item.id)) return prev;
       return [...prev, payload.item];
@@ -166,11 +225,17 @@ export default function StickersRearrangeDemoPage() {
 
     speak(`Returned ${payload.item.name} to dock`);
     setDraggedItemInfo(null);
-    setHoveredGap(null);
-    setActiveColumnCard(null);
+    setActiveColumnId(null);
+    setDragHoveredIndex(null);
   };
 
-  // Helper to move item in state
+  const handleDragEnd = () => {
+    setDraggedItemInfo(null);
+    setActiveColumnId(null);
+    setDragHoveredIndex(null);
+  };
+
+  // State update helper for moving items
   const moveItem = (item, source, sourceColId, sourceIndex, targetColId, targetIndex) => {
     // 1. Remove from source
     if (source === 'dock') {
@@ -191,15 +256,15 @@ export default function StickersRearrangeDemoPage() {
     setColumns(prev => {
       const targetCol = prev[targetColId];
       const nextItems = [...targetCol.items];
-      
-      // Adjust insert index if moving within the same column
+
+      // Adjust index if moving within the same column
       let finalIndex = targetIndex;
       if (source === 'column' && sourceColId === targetColId) {
         if (sourceIndex < targetIndex) {
           finalIndex = Math.max(0, targetIndex - 1);
         }
       }
-      
+
       nextItems.splice(finalIndex, 0, item);
       return {
         ...prev,
@@ -207,12 +272,12 @@ export default function StickersRearrangeDemoPage() {
       };
     });
 
-    speak(`Placed ${item.name} in ${columns[targetColId].title}`);
+    speak(`Placed ${item.name} in Column ${targetColId === 'col1' ? '1' : targetColId === 'col2' ? '2' : '3'}`);
   };
 
   // Mobile Click-to-Move handlers
   const handleDockClick = (item) => {
-    setSelectedPlacedInfo(null);
+    setSelectedPlacedId(null);
     if (selectedDockId === item.id) {
       setSelectedDockId(null);
     } else {
@@ -224,16 +289,16 @@ export default function StickersRearrangeDemoPage() {
   const handlePlacedItemClick = (e, colId, index, item) => {
     e.stopPropagation();
     setSelectedDockId(null);
-    if (selectedPlacedInfo && selectedPlacedInfo.colId === colId && selectedPlacedInfo.index === index) {
-      setSelectedPlacedInfo(null);
+    if (selectedPlacedId === item.id) {
+      setSelectedPlacedId(null);
     } else {
-      setSelectedPlacedInfo({ colId, index, item });
+      setSelectedPlacedId(item.id);
       speak(`Selected ${item.name}`);
     }
   };
 
-  const handleColumnHeaderClick = (colId) => {
-    // If a dock item is selected, move it to the end of this column
+  const handleColumnLaneClick = (colId) => {
+    // If a dock sticker is selected, add it to the column at the end
     if (selectedDockId) {
       const item = dockItems.find(d => d.id === selectedDockId);
       if (item) {
@@ -241,29 +306,30 @@ export default function StickersRearrangeDemoPage() {
         setSelectedDockId(null);
       }
     } 
-    // If a placed item is selected, move it to the end of this column
-    else if (selectedPlacedInfo) {
-      const { item, colId: sourceColId, index: sourceIndex } = selectedPlacedInfo;
-      moveItem(item, 'column', sourceColId, sourceIndex, colId, columns[colId].items.length);
-      setSelectedPlacedInfo(null);
-    }
-  };
+    // If a placed sticker is selected, move it to this column lane
+    else if (selectedPlacedId) {
+      // Find where selectedPlacedId is currently located
+      let foundColId = null;
+      let foundIndex = null;
+      let foundItem = null;
 
-  const handleGapClick = (colId, index) => {
-    if (selectedDockId) {
-      const item = dockItems.find(d => d.id === selectedDockId);
-      if (item) {
-        moveItem(item, 'dock', null, null, colId, index);
-        setSelectedDockId(null);
+      Object.keys(columns).forEach(cid => {
+        const idx = columns[cid].items.findIndex(item => item.id === selectedPlacedId);
+        if (idx !== -1) {
+          foundColId = cid;
+          foundIndex = idx;
+          foundItem = columns[cid].items[idx];
+        }
+      });
+
+      if (foundItem && foundColId !== colId) {
+        moveItem(foundItem, 'column', foundColId, foundIndex, colId, columns[colId].items.length);
       }
-    } else if (selectedPlacedInfo) {
-      const { item, colId: sourceColId, index: sourceIndex } = selectedPlacedInfo;
-      moveItem(item, 'column', sourceColId, sourceIndex, colId, index);
-      setSelectedPlacedInfo(null);
+      setSelectedPlacedId(null);
     }
   };
 
-  const handleRemoveClick = (e, colId, index, item) => {
+  const handlePlacedRemoveClick = (e, colId, index, item) => {
     e.stopPropagation();
     
     // Remove from column
@@ -277,32 +343,26 @@ export default function StickersRearrangeDemoPage() {
       };
     });
 
-    // Add back to dock
+    // Return to dock
     setDockItems(prev => {
       if (prev.some(d => d.id === item.id)) return prev;
       return [...prev, item];
     });
 
-    speak(`Removed ${item.name}`);
-    setSelectedPlacedInfo(null);
+    speak(`Returned ${item.name} to dock`);
+    setSelectedPlacedId(null);
   };
 
-  // Submit & Validation
+  // Submit and Validation
   const handleSubmit = () => {
-    // Check if any items are still in dock
     if (dockItems.length > 0) {
-      const msg = "Place all stickers in the columns first!";
+      const msg = "Place all stickers in the picture columns first!";
       setFeedback({ text: msg, type: 'error' });
       speak(msg);
       setSmartScore(prev => Math.max(0, prev - 5));
       return;
     }
 
-    // Validation rules:
-    // 1. Column 1 (col1): Category must be 'animals', items must be sorted A-Z (Penguin first, Rabbit second)
-    // 2. Column 2 (col2): Category must be 'mascots', items must be 'Alex'
-    // 3. Column 3 (col3): Category must be 'emojis', items must be sorted A-Z (Gift, Heart, Star)
-    
     const col1Items = columns.col1.items;
     const col2Items = columns.col2.items;
     const col3Items = columns.col3.items;
@@ -321,10 +381,10 @@ export default function StickersRearrangeDemoPage() {
 
     if (col1Correct && col2Correct && col3Correct) {
       setFeedback({
-        text: 'Fantastic! All stickers are sorted into the correct columns and arranged perfectly in A-Z order!',
+        text: 'Fantastic! All stickers are sorted and arranged perfectly in A-Z order inside the landscape columns!',
         type: 'success'
       });
-      speak("Excellent work! You sorted and arranged all stickers correctly.");
+      speak("Wonderful work! You solved the puzzle.");
       setSmartScore(prev => Math.min(100, prev + 20));
       setQuestionsAnswered(prev => prev + 1);
 
@@ -334,9 +394,9 @@ export default function StickersRearrangeDemoPage() {
     } else {
       let errorMsg = '';
       if (col1Items.some(i => i.category !== 'animals') || col2Items.some(i => i.category !== 'mascots') || col3Items.some(i => i.category !== 'emojis')) {
-        errorMsg = 'Some stickers are placed in the wrong columns. Check their categories!';
+        errorMsg = 'Check your columns! Make sure animals are in Column 1, mascots in Column 2, and emojis in Column 3.';
       } else {
-        errorMsg = 'Check your alphabetical arrangement. Stickers inside the columns must be ordered A-Z!';
+        errorMsg = 'Check your vertical order! Inside each column, stickers must be ordered A-Z from top to bottom.';
       }
       setFeedback({ text: errorMsg, type: 'error' });
       speak(errorMsg);
@@ -348,7 +408,7 @@ export default function StickersRearrangeDemoPage() {
 
   return (
     <div className={styles.container}>
-      {/* Top Header Navigation */}
+      {/* Top Navigation Header */}
       <nav className={styles.ixlNavBar}>
         <div className={styles.ixlBrand}>
           <div className={styles.ixlLogo}>
@@ -372,7 +432,7 @@ export default function StickersRearrangeDemoPage() {
         <div className={styles.breadcrumbs}>
           <span>Grade 1 Practice</span>
           <span>›</span>
-          <span style={{ color: '#0f172a', fontWeight: '800' }}>Sticker Sorting & Rearranging Demo</span>
+          <span style={{ color: '#0f172a', fontWeight: '800' }}>Sticker Sorting & Rearranging inside Canvas</span>
         </div>
         <Link href="/grades" className={styles.shareBtn}>‹ Back to Catalog</Link>
       </header>
@@ -385,7 +445,7 @@ export default function StickersRearrangeDemoPage() {
             🔄 Reset Placement / Play Again
           </div>
 
-          {/* Prompt header instruction */}
+          {/* Readout instruction prompt */}
           <div className={styles.promptRow}>
             <button 
               type="button" 
@@ -396,132 +456,231 @@ export default function StickersRearrangeDemoPage() {
               🔊
             </button>
             <span>
-              Sort the stickers into columns and <strong>rearrange them in alphabetical order (A-Z)</strong>.
+              Sort the stickers into columns <strong>inside the picture</strong> and rearrange them vertically in A-Z order.
             </span>
           </div>
 
-          {/* 3-Column Dropzone Canvas area */}
-          <div className={styles.columnsContainer}>
-            {Object.values(columns).map((col) => {
-              const isActive = activeColumnCard === col.id;
+          {/* Landscape Canvas Frame divided into 3 vertical lanes */}
+          <div
+            ref={canvasRef}
+            className={styles.canvasFrame}
+            onDragOver={handleDragOverCanvas}
+            onDrop={handleDropOnCanvas}
+            style={{
+              cursor: 'default',
+              position: 'relative',
+              borderRadius: 16,
+              border: '2px solid #cbd5e1',
+              boxShadow: '0 4px 12px rgba(15,23,42,0.05)'
+            }}
+          >
+            {/* Scenery background wallpaper */}
+            <img
+              src="/images/prek_landscape.webp"
+              alt="Scenery background"
+              className={styles.canvasBg}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+
+            {/* Render 3 Column Lane Overlays on top of background scenery */}
+            {Object.values(columns).map((col, index) => {
+              const isColHovered = activeColumnId === col.id;
+              const leftPercent = index * 33.33;
               
               return (
-                <div 
-                  key={col.id} 
-                  className={`${styles.columnCard} ${isActive ? styles.columnCardActive : ''}`}
-                  style={{ 
-                    '--theme-color': col.themeColor,
-                    '--theme-color-light': col.bgColorLight,
-                    '--theme-color-border': col.borderColor
+                <div
+                  key={col.id}
+                  onClick={() => handleColumnLaneClick(col.id)}
+                  style={{
+                    position: 'absolute',
+                    left: `${leftPercent}%`,
+                    top: 0,
+                    width: '33.33%',
+                    height: '100%',
+                    borderRight: index < 2 ? '2.5px dashed rgba(255, 255, 255, 0.45)' : 'none',
+                    background: isColHovered ? col.activeBgColor : col.bgColor,
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '16px 8px',
+                    zIndex: 2
                   }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    if (col.items.length === 0) setActiveColumnCard(col.id);
-                  }}
-                  onDragLeave={() => setActiveColumnCard(null)}
-                  onDrop={(e) => {
-                    if (col.items.length === 0) {
-                      handleDropOnGap(e, col.id, 0);
-                    }
-                  }}
-                  onClick={() => handleColumnHeaderClick(col.id)}
                 >
-                  <div className={styles.columnHeader}>
-                    <h3>{col.title}</h3>
-                    <span className={styles.columnBadge}>{col.items.length} placed</span>
+                  {/* Visual Lane Header Label */}
+                  <div
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.85)',
+                      backdropFilter: 'blur(4px)',
+                      border: `1.5px solid ${col.borderColor}`,
+                      color: col.themeColor,
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.04)'
+                    }}
+                  >
+                    Column {index + 1}: {col.title}
                   </div>
 
-                  <div className={styles.columnDropArea}>
-                    {col.items.length === 0 ? (
-                      <div className={styles.columnPlaceholder}>
-                        Drop stickers here
-                      </div>
-                    ) : (
-                      <>
-                        {/* Gap Dropzone before the first card */}
-                        <div
-                          className={styles.dragIndicatorLine}
-                          style={{
-                            height: hoveredGap?.colId === col.id && hoveredGap?.index === 0 ? '12px' : '6px',
-                            background: hoveredGap?.colId === col.id && hoveredGap?.index === 0 ? col.themeColor : 'transparent',
-                            cursor: 'pointer',
-                          }}
-                          onDragOver={(e) => handleDragOverGap(e, col.id, 0)}
-                          onDragLeave={handleDragLeaveGap}
-                          onDrop={(e) => handleDropOnGap(e, col.id, 0)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGapClick(col.id, 0);
-                          }}
-                        />
+                  {/* Empty state helper target inside column lane */}
+                  {col.items.length === 0 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        border: '2px dashed rgba(255, 255, 255, 0.6)',
+                        borderRadius: 12,
+                        width: '76px',
+                        height: '76px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        textAlign: 'center',
+                        background: 'rgba(0,0,0,0.06)'
+                      }}
+                    >
+                      Drop Here
+                    </div>
+                  )}
 
-                        {col.items.map((item, idx) => {
-                          const isItemSelected = selectedPlacedInfo?.colId === col.id && selectedPlacedInfo?.index === idx;
-                          const isDragging = draggedItemInfo?.item?.id === item.id;
-                          
-                          return (
-                            <React.Fragment key={item.id}>
-                              <div
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, item, 'column', col.id, idx)}
-                                onDragEnd={handleDragEnd}
-                                onClick={(e) => handlePlacedItemClick(e, col.id, idx, item)}
-                                className={`${styles.placedStickerItem} ${isItemSelected ? styles.placedStickerItemActive : ''} ${isDragging ? styles.placedStickerItemDragging : ''}`}
-                                title="Drag to reorder, click to select / remove"
-                              >
-                                <div className={styles.stickerIconWrapper}>
-                                  {item.type === 'image' ? (
-                                    <img src={item.url} alt={item.name} className={styles.stickerIconImage} />
-                                  ) : (
-                                    <span className={styles.stickerIconEmoji}>{item.content}</span>
-                                  )}
-                                </div>
-                                <div className={styles.stickerInfo}>
-                                  <span className={styles.stickerName}>{item.name}</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleRemoveClick(e, col.id, idx, item)}
-                                  className={styles.stickerRemoveBtn}
-                                  title="Return back to dock"
-                                >
-                                  ✕
-                                </button>
-                                <span className={styles.stickerDragHandle}>☰</span>
-                              </div>
-
-                              {/* Gap Dropzone after this card */}
-                              <div
-                                className={styles.dragIndicatorLine}
-                                style={{
-                                  height: hoveredGap?.colId === col.id && hoveredGap?.index === idx + 1 ? '12px' : '6px',
-                                  background: hoveredGap?.colId === col.id && hoveredGap?.index === idx + 1 ? col.themeColor : 'transparent',
-                                  cursor: 'pointer',
-                                }}
-                                onDragOver={(e) => handleDragOverGap(e, col.id, idx + 1)}
-                                onDragLeave={handleDragLeaveGap}
-                                onDrop={(e) => handleDropOnGap(e, col.id, idx + 1)}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleGapClick(col.id, idx + 1);
-                                }}
-                              />
-                            </React.Fragment>
-                          );
-                        })}
-                      </>
-                    )}
-                  </div>
+                  {/* Visual drag insertion line indicator inside the column lane */}
+                  {isColHovered && dragHoveredIndex !== null && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '10%',
+                        width: '80%',
+                        height: '4px',
+                        background: '#ffffff',
+                        boxShadow: '0 0 10px #ffffff, 0 0 4px #2563eb',
+                        borderRadius: '2px',
+                        zIndex: 15,
+                        top: `${
+                          col.items.length === 0
+                            ? 50
+                            : dragHoveredIndex === 0
+                            ? 22 - 7
+                            : dragHoveredIndex === 1
+                            ? (col.items.length === 1 ? 78 - 7 : 50 - 7)
+                            : 78 + 7
+                        }%`,
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  )}
                 </div>
               );
+            })}
+
+            {/* Render Placed Stickers Snap-positioned in column lanes on canvas */}
+            {Object.entries(columns).flatMap(([colId, col]) => {
+              const totalItems = col.items.length;
+              return col.items.map((item, idx) => {
+                const yPos = getYCoordinate(idx, totalItems);
+                const isSelected = selectedPlacedId === item.id;
+                
+                return (
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, item, 'column', colId, idx)}
+                    onDragEnd={handleDragEnd}
+                    onClick={(e) => handlePlacedItemClick(e, colId, idx, item)}
+                    style={{
+                      position: 'absolute',
+                      left: `${col.centerX}%`,
+                      top: `${yPos}%`,
+                      width: '68px',
+                      height: '68px',
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: 10,
+                      cursor: 'grab',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {/* Visual sticker container wrapper inside canvas */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        background: '#ffffff',
+                        border: isSelected ? '3px solid #0ea5e9' : '1.5px solid rgba(0,0,0,0.1)',
+                        borderRadius: '12px',
+                        padding: '4px',
+                        boxShadow: isSelected 
+                          ? '0 0 15px rgba(14,165,233,0.5), 0 4px 6px rgba(0,0,0,0.1)' 
+                          : '0 4px 8px rgba(0,0,0,0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {item.type === 'image' ? (
+                        <img 
+                          src={item.url} 
+                          alt={item.name} 
+                          style={{ width: '85%', height: '85%', objectFit: 'contain', pointerEvents: 'none' }} 
+                        />
+                      ) : (
+                        <span style={{ fontSize: '32px', pointerEvents: 'none', lineHeight: 1 }}>{item.content}</span>
+                      )}
+
+                      {/* Small floating close button on card hover or selection to return back to dock */}
+                      <button
+                        type="button"
+                        onClick={(e) => handlePlacedRemoveClick(e, colId, idx, item)}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: '#ef4444',
+                          color: '#ffffff',
+                          border: '1.5px solid #ffffff',
+                          fontSize: '9px',
+                          fontWeight: '900',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                          zIndex: 12
+                        }}
+                        title="Return back to dock"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
             })}
           </div>
 
           {/* Sticker Dock Row */}
           <div 
-            className={`${styles.dockPanel} ${activeColumnCard === 'dock' ? styles.dockPanelActive : ''}`}
+            className={styles.dockPanel}
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDropOnDock}
+            style={{ borderRadius: 16 }}
           >
             {INITIAL_STICKERS.map((m, index) => {
               const isPlaced = !dockItems.some(item => item.id === m.id);
@@ -546,7 +705,7 @@ export default function StickersRearrangeDemoPage() {
                         onDragEnd={handleDragEnd}
                         onClick={() => handleDockClick(m)}
                         className={`${styles.dockSlot} ${isSelected ? styles.dockSlotSelected : ''} ${isDragging ? styles.dockSlotDragging : ''}`}
-                        title={`Drag ${m.name} into columns`}
+                        title={`Drag ${m.name} onto the canvas columns`}
                         style={{ border: 'none', boxShadow: 'none', width: '100%', height: '100%' }}
                       >
                         {m.type === 'image' ? (
@@ -563,7 +722,7 @@ export default function StickersRearrangeDemoPage() {
             })}
           </div>
 
-          {/* Statistics summary */}
+          {/* Statistics summary footer */}
           <div className={styles.dockCount}>
             <span>Stickers Placed: <strong>{totalPlaced} / {INITIAL_STICKERS.length}</strong></span>
             <span>Stickers in Dock: <strong>{dockItems.length}</strong></span>
