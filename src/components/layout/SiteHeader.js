@@ -77,6 +77,20 @@ export default function SiteHeader() {
         <div className="site-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {!loading && session ? (
             <>
+              {/* Competitive Prep Link */}
+              <Link href="/exam-prep" style={{
+                textDecoration: 'none',
+                color: '#4f46e5',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                marginRight: '15px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                🏆 Competitive Prep
+              </Link>
+
               {/* Logged in User Badge */}
               <Link href={getDashboardHref(session.role)} style={{ textDecoration: 'none' }}>
                 <div className="user-badge" style={{
@@ -144,6 +158,9 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
+              <Link href="/exam-prep" style={{ textDecoration: 'none', color: '#4f46e5', fontWeight: 700, fontSize: '0.9rem', marginRight: '15px' }}>
+                🏆 Competitive Prep
+              </Link>
               <Link href="/docs/option-pooling" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem' }}>
                 Option Pooling Docs
               </Link>

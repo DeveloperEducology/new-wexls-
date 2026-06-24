@@ -84,46 +84,56 @@ function cleanText(value) {
 }
 
 function InlineMarkdown({ text }) {
-  return String(text || '').split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
-    const match = piece.match(/^\*\*([^*]+)\*\*$/);
-    if (match) return <strong key={index}>{match[1]}</strong>;
-    
-    const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
-    if (imgMatch) {
-      return (
-        <img
-          key={index}
-          src={imgMatch[1]}
-          alt="target word"
-          style={{
-            display: 'inline-block',
-            height: '1.6em',
-            verticalAlign: 'middle',
-            margin: '0 6px',
-            borderRadius: '4px',
-            objectFit: 'contain'
-          }}
-        />
-      );
-    }
-    
-    const subSegments = piece.split(/(\$[^\$]+\$)/g);
-    return (
-      <span key={index}>
-        {subSegments.map((subPiece, subIndex) => {
-          const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-          if (mathMatch) {
-            return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
-          }
-          return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
-        })}
-      </span>
-    );
-  });
+  const normalizedText = String(text || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\/n/g, '\n');
+  return (
+    <span style={{ whiteSpace: 'pre-line' }}>
+      {normalizedText.split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
+        const match = piece.match(/^\*\*([^*]+)\*\*$/);
+        if (match) return <strong key={index}>{match[1]}</strong>;
+        
+        const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
+        if (imgMatch) {
+          return (
+            <img
+              key={index}
+              src={imgMatch[1]}
+              alt="target word"
+              style={{
+                display: 'inline-block',
+                height: '1.6em',
+                verticalAlign: 'middle',
+                margin: '0 6px',
+                borderRadius: '4px',
+                objectFit: 'contain'
+              }}
+            />
+          );
+        }
+        
+        const subSegments = piece.split(/(\$[^\$]+\$)/g);
+        return (
+          <span key={index}>
+            {subSegments.map((subPiece, subIndex) => {
+              const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+              if (mathMatch) {
+                return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
+              }
+              return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+            })}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
-  const pieces = String(text || '').split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
+  const normalizedText = String(text || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\/n/g, '\n');
+  const pieces = normalizedText.split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
   const renderTextPiece = (piece, keyPrefix) => (
     String(piece).split('\n').map((line, lineIndex, lines) => (
       <span key={`${keyPrefix}-${lineIndex}`}>
@@ -285,7 +295,8 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
   }, [speakTextValue, content]);
 
   useEffect(() => {
-    if (isPreK && !isAnswered && content && !spokenRef.current && !part.noAutoplay && (partIndex === undefined || partIndex === 0)) {
+    const shouldAutoplay = (isPreK || question?.layoutConfig?.audio === true) && question?.layoutConfig?.audio !== false;
+    if (shouldAutoplay && !isAnswered && content && !spokenRef.current && !part.noAutoplay && (partIndex === undefined || partIndex === 0)) {
       spokenRef.current = true;
       const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
       const isAudioToLetterSkill = skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
@@ -330,7 +341,7 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
         fontSize: isPreK ? '22px' : responsivePx(part.style?.fontSize, 16, 22),
         fontWeight: isPreK ? 950 : (part.style?.fontWeight || 400),
         color: part.style?.color || '#334155',
-        lineHeight: 1.4,
+        lineHeight: 1.85,
         textAlign: 'left',
         width: '100%',
         fontFamily: isPreK ? 'var(--font-outfit), sans-serif' : undefined,
@@ -3034,13 +3045,13 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
       return { x, y, isSnapped: false, type: mascot.type };
     }
     
-    const matchingTargets = part.targets?.filter(t => t.type === mascot.type) || [];
-    if (matchingTargets.length === 0) return { x, y, isSnapped: false, type: mascot.type };
+    const allTargets = part.targets || [];
+    if (allTargets.length === 0) return { x, y, isSnapped: false, type: mascot.type };
     
-    // Find the matching target closest to the current pointer position (x, y)
-    let closestTarget = matchingTargets[0];
+    // Find the closest target to the current position (x, y)
+    let closestTarget = allTargets[0];
     let minDistance = Infinity;
-    for (const targetItem of matchingTargets) {
+    for (const targetItem of allTargets) {
       const dx = x - targetItem.x;
       const dy = y - targetItem.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -3188,9 +3199,14 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
       } else {
         const exists = nextPlacements.some((placement) => placement.id === drag.id);
         if (!exists) {
-          const fallback = initialPositions[drag.id % initialPositions.length];
-          const snapResult = checkSnap(drag.id, fallback.x, fallback.y);
-          nextPlacements = [...nextPlacements, { id: drag.id, ...snapResult }];
+          if (isShadowMatch) {
+            // For shadow match click-to-place, do NOT place the sticker on canvas on simple click.
+            // Just select/toggle it in the tray.
+          } else {
+            const fallback = initialPositions[drag.id % initialPositions.length];
+            const snapResult = checkSnap(drag.id, fallback.x, fallback.y);
+            nextPlacements = [...nextPlacements, { id: drag.id, ...snapResult }];
+          }
         }
       }
     } else {
@@ -3201,6 +3217,17 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
         }
         return placement;
       });
+      // Handle displacement: if two stickers are snapped to the same target coordinates,
+      // return the older one (which is NOT drag.id) to the tray.
+      const newPlaced = nextPlacements.find(p => p.id === drag.id);
+      if (newPlaced && newPlaced.isSnapped) {
+        nextPlacements = nextPlacements.filter(p => 
+          p.id === drag.id || 
+          !p.isSnapped || 
+          Math.abs(p.x - newPlaced.x) >= 0.1 || 
+          Math.abs(p.y - newPlaced.y) >= 0.1
+        );
+      }
       if (part.mode === 'column_sort') {
         setSelectedPlacementId(null);
       }
@@ -3209,7 +3236,9 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     placementsRef.current = nextPlacements;
     setPlacements(nextPlacements);
     emitPlacements(nextPlacements);
-    setSelectedTrayId(null);
+    if (!isShadowMatch || drag.moved || drag.source === 'scene') {
+      setSelectedTrayId(null);
+    }
     setDraggingId(null);
     dragRef.current = null;
   };
@@ -3233,21 +3262,36 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
     };
   }, [draggingId, isAnswered]);
 
-  const placeSelected = (event) => {
+  const placeOnTarget = (target) => {
     if (selectedTrayId === null || isAnswered) return;
+    const mascot = part.stickers?.find(s => s.id === selectedTrayId);
+    if (!mascot) return;
 
-    const stickerInfo = isShadowMatch ? part.stickers?.find(s => s.id === selectedTrayId) : null;
-    const sWidth = stickerInfo ? (stickerInfo.widthPercent || stickerInfo.width) : stickerWidth;
-    const sHeight = stickerInfo ? (stickerInfo.heightPercent || stickerInfo.height) : stickerHeight;
+    // Handle displacement: if another sticker is already snapped to this target, return it to the tray
+    const existingStickerAtTarget = placements.find(p => Math.abs(p.x - target.x) < 0.1 && Math.abs(p.y - target.y) < 0.1);
+    let nextPlacements = placements.filter(p => p.id !== selectedTrayId);
+    if (existingStickerAtTarget) {
+      nextPlacements = nextPlacements.filter(p => p.id !== existingStickerAtTarget.id);
+    }
 
-    const position = positionFromPointer(event.clientX, event.clientY, 0, 0, sWidth, sHeight);
-    if (!position) return;
+    nextPlacements.push({ 
+      id: selectedTrayId, 
+      x: target.x, 
+      y: target.y, 
+      isSnapped: true,
+      type: mascot.type
+    });
 
-    const snapResult = checkSnap(selectedTrayId, position.x, position.y);
-    const nextPlacements = [...placements, { id: selectedTrayId, ...snapResult }];
     placementsRef.current = nextPlacements;
     setPlacements(nextPlacements);
     emitPlacements(nextPlacements);
+    setSelectedTrayId(null);
+  };
+
+  const placeSelected = (event) => {
+    if (selectedTrayId === null || isAnswered) return;
+    
+    // In shadow match click-to-place mode, clicking the background canvas deselects the highlighted sticker
     setSelectedTrayId(null);
   };
 
@@ -3305,13 +3349,48 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
 
   const renderSticker = (label, stickerInfo, isSelected = false) => {
     const imgUrl = stickerInfo?.imageUrl || stickerImageUrl;
-    const content = stickerInfo?.content || stickerContent;
+    const content = stickerInfo?.content || stickerInfo?.name || stickerContent;
     const filterStyle = isSelected
       ? 'drop-shadow(0 0 10px rgba(14, 165, 233, 0.95)) drop-shadow(0 0 3px rgba(14, 165, 233, 0.75))'
       : 'none';
-    return imgUrl ? (
-      <img src={imgUrl} alt={label} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', filter: filterStyle }} />
-    ) : (
+
+    if (imgUrl) {
+      return (
+        <img src={imgUrl} alt={label} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', filter: filterStyle }} />
+      );
+    }
+
+    const isTextLabel = typeof content === 'string' && /[a-zA-Z0-9]/.test(content);
+    if (isTextLabel) {
+      return (
+        <span 
+          style={{ 
+            fontSize: 'clamp(11px, 2vw, 15px)', 
+            fontWeight: '600', 
+            color: '#1e293b', 
+            background: '#f8fafc', 
+            border: '2px solid #cbd5e1', 
+            borderRadius: '8px', 
+            padding: '2px 6px', 
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            textAlign: 'center',
+            boxSizing: 'border-box',
+            userSelect: 'none',
+            wordBreak: 'break-word',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+            filter: filterStyle
+          }}
+        >
+          {content}
+        </span>
+      );
+    }
+
+    return (
       <span aria-hidden="true" style={{ fontSize: 'clamp(38px, 7vw, 68px)', lineHeight: 1, filter: filterStyle }}>{content}</span>
     );
   };
@@ -3330,12 +3409,12 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
         style={{
           position: 'relative',
           width: '100%',
-          aspectRatio: part.sceneImageUrl ? undefined : '16 / 7',
-          minHeight: part.sceneImageUrl ? undefined : 230,
+          aspectRatio: part.sceneImageUrl || part.mobileSceneImageUrl || part.sceneImageUrlMobile ? undefined : '16 / 7',
+          minHeight: part.sceneImageUrl || part.mobileSceneImageUrl || part.sceneImageUrlMobile ? undefined : 230,
           overflow: 'hidden',
           border: isOutsideDragged ? '3px dashed #fb8c00' : '2px solid #93c5fd',
           borderRadius: part.mode === 'column_sort' ? '18px' : '18px 18px 0 0',
-          background: part.sceneImageUrl
+          background: part.sceneImageUrl || part.mobileSceneImageUrl || part.sceneImageUrlMobile
             ? '#ffffff'
             : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
           boxShadow: isOutsideDragged ? '0 0 15px rgba(251, 140, 0, 0.5), inset 0 0 20px rgba(251, 140, 0, 0.2)' : 'inset 0 -18px 0 rgba(32, 108, 43, 0.13)',
@@ -3343,19 +3422,24 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
           transition: 'all 0.2s ease',
         }}
       >
-        {part.sceneImageUrl ? (
-          <img
-            src={part.sceneImageUrl}
-            alt="Scene"
-            draggable={false}
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          />
+        {part.sceneImageUrl || part.mobileSceneImageUrl || part.sceneImageUrlMobile ? (
+          <picture style={{ display: 'block', width: '100%', height: 'auto', pointerEvents: 'none', userSelect: 'none' }}>
+            {(part.mobileSceneImageUrl || part.sceneImageUrlMobile) && (
+              <source media="(max-width: 768px)" srcSet={part.mobileSceneImageUrl || part.sceneImageUrlMobile} />
+            )}
+            <img
+              src={part.sceneImageUrl || part.mobileSceneImageUrl || part.sceneImageUrlMobile}
+              alt="Scene"
+              draggable={false}
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            />
+          </picture>
         ) : null}
 
         {/* Render 2 Column Lane Labels and Separator for column_sort */}
@@ -3416,35 +3500,99 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
           </>
         ) : null}
 
+        {/* Scoped CSS animations for shadow match click-to-place */}
+        {isShadowMatch && (
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes activePulse {
+              0% { box-shadow: 0 0 8px 2px rgba(37, 99, 235, 0.4); background-color: rgba(219, 234, 254, 0.7); }
+              50% { box-shadow: 0 0 20px 8px rgba(37, 99, 235, 0.65); background-color: rgba(219, 234, 254, 0.9); }
+              100% { box-shadow: 0 0 8px 2px rgba(37, 99, 235, 0.4); background-color: rgba(219, 234, 254, 0.7); }
+            }
+          `}} />
+        )}
+
         {/* Render target shadows behind stickers */}
         {isShadowMatch && part.targets?.map((target) => {
-          const matchedItem = placements.find(item => item.type === target.type && item.isSnapped && Math.abs(item.x - target.x) < 0.1 && Math.abs(item.y - target.y) < 0.1);
+          const matchedItem = placements.find(item => item.isSnapped && Math.abs(item.x - target.x) < 0.1 && Math.abs(item.y - target.y) < 0.1);
           const isSnapped = !!matchedItem;
           const mascot = part.stickers?.find(s => s.type === target.type);
+          const hasImage = !!mascot?.imageUrl;
+          const isTargetActive = selectedTrayId !== null;
+          const isAnyStickerSelected = selectedTrayId !== null;
+
+          let borderVal = 'none';
+          if (isSnapped) {
+            borderVal = 'none';
+          } else if (isAnyStickerSelected) {
+            borderVal = '3px dashed #2563eb';
+          } else {
+            borderVal = hasImage ? 'none' : '2px dashed #94a3b8';
+          }
+
+          let borderRadiusVal = '8px';
+          if (isSnapped) {
+            borderRadiusVal = hasImage ? '0' : '8px';
+          } else if (isAnyStickerSelected) {
+            borderRadiusVal = '8px';
+          } else {
+            borderRadiusVal = hasImage ? '0' : '8px';
+          }
+
+          let bgColorVal = 'transparent';
+          if (isSnapped) {
+            bgColorVal = 'transparent';
+          } else if (isAnyStickerSelected) {
+            bgColorVal = 'rgba(219, 234, 254, 0.85)';
+          } else {
+            bgColorVal = hasImage ? 'transparent' : 'rgba(241, 245, 249, 0.45)';
+          }
+
+          let filterVal = 'none';
+          if (isSnapped) {
+            filterVal = 'brightness(1.1) contrast(1.1) drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))';
+          } else if (isAnyStickerSelected) {
+            filterVal = hasImage ? (part.hideTargetShadows ? 'opacity(0)' : 'opacity(0.65)') : 'none';
+          } else {
+            filterVal = hasImage ? (part.hideTargetShadows ? 'opacity(0)' : 'brightness(0) opacity(0.25)') : 'none';
+          }
+
+          const isPointerActive = !isAnswered && isAnyStickerSelected;
 
           return (
             <div
               key={target.id}
+              onPointerDown={(event) => {
+                if (selectedTrayId !== null && !isAnswered) {
+                  event.stopPropagation();
+                  placeOnTarget(target);
+                }
+              }}
               style={{
                 position: 'absolute',
                 left: `${target.x}%`,
                 top: `${target.y}%`,
                 width: `${target.widthPercent || target.width || 15}%`,
                 height: `${target.heightPercent || target.height || 15}%`,
-                transform: 'translate(-50%, -50%)',
-                backgroundImage: mascot?.imageUrl ? `url(${mascot.imageUrl})` : 'none',
+                transform: (!isSnapped && isTargetActive) ? 'translate(-50%, -50%) scale(1.05)' : 'translate(-50%, -50%)',
+                backgroundImage: hasImage ? `url(${mascot.imageUrl})` : 'none',
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
-                filter: isSnapped
-                  ? 'brightness(1.1) contrast(1.1) drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))'
-                  : (part.hideTargetShadows ? 'opacity(0)' : 'brightness(0) opacity(0.25)'), // Silhouette shadow
-                transition: 'filter 0.3s ease',
-                pointerEvents: 'none',
+                border: borderVal,
+                borderRadius: borderRadiusVal,
+                backgroundColor: bgColorVal,
+                boxShadow: (!isSnapped && isTargetActive) ? '0 0 12px 4px rgba(37, 99, 235, 0.3)' : 'none',
+                animation: (!isSnapped && isTargetActive) ? 'activePulse 1.5s infinite ease-in-out' : 'none',
+                filter: filterVal,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                pointerEvents: isPointerActive ? 'auto' : 'none',
+                cursor: isPointerActive ? 'pointer' : 'default',
+                zIndex: isPointerActive ? 15 : 0,
               }}
             />
           );
         })}
+
 
         {placements.map((placement) => {
           const stickerInfo = isShadowMatch && part.stickers

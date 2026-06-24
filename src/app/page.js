@@ -55,6 +55,26 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Competitive Exam Prep Section */}
+        <section className="landing-features-section" style={{ background: '#f1f5f9', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '60px 3vw' }}>
+          <div className="section-header" style={{ marginBottom: '32px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Calibrated for Entrances</span>
+            <h2>Competitive Exam Prep</h2>
+            <p>Accelerate JNVST, AISSEE (Sainik School), and entrance exams prep with real-time adaptive drills.</p>
+          </div>
+
+          <div style={{ maxWidth: '800px', margin: '0 auto', background: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+            <div style={{ flex: '1 1 500px' }}>
+              <span className="badge badge-success" style={{ background: '#dcfce7', color: '#15803d', fontWeight: 800, fontSize: '11px', padding: '4px 10px', borderRadius: '9999px', textTransform: 'uppercase', display: 'inline-block' }}>JNVST (Class 6) Active</span>
+              <h3 style={{ fontSize: '22px', fontWeight: 800, marginTop: '8px', marginBottom: '6px' }}>Jawahar Navodaya Vidyalaya Selection Test</h3>
+              <p style={{ color: '#475569', fontSize: '15px', margin: 0 }}>Practice Mental Ability (MAT), Arithmetic, and Language passages aligned to actual cutoffs.</p>
+            </div>
+            <Link href="/exam-prep" style={{ margin: 0, padding: '12px 24px', fontSize: '15px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white', borderRadius: '12px', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(99, 102, 241, 0.15)' }}>
+              Start JNVST Prep ›
+            </Link>
+          </div>
+        </section>
+
         {/* Subjects Covered Section */}
         <section className="landing-subjects-section" aria-label="Subjects Covered">
           <div className="section-header">

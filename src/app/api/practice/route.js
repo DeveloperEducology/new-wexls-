@@ -123,14 +123,30 @@ async function resolveTemplatePools(templateDoc) {
     }
   }
   
+  const matchesPropertyFilter = (option, property, value) => {
+    const prop = String(property || '').trim();
+    const expected = String(value || '').trim();
+    if (!prop || !expected) return true;
+    const actual = option?.[prop];
+    if (Array.isArray(actual)) {
+      return actual.map(entry => String(entry).toLowerCase()).includes(expected.toLowerCase());
+    }
+    return String(actual ?? '').toLowerCase() === expected.toLowerCase();
+  };
+
   // Inject variable lists from loadedPools
   if (Array.isArray(copy.variables)) {
     copy.variables = copy.variables.map(v => {
       if (v.type === 'pool_selection' && v.poolId) {
         const poolDoc = loadedPools[v.poolId];
         if (poolDoc) {
-          const category = v.category || 'targets';
-          const words = poolDoc.pools?.[category] || [];
+          const targetCats = v.targetCategories?.length > 0 ? v.targetCategories 
+                            : v.category ? [v.category] 
+                            : ['targets'];
+          let words = targetCats.flatMap(cat => poolDoc.pools?.[cat] || []);
+          if (v.targetProperty && v.targetValue) {
+            words = words.filter(item => matchesPropertyFilter(item, v.targetProperty, v.targetValue));
+          }
           return {
             ...v,
             items: words
@@ -147,11 +163,28 @@ async function resolveTemplatePools(templateDoc) {
       if (ds.type === 'pool_selection' && ds.poolId) {
         const poolDoc = loadedPools[ds.poolId];
         if (poolDoc) {
-          const category = ds.category || 'targets';
-          const words = poolDoc.pools?.[category] || [];
+          const targetCats = ds.targetCategories?.length > 0 ? ds.targetCategories 
+                            : ds.category ? [ds.category] 
+                            : ['targets'];
+          let correctItems = targetCats.flatMap(cat => poolDoc.pools?.[cat] || []);
+          const targetSet = new Set(targetCats);
+          let distractorItems = Object.entries(poolDoc.pools || {})
+            .filter(([cat]) => !targetSet.has(cat) && cat !== 'correctPool' && cat !== 'distractorPool')
+            .flatMap(([, items]) => items);
+          const categoryLabel = poolDoc.categoryLabels?.[targetCats[0]] || targetCats[0] || '';
+          
+          if (ds.targetProperty && ds.targetValue) {
+            correctItems = correctItems.filter(item => matchesPropertyFilter(item, ds.targetProperty, ds.targetValue));
+          }
+          if (ds.distractorProperty && ds.distractorValue) {
+            distractorItems = distractorItems.filter(item => matchesPropertyFilter(item, ds.distractorProperty, ds.distractorValue));
+          }
+
           return {
             ...ds,
-            items: words
+            items: correctItems,
+            _distractorItems: distractorItems,
+            _categoryLabel: categoryLabel
           };
         }
       }
@@ -160,6 +193,52 @@ async function resolveTemplatePools(templateDoc) {
   }
   
   return copy;
+}
+
+async function evaluateUniversalOrPoolTemplate({
+  resolvedTemplateDoc,
+  seed,
+  difficulty,
+  searchParams,
+  grade
+}) {
+  if (searchParams) {
+    const seenItems = (searchParams.get('seenItems') || '').split(',').filter(Boolean);
+    resolvedTemplateDoc._seenItemIds = seenItems;
+  }
+
+  if (resolvedTemplateDoc.type === 'dynamic_pool') {
+    const { findVocabularyPool } = await import('../../../lib/practice/questionBank/questionRepository.js');
+    const { generateFromDynamicPool } = await import('../../../lib/practice/engine/DynamicPoolGenerator.js');
+    
+    if (resolvedTemplateDoc.poolId) {
+      const poolDoc = await findVocabularyPool(resolvedTemplateDoc.poolId);
+      if (poolDoc) {
+        resolvedTemplateDoc.pools = poolDoc.pools;
+        resolvedTemplateDoc.categoryLabels = poolDoc.categoryLabels;
+      }
+    }
+    
+    const historyContext = {
+      correctStreak: Number(searchParams.get('correctStreak') || 0),
+      practiceLevel: Number(searchParams.get('practiceLevel') || 1),
+      levelStreak: Number(searchParams.get('levelStreak') || 0),
+      lastResult: searchParams.get('lastResult') || 'none',
+      remediationActive: searchParams.get('remediationActive') === 'true',
+      remediationStep: Number(searchParams.get('remediationStep') || 0),
+    };
+    
+    return generateFromDynamicPool(
+      resolvedTemplateDoc,
+      seed,
+      difficulty,
+      historyContext,
+      grade
+    );
+  }
+  
+  const { evaluateTemplate } = await import('../../../lib/practice/generators/universalEvaluator.js');
+  return evaluateTemplate(resolvedTemplateDoc, seed);
 }
 
 export async function GET(request) {
@@ -247,19 +326,64 @@ export async function GET(request) {
   // Look up the skill node in the DB if available to resolve centralized templates
 
   let skillNode = null;
+  let matchingNodes = null;
+  let nodeBySkill = null;
+  let nodeByCombined = null;
   try {
-    const matchingNodes = await listCurriculumNodes({ skillId: skill });
+    const results = await Promise.all([
+      listCurriculumNodes({ skillId: skill }),
+      getCurriculumNode(skill),
+      getCurriculumNode(`${subject}-${topic}-${skill}`)
+    ]);
+    matchingNodes = results[0];
+    nodeBySkill = results[1];
+    nodeByCombined = results[2];
     if (matchingNodes && matchingNodes.length > 0) {
       skillNode = matchingNodes[0];
-    }
-    if (!skillNode) {
-      skillNode = await getCurriculumNode(skill);
-    }
-    if (!skillNode) {
-      skillNode = await getCurriculumNode(`${subject}-${topic}-${skill}`);
+    } else if (nodeBySkill) {
+      skillNode = nodeBySkill;
+    } else if (nodeByCombined) {
+      skillNode = nodeByCombined;
     }
   } catch (error) {
     console.error('Practice DB skill node lookup error:', error);
+  }
+
+  if (!skillNode) {
+    try {
+      const { listV2Nodes } = await import('../../../lib/curriculum/storeV2.js');
+      const v2Skills = await listV2Nodes('skill', { id: skill });
+      if (v2Skills && v2Skills.length > 0) {
+        const v2Skill = v2Skills[0];
+        
+        // Resolve parent chapter to get grade and topic (unit)
+        let gradeId = '1';
+        let topicId = topic;
+        if (v2Skill.chapterId) {
+          const v2Chapters = await listV2Nodes('chapter', { id: v2Skill.chapterId });
+          if (v2Chapters && v2Chapters.length > 0) {
+            gradeId = v2Chapters[0].gradeId || '1';
+            topicId = v2Chapters[0].unitId || topic;
+          }
+        }
+
+        skillNode = {
+          ...v2Skill,
+          topicId,
+          grade: gradeId,
+          metadata: {
+            ...v2Skill,
+            templateId: v2Skill.templateId,
+            engine: v2Skill.engine,
+            grade: gradeId,
+            subject,
+            topic: topicId,
+          }
+        };
+      }
+    } catch (err) {
+      console.warn('Error fetching v2 skill fallback:', err);
+    }
   }
 
   if (skillNode && skillNode.status && skillNode.status !== 'active') {
@@ -277,13 +401,51 @@ export async function GET(request) {
   // Falls back to single templateId for backward-compatibility.
   let resolvedTemplateId = skillNode?.templateId || skillNode?.metadata?.templateId || skill;
 
+  // Handle templateId being an array, JSON array, or comma-separated string
+  if (typeof resolvedTemplateId === 'string') {
+    const trimmed = resolvedTemplateId.trim();
+    resolvedTemplateId = trimmed;
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          resolvedTemplateId = parsed;
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (Array.isArray(resolvedTemplateId)) {
+    if (resolvedTemplateId.length > 0) {
+      const seedStr = String(seed || Date.now());
+      let seedHash = 0;
+      for (let i = 0; i < seedStr.length; i++) {
+        seedHash = (seedHash * 31 + seedStr.charCodeAt(i)) >>> 0;
+      }
+      resolvedTemplateId = resolvedTemplateId[seedHash % resolvedTemplateId.length];
+    } else {
+      resolvedTemplateId = skill;
+    }
+  } else if (typeof resolvedTemplateId === 'string' && resolvedTemplateId.includes(',')) {
+    const list = resolvedTemplateId.split(',').map(s => s.trim()).filter(Boolean);
+    if (list.length > 0) {
+      const seedStr = String(seed || Date.now());
+      let seedHash = 0;
+      for (let i = 0; i < seedStr.length; i++) {
+        seedHash = (seedHash * 31 + seedStr.charCodeAt(i)) >>> 0;
+      }
+      resolvedTemplateId = list[seedHash % list.length];
+    }
+  }
+
   const templateLevels = skillNode?.metadata?.templateLevels;
   if (Array.isArray(templateLevels) && templateLevels.length > 0) {
     // Determine target level
     const correctStreak = Number(searchParams.get('correctStreak') || 0);
+    const smartScore = Number(searchParams.get('smartScore') || 0);
     let targetLevel = 1;
-    if (difficulty === 'hard' || correctStreak >= 6) targetLevel = 3;
-    else if (difficulty === 'medium' || correctStreak >= 3) targetLevel = 2;
+    if (difficulty === 'hard' || smartScore >= 80 || correctStreak >= 6) targetLevel = 3;
+    else if (difficulty === 'medium' || smartScore >= 50 || correctStreak >= 3) targetLevel = 2;
     else targetLevel = 1;
 
     // Find pool for target level (fall back to highest available)
@@ -395,10 +557,9 @@ export async function GET(request) {
   }
   
   // Handle universal-template dynamic template engine
-  if (skillNode?.engine === 'universal-template') {
+  if (skillNode?.engine === 'universal-template' || skillNode?.engine === 'universal-templete') {
     try {
       const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
-      const { evaluateTemplate } = await import('../../../lib/practice/generators/universalEvaluator.js');
       
       const templateDoc = await findDynamicTemplateById(resolvedTemplateId);
       if (!templateDoc) {
@@ -409,7 +570,13 @@ export async function GET(request) {
       }
       
       const resolvedTemplateDoc = await resolveTemplatePools(templateDoc);
-      const rawQuestion = evaluateTemplate(resolvedTemplateDoc, seed);
+      const rawQuestion = await evaluateUniversalOrPoolTemplate({
+        resolvedTemplateDoc,
+        seed,
+        difficulty,
+        searchParams,
+        grade: skillNode?.grade || skillNode?.metadata?.grade || '1'
+      });
       
       // Normalize metadata to match expectations
       const question = {
@@ -426,7 +593,7 @@ export async function GET(request) {
         }
       };
 
-      return respond(withCompetency({
+      const responsePayload = {
         success: true,
         question,
         seed,
@@ -436,7 +603,12 @@ export async function GET(request) {
           templateId: resolvedTemplateId,
           engine: 'universal-template'
         }
-      }, { subject, topic: resolvedTopic, skill: resolvedSkillId }));
+      };
+      if (question.pickedItemIds) {
+        responsePayload.pickedItemIds = question.pickedItemIds;
+      }
+
+      return respond(withCompetency(responsePayload, { subject, topic: resolvedTopic, skill: resolvedSkillId }));
     } catch (err) {
       console.error('Error generating question via universal-template:', err);
       return NextResponse.json(
@@ -450,12 +622,17 @@ export async function GET(request) {
   // skill=<templateId> even before a curriculum node is wired to it.
   try {
     const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
-    const { evaluateTemplate } = await import('../../../lib/practice/generators/universalEvaluator.js');
     const templateDoc = await findDynamicTemplateById(resolvedTemplateId);
 
     if (templateDoc) {
       const resolvedTemplateDoc = await resolveTemplatePools(templateDoc);
-      const rawQuestion = evaluateTemplate(resolvedTemplateDoc, seed);
+      const rawQuestion = await evaluateUniversalOrPoolTemplate({
+        resolvedTemplateDoc,
+        seed,
+        difficulty,
+        searchParams,
+        grade: templateDoc.grade || templateDoc.templateInfo?.grade || skillNode?.grade || skillNode?.metadata?.grade || '1'
+      });
       const question = {
         ...rawQuestion,
         id: `universal-template-${resolvedTemplateId}-${seed}`,
@@ -470,7 +647,7 @@ export async function GET(request) {
         }
       };
 
-      return respond(withCompetency({
+      const responsePayload = {
         success: true,
         question,
         seed,
@@ -480,7 +657,12 @@ export async function GET(request) {
           templateId: resolvedTemplateId,
           engine: 'universal-template'
         }
-      }, { subject: question.metadata.subject, topic: question.metadata.topic, skill: question.metadata.skillId }));
+      };
+      if (question.pickedItemIds) {
+        responsePayload.pickedItemIds = question.pickedItemIds;
+      }
+
+      return respond(withCompetency(responsePayload, { subject: question.metadata.subject, topic: question.metadata.topic, skill: question.metadata.skillId }));
     }
   } catch (err) {
     console.error('Error generating direct dynamic template:', err);

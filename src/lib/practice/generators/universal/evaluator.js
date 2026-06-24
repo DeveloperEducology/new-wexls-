@@ -129,6 +129,7 @@ function normalizeDataSourceItems(source) {
   if (!source) return [];
   if (Array.isArray(source.items)) return source.items;
   if (Array.isArray(source.data)) return source.data;
+  if (Array.isArray(source.values)) return source.values;
   if (typeof source.items === 'string') {
     return source.items.split(',').map(item => item.trim()).filter(Boolean);
   }
@@ -181,7 +182,7 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
     return pickRandomMany(items, variable.count, rng);
   }
 
-  if (type === 'list' || type === 'random_item') {
+  if (type === 'list' || type === 'random_item' || type === 'array') {
     const items = Array.isArray(sourceItems) ? sourceItems : normalizeDataSourceItems(variable);
     return pickRandom(items, rng);
   }
@@ -243,9 +244,34 @@ export function evaluateTemplate(originalTemplate, seed) {
   }
 
   const rng = seededRandom(seed);
+  
+  function gcd(a, b) {
+    a = Math.abs(a); b = Math.abs(b);
+    while (b) { let t = b; b = a % b; a = t; }
+    return a || 1;
+  }
+  function lcm(a, b) {
+    return Math.abs(a * b) / gcd(a, b);
+  }
+  function simplifyFraction(n, d) {
+    const divisor = gcd(n, d);
+    const num = n / divisor;
+    const den = d / divisor;
+    return { numerator: num, denominator: den, string: den === 1 ? `${num}` : `${num}/${den}` };
+  }
+  function addFractions(n1, d1, n2, d2) {
+    const common = lcm(d1, d2);
+    const num = (n1 * (common / d1)) + (n2 * (common / d2));
+    return simplifyFraction(num, common);
+  }
+
   // Built-in helper functions available to ALL template expressions & interpolations.
   const resolvedVariables = {
     toWords: numberToWords,
+    gcd,
+    lcm,
+    simplifyFraction,
+    addFractions
   };
   const dataSourceMap = {};
 
@@ -254,10 +280,23 @@ export function evaluateTemplate(originalTemplate, seed) {
       const sourceId = source?.id || source?.name;
       if (!sourceId) continue;
       if (source.type === 'pool_selection') {
-        dataSourceMap[sourceId] = pickRandomMany(normalizeDataSourceItems(source), source.count, rng);
+        const allItems = normalizeDataSourceItems(source);
+        const targetCats = source.targetCategories || (source.category ? [source.category] : []);
+        if (targetCats.length > 0) {
+          dataSourceMap[sourceId] = allItems;
+          dataSourceMap[sourceId + ':distractors'] = source._distractorItems || [];
+        } else {
+          dataSourceMap[sourceId] = allItems;
+        }
+        dataSourceMap[sourceId + ':count'] = source.count || 1;
+        if (source._categoryLabel) {
+          resolvedVariables['targetCategoryLabel'] = source._categoryLabel;
+        }
       } else if (source.type === 'random_number') {
-        const min = Number(source.min ?? 0);
-        const max = Number(source.max ?? 10);
+        const minVal = resolveExpression(source.min ?? 0, resolvedVariables);
+        const maxVal = resolveExpression(source.max ?? 10, resolvedVariables);
+        const min = Number(isNaN(minVal) ? 0 : minVal);
+        const max = Number(isNaN(maxVal) ? 10 : maxVal);
         dataSourceMap[sourceId] = Math.floor(rng() * (Math.max(min, max) - Math.min(min, max) + 1)) + Math.min(min, max);
       } else if (source.type === 'random_item') {
         dataSourceMap[sourceId] = pickRandom(normalizeDataSourceItems(source), rng);
@@ -274,8 +313,9 @@ export function evaluateTemplate(originalTemplate, seed) {
   // 1. Evaluate variables sequentially
   if (Array.isArray(template.variables)) {
     for (const v of template.variables) {
-      if (!v?.name) continue;
-      resolvedVariables[v.name] = resolveVariableValue(v, resolvedVariables, dataSourceMap, rng);
+      const varName = v?.name || v?.id;
+      if (!varName) continue;
+      resolvedVariables[varName] = resolveVariableValue(v, resolvedVariables, dataSourceMap, rng);
     }
   }
 
@@ -460,7 +500,23 @@ export function evaluateTemplate(originalTemplate, seed) {
   }
 
   // 2. Interpolate question texts
-  const questionText = interpolateString(template.questionText, resolvedVariables);
+  let rawQuestionText = template.questionText || '';
+  if (template.optionsType === 'fillInTheBlank' || String(template.interaction?.engine || '').toLowerCase() === 'fill_blank') {
+    let blankCounter = 0;
+    const existingBlanksRegex = /\[\[blank(\d+)\]\]/g;
+    let matchBlank;
+    while ((matchBlank = existingBlanksRegex.exec(rawQuestionText)) !== null) {
+      const idx = parseInt(matchBlank[1], 10);
+      if (idx > blankCounter) {
+        blankCounter = idx;
+      }
+    }
+    rawQuestionText = rawQuestionText.replace(/\[\]|\[[rR]esult\]|\[[aA]nswer\]/g, () => {
+      blankCounter++;
+      return `[[blank${blankCounter}]]`;
+    });
+  }
+  const questionText = interpolateString(rawQuestionText, resolvedVariables);
   
   let explanationContent = '';
   if (template.explanation?.sections?.[0]?.content) {
@@ -469,19 +525,78 @@ export function evaluateTemplate(originalTemplate, seed) {
 
   // 3. Resolve options and determine correctness
   let optionsList = [];
-  if (Array.isArray(template.options)) {
-    const interactionEngine = String(
-      template.interaction?.engine
-      || template.interaction?.type
-      || template.optionsType
-      || template.type
-      || ''
-    ).toLowerCase();
-    const isPictureChoice = interactionEngine === 'picture_mcq'
-      || interactionEngine === 'picturechoice'
-      || interactionEngine === 'picture_choice';
+  let pickedItemIds = [];
 
-    const rawOptions = template.options.map(opt => {
+  if (template.optionPool) {
+    const { correctSource, distractorSource, correctCount = 1, distractorCount = 2 } = template.optionPool;
+    const correctPool = dataSourceMap[correctSource] || [];
+    const distractorPool = dataSourceMap[distractorSource + ':distractors'] || dataSourceMap[distractorSource] || [];
+
+    // Anti-repetition: exclude recently seen items
+    const seenIds = new Set(template._seenItemIds || []);
+    const freshCorrect = correctPool.filter(item => !seenIds.has(item.id || item.label));
+    const freshDistractors = distractorPool.filter(item => !seenIds.has(item.id || item.label));
+
+    // Helper to pick items with fallback to whole pool if all items are seen
+    const pickWithFallback = (freshPool, fullPool, count) => {
+      const candidates = freshPool.length > 0 ? freshPool : fullPool;
+      return pickRandomMany(candidates, count, rng);
+    };
+
+    const correctItems = pickWithFallback(freshCorrect, correctPool, correctCount);
+    if (correctItems.length > 0) {
+      resolvedVariables['TargetItem'] = correctItems[0];
+      resolvedVariables['TargetLabel'] = correctItems[0].label;
+      resolvedVariables['TargetSvg'] = correctItems[0].svg;
+      resolvedVariables['TargetCount'] = correctItems[0].count;
+    }
+    const correctIds = new Set(correctItems.map(i => i.id || i.label));
+    const correctShapes = new Set(correctItems.map(i => i.shape).filter(Boolean));
+
+    // Distractors must not overlap correct items or correct shapes
+    const eligibleFreshDistractors = freshDistractors.filter(d => !correctIds.has(d.id || d.label) && !correctShapes.has(d.shape));
+    const eligibleFullDistractors = distractorPool.filter(d => !correctIds.has(d.id || d.label) && !correctShapes.has(d.shape));
+
+    const distractorItems = pickWithFallback(eligibleFreshDistractors, eligibleFullDistractors, distractorCount);
+
+    pickedItemIds = [
+      ...correctItems.map(item => item.id || item.label),
+      ...distractorItems.map(item => item.id || item.label)
+    ];
+
+    const rawOptions = [
+      ...correctItems.map(item => ({ ...item, isCorrect: true })),
+      ...distractorItems.map(item => ({ ...item, isCorrect: false }))
+    ];
+
+    optionsList = shuffle(rawOptions, rng);
+  } else {
+    let resolvedOptionsData = template.options;
+    if (typeof resolvedOptionsData === 'string' && resolvedOptionsData.includes('[')) {
+      const varName = resolvedOptionsData.replace(/[\[\]]/g, '').trim();
+      if (resolvedVariables[varName] !== undefined && Array.isArray(resolvedVariables[varName])) {
+        resolvedOptionsData = resolvedVariables[varName];
+      } else {
+        try {
+          const parsed = JSON.parse(interpolateString(resolvedOptionsData, resolvedVariables));
+          if (Array.isArray(parsed)) resolvedOptionsData = parsed;
+        } catch (e) {}
+      }
+    }
+
+    if (Array.isArray(resolvedOptionsData)) {
+      const interactionEngine = String(
+        template.interaction?.engine
+        || template.interaction?.type
+        || template.optionsType
+        || template.type
+        || ''
+      ).toLowerCase();
+      const isPictureChoice = interactionEngine === 'picture_mcq'
+        || interactionEngine === 'picturechoice'
+        || interactionEngine === 'picture_choice';
+
+      const rawOptions = resolvedOptionsData.map(opt => {
       const resolvedLabel = resolveLabelOrExpression(opt.label || opt.value, resolvedVariables);
       const resolvedImageUrl = opt.imageUrl
         ? resolveLabelOrExpression(opt.imageUrl, resolvedVariables)
@@ -498,7 +613,10 @@ export function evaluateTemplate(originalTemplate, seed) {
       return {
         label: isPictureChoice && resolvedImageUrl ? opt.alt || opt.text || `Option` : resolvedLabel,
         ...(resolvedImageUrl ? { imageUrl: resolvedImageUrl } : {}),
-        isCorrect
+        isCorrect,
+        misconception: opt.misconception ? resolveLabelOrExpression(opt.misconception, resolvedVariables) : undefined,
+        feedback: opt.feedback ? resolveLabelOrExpression(opt.feedback, resolvedVariables) : undefined,
+        remediationHint: opt.remediationHint ? resolveLabelOrExpression(opt.remediationHint, resolvedVariables) : undefined
       };
     });
 
@@ -516,6 +634,7 @@ export function evaluateTemplate(originalTemplate, seed) {
                           template.optionsType !== 'mcq_hotspot' && 
                           template.shuffleOptions !== false;
     optionsList = shouldShuffle ? shuffle(uniqueOptions, rng) : uniqueOptions;
+    }
   }
 
   const correctAnswerIndex = optionsList.findIndex(o => o.isCorrect);
@@ -879,10 +998,15 @@ export function evaluateTemplate(originalTemplate, seed) {
     options: isVisualChoice
       ? visualPanels.map((p, idx) => ({ id: `panel_${idx}`, label: String(p.count), isPanel: true }))
       : optionsList.map((o, idx) => ({
-        id: `opt_${idx}`,
+        id: o.id || `opt_${idx}`,
         label: o.label,
-        ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
-        ...(o.audioUrl ? { audioUrl: o.audioUrl } : {})
+        svg: o.svg || null,
+        imageUrl: o.imageUrl || null,
+        audioUrl: o.audioUrl || (o.label ? `/api/tts?voice=${template.voice || 'Puck'}&text=${encodeURIComponent(o.label)}` : null),
+        isCorrect: o.isCorrect,
+        misconception: o.misconception || null,
+        feedback: o.feedback || null,
+        remediationHint: o.remediationHint || null
       })),
     correctAnswerIndex: isVisualChoice
       ? (vcCorrectIndex >= 0 ? vcCorrectIndex : 0)
@@ -939,6 +1063,13 @@ export function evaluateTemplate(originalTemplate, seed) {
     if (categorizationPart.grid) questionPayload.grid = categorizationPart.grid;
   }
 
+  if (resolvedAnswer === null && Array.isArray(questionPayload.validationRules)) {
+    const exactMatchRule = questionPayload.validationRules.find(r => r && r.type === 'exact_match' && String(r.target || '').toLowerCase() === 'answer');
+    if (exactMatchRule && exactMatchRule.value !== undefined) {
+      resolvedAnswer = exactMatchRule.value;
+    }
+  }
+
   if (resolvedAnswer !== null) {
     const categorizationLayoutMode = String(categorizationPart?.layoutMode || categorizationPart?.htmlLayout || '').toLowerCase();
     if (
@@ -962,6 +1093,10 @@ export function evaluateTemplate(originalTemplate, seed) {
     questionPayload.solution = {
       sections: solutionSections
     };
+  }
+
+  if (pickedItemIds && pickedItemIds.length > 0) {
+    questionPayload.pickedItemIds = pickedItemIds;
   }
 
   return questionPayload;

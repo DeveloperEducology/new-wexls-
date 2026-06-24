@@ -118,9 +118,13 @@ export async function generateTtsBuffer(text, voice = 'Puck') {
       url.searchParams.append('voice', piperVoice);
 
       console.log(`Calling Piper TTS at: ${url.toString()}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 800);
       const response = await fetch(url.toString(), {
         method: 'GET',
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();

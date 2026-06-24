@@ -1,4 +1,4 @@
-import { getNextUnlockingSkills, getPrerequisiteFallback } from '../competency';
+import { getNextUnlockingSkills, getPrerequisiteFallback } from '../competency/index.js';
 
 const STORAGE_KEY = 'wexls.mastery.v1';
 const ATTEMPTS_KEY = 'wexls.attempts.v1';
@@ -137,6 +137,7 @@ export function createAttempt({
     phase,
     errorType,
     nextAction,
+    adaptiveRules: question?.adaptiveRules || question?.metadata?.adaptiveRules || null,
   };
 }
 
@@ -169,6 +170,11 @@ export function updateMasteryState(previousState, attempt) {
   const incorrectCount = Number(previous.incorrectCount || 0) + (attempt.isCorrect ? 0 : 1);
   const masteryScore = attempts ? Math.round((correctCount / attempts) * 100) / 100 : 0;
 
+  // Resolve custom adaptive rules
+  const masteryRules = attempt.adaptiveRules?.masteryAchieved || null;
+  const masteryThreshold = Number(masteryRules?.threshold ?? 100);
+  const masteryRouteTarget = masteryRules?.target || masteryRules?.targetTemplateId || null;
+
   // Resolve Skill State Transitions
   let currentState = previous.state || 'practicing';
   let sourceSkillId = previous.sourceSkillId || attempt.skillId;
@@ -180,7 +186,7 @@ export function updateMasteryState(previousState, attempt) {
   let nextAction = 'stay';
 
   if (attempt.isCorrect) {
-    if (smartScore >= 100) {
+    if (smartScore >= masteryThreshold) {
       currentState = 'mastered';
       shouldPromote = true;
       nextAction = 'promote';
@@ -196,23 +202,19 @@ export function updateMasteryState(previousState, attempt) {
       }
     }
   } else {
-    if (currentState === 'practicing') {
-      if (wrongStreak >= 3) {
-        const resolvedFallback = getPrerequisiteFallback(attempt.subject, attempt.topic, attempt.skillId);
-        if (resolvedFallback && resolvedFallback !== attempt.skillId) {
-          currentState = 'prerequisite_review';
-          shouldFallback = true;
-          fallbackSkillId = resolvedFallback;
-          sourceSkillId = attempt.skillId;
-          nextAction = 'fallback';
-        } else {
-          currentState = 'remediation';
-          nextAction = 'remediating';
-        }
-      }
-    } else if (currentState === 'remediation') {
-      if (wrongStreak >= 2) {
-        if (fallbackDepth < 2) {
+    // Check for custom incorrect/remediation target first
+    const incorrectRules = attempt.adaptiveRules?.incorrect || null;
+    const incorrectTarget = incorrectRules?.targetSkillId || incorrectRules?.target || incorrectRules?.targetTemplateId;
+    
+    if (incorrectTarget) {
+      currentState = 'remediation';
+      shouldFallback = true;
+      fallbackSkillId = incorrectTarget;
+      sourceSkillId = attempt.skillId;
+      nextAction = 'fallback';
+    } else {
+      if (currentState === 'practicing') {
+        if (wrongStreak >= 3) {
           const resolvedFallback = getPrerequisiteFallback(attempt.subject, attempt.topic, attempt.skillId);
           if (resolvedFallback && resolvedFallback !== attempt.skillId) {
             currentState = 'prerequisite_review';
@@ -220,6 +222,22 @@ export function updateMasteryState(previousState, attempt) {
             fallbackSkillId = resolvedFallback;
             sourceSkillId = attempt.skillId;
             nextAction = 'fallback';
+          } else {
+            currentState = 'remediation';
+            nextAction = 'remediating';
+          }
+        }
+      } else if (currentState === 'remediation') {
+        if (wrongStreak >= 2) {
+          if (fallbackDepth < 2) {
+            const resolvedFallback = getPrerequisiteFallback(attempt.subject, attempt.topic, attempt.skillId);
+            if (resolvedFallback && resolvedFallback !== attempt.skillId) {
+              currentState = 'prerequisite_review';
+              shouldFallback = true;
+              fallbackSkillId = resolvedFallback;
+              sourceSkillId = attempt.skillId;
+              nextAction = 'fallback';
+            }
           }
         }
       }
@@ -241,7 +259,7 @@ export function updateMasteryState(previousState, attempt) {
     smartScore,
     masteryScore,
     phase: getMasteryPhase(smartScore),
-    status: smartScore >= 100 ? 'mastered' : smartScore >= 80 ? 'proficient' : wrongStreak >= 2 ? 'needs_remediation' : 'learning',
+    status: smartScore >= masteryThreshold ? 'mastered' : smartScore >= Math.min(80, masteryThreshold) ? 'proficient' : wrongStreak >= 2 ? 'needs_remediation' : 'learning',
     attempts,
     correctCount,
     incorrectCount,
@@ -267,5 +285,6 @@ export function updateMasteryState(previousState, attempt) {
     shouldFallback,
     shouldBridgeBack,
     nextAction,
+    masteryRouteTarget,
   };
 }

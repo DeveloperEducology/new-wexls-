@@ -174,12 +174,20 @@ Supported variable types:
 - "conditional" with "condition", "whenTrue", "whenFalse"
 - "pool_selection" with "poolId", "category", "count"
 
-Use square-bracket interpolation in prompts/options/visual props:
+Built-in Math Helpers available for computed formulas:
+- gcd(a, b): returns greatest common divisor
+- lcm(a, b): returns least common multiple
+- simplifyFraction(n, d): returns { numerator, denominator, string }
+- addFractions(n1, d1, n2, d2): returns { numerator, denominator, string }
+NOTE: All formulas MUST be valid JavaScript. Do NOT omit the '*' operator (e.g., write "6 * lcm(a,b)", not "6 lcm(a,b)").
+
+Use square-bracket interpolation in prompts/options/visual props to evaluate math and insert values:
 - [A]
 - [B]
 - [Result]
 - [WordsPool[0].label]
 - [TargetWord]
+- [addFractions(v_n1, v_d1, v_n2, v_d2).string] <-- MUST use brackets to evaluate helper functions in options!
 
 Supported layoutConfig.mode values:
 - "prompt_top"

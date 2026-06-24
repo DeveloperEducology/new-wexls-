@@ -12,6 +12,35 @@ import { getDifficultyParameters } from './DifficultyEngine.js';
  * @returns {Object} Hydrated MCQ question payload compatible with standard WEXLS rendering
  */
 export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade = 'lkg') {
+  const result = _generateFromDynamicPool(poolDoc, seed, difficulty, history, grade);
+  if (result && poolDoc) {
+    const bg = poolDoc.backgroundImage || poolDoc.backgroundUrl || '';
+    const mbg = poolDoc.mobileBackgroundImage || poolDoc.mobileBackgroundUrl || poolDoc.backgroundImageMobile || poolDoc.backgroundUrlMobile || '';
+    if (bg) {
+      result.backgroundImage = bg;
+      result.backgroundUrl = bg;
+      if (!result.metadata) result.metadata = {};
+      result.metadata.backgroundImage = bg;
+      result.metadata.backgroundUrl = bg;
+    }
+    if (mbg) {
+      result.mobileBackgroundImage = mbg;
+      result.mobileBackgroundUrl = mbg;
+      if (!result.metadata) result.metadata = {};
+      result.metadata.mobileBackgroundImage = mbg;
+      result.metadata.mobileBackgroundUrl = mbg;
+    }
+    if (poolDoc.adaptiveRules) {
+      result.adaptiveRules = poolDoc.adaptiveRules;
+    }
+    if (poolDoc.analyticsConfig) {
+      result.analyticsConfig = poolDoc.analyticsConfig;
+    }
+  }
+  return result;
+}
+
+function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade = 'lkg') {
   const prng = createSeededRandom(seed);
   const voice = poolDoc.voice || 'Puck';
   const hasExplicitLabelDisplay = Object.prototype.hasOwnProperty.call(poolDoc, 'hideOptionLabel')
@@ -55,7 +84,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 
     if (isPickFromSentence) {
       const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
-      const configuredCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
+      const targetCatsArr = Array.isArray(poolDoc.targetCategories) && poolDoc.targetCategories.length > 0 ? poolDoc.targetCategories : null;
+      const configuredCategory = (targetCatsArr ? targetCatsArr[Math.floor(prng() * targetCatsArr.length)] : null) || poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
       const shouldRandomizeCategory = configuredCategory === '[random]'
         || poolDoc.randomizeTargetCategory === true
         || poolDoc.metadata?.randomizeTargetCategory === true;
@@ -263,7 +293,8 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
         };
       };
       const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
-      const configuredCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
+      const targetCatsArr = Array.isArray(poolDoc.targetCategories) && poolDoc.targetCategories.length > 0 ? poolDoc.targetCategories : null;
+      const configuredCategory = (targetCatsArr ? targetCatsArr[Math.floor(prng() * targetCatsArr.length)] : null) || poolDoc.targetCategory || poolDoc.metadata?.targetCategory || poolDoc.category || poolKeys[0] || '';
       const eligiblePoolKeys = poolKeys.filter((key) => (
         (poolDoc.pools[key] || [])
           .filter(option => option?.active !== false)
@@ -484,6 +515,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
           type: 'interactive_stickers',
           mode: 'column_sort',
           sceneImageUrl: poolDoc.sceneImageUrl || '/images/prek_landscape.webp',
+          mobileSceneImageUrl: poolDoc.mobileSceneImageUrl || poolDoc.sceneImageUrlMobile || '',
           itemLabel: poolDoc.itemLabel || 'sticker',
           categories: activeCategories,
           stickers: shuffledStickers,
@@ -669,20 +701,34 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     let correctPool = [];
     let distractorPool = [];
 
-    let resolvedTargetCategory = poolDoc.targetCategory || poolDoc.metadata?.targetCategory || '';
-    const poolKeys = Object.keys(poolDoc.pools).filter(k => k !== 'correctPool' && k !== 'distractorPool');
-    const shouldRandomize = poolDoc.randomizeTargetCategory || resolvedTargetCategory === '[random]' || (!resolvedTargetCategory && poolKeys.length > 1);
+    // Resolve target categories: support targetCategories[] array or single targetCategory string
+    const targetCategoriesArr = Array.isArray(poolDoc.targetCategories) && poolDoc.targetCategories.length > 0
+      ? poolDoc.targetCategories
+      : null;
+    let resolvedTargetCategory = (targetCategoriesArr ? null : poolDoc.targetCategory) || poolDoc.metadata?.targetCategory || '';
+    const poolKeys = Object.keys(poolDoc.pools)
+      .filter(k => k !== 'correctPool' && k !== 'distractorPool')
+      .filter(k => Array.isArray(poolDoc.pools[k]) && poolDoc.pools[k].length > 0);
+    const shouldRandomize = poolDoc.randomizeTargetCategory || resolvedTargetCategory === '[random]' || (!resolvedTargetCategory && !targetCategoriesArr && poolKeys.length > 1);
 
-    if (shouldRandomize && poolKeys.length > 0) {
+    if (targetCategoriesArr) {
+      // Pick one category from the allowed target categories list for this session
+      const eligibleTargets = targetCategoriesArr.filter(c => poolKeys.includes(c));
+      resolvedTargetCategory = eligibleTargets.length > 0
+        ? eligibleTargets[Math.floor(prng() * eligibleTargets.length)]
+        : poolKeys[0] || '';
+    } else if (shouldRandomize && poolKeys.length > 0) {
       const randIdx = Math.floor(prng() * poolKeys.length);
       resolvedTargetCategory = poolKeys[randIdx];
     }
 
     if (resolvedTargetCategory) {
       correctPool = poolDoc.pools[resolvedTargetCategory] || [];
+      // Distractor categories: all other categories not in targetCategories and not resolvedTargetCategory
+      const targetSet = new Set(targetCategoriesArr || [resolvedTargetCategory]);
       const distCats = (poolDoc.distractorCategories && poolDoc.distractorCategories.length > 0)
-        ? poolDoc.distractorCategories.filter(cat => cat !== resolvedTargetCategory)
-        : poolKeys.filter(cat => cat !== resolvedTargetCategory);
+        ? poolDoc.distractorCategories.filter(cat => !targetSet.has(cat))
+        : poolKeys.filter(cat => !targetSet.has(cat));
 
       distCats.forEach(cat => {
         const items = poolDoc.pools[cat] || [];
@@ -869,10 +915,16 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
           : `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`);
 
     // Interpolate parts
-    const parts = (poolDoc.parts || [
-      { type: 'text', content: '{{questionText}}' },
-      { type: 'play_sound_card' }
-    ]).map(part => {
+    const defaultParts = poolDoc.subject === 'english'
+      ? [
+          { type: 'text', content: '{{questionText}}' },
+          { type: 'play_sound_card' }
+        ]
+      : [
+          { type: 'text', content: '{{questionText}}' }
+        ];
+
+    const parts = (poolDoc.parts || defaultParts).map(part => {
       const newPart = { ...part };
       if (newPart.content) {
         newPart.content = newPart.content
@@ -944,7 +996,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
     return {
       id: `${poolDoc.id || 'dynamic_pool'}_${seed}_${targetWord}`,
       type: 'mcq',
-      interaction: isMultiSelect ? 'multi_select' : (poolDoc.interaction || 'choice'),
+      interaction: isMultiSelect ? 'multi_select' : (typeof poolDoc.interaction === 'string' ? poolDoc.interaction : (poolDoc.interaction?.inputMode || poolDoc.interaction?.engine || 'choice')),
       questionText,
       audioUrl: questionAudioUrl,
       voice,
@@ -1057,10 +1109,16 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
   const soundText = targetOption.soundText || targetWord;
   const soundUrl = targetOption.phonicSoundUrl || targetOption.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(soundText)}`;
 
-  const parts = (poolDoc.parts || [
-    { type: 'text', content: '{{questionText}}' },
-    { type: 'play_sound_card' }
-  ]).map(part => {
+  const defaultParts = poolDoc.subject === 'english'
+    ? [
+        { type: 'text', content: '{{questionText}}' },
+        { type: 'play_sound_card' }
+      ]
+    : [
+        { type: 'text', content: '{{questionText}}' }
+      ];
+
+  const parts = (poolDoc.parts || defaultParts).map(part => {
     const newPart = { ...part };
     if (newPart.content) {
       newPart.content = newPart.content
@@ -1108,7 +1166,7 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
   return {
     id: `${poolDoc.id || 'dynamic_pool'}_${seed}_${targetWord}`,
     type: 'mcq',
-    interaction: isMultiSelect ? 'multi_select' : (poolDoc.interaction || 'choice'),
+    interaction: isMultiSelect ? 'multi_select' : (typeof poolDoc.interaction === 'string' ? poolDoc.interaction : (poolDoc.interaction?.inputMode || poolDoc.interaction?.engine || 'choice')),
     questionText,
     audioUrl: questionAudioUrl,
     voice,

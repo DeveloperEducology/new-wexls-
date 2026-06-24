@@ -55,7 +55,11 @@ function buildPracticeUrl(request, {
   const url = new URL('/api/practice', request.url);
   const subject = getQuestionSubject(question, body);
   const topic = getQuestionTopic(question, body);
-  const skillId = getQuestionSkill(question, body);
+  
+  let skillId = getQuestionSkill(question, body);
+  if (nextMastery?.status === 'mastered' && nextMastery?.masteryRouteTarget) {
+    skillId = nextMastery.masteryRouteTarget;
+  }
 
   url.searchParams.set('subject', subject);
   url.searchParams.set('topic', topic);

@@ -14,7 +14,7 @@ export function clearTemplateCache(templateId) {
 export async function findDynamicTemplateById(templateId) {
   if (!templateId) return null;
   
-  if (templateCache.has(templateId)) {
+  if (process.env.NODE_ENV !== 'development' && templateCache.has(templateId)) {
     return templateCache.get(templateId);
   }
 

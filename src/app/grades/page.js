@@ -16,6 +16,11 @@ import SiteHeader from '../../components/layout/SiteHeader';
 import HomeHero from '../../components/home/HomeHero';
 import SubjectTabs from '../../components/home/SubjectTabs';
 
+export const metadata = {
+  title: 'Explore Grade Curriculum & Learning Skills | KlassChamp',
+  description: 'Browse curriculum topics in Math, English, and Science. Build foundational knowledge with adaptive questions tailored to your child\'s learning speed.',
+};
+
 function SkillProgress({ score, isMastered, isCompact = false }) {
   const isCompleted = score === 100;
   

@@ -37,6 +37,13 @@ export default function LabLayout({
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
     const [isLearningPathOpen, setIsLearningPathOpen] = useState(true);
     const isDirectImageSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
+    const shouldAutoSubmit = Boolean(
+        autoSubmit ||
+        question?.metadata?.clickToSubmit ||
+        question?.layoutConfig?.clickToSubmit ||
+        question?.metadata?.autoSubmit ||
+        question?.layoutConfig?.autoSubmit
+    );
 
     const formatTimer = (totalSeconds) => {
         const hrs = Math.floor(totalSeconds / 3600);
@@ -83,14 +90,53 @@ export default function LabLayout({
     const isLocationWords = String(question?.id || '').includes('loc_position') || String(question?.id || '').includes('loc_next_beside');
     const resolvedBackgroundUrl = question?.backgroundImage || question?.backgroundUrl;
     const isHotspotQuestion = question?.interaction === 'hotspot_select' || question?.layoutMode === 'mcq_hotspot' || isLocationWords;
-    const pageStyle = isPreK ? (
-        (resolvedBackgroundUrl && !isHotspotQuestion)
-            ? { backgroundImage: `url(${resolvedBackgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center center' }
-            : {}
-    ) : {};
+
+    const desktopBgUrl = question?.backgroundImage || question?.backgroundUrl || question?.metadata?.backgroundImage || question?.metadata?.backgroundUrl;
+    const mobileBgUrl = question?.mobileBackgroundImage || question?.mobileBackgroundUrl || question?.backgroundImageMobile || question?.backgroundUrlMobile || question?.metadata?.mobileBackgroundImage || question?.metadata?.mobileBackgroundUrl || question?.metadata?.backgroundImageMobile || question?.metadata?.backgroundUrlMobile;
+
+    const showCustomBg = isPreK && !isHotspotQuestion && (Boolean(desktopBgUrl || mobileBgUrl));
+
+    let bgCss = '';
+    if (showCustomBg) {
+        if (desktopBgUrl && mobileBgUrl) {
+            bgCss = `
+                .custom-page-bg {
+                    background-image: url("${desktopBgUrl}") !important;
+                }
+                @media (max-width: 768px) {
+                    .custom-page-bg {
+                        background-image: url("${mobileBgUrl}") !important;
+                    }
+                }
+            `;
+        } else if (desktopBgUrl) {
+            bgCss = `
+                .custom-page-bg {
+                    background-image: url("${desktopBgUrl}") !important;
+                }
+            `;
+        } else if (mobileBgUrl) {
+            bgCss = `
+                @media (max-width: 768px) {
+                    .custom-page-bg {
+                        background-image: url("${mobileBgUrl}") !important;
+                    }
+                }
+            `;
+        }
+    }
+
+    const pageStyle = (isPreK && resolvedBackgroundUrl && !isHotspotQuestion && !showCustomBg) ? {
+        backgroundImage: `url(${resolvedBackgroundUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center'
+    } : {};
 
     return (
-        <div className={isPreK ? styles.preKPageContainer : styles.pageContainer} style={pageStyle}>
+        <div className={`${isPreK ? styles.preKPageContainer : styles.pageContainer} ${showCustomBg ? 'custom-page-bg' : ''}`} style={pageStyle}>
+            {showCustomBg && (
+                <style dangerouslySetInnerHTML={{ __html: bgCss }} />
+            )}
             {isPreK && (
                 <>
                     <style dangerouslySetInnerHTML={{ __html: `
@@ -348,7 +394,7 @@ export default function LabLayout({
                                                 </div>
                                             )}
                                             
-                                            {!isAnswered && question?.showSubmitButton !== false && (
+                                            {!isAnswered && question?.showSubmitButton !== false && !shouldAutoSubmit && (
                                                 <div className={styles.submitRow}>
                                                     <button 
                                                         onClick={() => handleSubmit()}
@@ -505,14 +551,16 @@ export default function LabLayout({
 
                     {/* Center Check/Next Button (Orange Capsule Button) */}
                     {!isAnswered ? (
-                        <button
-                            type="button"
-                            onClick={() => handleSubmit()}
-                            disabled={userAnswer === null || isSubmitting || loading}
-                            className={styles.preKSubmitBtn}
-                        >
-                            <span>{isDirectImageSelect && userAnswer === null ? '👆 Tap a picture' : '🚀 Check My Answer'}</span>
-                        </button>
+                        !shouldAutoSubmit && (
+                            <button
+                                type="button"
+                                onClick={() => handleSubmit()}
+                                disabled={userAnswer === null || isSubmitting || loading}
+                                className={styles.preKSubmitBtn}
+                            >
+                                <span>{isDirectImageSelect && userAnswer === null ? '👆 Tap a picture' : '🚀 Check My Answer'}</span>
+                            </button>
+                        )
                     ) : (
                         <button
                             type="button"

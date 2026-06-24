@@ -234,8 +234,15 @@ export default function PictographMCQRenderer({
   question,
   userAnswer,
   onAnswer,
+  onSubmit,
   isAnswered,
 }) {
+  const shouldAutoSubmit = Boolean(
+    question?.metadata?.clickToSubmit ||
+    question?.layoutConfig?.clickToSubmit ||
+    question?.metadata?.autoSubmit ||
+    question?.layoutConfig?.autoSubmit
+  );
   const selectedIndex =
     typeof userAnswer === 'object' && userAnswer !== null
       ? Number(userAnswer?.selectedIndex ?? userAnswer?.index ?? userAnswer)
@@ -304,7 +311,12 @@ export default function PictographMCQRenderer({
               key={option.id || idx}
               pictograph={option.pictograph}
               selected={isSelected}
-              onClick={onAnswer}
+              onClick={(idx) => {
+                onAnswer(idx);
+                if (shouldAutoSubmit && onSubmit) {
+                  onSubmit(idx);
+                }
+              }}
               isAnswered={isAnswered}
               optionIndex={idx}
             />

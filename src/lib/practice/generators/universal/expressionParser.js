@@ -5,9 +5,14 @@ function evaluateSimpleExpression(str) {
   let s = String(str).replace(/\s+/g, '');
   
   while (s.includes('(')) {
-    s = s.replace(/\(([^()]+)\)/g, (match, subExpr) => {
+    const prev = s;
+    s = s.replace(/\(([^()]*)\)/g, (match, subExpr) => {
       return evaluateSimpleExpression(subExpr);
     });
+    if (s === prev) {
+      s = s.replace(/\(\)/g, '0');
+      if (s === prev) break;
+    }
   }
   
   const tokens = [];
@@ -172,7 +177,23 @@ const drawingHelpers = {
 export function resolveExpression(expr, context) {
   if (typeof expr === 'number') return expr;
   if (!expr) return 0;
-  
+
+  let cleanedExpr = String(expr);
+  if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
+    cleanedExpr = cleanedExpr.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
+      const trimmed = name.trim();
+      if (context[trimmed] !== undefined) {
+        return context[trimmed];
+      }
+      try {
+        return new Function('ctx', `with(ctx) { return ${trimmed}; }`)(context);
+      } catch {
+        return `[${trimmed}]`;
+      }
+    });
+  }
+  expr = cleanedExpr;
+
   const hasOperators = /[\+\-\*\/\%\(\)]/.test(String(expr));
   const hasComparisons = /[=\!<>\?:]/.test(String(expr));
 

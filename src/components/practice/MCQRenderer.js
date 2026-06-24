@@ -421,6 +421,7 @@ export default function MCQRenderer({
   userAnswer,
   onAnswer,
   isAnswered,
+  onSubmit,
 }) {
   const isPreK = useMemo(() => {
     const getSafeString = (val) => {
@@ -444,6 +445,12 @@ export default function MCQRenderer({
   }, [question]);
 
   const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+  const shouldAutoSubmit = Boolean(
+    question?.metadata?.clickToSubmit ||
+    question?.layoutConfig?.clickToSubmit ||
+    question?.metadata?.autoSubmit ||
+    question?.layoutConfig?.autoSubmit
+  );
   const visualPanels = useMemo(() => {
     return (question.parts || []).filter(p => p.type === 'visual_panel');
   }, [question.parts]);
@@ -569,10 +576,10 @@ export default function MCQRenderer({
             textAlign: 'center',
             color: '#3b0764',
             fontSize: 'clamp(22px, 5vw, 28px)',
-            lineHeight: 1.3,
+            lineHeight: 1.85,
             fontWeight: 900,
             fontFamily: 'var(--font-outfit), sans-serif',
-          } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
+          } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
             <InlineMarkdown text={question.questionText} />
           </h2>
         </div>
@@ -709,7 +716,12 @@ export default function MCQRenderer({
                 index={index}
                 selected={selected}
                 isAnswered={isAnswered}
-                onSelect={() => onAnswer(index)}
+                onSelect={() => {
+                  onAnswer(index);
+                  if (!isMultiSelect && shouldAutoSubmit && onSubmit) {
+                    onSubmit(index);
+                  }
+                }}
               />
             );
           })}
@@ -751,6 +763,9 @@ export default function MCQRenderer({
                     onAnswer(nextSelected);
                   } else {
                     onAnswer(index);
+                    if (shouldAutoSubmit && onSubmit) {
+                      onSubmit(index);
+                    }
                   }
                   if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(value, question.voice || 'Puck', option?.audioUrl);
@@ -817,6 +832,9 @@ export default function MCQRenderer({
                     onAnswer(nextSelected);
                   } else {
                     onAnswer(index);
+                    if (shouldAutoSubmit && onSubmit) {
+                      onSubmit(index);
+                    }
                   }
                   if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(value, question.voice || 'Puck', option?.audioUrl);
@@ -895,6 +913,9 @@ export default function MCQRenderer({
                     disabled={isAnswered}
                     onClick={() => {
                       onAnswer(index);
+                      if (shouldAutoSubmit && onSubmit) {
+                        onSubmit(index);
+                      }
                       if (isPreK || question.metaConfig?.readable) {
                         speakText(`Option ${index + 1}`, question.voice || 'Puck');
                       }
@@ -981,6 +1002,9 @@ export default function MCQRenderer({
                         onAnswer(nextSelected);
                       } else {
                         onAnswer(index);
+                        if (shouldAutoSubmit && onSubmit) {
+                          onSubmit(index);
+                        }
                       }
                       if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                         speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);

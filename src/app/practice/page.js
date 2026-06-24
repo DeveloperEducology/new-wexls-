@@ -1048,6 +1048,11 @@ function PracticePageContent() {
   const [logicType, setLogicType] = useState(initialLogicType || 'addition-g1-e3-model-match-to-10');
   const [question, setQuestion] = useState(null);
   const isPreK = useMemo(() => {
+    const skillGrade = question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade;
+    const g = String(skillGrade || (searchParams ? searchParams.get('grade') : '') || '').toLowerCase().trim();
+    const isElementaryOrHigher = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'grade 1', 'grade 2', 'grade 3', 'class 1', 'class 2'].includes(g);
+    if (isElementaryOrHigher) return false;
+
     const checkPreK = (str) => {
       if (!str) return false;
       const s = String(str).toLowerCase().trim();
@@ -1066,8 +1071,6 @@ function PracticePageContent() {
     
     if (logicType && checkPreK(logicType.toLowerCase())) return true;
     
-    const skillGrade = question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade;
-    const g = String(skillGrade || '').toLowerCase().trim();
     if (checkPreK(g)) return true;
 
     // Check query params manually (allows explicitly forcing via URL query strings)
@@ -1081,6 +1084,7 @@ function PracticePageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartScore, setSmartScore] = useState(0);
   const [correctStreak, setCorrectStreak] = useState(0);
+  const [seenItemIds, setSeenItemIds] = useState([]);
   const [practiceLevel, setPracticeLevel] = useState(1);
   const [levelStreak, setLevelStreak] = useState(0);
   const [levelModal, setLevelModal] = useState(null);
@@ -1318,6 +1322,7 @@ function PracticePageContent() {
     url.searchParams.set('practiceLevel', String(sessionOverride.practiceLevel ?? practiceLevel));
     url.searchParams.set('levelStreak', String(sessionOverride.levelStreak ?? levelStreak));
     url.searchParams.set('lastResult', sessionOverride.lastResult ?? lastResult);
+    url.searchParams.set('smartScore', String(sessionOverride.smartScore ?? smartScore));
 
     if (urlQn) {
       url.searchParams.set('qn', urlQn);
@@ -1340,6 +1345,11 @@ function PracticePageContent() {
     url.searchParams.set('remediationStep', remediationNeeded ? '1' : '0');
     url.searchParams.set('seed', seed);
 
+    const currentSeen = sessionOverride.seenItemIds ?? seenItemIds;
+    if (currentSeen && currentSeen.length > 0) {
+      url.searchParams.set('seenItems', currentSeen.join(','));
+    }
+
     return url;
   }, [
     activeStudent,
@@ -1353,6 +1363,7 @@ function PracticePageContent() {
     urlSubject,
     urlTopic,
     urlQn,
+    seenItemIds,
   ]);
 
   const applyQuestionPayload = useCallback((data, sessionOverride = {}) => {
@@ -1366,6 +1377,18 @@ function PracticePageContent() {
         setStreakThreshold(Number(data.question.streakThreshold));
       } else {
         setStreakThreshold(5);
+      }
+      if (Array.isArray(data.pickedItemIds)) {
+        setSeenItemIds(prev => {
+          let next = [...prev];
+          if (next.length >= 20) {
+            next = [];
+          }
+          data.pickedItemIds.forEach(id => {
+            if (!next.includes(id)) next.push(id);
+          });
+          return next;
+        });
       }
       if (sessionOverride.slideIn) {
         setTransitionState('slideIn');
@@ -1522,11 +1545,16 @@ function PracticePageContent() {
   useEffect(() => {
     async function loadCurriculum() {
       try {
-        const res = await fetch('/api/curriculum?tree=true');
+        const [res, templatesRes] = await Promise.all([
+          fetch('/api/curriculum?tree=true'),
+          fetch('/api/admin/templates')
+        ]);
         const data = await res.json();
+        const templatesData = await templatesRes.json();
+
+        const loadedConfigs = {};
+
         if (data && data.success && Array.isArray(data.tree)) {
-          const loadedConfigs = {};
-          
           const traverse = (nodes) => {
             nodes.forEach(node => {
               if (node.type === 'topic') {
@@ -1542,10 +1570,37 @@ function PracticePageContent() {
           };
           
           traverse(data.tree);
-          setDbConfigs(loadedConfigs);
         }
+
+        if (templatesData && templatesData.success && Array.isArray(templatesData.dynamicTemplates)) {
+          const templateOptions = templatesData.dynamicTemplates.map(t => {
+            const groupName = t.subject ? String(t.subject).toUpperCase() : 'OTHER';
+            return {
+              group: groupName,
+              label: t.title || t.id,
+              value: t.id
+            };
+          });
+          if (templateOptions.length > 0) {
+            loadedConfigs['dynamic-templates'] = {
+              label: 'Dynamic Templates',
+              api: '/api/practice',
+              badge: 'DYNAMIC',
+              description: 'Practice questions generated dynamically from custom templates.',
+              defaultLogicType: templateOptions[0]?.value || '',
+              subject: 'math',
+              topic: 'dynamic-templates',
+              options: templateOptions,
+              tips: [
+                { label: 'Live generation', text: 'Questions are generated in real-time from active masterclass templates.' }
+              ]
+            };
+          }
+        }
+
+        setDbConfigs(loadedConfigs);
       } catch (err) {
-        console.error('Failed to load curriculum tree:', err);
+        console.error('Failed to load curriculum tree or templates:', err);
       } finally {
         setCurriculumLoading(false);
       }
@@ -1555,18 +1610,25 @@ function PracticePageContent() {
 
   useEffect(() => {
     if (curriculumLoading) return;
-    const nextSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
-    const nextConfig = mergedConfigs[nextSource] || mergedConfigs['addition-topic'];
+    let nextSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
     const nextLogicType = urlSkill
       || resolveSearchValue(searchParams, 'forcedTask')
       || resolveSearchValue(searchParams, 'logic_type')
-      || nextConfig.defaultLogicType;
+      || (mergedConfigs[nextSource] || mergedConfigs['addition-topic']).defaultLogicType;
+
+    if (nextLogicType && (nextLogicType.startsWith('template-') || nextLogicType.startsWith('dynamic_template') || nextLogicType.startsWith('dynamic-template'))) {
+      if (mergedConfigs['dynamic-templates']) {
+        nextSource = 'dynamic-templates';
+      }
+    }
+
     setSourceKey(nextSource);
     setLogicType(nextLogicType);
   }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource, curriculumLoading, mergedConfigs]);
 
   useEffect(() => {
     seedUsedRef.current = false;
+    setSeenItemIds([]);
   }, [logicType]);
 
   useEffect(() => {
@@ -1774,19 +1836,27 @@ function PracticePageContent() {
 
     // ── Adaptive Action Routing ─────────────────────────────────────────────
     if (adaptiveAction === 'promote') {
-      const nextSkills = getNextUnlockingSkills(
-        urlSubject || sourceConfig.subject,
-        urlTopic || sourceConfig.topic,
-        logicType
-      );
-      setMasteredOverlay({
-        skillLabel: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
-        nextSkills: nextSkills.slice(0, 3),
-      });
-      setAdaptiveBanner(null);
-      setIsSubmitting(false);
-      submittingRef.current = false;
-      return;
+      if (canonicalMastery.masteryRouteTarget) {
+        const nextSkillId = canonicalMastery.masteryRouteTarget;
+        setLogicType(nextSkillId);
+        syncRoute(sourceKey, nextSkillId);
+        
+        // Do not return; fall through to load the preloaded next question of the new template
+      } else {
+        const nextSkills = getNextUnlockingSkills(
+          urlSubject || sourceConfig.subject,
+          urlTopic || sourceConfig.topic,
+          logicType
+        );
+        setMasteredOverlay({
+          skillLabel: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
+          nextSkills: nextSkills.slice(0, 3),
+        });
+        setAdaptiveBanner(null);
+        setIsSubmitting(false);
+        submittingRef.current = false;
+        return;
+      }
     }
 
     if (adaptiveAction === 'fallback') {
@@ -3128,7 +3198,8 @@ function PracticePageContent() {
             }}>Unlock Next Skills</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {masteredOverlay.nextSkills.map((skillId) => {
-                const label = sourceConfig.options.find((o) => o.value === skillId)?.label || skillId;
+                const label = sourceConfig.options.find((o) => o.value === skillId)?.label 
+                  || skillId.replace('template-', '').replaceAll('-', ' ');
                 return (
                   <button
                     key={skillId}

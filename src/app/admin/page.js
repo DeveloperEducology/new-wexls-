@@ -1674,6 +1674,7 @@ export default function AdminConsolePage() {
   const [interaction, setInteraction] = useState('');
   const [targets, setTargets] = useState(null);
   const [backgroundImage, setBackgroundImage] = useState('');
+  const [mobileBackgroundImage, setMobileBackgroundImage] = useState('');
   const [canvas, setCanvas] = useState(null);
   const [behavior, setBehavior] = useState(null);
   const [sourceTray, setSourceTray] = useState(null);
@@ -1703,6 +1704,7 @@ export default function AdminConsolePage() {
   const [columnSortStickers, setColumnSortStickers] = useState([]);
   const [columnSortCategories, setColumnSortCategories] = useState([]);
   const [columnSortSceneImageUrl, setColumnSortSceneImageUrl] = useState('');
+  const [columnSortMobileSceneImageUrl, setColumnSortMobileSceneImageUrl] = useState('');
   const [selectedColumnSortStickerId, setSelectedColumnSortStickerId] = useState(null);
   const [columnSortStickerDragging, setColumnSortStickerDragging] = useState(null); // {id, offsetX, offsetY}
   const [commonStickerWidth, setCommonStickerWidth] = useState(20);
@@ -2032,6 +2034,24 @@ export default function AdminConsolePage() {
     } else if (imgPickerPartIdx === -100) {
       // Special sentinel: column sort scene / background image
       setColumnSortSceneImageUrl(url);
+      setImgPickerPartIdx(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
+    } else if (imgPickerPartIdx === -101) {
+      // Special sentinel: column sort mobile scene / background image
+      setColumnSortMobileSceneImageUrl(url);
+      setImgPickerPartIdx(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
+    } else if (imgPickerPartIdx === -200) {
+      // Special sentinel: general desktop page background image
+      setBackgroundImage(url);
+      setImgPickerPartIdx(null);
+      setImgPickerOpen(false);
+      setIsDirty(true);
+    } else if (imgPickerPartIdx === -201) {
+      // Special sentinel: general mobile page background image
+      setMobileBackgroundImage(url);
       setImgPickerPartIdx(null);
       setImgPickerOpen(false);
       setIsDirty(true);
@@ -2520,6 +2540,7 @@ export default function AdminConsolePage() {
   const [templatesCatalog, setTemplatesCatalog] = useState(null);
   const [dynamicTemplates, setDynamicTemplates] = useState([]);
   const [useCustomTemplateId, setUseCustomTemplateId] = useState(false);
+  const [useCustomGrade, setUseCustomGrade] = useState(false);
 
   const uniqueSubjects = useMemo(() => {
     const subs = currFlatNodes.filter(n => n.type === 'subject').map(n => n.id);
@@ -2711,6 +2732,7 @@ export default function AdminConsolePage() {
   const startNewCurr = (type = 'topic') => {
     setCurrSelected(null);
     setCurrForm({ ...EMPTY_FORM, type });
+    setUseCustomGrade(false);
     setCurrManuallyEdited({});
     setCurrError('');
     setCurrStatus(`Creating a new ${type}.`);
@@ -2718,7 +2740,18 @@ export default function AdminConsolePage() {
 
   const selectCurrNode = (node) => {
     setCurrSelected(node);
-    setCurrForm(formFromNode(node));
+    const form = formFromNode(node);
+    setCurrForm(form);
+    
+    // Auto-detect custom grade
+    const standardGrades = new Set(['', 'prek', 'lkg', 'ukg', '1', '2', '3', '4', '5', '6', '7', '8', 'remediation']);
+    const gradeVal = form.grade != null ? String(form.grade).toLowerCase().trim() : '';
+    if (gradeVal && !standardGrades.has(gradeVal)) {
+      setUseCustomGrade(true);
+    } else {
+      setUseCustomGrade(false);
+    }
+
     setCurrManuallyEdited({});
     setCurrError('');
     setCurrStatus(`Editing ${node.type}: ${node.title || node.id}.`);
@@ -2727,6 +2760,7 @@ export default function AdminConsolePage() {
   const startChildCurr = (parent, type) => {
     setCurrSelected(null);
     setCurrForm(childDefaults(parent, type));
+    setUseCustomGrade(false);
     setCurrManuallyEdited({});
     setCurrError('');
     setCurrStatus(`Creating ${type} under ${parent.title || parent.id}.`);
@@ -2773,7 +2807,7 @@ export default function AdminConsolePage() {
       parentId: currForm.parentId.trim() || undefined,
       skillId: currForm.skillId.trim() || undefined,
       code: currForm.code.trim() || undefined,
-      grade: currForm.grade === '' ? undefined : Number(currForm.grade),
+      grade: currForm.grade === '' ? undefined : (Number.isFinite(Number(currForm.grade)) ? Number(currForm.grade) : currForm.grade.trim()),
       templateId: currForm.templateId.trim() || undefined,
       engine: currForm.engine.trim() || undefined,
       questionType: currForm.questionType.trim() || undefined,
@@ -4572,6 +4606,7 @@ export default function AdminConsolePage() {
     setInteraction('');
     setTargets(null);
     setBackgroundImage('');
+    setMobileBackgroundImage('');
     setCanvas(null);
     setBehavior(null);
     setSourceTray(null);
@@ -4588,6 +4623,7 @@ export default function AdminConsolePage() {
     setColumnSortStickers([]);
     setColumnSortCategories([]);
     setColumnSortSceneImageUrl('');
+    setColumnSortMobileSceneImageUrl('');
     setSelectedColumnSortStickerId(null);
     setColumnSortStickerDragging(null);
     setCommonStickerWidth(20);
@@ -4652,6 +4688,7 @@ export default function AdminConsolePage() {
     setInteraction('');
     setTargets(null);
     setBackgroundImage('');
+    setMobileBackgroundImage('');
     setCanvas(null);
     setBehavior(null);
     setSourceTray(null);
@@ -4668,6 +4705,7 @@ export default function AdminConsolePage() {
     setColumnSortStickers([]);
     setColumnSortCategories([]);
     setColumnSortSceneImageUrl('');
+    setColumnSortMobileSceneImageUrl('');
     setSelectedColumnSortStickerId(null);
     setColumnSortStickerDragging(null);
     setCommonStickerWidth(20);
@@ -4815,6 +4853,7 @@ export default function AdminConsolePage() {
     setInteraction(loadedInteraction);
     setTargets(q.targets || null);
     setBackgroundImage(q.backgroundImage || '');
+    setMobileBackgroundImage(q.mobileBackgroundImage || q.metadata?.mobileBackgroundImage || q.mobileBackgroundUrl || q.metadata?.mobileBackgroundUrl || q.backgroundImageMobile || q.metadata?.backgroundImageMobile || q.backgroundUrlMobile || q.metadata?.backgroundUrlMobile || '');
     setCanvas(q.canvas || null);
     setBehavior(q.behavior || null);
     setSourceTray(q.sourceTray || null);
@@ -5005,6 +5044,7 @@ export default function AdminConsolePage() {
     if (columnSortPart) {
       setType('column_sort');
       setColumnSortSceneImageUrl(columnSortPart.sceneImageUrl || '');
+      setColumnSortMobileSceneImageUrl(columnSortPart.mobileSceneImageUrl || columnSortPart.sceneImageUrlMobile || '');
       setColumnSortCategories((columnSortPart.categories || []).map((c, i) => ({
         id: c.id || `col_${i}`,
         label: c.label || `Column ${i + 1}`,
@@ -5030,6 +5070,7 @@ export default function AdminConsolePage() {
       setCommonStickerHeight(columnSortPart.commonStickerHeight !== undefined ? columnSortPart.commonStickerHeight : 20);
     } else {
       setColumnSortSceneImageUrl('');
+      setColumnSortMobileSceneImageUrl('');
       setColumnSortCategories([]);
       setColumnSortStickers([]);
       setCommonStickerWidth(20);
@@ -5288,6 +5329,7 @@ export default function AdminConsolePage() {
     setInteraction(tpl.interaction || '');
     setTargets(tpl.targets || null);
     setBackgroundImage(tpl.backgroundImage || '');
+    setMobileBackgroundImage(tpl.mobileBackgroundImage || tpl.mobileBackgroundUrl || tpl.backgroundImageMobile || tpl.backgroundUrlMobile || '');
     setCanvas(tpl.canvas || null);
     setBehavior(tpl.behavior || null);
     setSourceTray(tpl.sourceTray || null);
@@ -6184,6 +6226,7 @@ export default function AdminConsolePage() {
         type: 'interactive_stickers',
         mode: 'column_sort',
         sceneImageUrl: columnSortSceneImageUrl || '',
+        mobileSceneImageUrl: columnSortMobileSceneImageUrl || '',
         commonStickerWidth: Number(commonStickerWidth) || 20,
         commonStickerHeight: Number(commonStickerHeight) || 20,
         categories: columnSortCategories.map(c => ({
@@ -6619,6 +6662,10 @@ export default function AdminConsolePage() {
     if (backgroundImage) {
       payload.backgroundImage = backgroundImage;
       payload.metadata.backgroundImage = backgroundImage;
+    }
+    if (mobileBackgroundImage) {
+      payload.mobileBackgroundImage = mobileBackgroundImage;
+      payload.metadata.mobileBackgroundImage = mobileBackgroundImage;
     }
     if (canvas !== null) {
       payload.canvas = canvas;
@@ -7986,7 +8033,13 @@ export default function AdminConsolePage() {
         >
           ⚙️ VISUAL TEMPLATE BUILDER
         </a>
-
+        <a 
+          className={styles.tabButton}
+          href="/admin/links"
+          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 800 }}
+        >
+          🗺️ APPLICATION MAP
+        </a>
       </nav>
 
       {/* Active Tab View */}
@@ -8023,8 +8076,8 @@ export default function AdminConsolePage() {
                     }}
                   >
                     <option value="all">👥 All Students (Aggregated)</option>
-                    {stats.students && stats.students.map((student) => (
-                      <option key={student} value={student}>👤 {student}</option>
+                    {stats.students && stats.students.map((student, sIdx) => (
+                      <option key={`${student || 'student'}_${sIdx}`} value={student}>👤 {student}</option>
                     ))}
                   </select>
                 </div>
@@ -8138,7 +8191,7 @@ export default function AdminConsolePage() {
                           const mockPercentages = [65, 35, 20, 10];
                           const percent = mockPercentages[idx % mockPercentages.length];
                           return (
-                            <div key={subj} className={styles.barRow}>
+                            <div key={`${subj || 'subject'}_${idx}`} className={styles.barRow}>
                               <div className={styles.barInfo}>
                                 <span>{subj}</span>
                                 <span>{percent}%</span>
@@ -10161,6 +10214,65 @@ export default function AdminConsolePage() {
                               />
                             </div>
                           </div>
+
+                          <div className={styles.formRow} style={{ marginTop: 12 }}>
+                            <div className={styles.formGroup} style={{ flex: 1 }}>
+                              <label className={styles.filterLabel}>Page Background Image (Desktop)</label>
+                              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                <input
+                                  type="text"
+                                  className={styles.formInput}
+                                  value={backgroundImage || ''}
+                                  onChange={(e) => {
+                                    setBackgroundImage(e.target.value);
+                                    setIsDirty(true);
+                                  }}
+                                  placeholder="Default background is kids_practice_bg.webp if empty"
+                                  style={{ flex: 1 }}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => {
+                                    setImgPickerPartIdx(-200); // sentinel for desktop page bg
+                                    setImgPickerTab('gallery');
+                                    setImgPickerOpen(true);
+                                  }}
+                                  style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                                >
+                                  🖼 Browse
+                                </button>
+                              </div>
+                            </div>
+                            <div className={styles.formGroup} style={{ flex: 1 }}>
+                              <label className={styles.filterLabel}>Page Background Image (Mobile)</label>
+                              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                <input
+                                  type="text"
+                                  className={styles.formInput}
+                                  value={mobileBackgroundImage || ''}
+                                  onChange={(e) => {
+                                    setMobileBackgroundImage(e.target.value);
+                                    setIsDirty(true);
+                                  }}
+                                  placeholder="Falls back to desktop background if empty"
+                                  style={{ flex: 1 }}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.btnOutline}
+                                  onClick={() => {
+                                    setImgPickerPartIdx(-201); // sentinel for mobile page bg
+                                    setImgPickerTab('gallery');
+                                    setImgPickerOpen(true);
+                                  }}
+                                  style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                                >
+                                  🖼 Browse
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -12155,6 +12267,33 @@ export default function AdminConsolePage() {
                                     className={styles.btnOutline}
                                     onClick={() => {
                                       setImgPickerPartIdx(-100); // sentinel for column sort scene
+                                      setImgPickerTab('gallery');
+                                      setImgPickerOpen(true);
+                                    }}
+                                    style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                                  >
+                                    🖼 Browse
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Mobile Scene Image URL */}
+                              <div className={styles.formGroup}>
+                                <label className={styles.filterLabel}>Mobile Scene / Background Image URL (Responsive)</label>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                  <input
+                                    type="text"
+                                    className={styles.formInput}
+                                    value={columnSortMobileSceneImageUrl}
+                                    onChange={e => { setColumnSortMobileSceneImageUrl(e.target.value); setIsDirty(true); }}
+                                    placeholder="e.g. /images/prek_landscape_mobile.webp or https://... (Optional)"
+                                    style={{ flex: 1 }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className={styles.btnOutline}
+                                    onClick={() => {
+                                      setImgPickerPartIdx(-101); // sentinel for column sort mobile scene
                                       setImgPickerTab('gallery');
                                       setImgPickerOpen(true);
                                     }}
@@ -14800,9 +14939,36 @@ Explanation: A question must end with a question mark.`}</pre>
 
                     {/* Grade field (for chapters and skills) */}
                     {(currForm.type === 'chapter' || currForm.type === 'skill') && (
-                      <label>
-                        Grade
-                        <input name="grade" value={currForm.grade} onChange={updateCurrField} inputMode="numeric" placeholder="5" />
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Grade</span>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomGrade(!useCustomGrade)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                          >
+                            {useCustomGrade ? 'Use Select' : 'Enter Custom'}
+                          </button>
+                        </div>
+                        {useCustomGrade ? (
+                          <input name="grade" value={currForm.grade} onChange={updateCurrField} placeholder="e.g. Nursery" />
+                        ) : (
+                          <select name="grade" value={currForm.grade} onChange={updateCurrField}>
+                            <option value="">-- Select Grade --</option>
+                            <option value="prek">Pre-K</option>
+                            <option value="lkg">LKG</option>
+                            <option value="ukg">UKG</option>
+                            <option value="1">Grade 1</option>
+                            <option value="2">Grade 2</option>
+                            <option value="3">Grade 3</option>
+                            <option value="4">Grade 4</option>
+                            <option value="5">Grade 5</option>
+                            <option value="6">Grade 6</option>
+                            <option value="7">Grade 7</option>
+                            <option value="8">Grade 8</option>
+                            <option value="remediation">Remediation</option>
+                          </select>
+                        )}
                       </label>
                     )}
 

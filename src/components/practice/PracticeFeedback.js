@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import KaTeXRenderer from './KaTeXRenderer';
 import { speakText } from '../../lib/ttsClient';
 import styles from './FactoryLayout.module.css';
@@ -15,23 +15,30 @@ function isSvgString(value) {
 }
 
 function InlineMarkdown({ text }) {
-  return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
-    const match = piece.match(/^\*\*([^*]+)\*\*$/);
-    if (match) return <strong key={index}>{match[1]}</strong>;
-    
-    const subSegments = piece.split(/(\$[^\$]+\$)/g);
-    return (
-      <span key={index}>
-        {subSegments.map((subPiece, subIndex) => {
-          const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-          if (mathMatch) {
-            return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
-          }
-          return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
-        })}
-      </span>
-    );
-  });
+  const normalizedText = String(text || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\/n/g, '\n');
+  return (
+    <span style={{ whiteSpace: 'pre-line' }}>
+      {normalizedText.split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
+        const match = piece.match(/^\*\*([^*]+)\*\*$/);
+        if (match) return <strong key={index}>{match[1]}</strong>;
+        
+        const subSegments = piece.split(/(\$[^\$]+\$)/g);
+        return (
+          <span key={index}>
+            {subSegments.map((subPiece, subIndex) => {
+              const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+              if (mathMatch) {
+                return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
+              }
+              return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+            })}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 function ArithmeticLayoutSolution({ layout }) {
@@ -260,6 +267,7 @@ function renderInteractiveSolution(question) {
     const categories = question.categories || partStickersObj.categories || [];
     const stickers = question.stickers || partStickersObj.stickers || [];
     const sceneImageUrl = partStickersObj.sceneImageUrl || '';
+    const mobileSceneImageUrl = partStickersObj.mobileSceneImageUrl || partStickersObj.sceneImageUrlMobile || '';
     
     // Automatically assign minX and maxX boundaries if missing
     const catCount = categories.length;
@@ -274,27 +282,42 @@ function renderInteractiveSolution(question) {
     });
 
     const correctPlacements = [];
-    activeCategories.forEach((cat) => {
-      const catStickers = stickers.filter(s => s.category === cat.id);
-      const colWidth = cat.maxX - cat.minX;
-      catStickers.forEach((sticker, index) => {
-        const xOffset = catStickers.length === 1 
-          ? 0.5 
-          : (index % 2 === 0 ? 0.35 : 0.65);
-        const yOffset = catStickers.length <= 2 
-          ? (index === 0 ? 0.45 : 0.7) 
-          : (0.3 + (index / catStickers.length) * 0.45);
-        
-        const x = cat.minX + colWidth * xOffset;
-        const y = yOffset * 100;
-        correctPlacements.push({
-          id: sticker.id,
-          x,
-          y,
-          sticker
+    if (partStickersObj.mode === 'shadow_match') {
+      const targets = partStickersObj.targets || [];
+      targets.forEach((target) => {
+        const matchingSticker = stickers.find(s => s.type === target.type);
+        if (matchingSticker) {
+          correctPlacements.push({
+            id: target.id,
+            x: target.x,
+            y: target.y,
+            sticker: matchingSticker
+          });
+        }
+      });
+    } else {
+      activeCategories.forEach((cat) => {
+        const catStickers = stickers.filter(s => s.category === cat.id);
+        const colWidth = cat.maxX - cat.minX;
+        catStickers.forEach((sticker, index) => {
+          const xOffset = catStickers.length === 1 
+            ? 0.5 
+            : (index % 2 === 0 ? 0.35 : 0.65);
+          const yOffset = catStickers.length <= 2 
+            ? (index === 0 ? 0.45 : 0.7) 
+            : (0.3 + (index / catStickers.length) * 0.45);
+          
+          const x = cat.minX + colWidth * xOffset;
+          const y = yOffset * 100;
+          correctPlacements.push({
+            id: sticker.id,
+            x,
+            y,
+            sticker
+          });
         });
       });
-    });
+    }
 
     return (
       <div style={{ marginTop: 14, marginBottom: 14 }}>
@@ -305,27 +328,32 @@ function renderInteractiveSolution(question) {
           style={{
             position: 'relative',
             width: '100%',
-            aspectRatio: '16 / 7',
-            minHeight: 'clamp(180px, 48vw, 360px)',
+            aspectRatio: sceneImageUrl || mobileSceneImageUrl ? undefined : '16 / 7',
+            minHeight: sceneImageUrl || mobileSceneImageUrl ? undefined : 'clamp(180px, 48vw, 360px)',
             overflow: 'hidden',
             border: '2px solid #22c55e',
             borderRadius: '16px',
-            background: sceneImageUrl
+            background: sceneImageUrl || mobileSceneImageUrl
               ? '#ffffff'
               : 'linear-gradient(#62b8ed 0 62%, #b9d85a 62% 76%, #65a83c 76%)',
             boxShadow: '0 4px 12px rgba(22, 163, 74, 0.08)',
           }}
         >
-          {sceneImageUrl ? (
-            <img 
-              src={sceneImageUrl} 
-              alt="Scene" 
-              draggable={false} 
-              style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', userSelect: 'none' }} 
-            />
+          {sceneImageUrl || mobileSceneImageUrl ? (
+            <picture style={{ display: 'block', width: '100%', height: 'auto', pointerEvents: 'none', userSelect: 'none' }}>
+              {mobileSceneImageUrl && (
+                <source media="(max-width: 768px)" srcSet={mobileSceneImageUrl} />
+              )}
+              <img 
+                src={sceneImageUrl || mobileSceneImageUrl} 
+                alt="Scene" 
+                draggable={false} 
+                style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none', userSelect: 'none' }} 
+              />
+            </picture>
           ) : null}
 
-          {activeCategories.map((cat, index) => {
+          {partStickersObj.mode !== 'shadow_match' && activeCategories.map((cat, index) => {
             const width = cat.maxX - cat.minX;
             const left = cat.minX;
             return (
@@ -364,7 +392,7 @@ function renderInteractiveSolution(question) {
           {correctPlacements.map((placement) => {
             const sticker = placement.sticker;
             const imgUrl = sticker.imageUrl || '';
-            const content = sticker.content || '🦋';
+            const content = sticker.content || sticker.name || '🦋';
             const sWidth = sticker.widthPercent || sticker.width || partStickersObj.commonStickerWidth || 20;
             const sHeight = sticker.heightPercent || sticker.height || partStickersObj.commonStickerHeight || 20;
 
@@ -388,7 +416,31 @@ function renderInteractiveSolution(question) {
                 {imgUrl ? (
                   <img src={imgUrl} alt={sticker.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 ) : (
-                  <span style={{ fontSize: 'clamp(24px, 4vw, 44px)', lineHeight: 1 }}>{content}</span>
+                  /[a-zA-Z0-9]/.test(content) ? (
+                    <span 
+                      style={{ 
+                        fontSize: 'clamp(10px, 1.8vw, 13px)', 
+                        fontWeight: '600', 
+                        color: '#1e293b', 
+                        background: '#f8fafc', 
+                        border: '2px solid #cbd5e1', 
+                        borderRadius: '8px', 
+                        padding: '2px 6px', 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        textAlign: 'center',
+                        boxSizing: 'border-box',
+                        boxShadow: '0 2px 4px rgba(148, 163, 184, 0.08)'
+                      }}
+                    >
+                      {content}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 'clamp(24px, 4vw, 44px)', lineHeight: 1 }}>{content}</span>
+                  )
                 )}
               </div>
             );
@@ -735,83 +787,141 @@ function renderInteractiveSolution(question) {
   return null;
 }
 
-function renderCorrectChoices(question) {
+function renderCorrectAnswer(question) {
   if (!question) return null;
-  const isMcq = question.type === 'mcq' || question.interaction === 'choice' || question.interaction === 'multi_select';
-  if (!isMcq) return null;
 
-  const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
-  let correctIndices = [];
-  if (isMultiSelect && Array.isArray(question.correctAnswerIndices)) {
-    correctIndices = question.correctAnswerIndices;
-  } else if (isMultiSelect && Array.isArray(question.answer)) {
-    correctIndices = question.answer;
-  } else if (question.correctAnswerIndex !== undefined) {
-    correctIndices = [question.correctAnswerIndex];
-  } else if (typeof question.answer === 'number') {
-    correctIndices = [question.answer];
+  // Try to resolve the expected answer value
+  const isMcq = question.type === 'mcq' || question.interaction === 'choice' || question.interaction === 'multi_select';
+  
+  let expected = null;
+  if (isMcq) {
+    const options = Array.isArray(question.options) ? question.options : [];
+    let correctIndices = [];
+    if (question.correctAnswerIndex !== undefined) {
+      correctIndices = [question.correctAnswerIndex];
+    } else if (Array.isArray(question.correctAnswerIndices)) {
+      correctIndices = question.correctAnswerIndices;
+    } else if (typeof question.answer === 'number') {
+      correctIndices = [question.answer];
+    }
+    
+    if (correctIndices.length > 0) {
+      const labels = correctIndices.map(idx => {
+        const opt = options[idx];
+        if (!opt) return '';
+        return typeof opt === 'object' ? (opt.label ?? opt.text ?? '') : String(opt);
+      }).filter(Boolean);
+      expected = labels.join(', ');
+    }
+  } else {
+    expected = question.answer ?? question.correctAnswer;
+    if (!expected && Array.isArray(question.validationRules)) {
+      const rule = question.validationRules.find(r => r.type === 'exact_match' && r.target === 'answer');
+      if (rule) expected = rule.value;
+    }
   }
 
-  if (correctIndices.length === 0) return null;
+  if (expected === undefined || expected === null || expected === '') return null;
 
-  const options = Array.isArray(question.options) ? question.options : [];
-
+  // Render Section
   return (
     <div style={{ marginTop: 14, marginBottom: 14 }}>
-      <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        Correct Option{correctIndices.length > 1 ? 's' : ''}
+      <h4 style={{
+        margin: '0 0 10px',
+        fontSize: 13,
+        fontWeight: 900,
+        color: '#475569',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em'
+      }}>
+        Correct Answer
       </h4>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-        {correctIndices.map((idx) => {
-          const option = options[idx];
-          if (!option) return null;
-
-          const label = typeof option === 'object' ? (option.label || option.text || '') : String(option);
-          const imageUrl = typeof option === 'object' ? option.imageUrl : null;
-
-          return (
-            <div
-              key={idx}
-              style={{
-                minWidth: 140,
-                minHeight: 52,
-                padding: imageUrl ? '10px' : '12px 18px',
-                borderRadius: 12,
-                border: '2px solid #22c55e', // Green border for correct answer
+      
+      {typeof expected === 'object' && !Array.isArray(expected) ? (
+        // Multi-blank layout: Render question blueprint with values filled in
+        (() => {
+          const qText = question.questionText || '';
+          if (/\[\[([^\]]+)\]\]/.test(qText)) {
+            const parts = qText.split(/(\[\[[^\]]+\]\])/g);
+            return (
+              <div style={{
+                padding: '16px 20px',
                 background: '#ffffff',
-                color: '#1e293b',
-                boxShadow: '0 6px 12px rgba(22, 163, 74, 0.06)',
-                textAlign: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                fontWeight: 700,
-                fontSize: 14,
-                gap: 6,
-              }}
-            >
-              {imageUrl && (
-                <div style={{
-                  width: '100%',
-                  height: 84,
-                  background: '#f8fafc',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  marginBottom: 4
+                borderRadius: 14,
+                border: '2px solid #22c55e',
+                fontSize: 'clamp(17px, 3.2vw, 20px)',
+                fontWeight: 500,
+                lineHeight: 1.85,
+                color: '#0f172a'
+              }}>
+                {parts.map((part, idx) => {
+                  const match = part.match(/^\[\[([^\]]+)\]\]$/);
+                  if (match) {
+                    const blankId = match[1].trim();
+                    const val = expected[blankId] || '';
+                    return (
+                      <strong key={idx} style={{
+                        color: '#15803d',
+                        background: '#dcfce7',
+                        padding: '3px 10px',
+                        borderRadius: 6,
+                        margin: '0 4px',
+                        border: '1.5px solid #22c55e',
+                        fontFamily: 'var(--font-outfit), sans-serif',
+                        fontWeight: 900,
+                        fontSize: '1.1em'
+                      }}>
+                        {val}
+                      </strong>
+                    );
+                  }
+                  return part.split('\n').map((line, i) => (
+                    <span key={i}>
+                      {i > 0 && <br />}
+                      {line}
+                    </span>
+                  ));
+                })}
+              </div>
+            );
+          }
+          
+          // Fallback list of blank values
+          return (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {Object.entries(expected).map(([key, val]) => (
+                <div key={key} style={{
+                  padding: '8px 14px',
+                  background: '#f0fdf4',
+                  borderRadius: 10,
+                  border: '1.5px solid #22c55e',
+                  color: '#16a34a',
+                  fontWeight: 700,
+                  fontSize: 16
                 }}>
-                  <img src={imageUrl} alt={label} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                  {key}: <strong>{val}</strong>
                 </div>
-              )}
-              <span>{label}</span>
+              ))}
             </div>
           );
-        })}
-      </div>
+        })()
+      ) : (
+        // Single value layout
+        <div style={{
+          padding: '14px 20px',
+          background: '#ffffff',
+          borderRadius: 12,
+          border: '2px solid #22c55e',
+          color: '#15803d',
+          fontWeight: 900,
+          fontSize: 'clamp(18px, 3.2vw, 21px)',
+          display: 'inline-block',
+          fontFamily: 'var(--font-outfit), sans-serif',
+          boxShadow: '0 4px 10px rgba(34, 197, 94, 0.05)'
+        }}>
+          {String(expected)}
+        </div>
+      )}
     </div>
   );
 }
@@ -825,6 +935,13 @@ export default function PracticeFeedback({
   isPreK = false,
 }) {
   const spokenRef = useRef(false);
+
+  const activeIsPreK = useMemo(() => {
+    const skillGrade = question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade;
+    const g = String(skillGrade || '').toLowerCase().trim();
+    const isElementaryOrHigher = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'grade 1', 'grade 2', 'grade 3', 'class 1', 'class 2'].includes(g);
+    return isPreK && !isElementaryOrHigher;
+  }, [question, isPreK]);
 
   // Clean explanation text
   const getExplanationText = (exp) => {
@@ -851,7 +968,12 @@ export default function PracticeFeedback({
 
   if (question) {
     if (isInteractiveStickers) {
-      correctLabel = 'Correct sorting';
+      const partStickersObj = question.parts?.find(p => p.type === 'interactive_stickers') || {};
+      if (partStickersObj.mode === 'shadow_match') {
+        correctLabel = 'Correct labeling';
+      } else {
+        correctLabel = 'Correct sorting';
+      }
     } else {
       let indices = [];
       if (isMultiSelect && Array.isArray(question.correctAnswerIndices)) {
@@ -886,7 +1008,7 @@ export default function PracticeFeedback({
   const cleanLabel = cleanText(correctLabel);
 
   useEffect(() => {
-    if (isPreK && !isCorrect && question && !spokenRef.current) {
+    if (activeIsPreK && !isCorrect && question && !spokenRef.current) {
       spokenRef.current = true;
       const introText = cleanLabel 
         ? `Almost! The correct answer is the ${cleanLabel}.` 
@@ -897,7 +1019,7 @@ export default function PracticeFeedback({
       }, 100);
       return () => clearTimeout(t);
     }
-  }, [isPreK, isCorrect, question, cleanLabel, cleanExp]);
+  }, [activeIsPreK, isCorrect, question, cleanLabel, cleanExp]);
 
   const handlePlaySpeech = () => {
     const introText = cleanLabel 
@@ -916,7 +1038,7 @@ export default function PracticeFeedback({
       })
     : [];
 
-  if (isPreK) {
+  if (activeIsPreK) {
     return (
       <section className={styles.preKFeedbackContainer}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
@@ -942,26 +1064,7 @@ export default function PracticeFeedback({
           </button>
         </div>
 
-        {/* Visual Spotlight Choice Card */}
-        <div className={styles.preKSpotlightCard}>
-          <div className={styles.preKSpotlightCircle}>
-            {correctImageUrl ? (
-              <img src={correctImageUrl} alt={cleanLabel} style={{ width: 68, height: 68, objectFit: 'contain' }} />
-            ) : isSvgString(correctLabel) ? (
-              <div style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }} dangerouslySetInnerHTML={{ __html: correctLabel }} />
-            ) : (
-              <span style={{ fontSize: 32, fontWeight: 950, color: '#16a34a' }}>✓</span>
-            )}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Correct Answer
-            </div>
-            <div style={{ fontSize: 19, fontWeight: 950, color: '#0f172a', fontFamily: 'var(--font-outfit), sans-serif' }}>
-              {isSvgString(correctLabel) ? 'Right choice' : (cleanLabel || 'Right choice')}
-            </div>
-          </div>
-        </div>
+        {renderCorrectAnswer(question, isCorrect)}
 
         {cleanExp && (
           <div style={{
@@ -971,9 +1074,9 @@ export default function PracticeFeedback({
             borderRadius: 18,
             border: '2px solid rgba(251, 146, 60, 0.15)',
             color: '#334155',
-            fontSize: 14,
-            fontWeight: 700,
-            lineHeight: 1.55,
+            fontSize: 17,
+            fontWeight: 500,
+            lineHeight: 1.8,
           }}>
             <InlineMarkdown text={cleanExp} />
           </div>
@@ -989,8 +1092,9 @@ export default function PracticeFeedback({
             borderRadius: 18,
             border: '2px solid rgba(251, 146, 60, 0.15)',
             color: '#1e293b',
-            fontSize: 14,
-            lineHeight: 1.55,
+            fontSize: 17,
+            fontWeight: 500,
+            lineHeight: 1.8,
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
@@ -1053,9 +1157,9 @@ export default function PracticeFeedback({
             borderRadius: 14,
             border: `1px solid ${isCorrect ? 'rgba(34, 197, 94, 0.12)' : 'rgba(251, 146, 60, 0.12)'}`,
             color: '#334155',
-            fontSize: 14,
-            fontWeight: 700,
-            lineHeight: 1.5,
+            fontSize: 17,
+            fontWeight: 500,
+            lineHeight: 1.8,
           }}
         >
           <InlineMarkdown text={cleanExp} />
@@ -1064,7 +1168,7 @@ export default function PracticeFeedback({
 
       {renderInteractiveSolution(question)}
 
-      {renderCorrectChoices(question)}
+      {renderCorrectAnswer(question, isCorrect)}
 
       {solutionSections.length > 0 ? (
         <div
@@ -1074,8 +1178,9 @@ export default function PracticeFeedback({
             borderRadius: 14,
             border: `1px solid ${isCorrect ? 'rgba(34, 197, 94, 0.18)' : 'rgba(251, 146, 60, 0.18)'}`,
             color: '#1e293b',
-            fontSize: 15,
-            lineHeight: 1.6,
+            fontSize: 17,
+            fontWeight: 500,
+            lineHeight: 1.8,
             display: 'flex',
             flexDirection: 'column',
             gap: 10,

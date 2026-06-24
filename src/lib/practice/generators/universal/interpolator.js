@@ -41,6 +41,28 @@ export function resolveLabelOrExpression(label, context) {
     interpolated = interpolateString(label, context);
   }
 
+  // Parse fraction-like strings so they don't evaluate to decimal floats
+  // e.g. "4/7" or "4/(7 * 2)" -> "4/7" or "4/14"
+  if (interpolated.includes('/')) {
+    const parts = interpolated.split('/');
+    if (parts.length === 2) {
+      const numPart = parts[0].trim();
+      const denPart = parts[1].trim();
+      const mathTermRegex = /^[A-Za-z0-9_()+\-*%\s]+$/;
+      if (mathTermRegex.test(numPart) && mathTermRegex.test(denPart)) {
+        try {
+          const numVal = resolveExpression(numPart, context);
+          const denVal = resolveExpression(denPart, context);
+          if (typeof numVal === 'number' && typeof denVal === 'number' && !isNaN(numVal) && !isNaN(denVal)) {
+            return `${numVal}/${denVal}`;
+          }
+        } catch (e) {
+          // ignore and fallback
+        }
+      }
+    }
+  }
+
   // If the string looks like a function call expression (contains parentheses),
   // try evaluating it directly via resolveExpression.
   // e.g. toWords(A) + ' minus ' + toWords(B) → "nine minus five"

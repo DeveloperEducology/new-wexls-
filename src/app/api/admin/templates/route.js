@@ -1,76 +1,261 @@
 import { NextResponse } from 'next/server';
-import { TEMPLATES_CATALOG } from '@/lib/practice/templatesCatalog';
+import { TEMPLATES_CATALOG } from '../../../../lib/practice/templatesCatalog.js';
 import {
   listAllDynamicTemplates,
   saveDynamicTemplate,
   deleteDynamicTemplate
-} from '@/lib/practice/questionBank/dynamicTemplatesRepository';
+} from '../../../../lib/practice/questionBank/dynamicTemplatesRepository.js';
+import { listTemplates, createTemplate } from '../../../../lib/exam/template-store.js';
 
-export async function GET(request) {
+export async function GET(req) {
   try {
-    const dynamicTemplates = await listAllDynamicTemplates();
-    return NextResponse.json({
-      success: true,
-      templates: TEMPLATES_CATALOG,
-      dynamicTemplates
+    const { searchParams } = new URL(req.url);
+    const examId = searchParams.get('examId');
+
+    // 1. Fetch dynamic templates from MongoDB (dynamic_templates collection)
+    const curriculumDynamic = await listAllDynamicTemplates();
+
+    // 2. Fetch competitive exam templates from MongoDB (templates collection)
+    const examTemplates = await listTemplates({
+      examId: examId || undefined,
+      section: searchParams.get('section') || undefined,
+      type: searchParams.get('type') || undefined,
     });
-  } catch (error) {
-    console.error('Templates API GET error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
-  }
-}
 
-export async function POST(request) {
-  try {
-    const body = await request.json();
-    const { template } = body || {};
+    const mappedCurriculum = curriculumDynamic.map(t => ({
+      ...t,
+      title: t.title || t.name || t.templateInfo?.title || t.id,
+      subject: t.subject || t.templateInfo?.subject || 'other',
+      topic: t.topic || t.templateInfo?.topic || 'general',
+      id: t.id || String(t._id)
+    }));
 
-    if (!template || !template.id) {
+    const mappedExamTemplates = examTemplates.map(t => {
+      let config = t.config || {};
+      if (config.config && (!config.variables || Array.isArray(config.variables))) {
+        config = { ...config, ...config.config };
+      }
+      const { config: _, ...rest } = t;
+      return {
+        ...config,
+        ...rest,
+        title: t.name || t.title,
+        subject: t.section || t.subject || 'other',
+        id: String(t._id),
+        _id: String(t._id)
+      };
+    });
+
+    // 3. Combine both flat lists for dynamicTemplates
+    const allDynamic = [
+      ...mappedCurriculum,
+      ...mappedExamTemplates
+    ];
+
+    // 4. Merge JNVST templates into static templates catalog
+    const groupedExam = {};
+    mappedExamTemplates.forEach(t => {
+      const subj = t.section || 'other';
+      const topicName = t.topic || 'general';
+      if (!groupedExam[subj]) groupedExam[subj] = {};
+      if (!groupedExam[subj][topicName]) groupedExam[subj][topicName] = [];
+      groupedExam[subj][topicName].push(t);
+    });
+
+    const mergedTemplatesCatalog = {
+      ...TEMPLATES_CATALOG,
+      ...groupedExam
+    };
+
+    // If a specific exam is queried, return the flat exam templates list for templates key
+    // to match what the questions list page expects.
+    if (examId) {
       return NextResponse.json({
-        success: false,
-        error: 'Template object with a unique "id" field is required.'
-      }, { status: 400 });
+        success: true,
+        templates: mappedExamTemplates,
+        dynamicTemplates: mappedExamTemplates,
+        groupedTemplates: groupedExam
+      });
     }
 
-    const result = await saveDynamicTemplate(template);
     return NextResponse.json({
       success: true,
-      result
+      templates: mergedTemplatesCatalog,
+      dynamicTemplates: allDynamic,
+      groupedTemplates: mergedTemplatesCatalog
     });
-  } catch (error) {
-    console.error('Templates API POST error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
+  } catch (err) {
+    console.error('Templates API GET error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
 
-export async function DELETE(request) {
+export async function POST(req) {
   try {
-    const { searchParams } = new URL(request.url);
+    const body = await req.json();
+    const tData = body.template || body;
+
+    if (!tData) {
+      return NextResponse.json({ success: false, error: 'Template object is required' }, { status: 400 });
+    }
+
+    // If it has a competitive examId, save to JNVST templates collection
+    if (tData.examId === 'jnvst' || tData.exam === 'jnvst') {
+      const name = tData.name || tData.title;
+      const type = tData.type || 'parameterized';
+      const examId = tData.examId || tData.exam || 'jnvst';
+      const section = tData.section || tData.subject;
+      const topic = tData.topic;
+      const difficulty = Number(tData.difficulty) || 0.5;
+
+      if (!name || !type || !examId || !section || !topic) {
+        return NextResponse.json({ success: false, error: 'Missing required fields for competitive template (name, type, examId, section, topic)' }, { status: 400 });
+      }
+
+      const { getMongoDb } = await import('../../../../lib/db/mongo.js');
+      const db = await getMongoDb();
+      if (!db) {
+        return NextResponse.json({ success: false, error: 'Database connection failed' }, { status: 500 });
+      }
+
+      const { _id, id, createdAt, updatedAt, config: nestedConfig, ...configData } = tData;
+      const config = {
+        ...(typeof nestedConfig === 'object' && nestedConfig !== null ? nestedConfig : configData),
+        examId,
+        section,
+        topic,
+        difficulty
+      };
+
+      const { ObjectId } = await import('mongodb');
+      let templateId = tData._id || tData.id;
+      let isUpdate = false;
+      let finalId = null;
+
+      if (templateId) {
+        let queryId;
+        try {
+          queryId = new ObjectId(templateId);
+        } catch {
+          queryId = templateId;
+        }
+
+        const existing = await db.collection('templates').findOne({ _id: queryId });
+        if (existing) {
+          isUpdate = true;
+          finalId = String(existing._id);
+          await db.collection('templates').updateOne(
+            { _id: queryId },
+            {
+              $set: {
+                name,
+                type,
+                examId,
+                section,
+                topic,
+                difficulty,
+                config,
+                updatedAt: new Date()
+              }
+            }
+          );
+        }
+      }
+
+      if (!isUpdate) {
+        const doc = {
+          ...(templateId ? { _id: templateId } : {}),
+          name,
+          type,
+          examId,
+          section,
+          topic,
+          difficulty,
+          config,
+          generatedCount: 0,
+          status: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        const insertRes = await db.collection('templates').insertOne(doc);
+        finalId = String(insertRes.insertedId);
+      }
+
+      // Automatic JNVST exam topic registration
+      try {
+        const examDoc = await db.collection('exams').findOne({ _id: 'jnvst' });
+        if (examDoc) {
+          let updated = false;
+          const updatedSections = examDoc.sections.map(s => {
+            if (s.id === section) {
+              if (!s.topics.includes(topic)) {
+                s.topics.push(topic);
+                updated = true;
+              }
+            }
+            return s;
+          });
+          if (updated) {
+            await db.collection('exams').updateOne(
+              { _id: 'jnvst' },
+              { $set: { sections: updatedSections, updatedAt: new Date() } }
+            );
+            console.log(`Auto-registered new JNVST topic "${topic}" under section "${section}"`);
+          }
+        }
+      } catch (examErr) {
+        console.error('Failed to auto-register JNVST topic in exams collection:', examErr);
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: finalId,
+        result: {
+          id: finalId,
+          mode: isUpdate ? 'update' : 'insert'
+        }
+      });
+    } else {
+      // General curriculum dynamic template
+      if (!tData.id) {
+        return NextResponse.json({ success: false, error: 'Template ID is required for curriculum template' }, { status: 400 });
+      }
+      const result = await saveDynamicTemplate(tData);
+      return NextResponse.json({ success: true, result });
+    }
+  } catch (err) {
+    console.error('Templates API POST error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req) {
+  try {
+    const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
+    const isExam = searchParams.get('exam') === 'true';
+
     if (!id) {
-      return NextResponse.json({
-        success: false,
-        error: 'Template id query parameter is required.'
-      }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Template id query parameter is required.' }, { status: 400 });
     }
 
-    const result = await deleteDynamicTemplate(id);
-    return NextResponse.json({
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error('Templates API DELETE error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
+    if (isExam) {
+      const { ObjectId } = await import('mongodb');
+      const { getMongoDb } = await import('../../../../lib/db/mongo.js');
+      const db = await getMongoDb();
+      let res;
+      try {
+        res = await db.collection('templates').deleteOne({ _id: new ObjectId(id) });
+      } catch {
+        res = await db.collection('templates').deleteOne({ _id: id });
+      }
+      return NextResponse.json({ success: true, result: res });
+    } else {
+      const result = await deleteDynamicTemplate(id);
+      return NextResponse.json({ success: true, result });
+    }
+  } catch (err) {
+    console.error('Templates API DELETE error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
-

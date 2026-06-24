@@ -3,6 +3,10 @@ import { getMongoDb } from '@/lib/db/mongo';
 const COLLECTION_NAME = process.env.MONGODB_CURRICULUM_COLLECTION || 'curriculum_nodes';
 const NODE_TYPES = new Set(['subject', 'topic', 'chapter', 'skill']);
 
+let cachedV2Nodes = null;
+let cachedV2NodesExpiry = 0;
+const V2_CACHE_TTL_MS = 15000; // 15 seconds TTL cache
+
 function slugify(value) {
   return String(value || '')
     .trim()
@@ -109,7 +113,130 @@ export async function listCurriculumNodes(filters = {}) {
   }
 
   const limit = Math.min(Number(filters.limit) || 200, 1000);
-  return collection.find(query).sort({ type: 1, order: 1, title: 1 }).limit(limit).toArray();
+  const v1Nodes = await collection.find(query).sort({ type: 1, order: 1, title: 1 }).limit(limit).toArray();
+
+  let v2Nodes = [];
+  const now = Date.now();
+  if (cachedV2Nodes && now < cachedV2NodesExpiry) {
+    v2Nodes = cachedV2Nodes;
+  } else {
+    try {
+      const { listV2Nodes } = await import('./storeV2.js');
+      const [v2Subjects, v2Units, v2Chapters, v2Skills] = await Promise.all([
+        listV2Nodes('subject'),
+        listV2Nodes('unit'),
+        listV2Nodes('chapter'),
+        listV2Nodes('skill')
+      ]);
+
+      const normSubjects = v2Subjects.map(sub => ({
+        ...sub,
+        id: sub.id,
+        type: 'subject',
+        title: sub.title || sub.name,
+        order: sub.order || 0,
+        status: sub.status || 'active',
+        source: 'v2'
+      }));
+
+      const normUnits = v2Units.map(unit => ({
+        ...unit,
+        id: unit.id,
+        type: 'topic',
+        parentId: unit.subjectId,
+        subjectId: unit.subjectId,
+        topicId: unit.id,
+        title: unit.title || unit.name,
+        order: unit.order || 0,
+        status: unit.status || 'active',
+        source: 'v2'
+      }));
+
+      const normChapters = v2Chapters.map(ch => {
+        const parentUnit = v2Units.find(u => u.id === ch.unitId);
+        const subjectId = parentUnit?.subjectId || 'math';
+        return {
+          ...ch,
+          id: ch.id,
+          type: 'chapter',
+          parentId: ch.unitId,
+          subjectId,
+          topicId: ch.unitId,
+          chapterId: ch.id,
+          grade: ch.gradeId,
+          title: `${ch.title || ch.name} (${String(ch.gradeId).toUpperCase()})`,
+          order: ch.order || 0,
+          status: ch.status || 'active',
+          source: 'v2'
+        };
+      });
+
+      const normSkills = v2Skills.map(sk => {
+        const chapter = v2Chapters.find(c => c.id === sk.chapterId);
+        const unitId = chapter?.unitId || '';
+        const parentUnit = v2Units.find(u => u.id === unitId);
+        const subjectId = parentUnit?.subjectId || 'math';
+        const gradeId = sk.gradeId || chapter?.gradeId || '1';
+        const resolvedTopicId = chapter?.unitId || sk.chapterId;
+        
+        return {
+          ...sk,
+          id: sk.id,
+          type: 'skill',
+          parentId: sk.chapterId,
+          subjectId,
+          topicId: resolvedTopicId,
+          chapterId: sk.chapterId,
+          skillId: sk.id,
+          title: sk.title || sk.name,
+          code: sk.code || '',
+          templateId: sk.templateId || '',
+          grade: gradeId,
+          order: sk.order || 0,
+          status: sk.status || 'active',
+          source: 'v2',
+          metadata: {
+            ...sk,
+            ...(sk.metadata || {}),
+            grade: gradeId,
+            subject: subjectId,
+            topic: resolvedTopicId,
+            templateId: sk.templateId || '',
+            engine: sk.engine || ''
+          }
+        };
+      });
+
+      v2Nodes = [...normSubjects, ...normUnits, ...normChapters, ...normSkills];
+      cachedV2Nodes = v2Nodes;
+      cachedV2NodesExpiry = now + V2_CACHE_TTL_MS;
+    } catch (err) {
+      console.error('Error fetching V2 nodes:', err);
+    }
+  }
+
+  const filteredV2 = v2Nodes.filter(node => {
+    if (filters.type && node.type !== filters.type) return false;
+    if (filters.subjectId && node.subjectId !== slugify(filters.subjectId)) return false;
+    if (filters.topicId && node.topicId !== slugify(filters.topicId)) return false;
+    if (filters.chapterId && node.chapterId !== slugify(filters.chapterId)) return false;
+    if (filters.parentId && node.parentId !== slugify(filters.parentId)) return false;
+    if (filters.status && node.status !== filters.status) return false;
+    if (filters.skillId && node.skillId !== slugify(filters.skillId)) return false;
+    if (filters.search) {
+      const q = String(filters.search).toLowerCase();
+      const match = (node.id || '').toLowerCase().includes(q) || 
+                    (node.title || '').toLowerCase().includes(q) || 
+                    (node.skillId || '').toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  const v1Ids = new Set(v1Nodes.map(n => n.id));
+  const uniqueV2 = filteredV2.filter(n => !v1Ids.has(n.id));
+
+  return [...v1Nodes, ...uniqueV2];
 }
 
 export async function getCurriculumNode(id) {

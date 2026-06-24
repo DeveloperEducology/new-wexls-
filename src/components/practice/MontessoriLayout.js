@@ -93,6 +93,12 @@ export default function MontessoriLayout({
 }) {
   const [isTrayOpen, setIsTrayOpen] = useState(false);
   const isDirectImageSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
+  const shouldAutoSubmit = Boolean(
+    question?.metadata?.clickToSubmit ||
+    question?.layoutConfig?.clickToSubmit ||
+    question?.metadata?.autoSubmit ||
+    question?.layoutConfig?.autoSubmit
+  );
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -190,18 +196,20 @@ export default function MontessoriLayout({
 
             {/* Check/Next Question capsule button */}
             {!isAnswered ? (
-              <button
-                type="button"
-                onClick={() => handleSubmit()}
-                disabled={userAnswer === null || isSubmitting || loading}
-                className={isSecondTry ? styles.montessoriRetryBtn : styles.montessoriCheckBtn}
-              >
-                {isSecondTry ? (
-                  <span>💫 Try Again! (Self-Correct)</span>
-                ) : (
-                  <span>{isDirectImageSelect && userAnswer === null ? '👆 Tap a picture' : '🚀 Check My Answer'}</span>
-                )}
-              </button>
+              !shouldAutoSubmit && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={userAnswer === null || isSubmitting || loading}
+                  className={isSecondTry ? styles.montessoriRetryBtn : styles.montessoriCheckBtn}
+                >
+                  {isSecondTry ? (
+                    <span>💫 Try Again! (Self-Correct)</span>
+                  ) : (
+                    <span>{isDirectImageSelect && userAnswer === null ? '👆 Tap a picture' : '🚀 Check My Answer'}</span>
+                  )}
+                </button>
+              )
             ) : (
               <button
                 type="button"

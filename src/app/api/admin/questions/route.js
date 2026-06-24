@@ -97,6 +97,12 @@ export async function GET(request) {
     const type = searchParams.get('type') || '';
     const difficulty = searchParams.get('difficulty') || '';
     
+    // Competitive exam parameters
+    const examId = searchParams.get('examId') || '';
+    const section = searchParams.get('section') || '';
+    const status = searchParams.get('status') || '';
+    const isPYQ = searchParams.get('isPYQ');
+    
     // Pagination parameters
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -119,6 +125,19 @@ export async function GET(request) {
     if (topic) filter.topic = topic;
     if (skillId) filter.skillId = skillId;
     if (type) filter.type = type;
+    
+    // JNVST / competitive filters
+    if (examId) filter.examId = examId;
+    if (section) filter.section = section;
+    if (status) {
+      filter.status = status;
+    } else if (examId) {
+      filter.status = 'active'; // Default to active for exam prep views
+    }
+    
+    if (isPYQ === 'true') filter.isPYQ = true;
+    if (isPYQ === 'false') filter.isPYQ = false;
+
     if (difficulty) {
       const val = String(difficulty).toLowerCase();
       const equivalents = [val];
@@ -178,8 +197,39 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const mode = body?.mode === 'insert' ? 'insert' : 'upsert';
     const payload = body?.question || body;
+
+    // Check if it's a competitive exam question (like JNVST)
+    if (payload.examId) {
+      const db = await getMongoDb();
+      if (!db) {
+        return NextResponse.json({ success: false, error: 'Database connection failed' }, { status: 500 });
+      }
+      const collectionName = process.env.MONGODB_QUESTIONS_COLLECTION || 'questions';
+      const collection = db.collection(collectionName);
+      
+      const doc = {
+        examId: payload.examId,
+        section: payload.section,
+        topic: payload.topic || '',
+        difficulty: Number(payload.difficulty) || 0.5,
+        questionText: payload.questionText,
+        options: payload.options,
+        correctOption: payload.correctOption,
+        explanationText: payload.explanationText || '',
+        isPYQ: Boolean(payload.isPYQ),
+        pyqYear: payload.pyqYear ? Number(payload.pyqYear) : null,
+        tags: payload.tags || [],
+        status: payload.status || 'active',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const result = await collection.insertOne(doc);
+      return NextResponse.json({ success: true, id: String(result.insertedId) });
+    }
+
+    const mode = body?.mode === 'insert' ? 'insert' : 'upsert';
 
     // Validate fields
     if (!payload.subject || !payload.topic || !payload.skillId || !payload.type) {

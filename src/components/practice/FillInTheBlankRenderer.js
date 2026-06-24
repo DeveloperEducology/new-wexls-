@@ -31,7 +31,8 @@ function responsivePx(value, minPx, fallbackMaxPx) {
 }
 
 function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered }) {
-  const pieces = String(text || '').split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
+  const normalizedText = String(text || '').replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+  const pieces = normalizedText.split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
   const renderPlainTextPiece = (piece, keyPrefix) => (
     String(piece).split('\n').map((line, lineIndex, lines) => (
       <span key={`${keyPrefix}-${lineIndex}`}>
@@ -352,7 +353,7 @@ export default function FillInTheBlankRenderer({
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
             </svg>
           </button>
-          <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.28, fontWeight: 600 }}>
+          <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
             <InlineTextWithBlanks
               text={question.questionText}
               userAnswer={userAnswer}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { evaluateTemplate } from '@/lib/practice/generators/universalEvaluator';
+import { generateFromDynamicPool } from '@/lib/practice/engine/DynamicPoolGenerator';
 import styles from './templates.module.css';
 
 const DEFAULT_TEMPLATE = {
@@ -465,6 +466,24 @@ const SUBJECT_MODES = {
     strands: ['patterns', 'classification', 'analogies', 'deduction'],
     visuals: ['Text', 'Image', 'SVG', 'DragCanvas'],
     interactions: ['mcq', 'multi_select', 'sorting', 'matching', 'sequence', 'fill_blank']
+  },
+  mat: {
+    label: 'Mental Ability (MAT)',
+    strands: ['patterns', 'classification', 'analogies', 'figure-completion', 'mirror-image', 'embedded-figures'],
+    visuals: ['Text', 'Image', 'SVG', 'DragCanvas'],
+    interactions: ['mcq', 'picture_mcq', 'multi_select', 'sorting', 'matching', 'hotspot']
+  },
+  arithmetic: {
+    label: 'Arithmetic',
+    strands: ['numbers', 'fractions', 'percentages', 'ratios', 'profit-loss', 'mensuration'],
+    visuals: ['Text', 'NumberLine', 'FractionBar', 'BaseTenBlocks', 'Clock', 'GeometryCanvas', 'DragCanvas'],
+    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'fill_blank', 'number_input', 'sequence', 'interactive_tool']
+  },
+  language: {
+    label: 'Language',
+    strands: ['comprehension', 'grammar', 'vocabulary'],
+    visuals: ['Text', 'Image', 'Audio', 'ReadingPassage'],
+    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'matching', 'fill_blank', 'text_input', 'sequence']
   }
 };
 
@@ -559,7 +578,9 @@ const createUniversalSchemaDefaults = () => ({
   },
   layoutConfig: {
     mode: 'prompt_top',
-    responsiveTarget: 'desktop_first'
+    responsiveTarget: 'desktop_first',
+    clickToSubmit: false,
+    audio: false
   },
   interaction: {
     engine: 'mcq',
@@ -588,6 +609,21 @@ const createUniversalSchemaDefaults = () => ({
   }
 });
 
+const getInteractionString = (interaction) => {
+  if (!interaction) return 'choice';
+  if (typeof interaction === 'string') return interaction;
+  if (interaction["0"] !== undefined) {
+    let str = '';
+    let i = 0;
+    while (interaction[String(i)] !== undefined) {
+      str += interaction[String(i)];
+      i++;
+    }
+    return str;
+  }
+  return interaction.inputMode || interaction.engine || 'choice';
+};
+
 const withUniversalDefaults = (template) => {
   const defaults = createUniversalSchemaDefaults();
   return {
@@ -596,7 +632,11 @@ const withUniversalDefaults = (template) => {
     dataSources: template.dataSources || defaults.dataSources,
     constraints: { ...defaults.constraints, ...(template.constraints || {}) },
     layoutConfig: { ...defaults.layoutConfig, ...(template.layoutConfig || {}) },
-    interaction: { ...defaults.interaction, ...(template.interaction || {}) },
+    interaction: typeof template.interaction === 'string'
+      ? template.interaction
+      : (template.interaction && template.interaction["0"] !== undefined
+         ? getInteractionString(template.interaction)
+         : { ...defaults.interaction, ...(template.interaction || {}) }),
     validationRules: template.validationRules || defaults.validationRules,
     feedbackRules: { ...defaults.feedbackRules, ...(template.feedbackRules || {}) },
     difficultyRules: { ...defaults.difficultyRules, ...(template.difficultyRules || {}) },
@@ -608,9 +648,30 @@ const withUniversalDefaults = (template) => {
 
 const normalizeTemplateForBuilder = (template) => {
   const normalized = withUniversalDefaults(template || {});
+  
+  // Convert variables object to array if needed
+  let variables = normalized.variables;
+  if (variables && !Array.isArray(variables) && typeof variables === 'object') {
+    variables = Object.entries(variables).map(([name, val]) => {
+      if (Array.isArray(val)) {
+        return {
+          name,
+          type: 'list',
+          items: val
+        };
+      }
+      return {
+        name,
+        ...val
+      };
+    });
+  } else {
+    variables = variables || [];
+  }
+
   return {
     ...normalized,
-    variables: normalized.variables || [],
+    variables,
     visuals: normalized.visuals || [],
     options: normalized.options || [],
     explanation: normalized.explanation || { sections: [{ type: 'text', content: '' }] }
@@ -1429,6 +1490,37 @@ const getImageUrlPreview = (value) => {
   return null;
 };
 
+const getOptionMediaContent = (opt) => {
+  if (!opt) return null;
+  if (typeof opt === 'string') {
+    if (isInlineSvg(opt)) return { type: 'svg', content: opt };
+    const url = getImageUrlPreview(opt);
+    if (url) return { type: 'image', content: url };
+    return null;
+  }
+  if (typeof opt === 'object') {
+    if (opt.emoji) return { type: 'emoji', content: opt.emoji };
+    if (opt.svg && typeof opt.svg === 'string') return { type: 'svg', content: opt.svg };
+    if (opt.imageUrl && typeof opt.imageUrl === 'string') {
+      if (isInlineSvg(opt.imageUrl)) return { type: 'svg', content: opt.imageUrl };
+      const url = getImageUrlPreview(opt.imageUrl);
+      if (url) return { type: 'image', content: url };
+    }
+    if (opt.image && typeof opt.image === 'string') {
+      const url = getImageUrlPreview(opt.image);
+      if (url) return { type: 'image', content: url };
+    }
+    const labelVal = opt.label ?? opt.value ?? opt.content ?? opt.text ?? '';
+    if (typeof labelVal === 'string') {
+      if (isInlineSvg(labelVal)) return { type: 'svg', content: labelVal };
+      const url = getImageUrlPreview(labelVal);
+      if (url) return { type: 'image', content: url };
+    }
+  }
+  return null;
+};
+
+
 const normalizeOptionLabel = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
 
 const hasBlankToken = (value) => /\[\[[^\]]+\]\]|\[blank(?::[^\]]+)?\]/.test(String(value ?? ''));
@@ -1653,6 +1745,34 @@ export default function VisualTemplateBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [loadedPools, setLoadedPools] = useState({});
+  const [availablePools, setAvailablePools] = useState([]);
+
+  const groupedPools = useMemo(() => {
+    const groups = {
+      math: [],
+      english: [],
+      science: [],
+      social_studies: [],
+      other: []
+    };
+
+    availablePools.forEach(p => {
+      const pid = String(p.poolId || '').toLowerCase();
+      if (pid.startsWith('math-') || pid.includes('-math-') || pid.includes('maths')) {
+        groups.math.push(p);
+      } else if (pid.startsWith('english-') || pid.startsWith('ela-') || pid.includes('-english-') || pid.includes('-ela-') || pid.includes('vocab')) {
+        groups.english.push(p);
+      } else if (pid.startsWith('science-') || pid.includes('-science-')) {
+        groups.science.push(p);
+      } else if (pid.startsWith('social-') || pid.includes('-social-') || pid.startsWith('history-') || pid.includes('-history-') || pid.startsWith('geography-')) {
+        groups.social_studies.push(p);
+      } else {
+        groups.other.push(p);
+      }
+    });
+
+    return groups;
+  }, [availablePools]);
 
   // Sidebar search & collapsible category state
   const [sidebarSearch, setSidebarSearch] = useState('');
@@ -1665,6 +1785,10 @@ export default function VisualTemplateBuilderPage() {
     // Custom MongoDB sub-subjects
     'custom-math': true,
     'custom-english': true,
+    'custom-science': true,
+    'custom-mat': true,
+    'custom-arithmetic': true,
+    'custom-language': true,
     'custom-other': true,
     // Static Catalog sub-subjects
     'static-math': false,
@@ -1702,7 +1826,7 @@ export default function VisualTemplateBuilderPage() {
     filtered.forEach(tpl => {
       let subject = tpl.subject || tpl.templateInfo?.subject || 'other';
       subject = subject.toLowerCase().trim();
-      const subjectKey = (subject === 'math' || subject === 'english' || subject === 'gk' || subject === 'social_studies') ? subject : 'other';
+      const subjectKey = (subject === 'math' || subject === 'english' || subject === 'science' || subject === 'gk' || subject === 'social_studies' || subject === 'mat' || subject === 'arithmetic' || subject === 'language') ? subject : 'other';
       if (!groups[subjectKey]) {
         groups[subjectKey] = [];
       }
@@ -1817,6 +1941,30 @@ export default function VisualTemplateBuilderPage() {
   const [levelAddInputs, setLevelAddInputs] = useState({ 1: '', 2: '', 3: '' });
   const [expandedLevel, setExpandedLevel] = useState(1);
 
+  // Create Vocabulary Pool states
+  const [showCreatePoolModal, setShowCreatePoolModal] = useState(false);
+  const [newPoolTab, setNewPoolTab] = useState('quick'); // 'quick' or 'json'
+  const [newPoolId, setNewPoolId] = useState('');
+  const [newPoolSubject, setNewPoolSubject] = useState('science');
+  const [newPoolTopic, setNewPoolTopic] = useState('general');
+  const [newPoolCategories, setNewPoolCategories] = useState('light, heavy');
+  const [newPoolJson, setNewPoolJson] = useState('');
+  const [createPoolStatus, setCreatePoolStatus] = useState('');
+  const [createPoolSaving, setCreatePoolSaving] = useState(false);
+
+  // Option Pool Library Modal states
+  const [showPoolLibraryModal, setShowPoolLibraryModal] = useState(false);
+  const [activeLibraryPool, setActiveLibraryPool] = useState(null); // The full pool object from DB
+  const [activeLibraryCategory, setActiveLibraryCategory] = useState('');
+  const [librarySearchQuery, setLibrarySearchQuery] = useState('');
+  const [libraryStatus, setLibraryStatus] = useState('');
+  const [librarySaving, setLibrarySaving] = useState(false);
+  const [libraryNewCategory, setLibraryNewCategory] = useState('');
+  const [libraryNewWords, setLibraryNewWords] = useState('');
+  const [libraryImageSearchQuery, setLibraryImageSearchQuery] = useState('');
+  const [libraryImageSearchResults, setLibraryImageSearchResults] = useState([]);
+  const [libraryImageSearchIndex, setLibraryImageSearchIndex] = useState(null); // { cat, idx }
+  const [libraryImageSearching, setLibraryImageSearching] = useState(false);
 
   const handleAiTemplateGenerate = async () => {
     if (!aiTemplatePrompt.trim()) return;
@@ -1848,6 +1996,304 @@ export default function VisualTemplateBuilderPage() {
       alert(`AI template generation failed: ${err.message}`);
     } finally {
       setAiTemplateGenerating(false);
+    }
+  };
+
+  const handleCreateVocabularyPool = async () => {
+    setCreatePoolStatus('');
+    setCreatePoolSaving(true);
+    try {
+      let payload;
+      if (newPoolTab === 'quick') {
+        const poolId = newPoolId.trim();
+        if (!poolId) {
+          throw new Error('Please enter a Pool ID.');
+        }
+        const categoriesList = newPoolCategories
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean)
+          .map(c => c.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/(^_+|_+$)/g, ''));
+        
+        if (categoriesList.length === 0) {
+          throw new Error('Please enter at least one category.');
+        }
+        
+        payload = {
+          poolId,
+          subject: newPoolSubject,
+          topic: newPoolTopic,
+          status: 'draft',
+          version: 1,
+          pools: Object.fromEntries(categoriesList.map(c => [c, []]))
+        };
+      } else {
+        if (!newPoolJson.trim()) {
+          throw new Error('Please paste a JSON pool structure.');
+        }
+        try {
+          payload = JSON.parse(newPoolJson);
+        } catch (e) {
+          throw new Error('Invalid JSON format. Check brackets and quotes.');
+        }
+        if (!payload.poolId) {
+          throw new Error('JSON is missing a "poolId" property.');
+        }
+        if (!payload.pools && !payload.categories) {
+          throw new Error('JSON must contain a "pools" or "categories" object.');
+        }
+      }
+
+      const res = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save vocabulary pool.');
+      }
+
+      await fetchVocabularyPools();
+      
+      setLoadedPools(prev => ({
+        ...prev,
+        [payload.poolId]: {
+          ...payload,
+          pools: payload.pools || payload.categories
+        }
+      }));
+
+      setCreatePoolStatus(`✅ Success! Pool "${payload.poolId}" created.`);
+      setNewPoolId('');
+      setNewPoolJson('');
+      
+      setTimeout(() => {
+        setShowCreatePoolModal(false);
+        setCreatePoolStatus('');
+      }, 1500);
+    } catch (err) {
+      setCreatePoolStatus(`❌ Error: ${err.message}`);
+    } finally {
+      setCreatePoolSaving(false);
+    }
+  };
+
+  const openPoolLibrary = async (poolId) => {
+    if (!poolId) return;
+    setLibraryStatus('Loading pool details...');
+    setShowPoolLibraryModal(true);
+    try {
+      const res = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId)}`);
+      const data = await res.json();
+      if (data.success && data.pool) {
+        setActiveLibraryPool(data.pool);
+        const categories = Object.keys(data.pool.pools || {});
+        setActiveLibraryCategory(categories[0] || '');
+        setLibraryStatus('');
+      } else {
+        throw new Error(data.error || 'Failed to fetch pool details.');
+      }
+    } catch (err) {
+      setLibraryStatus(`❌ Error: ${err.message}`);
+    }
+  };
+
+  const handleLibraryAddWords = () => {
+    if (!libraryNewWords.trim() || !activeLibraryCategory) return;
+    const newWordsList = libraryNewWords
+      .split(/[\n,]+/)
+      .map(w => w.trim())
+      .filter(Boolean);
+    
+    if (newWordsList.length === 0) return;
+
+    setActiveLibraryPool(prev => {
+      if (!prev) return prev;
+      const updatedPools = { ...prev.pools };
+      const currentList = updatedPools[activeLibraryCategory] || [];
+      const usedIds = new Set(currentList.map(item => item.id || item.label));
+      
+      const newItems = newWordsList.map(w => {
+        let cleanId = w.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '');
+        if (usedIds.has(cleanId)) {
+          cleanId = `${cleanId}_${Math.floor(Math.random() * 1000)}`;
+        }
+        return {
+          id: cleanId,
+          label: w,
+          active: true
+        };
+      });
+
+      updatedPools[activeLibraryCategory] = [...currentList, ...newItems];
+      return { ...prev, pools: updatedPools };
+    });
+
+    setLibraryNewWords('');
+    setLibraryStatus('Words added. Don\'t forget to click Save Pool Changes.');
+  };
+
+  const handleLibraryAddCategory = () => {
+    const cat = libraryNewCategory.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+    if (!cat) return;
+    if (activeLibraryPool?.pools?.[cat]) {
+      alert('Category already exists!');
+      return;
+    }
+    setActiveLibraryPool(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        pools: {
+          ...prev.pools,
+          [cat]: []
+        }
+      };
+    });
+    setActiveLibraryCategory(cat);
+    setLibraryNewCategory('');
+    setLibraryStatus(`Category "${cat}" added.`);
+  };
+
+  const handleLibraryRemoveItem = (cat, idx) => {
+    setActiveLibraryPool(prev => {
+      if (!prev) return prev;
+      const updatedPools = { ...prev.pools };
+      updatedPools[cat] = (updatedPools[cat] || []).filter((_, i) => i !== idx);
+      return { ...prev, pools: updatedPools };
+    });
+    setLibraryStatus('Item removed.');
+  };
+
+  const handleLibraryUpdateField = (cat, idx, field, value) => {
+    setActiveLibraryPool(prev => {
+      if (!prev) return prev;
+      const updatedPools = { ...prev.pools };
+      const updatedList = [...(updatedPools[cat] || [])];
+      updatedList[idx] = { ...updatedList[idx], [field]: value };
+      updatedPools[cat] = updatedList;
+      return { ...prev, pools: updatedPools };
+    });
+  };
+
+  const handleLibraryItemMetadataChange = (cat, idx, propertyName, propertyVal) => {
+    setActiveLibraryPool(prev => {
+      if (!prev) return prev;
+      const updatedPools = { ...prev.pools };
+      const updatedList = [...(updatedPools[cat] || [])];
+      
+      const item = { ...updatedList[idx] };
+      const cleanProp = propertyName.trim();
+      
+      if (propertyVal === undefined || propertyVal === null || propertyVal === '') {
+        delete item[cleanProp];
+      } else {
+        item[cleanProp] = propertyVal;
+      }
+      
+      updatedList[idx] = item;
+      updatedPools[cat] = updatedList;
+      return { ...prev, pools: updatedPools };
+    });
+  };
+
+  const generateTTSForLibraryItem = async (cat, idx) => {
+    const item = activeLibraryPool?.pools?.[cat]?.[idx];
+    if (!item?.label) return;
+    setLibraryStatus(`Generating TTS audio for "${item.label}"...`);
+    try {
+      const voice = activeLibraryPool.voice || 'en-US-Journey-F';
+      const res = await fetch('/api/admin/generate-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: item.label,
+          voice: voice,
+          speed: 1.0
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.audioUrl) {
+        handleLibraryUpdateField(cat, idx, 'audioUrl', data.audioUrl);
+        setLibraryStatus(`✅ TTS Audio generated for "${item.label}".`);
+      } else {
+        throw new Error(data.error || 'TTS generation failed.');
+      }
+    } catch (err) {
+      setLibraryStatus(`❌ TTS Error: ${err.message}`);
+    }
+  };
+
+  const searchImageForLibraryItem = async (cat, idx, label) => {
+    setLibraryImageSearchIndex({ cat, idx });
+    setLibraryImageSearchQuery(label);
+    setLibraryImageSearching(true);
+    setLibraryImageSearchResults([]);
+    try {
+      const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(label)}&type=clipart`);
+      const data = await res.json();
+      if (data.success) {
+        setLibraryImageSearchResults(data.results || []);
+      }
+    } catch (err) {
+      console.error('Image search failed:', err);
+    } finally {
+      setLibraryImageSearching(false);
+    }
+  };
+
+  const selectImageForLibraryItem = async (cat, idx, remoteUrl) => {
+    setLibraryStatus('Importing image to storage...');
+    try {
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remoteUrl })
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        handleLibraryUpdateField(cat, idx, 'imageUrl', data.url);
+        setLibraryStatus('✅ Image linked successfully.');
+        setLibraryImageSearchIndex(null);
+      } else {
+        throw new Error(data.error || 'Image upload failed.');
+      }
+    } catch (err) {
+      setLibraryStatus(`❌ Image upload failed: ${err.message}`);
+    }
+  };
+
+  const savePoolLibrary = async () => {
+    if (!activeLibraryPool) return;
+    setLibrarySaving(true);
+    setLibraryStatus('Saving changes to database...');
+    try {
+      const res = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(activeLibraryPool)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save changes.');
+      }
+
+      await fetchVocabularyPools();
+      
+      setLoadedPools(prev => ({
+        ...prev,
+        [activeLibraryPool.poolId]: activeLibraryPool
+      }));
+
+      setLibraryStatus('✅ Changes saved successfully!');
+      setTimeout(() => {
+        setLibraryStatus('');
+      }, 2000);
+    } catch (err) {
+      setLibraryStatus(`❌ Error: ${err.message}`);
+    } finally {
+      setLibrarySaving(false);
     }
   };
 
@@ -2315,7 +2761,7 @@ export default function VisualTemplateBuilderPage() {
       const data = await res.json();
       if (data.success) {
         setDynamicTemplates(data.dynamicTemplates || []);
-        setStaticTemplates(data.templates || {});
+        setStaticTemplates(data.groupedTemplates || {});
         
         // Auto select by query param id
         if (typeof window !== 'undefined') {
@@ -2338,6 +2784,19 @@ export default function VisualTemplateBuilderPage() {
                 handleSelectTemplate(tpl);
               }
             }
+          } else if (params.get('examId') === 'jnvst') {
+            const uniqueId = `template-jnvst-${Date.now()}`;
+            const newTpl = {
+              ...normalizeTemplateForBuilder(DEFAULT_TEMPLATE),
+              id: uniqueId,
+              examId: 'jnvst',
+              subject: 'arithmetic',
+              title: 'New JNVST Template'
+            };
+            setTemplate(newTpl);
+            setJsonText(JSON.stringify(newTpl, null, 2));
+            setJsonError(null);
+            setSaveStatus(null);
           }
         }
       }
@@ -2360,9 +2819,22 @@ export default function VisualTemplateBuilderPage() {
     }
   };
 
+  const fetchVocabularyPools = async () => {
+    try {
+      const res = await fetch('/api/admin/vocabulary-pools');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.pools)) {
+        setAvailablePools(data.pools);
+      }
+    } catch (err) {
+      console.error('Failed to fetch vocabulary pools:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTemplates();
     fetchCurriculumNodes();
+    fetchVocabularyPools();
   }, []);
 
   useEffect(() => {
@@ -2588,9 +3060,16 @@ export default function VisualTemplateBuilderPage() {
   };
 
   const getPoolCategories = (poolId) => {
+    if (!poolId) return [];
     const poolDoc = loadedPools[poolId];
-    if (!poolId || !poolDoc || poolDoc === 'loading') return [];
-    return Object.keys(poolDoc.pools || {}).sort();
+    if (poolDoc && poolDoc !== 'loading' && poolDoc.pools) {
+      return Object.keys(poolDoc.pools).sort();
+    }
+    const summary = availablePools.find(p => p.poolId === poolId);
+    if (summary && summary.categoryCounts) {
+      return Object.keys(summary.categoryCounts).sort();
+    }
+    return [];
   };
 
   const getPoolItemsForSource = (source) => {
@@ -2909,15 +3388,45 @@ export default function VisualTemplateBuilderPage() {
     setSaving(true);
     setSaveStatus(null);
     try {
+      // Convert variables array back to object if parameterized
+      const copy = JSON.parse(JSON.stringify(template));
+      if (copy.examId === 'jnvst' || copy.exam === 'jnvst' || copy.type === 'parameterized') {
+        if (Array.isArray(copy.variables)) {
+          const varObj = {};
+          copy.variables.forEach(v => {
+            if (v && v.name) {
+              const { name, ...rest } = v;
+              if (v.type === 'list' && Array.isArray(v.items)) {
+                varObj[name] = v.items;
+              } else {
+                varObj[name] = rest;
+              }
+            }
+          });
+          copy.variables = varObj;
+        }
+      }
+
       // 1. Save Template
       const res = await fetch('/api/admin/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template })
+        body: JSON.stringify({ template: copy })
       });
       const data = await res.json();
       if (!data.success) {
         throw new Error(data.error || 'Server returned failure saving template');
+      }
+
+      // If the DB returned a MongoDB ObjectId (e.g. new JNVST template insert),
+      // store it as _id only for future update detection.
+      // NEVER overwrite template.id (the human-readable slug).
+      const savedId = template.id || template.title || data.id;
+      if (data.id && data.id !== template.id) {
+        setTemplate(prev => ({
+          ...prev,
+          _id: data.id   // only update _id, leave id (slug) intact
+        }));
       }
 
       // 2. Link to Curriculum Skill if checked
@@ -3041,10 +3550,10 @@ export default function VisualTemplateBuilderPage() {
       setSaveStatus({
         type: 'success',
         text: linkToSkill
-          ? `Template "${template.id}" saved and linked to curriculum skill successfully!`
-          : `Template "${template.id}" saved successfully!`
+          ? `"${template.title || template.name || savedId}" saved and linked to curriculum skill successfully!`
+          : `"${template.title || template.name || savedId}" saved successfully!`
       });
-      setSelectedId(template.id);
+      setSelectedId(savedId);
       await fetchTemplates();
     } catch (err) {
       setSaveStatus({ type: 'error', text: `Save failed: ${err.message}` });
@@ -3056,6 +3565,11 @@ export default function VisualTemplateBuilderPage() {
   // Fetch required vocabulary pools for template variables or dataSources
   useEffect(() => {
     const poolsToFetch = new Set();
+
+    // Scan root poolId
+    if (template.type === 'dynamic_pool' && template.poolId) {
+      poolsToFetch.add(template.poolId);
+    }
     
     // Scan variables
     if (Array.isArray(template.variables)) {
@@ -3088,35 +3602,41 @@ export default function VisualTemplateBuilderPage() {
         if (data.success && data.pool) {
           setLoadedPools(prev => ({ ...prev, [poolId]: data.pool }));
         } else {
-          setLoadedPools(prev => {
-            const copy = { ...prev };
-            delete copy[poolId];
-            return copy;
-          });
+          setLoadedPools(prev => ({ ...prev, [poolId]: { error: true } }));
         }
       } catch (err) {
         console.error('Failed to fetch pool:', poolId, err);
-        setLoadedPools(prev => {
-          const copy = { ...prev };
-          delete copy[poolId];
-          return copy;
-        });
+        setLoadedPools(prev => ({ ...prev, [poolId]: { error: true } }));
       }
     });
-  }, [template.variables, template.dataSources, loadedPools]);
+  }, [template.variables, template.dataSources, template.poolId, template.type, loadedPools]);
 
   // Inject variable/dataSource lists from loadedPools into template before evaluation
   const resolvedTemplate = useMemo(() => {
     const copy = JSON.parse(JSON.stringify(template));
     
+    // Inject pools and voice if it is a dynamic_pool template
+    if (copy.type === 'dynamic_pool' && copy.poolId) {
+      const poolDoc = loadedPools[copy.poolId];
+      if (poolDoc && poolDoc !== 'loading' && !poolDoc.error) {
+        copy.pools = poolDoc.pools;
+        copy.voice = poolDoc.voice;
+      }
+    }
+
     // Inject variables
     if (Array.isArray(copy.variables)) {
       copy.variables = copy.variables.map(v => {
         if (v.type === 'pool_selection' && v.poolId) {
           const poolDoc = loadedPools[v.poolId];
-          if (poolDoc && poolDoc !== 'loading') {
-            const category = v.category || 'targets';
-            const words = poolDoc.pools?.[category] || [];
+          if (poolDoc && poolDoc !== 'loading' && !poolDoc.error) {
+            const targetCats = v.targetCategories?.length > 0 ? v.targetCategories 
+                              : v.category ? [v.category] 
+                              : ['targets'];
+            let words = targetCats.flatMap(cat => poolDoc.pools?.[cat] || []);
+            if (v.targetProperty && v.targetValue) {
+              words = words.filter(item => matchesPropertyFilter(item, v.targetProperty, v.targetValue));
+            }
             return {
               ...v,
               items: words
@@ -3132,17 +3652,53 @@ export default function VisualTemplateBuilderPage() {
       copy.dataSources = copy.dataSources.map(ds => {
         if (ds.type === 'pool_selection' && ds.poolId) {
           const poolDoc = loadedPools[ds.poolId];
-          if (poolDoc && poolDoc !== 'loading') {
-            const category = ds.category || 'targets';
-            const words = poolDoc.pools?.[category] || [];
+          if (poolDoc && poolDoc !== 'loading' && !poolDoc.error) {
+            const targetCats = ds.targetCategories?.length > 0 ? ds.targetCategories 
+                              : ds.category ? [ds.category] 
+                              : ['targets'];
+            let correctItems = targetCats.flatMap(cat => poolDoc.pools?.[cat] || []);
+            const targetSet = new Set(targetCats);
+            let distractorItems = Object.entries(poolDoc.pools || {})
+              .filter(([cat]) => !targetSet.has(cat) && cat !== 'correctPool' && cat !== 'distractorPool')
+              .flatMap(([, items]) => items);
+            const categoryLabel = poolDoc.categoryLabels?.[targetCats[0]] || targetCats[0] || '';
+            
+            // Apply property filters
+            if (ds.targetProperty && ds.targetValue) {
+              correctItems = correctItems.filter(item => matchesPropertyFilter(item, ds.targetProperty, ds.targetValue));
+            }
+            if (ds.distractorProperty && ds.distractorValue) {
+              distractorItems = distractorItems.filter(item => matchesPropertyFilter(item, ds.distractorProperty, ds.distractorValue));
+            }
+
             return {
               ...ds,
-              items: words
+              items: correctItems,
+              _distractorItems: distractorItems,
+              _categoryLabel: categoryLabel
             };
           }
         }
         return ds;
       });
+    }
+    
+    // Convert variables array back to object if parameterized
+    if (copy.examId === 'jnvst' || copy.exam === 'jnvst' || copy.type === 'parameterized') {
+      if (Array.isArray(copy.variables)) {
+        const varObj = {};
+        copy.variables.forEach(v => {
+          if (v && v.name) {
+            const { name, ...rest } = v;
+            if (v.type === 'list' && Array.isArray(v.items)) {
+              varObj[name] = v.items;
+            } else {
+              varObj[name] = rest;
+            }
+          }
+        });
+        copy.variables = varObj;
+      }
     }
     
     return copy;
@@ -3151,6 +3707,19 @@ export default function VisualTemplateBuilderPage() {
   // Live simulation evaluation
   const evaluatedQuestion = useMemo(() => {
     try {
+      if (resolvedTemplate.type === 'dynamic_pool') {
+        if (!resolvedTemplate.pools) {
+          return { ok: false, error: 'Loading vocabulary pool...' };
+        }
+        const q = generateFromDynamicPool(
+          resolvedTemplate,
+          seed,
+          resolvedTemplate.difficultyLevel || 'easy',
+          {},
+          resolvedTemplate.grade || 'lkg'
+        );
+        return { ok: true, question: q };
+      }
       const q = evaluateTemplate(resolvedTemplate, seed);
       return { ok: true, question: q };
     } catch (err) {
@@ -3824,6 +4393,9 @@ export default function VisualTemplateBuilderPage() {
                           
                           const subjectTitle = subjKey === 'gk' ? 'General Knowledge'
                             : subjKey === 'social_studies' ? 'Social Studies'
+                            : subjKey === 'mat' ? 'Mental Ability (MAT)'
+                            : subjKey === 'arithmetic' ? 'Arithmetic'
+                            : subjKey === 'language' ? 'Language'
                             : subjKey.charAt(0).toUpperCase() + subjKey.slice(1);
                             
                           const subSectionKey = `custom-${subjKey}`;
@@ -4238,26 +4810,82 @@ export default function VisualTemplateBuilderPage() {
 
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
-                  <label htmlFor="tpl-subject">Subject</label>
+                  <label htmlFor="tpl-exam-id">Exam Prep Mode</label>
+                  <select
+                    id="tpl-exam-id"
+                    className={styles.select}
+                    value={template.examId || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateField('examId', val || undefined);
+                      if (val === 'jnvst') {
+                        if (template.subject !== 'mat' && template.subject !== 'arithmetic' && template.subject !== 'language') {
+                          updateField('subject', 'arithmetic');
+                        }
+                      } else {
+                        if (template.subject === 'mat' || template.subject === 'arithmetic' || template.subject === 'language') {
+                          updateField('subject', 'math');
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">None (School Curriculum)</option>
+                    <option value="jnvst">JNVST (Navodaya Prep)</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tpl-type">Template Type</label>
+                  <select
+                    id="tpl-type"
+                    className={styles.select}
+                    value={template.type || 'math'}
+                    onChange={(e) => {
+                      const nextType = e.target.value;
+                      updateField('type', nextType === 'math' ? undefined : nextType);
+                    }}
+                  >
+                    <option value="math">Visual Mathematics (Static/Formula)</option>
+                    <option value="dynamic_pool">Dynamic Option Pool (Vocabulary/Sorting)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tpl-subject">
+                    {template.examId === 'jnvst' ? 'Exam Section' : 'Subject'}
+                  </label>
                   <select
                     id="tpl-subject"
                     className={styles.select}
                     value={template.subject || 'math'}
                     onChange={(e) => updateField('subject', e.target.value)}
                   >
-                    {Object.entries(SUBJECT_MODES).map(([value, config]) => (
-                      <option key={value} value={value}>{config.label}</option>
-                    ))}
+                    {template.examId === 'jnvst' ? (
+                      <>
+                        <option value="mat">Mental Ability (MAT)</option>
+                        <option value="arithmetic">Arithmetic</option>
+                        <option value="language">Language</option>
+                      </>
+                    ) : (
+                      Object.entries(SUBJECT_MODES)
+                        .filter(([k]) => k !== 'mat' && k !== 'arithmetic' && k !== 'language')
+                        .map(([value, config]) => (
+                          <option key={value} value={value}>{config.label}</option>
+                        ))
+                    )}
                   </select>
                 </div>
                 <div className={styles.formGroup}>
-                  <label htmlFor="tpl-topic">Topic Node Slug</label>
+                  <label htmlFor="tpl-topic">
+                    {template.examId === 'jnvst' ? 'Exam Topic Slug' : 'Topic Node Slug'}
+                  </label>
                   <input
                     id="tpl-topic"
                     type="text"
                     className={styles.input}
                     value={template.topic || ''}
-                    placeholder="e.g. ukg-numbers-counting"
+                    placeholder={template.examId === 'jnvst' ? "e.g. averages" : "e.g. ukg-numbers-counting"}
                     onChange={(e) => updateField('topic', e.target.value)}
                   />
                 </div>
@@ -4348,6 +4976,158 @@ export default function VisualTemplateBuilderPage() {
               {currentStep === 2 && (
                 <div className={styles.wizardStepContent}>
 
+                  {template.type === 'dynamic_pool' && (
+                    <div style={{ padding: '18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', marginBottom: '24px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#1e293b', fontSize: '15px', fontWeight: 800 }}>
+                        🎯 Dynamic Option Pool Configuration
+                      </h4>
+                      <div className={styles.formGrid} style={{ gap: '16px' }}>
+                        <div className={styles.formGroup}>
+                          <label htmlFor="tpl-pool-select">Select Option Pool</label>
+                          <select
+                            id="tpl-pool-select"
+                            className={styles.select}
+                            value={template.poolId || ''}
+                            onChange={(e) => {
+                              const poolId = e.target.value;
+                              updateField('poolId', poolId);
+                              const categories = getPoolCategories(poolId);
+                              if (categories.length > 0) {
+                                if (!template.targetCategory || (template.targetCategory !== '[random]' && !categories.includes(template.targetCategory))) {
+                                  updateField('targetCategory', '[random]');
+                                }
+                              } else {
+                                updateField('targetCategory', '');
+                              }
+                            }}
+                          >
+                            <option value="">-- Choose Option Pool --</option>
+                            {groupedPools.english.length > 0 && (
+                              <optgroup label="📚 English / ELA">
+                                {groupedPools.english.map(p => (
+                                  <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {groupedPools.math.length > 0 && (
+                              <optgroup label="📐 Mathematics">
+                                {groupedPools.math.map(p => (
+                                  <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {groupedPools.science.length > 0 && (
+                              <optgroup label="🔬 Science">
+                                {groupedPools.science.map(p => (
+                                  <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {groupedPools.social_studies.length > 0 && (
+                              <optgroup label="🌍 Social Studies">
+                                {groupedPools.social_studies.map(p => (
+                                  <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {groupedPools.other.length > 0 && (
+                              <optgroup label="⚙️ Other / General">
+                                {groupedPools.other.map(p => (
+                                  <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                        </div>
+                        
+                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                            🎯 Target Categories
+                            <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>(which pool categories are used as correct answer targets)</span>
+                          </label>
+                          {template.poolId && getPoolCategories(template.poolId).length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px 14px', background: '#f1f5f9', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                              {/* [random] toggle */}
+                              {(() => {
+                                const selectedTargets = Array.isArray(template.targetCategories) ? template.targetCategories : (template.targetCategory && template.targetCategory !== '[random]' ? [template.targetCategory] : []);
+                                const isRandom = template.targetCategory === '[random]' || !template.targetCategory;
+                                return (
+                                  <>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: isRandom ? '#fef9c3' : '#fff', border: isRandom ? '1px solid #eab308' : '1px solid #cbd5e1', fontSize: '13px', fontWeight: isRandom ? 700 : 500, color: isRandom ? '#854d0e' : '#334155', transition: 'all 0.15s' }}>
+                                      <input
+                                        type="radio"
+                                        name={`target-cat-mode-${template.id}`}
+                                        checked={isRandom}
+                                        style={{ accentColor: '#eab308', width: '14px', height: '14px' }}
+                                        onChange={() => {
+                                          updateField('targetCategory', '[random]');
+                                          updateField('targetCategories', []);
+                                        }}
+                                      />
+                                      🎲 [random]
+                                    </label>
+                                    {getPoolCategories(template.poolId).map(category => {
+                                      const isChecked = !isRandom && selectedTargets.includes(category);
+                                      return (
+                                        <label key={category} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: isChecked ? '#dbeafe' : '#fff', border: isChecked ? '1px solid #3b82f6' : '1px solid #cbd5e1', fontSize: '13px', fontWeight: isChecked ? 700 : 500, color: isChecked ? '#1d4ed8' : '#334155', transition: 'all 0.15s' }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            style={{ accentColor: '#3b82f6', width: '14px', height: '14px' }}
+                                            onChange={(e) => {
+                                              const current = Array.isArray(template.targetCategories) ? template.targetCategories : (template.targetCategory && template.targetCategory !== '[random]' ? [template.targetCategory] : []);
+                                              const updated = e.target.checked
+                                                ? [...current, category]
+                                                : current.filter(c => c !== category);
+                                              if (updated.length > 0) {
+                                                updateField('targetCategory', updated[0]);
+                                                updateField('targetCategories', updated);
+                                              } else {
+                                                updateField('targetCategory', '[random]');
+                                                updateField('targetCategories', []);
+                                              }
+                                            }}
+                                          />
+                                          {category}
+                                        </label>
+                                      );
+                                    })}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <input
+                              id="tpl-target-category"
+                              type="text"
+                              className={styles.input}
+                              placeholder="e.g. nouns, verbs, A, B — or [random]"
+                              value={template.targetCategory || ''}
+                              onChange={(e) => updateField('targetCategory', e.target.value)}
+                            />
+                          )}
+                        </div>
+                        
+                        <div className={styles.formGroup}>
+                          <label htmlFor="tpl-base-interaction">Base Interaction</label>
+                          <select
+                            id="tpl-base-interaction"
+                            className={styles.select}
+                            value={getInteractionString(template.interaction)}
+                            onChange={(e) => updateField('interaction', e.target.value)}
+                          >
+                            <option value="choice">choice (Multiple Choice MCQ)</option>
+                            <option value="multi_select">multi_select (Multi-Select MCQ)</option>
+                            <option value="categorization">categorization (Categorization / Sorting - Konva Canvas)</option>
+                            <option value="categorizationv2">categorizationv2 (Categorization / Sorting - HTML5 Drag-Drop)</option>
+                            <option value="word_completion">word_completion (Word Completion / Phonics Fill)</option>
+                            <option value="pick_from_sentence">pick_from_sentence (Select Word in Sentence)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
               {/* Data & Logic Board */}
               <div className={styles.sectionTitle}>
                 <span>Data & Logic Board</span>
@@ -4369,6 +5149,19 @@ export default function VisualTemplateBuilderPage() {
                     <button type="button" className={styles.btn + ' ' + styles.btnSecondary} onClick={addDataSource}>
                       + Add Data Source
                     </button>
+                    <button
+                      type="button"
+                      className={styles.btn + ' ' + styles.btnSecondary}
+                      onClick={() => {
+                        const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
+                        setNewPoolId(`${template.subject || 'science'}-${template.topic || 'general'}-options-${randomSuffix}`);
+                        setNewPoolSubject(template.subject || 'science');
+                        setNewPoolTopic(template.topic || 'general');
+                        setShowCreatePoolModal(true);
+                      }}
+                    >
+                      🧪 Create Pool
+                    </button>
                   </div>
                 </div>
                 {(template.dataSources || []).length === 0 ? (
@@ -4385,14 +5178,66 @@ export default function VisualTemplateBuilderPage() {
                                 <input id={`ds-id-${idx}`} className={styles.input} value={source.id || ''} onChange={(e) => updateDataSource(idx, 'id', e.target.value)} />
                               </div>
                               <div>
-                                <label htmlFor={`ds-pool-${idx}`}>Pool ID</label>
-                                <input
+                                <label htmlFor={`ds-pool-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>Pool ID</span>
+                                  <a href="/admin" target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', color: '#4f46e5', fontWeight: 600, textDecoration: 'underline' }}>
+                                    Edit items at /admin ↗
+                                  </a>
+                                </label>
+                                <select
                                   id={`ds-pool-${idx}`}
-                                  className={styles.input}
+                                  className={styles.select}
                                   value={source.poolId || ''}
-                                  placeholder="english-ukg-parts-of-speech-v2"
-                                  onChange={(e) => updateDataSource(idx, 'poolId', e.target.value)}
-                                />
+                                  onChange={(e) => {
+                                    const nextPoolId = e.target.value;
+                                    updateDataSource(idx, 'poolId', nextPoolId);
+                                    const categories = getPoolCategories(nextPoolId);
+                                    if (categories.length > 0) {
+                                      if (!source.category || !categories.includes(source.category)) {
+                                        updateDataSource(idx, 'category', categories[0]);
+                                      }
+                                    } else {
+                                      updateDataSource(idx, 'category', '');
+                                    }
+                                  }}
+                                >
+                                  <option value="">-- Choose Option Pool --</option>
+                                  {groupedPools.english.length > 0 && (
+                                    <optgroup label="📚 English / ELA">
+                                      {groupedPools.english.map(p => (
+                                        <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                  {groupedPools.math.length > 0 && (
+                                    <optgroup label="📐 Mathematics">
+                                      {groupedPools.math.map(p => (
+                                        <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                  {groupedPools.science.length > 0 && (
+                                    <optgroup label="🔬 Science">
+                                      {groupedPools.science.map(p => (
+                                        <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                  {groupedPools.social_studies.length > 0 && (
+                                    <optgroup label="🌍 Social Studies">
+                                      {groupedPools.social_studies.map(p => (
+                                        <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                  {groupedPools.other.length > 0 && (
+                                    <optgroup label="⚙️ Other / General">
+                                      {groupedPools.other.map(p => (
+                                        <option key={p.poolId} value={p.poolId}>{p.poolId} ({Object.keys(p.categoryCounts || {}).length} categories)</option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                </select>
                               </div>
                               <div>
                                 <label htmlFor={`ds-category-${idx}`}>Category</label>
@@ -4418,6 +5263,47 @@ export default function VisualTemplateBuilderPage() {
                                   />
                                 )}
                               </div>
+                              <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                  🎯 Target Categories
+                                  <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>(items from these categories become correct answer options)</span>
+                                </label>
+                                {getPoolCategories(source.poolId).length > 0 ? (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 12px', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    {getPoolCategories(source.poolId).map(category => {
+                                      const selectedTargets = Array.isArray(source.targetCategories) ? source.targetCategories : (source.targetCategories ? [source.targetCategories] : []);
+                                      const isChecked = selectedTargets.includes(category);
+                                      return (
+                                        <label key={category} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: isChecked ? '#dbeafe' : '#fff', border: isChecked ? '1px solid #3b82f6' : '1px solid #cbd5e1', fontSize: '13px', fontWeight: isChecked ? 700 : 500, color: isChecked ? '#1d4ed8' : '#334155', transition: 'all 0.15s' }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            style={{ accentColor: '#3b82f6', width: '14px', height: '14px' }}
+                                            onChange={(e) => {
+                                              const current = Array.isArray(source.targetCategories) ? source.targetCategories : (source.targetCategories ? [source.targetCategories] : []);
+                                              const updated = e.target.checked
+                                                ? [...current, category]
+                                                : current.filter(c => c !== category);
+                                              updateDataSource(idx, 'targetCategories', updated.length > 0 ? updated : []);
+                                            }}
+                                          />
+                                          {category}
+                                        </label>
+                                      );
+                                    })}
+                                    {(Array.isArray(source.targetCategories) ? source.targetCategories : []).length === 0 && (
+                                      <span style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>No target categories selected — all items treated equally</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <input
+                                    className={styles.input}
+                                    value={Array.isArray(source.targetCategories) ? source.targetCategories.join(', ') : (source.targetCategories || '')}
+                                    placeholder="e.g. targets, correct_items"
+                                    onChange={(e) => updateDataSource(idx, 'targetCategories', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                  />
+                                )}
+                              </div>
                               <div>
                                 <label htmlFor={`ds-count-${idx}`}>Count</label>
                                 <input
@@ -4429,6 +5315,55 @@ export default function VisualTemplateBuilderPage() {
                                   onChange={(e) => updateDataSource(idx, 'count', Number(e.target.value))}
                                 />
                               </div>
+
+                              {/* Property filters grid */}
+                              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '6px', background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  <div>
+                                    <label htmlFor={`ds-target-prop-${idx}`} style={{ fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>🎯 Target Filter Property</label>
+                                    <input
+                                      id={`ds-target-prop-${idx}`}
+                                      className={styles.input}
+                                      value={source.targetProperty || ''}
+                                      placeholder="e.g. kind"
+                                      onChange={(e) => updateDataSource(idx, 'targetProperty', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label htmlFor={`ds-target-val-${idx}`} style={{ fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>🎯 Target Filter Value</label>
+                                    <input
+                                      id={`ds-target-val-${idx}`}
+                                      className={styles.input}
+                                      value={source.targetValue || ''}
+                                      placeholder="e.g. animal"
+                                      onChange={(e) => updateDataSource(idx, 'targetValue', e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  <div>
+                                    <label htmlFor={`ds-dist-prop-${idx}`} style={{ fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>👾 Distractor Filter Property</label>
+                                    <input
+                                      id={`ds-dist-prop-${idx}`}
+                                      className={styles.input}
+                                      value={source.distractorProperty || ''}
+                                      placeholder="e.g. tags"
+                                      onChange={(e) => updateDataSource(idx, 'distractorProperty', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label htmlFor={`ds-dist-val-${idx}`} style={{ fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>👾 Distractor Filter Value</label>
+                                    <input
+                                      id={`ds-dist-val-${idx}`}
+                                      className={styles.input}
+                                      value={source.distractorValue || ''}
+                                      placeholder="e.g. living"
+                                      onChange={(e) => updateDataSource(idx, 'distractorValue', e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
                               <div>
                                 <label htmlFor={`ds-variable-${idx}`}>Save as variable</label>
                                 <input
@@ -4443,6 +5378,11 @@ export default function VisualTemplateBuilderPage() {
                                 <button type="button" className={styles.btn + ' ' + styles.btnPrimary} onClick={() => createPoolVariableFromSource(source)}>
                                   Save Variable
                                 </button>
+                                {source.poolId && (
+                                  <button type="button" className={styles.btn + ' ' + styles.btnSecondary} style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openPoolLibrary(source.poolId)}>
+                                    🛠️ Manage Items
+                                  </button>
+                                )}
                                 <button type="button" className={styles.btnRemoveOption} onClick={() => removeDataSource(idx)}>✕</button>
                               </div>
                             </div>
@@ -4795,6 +5735,24 @@ export default function VisualTemplateBuilderPage() {
                     />
                     Show student work area
                   </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!template.layoutConfig?.clickToSubmit}
+                      onChange={(e) => updateNestedConfig('layoutConfig', 'clickToSubmit', e.target.checked)}
+                    />
+                    Click to submit option (bypasses Check button)
+                  </label>
+                  {template.subject === 'english' && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!template.layoutConfig?.audio}
+                        onChange={(e) => updateNestedConfig('layoutConfig', 'audio', e.target.checked)}
+                      />
+                      Play question audio automatically
+                    </label>
+                  )}
                 </div>
               </div>
 
@@ -6780,13 +7738,51 @@ export default function VisualTemplateBuilderPage() {
                                 || Boolean(opt?.isCorrect)
                                 || (hasCorrectValue && String(label) === String(correctValue))
                                 || (hasCorrectValue && opt?.value !== undefined && String(opt.value) === String(correctValue));
+                              const media = getOptionMediaContent(opt);
                               return (
                                 <div
                                   key={`rail-option-${idx}-${String(label).slice(0, 18)}`}
                                   className={`${styles.railOption} ${isCorrect ? styles.railOptionCorrect : ''}`}
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    minHeight: '52px',
+                                    padding: '6px 12px'
+                                  }}
                                 >
-                                  <span>{String(label)}</span>
-                                  {isCorrect && <strong>Correct</strong>}
+                                  {media && (
+                                    <div style={{
+                                      flexShrink: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: '40px',
+                                      height: '40px',
+                                      background: '#f8fafc',
+                                      borderRadius: '6px',
+                                      border: '1px solid #e2e8f0',
+                                      padding: '2px',
+                                      overflow: 'hidden'
+                                    }}>
+                                      {media.type === 'image' && (
+                                        <img src={media.content} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                      )}
+                                      {media.type === 'svg' && (
+                                        <div dangerouslySetInnerHTML={{ __html: cleanSvgContent(media.content) }} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                                      )}
+                                      {media.type === 'emoji' && (
+                                        <span style={{ fontSize: '20px', lineHeight: 1 }}>{media.content}</span>
+                                      )}
+                                    </div>
+                                  )}
+                                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155', wordBreak: 'break-word' }}>
+                                      {(!media || (label && !isInlineSvg(label) && !getImageUrlPreview(label))) ? String(label) : ''}
+                                    </span>
+                                  </div>
+                                  {isCorrect && <strong style={{ marginLeft: 'auto' }}>Correct</strong>}
                                 </div>
                               );
                             })}
@@ -7466,17 +8462,85 @@ export default function VisualTemplateBuilderPage() {
                   <div className={styles.optionsContainer}>
                     {evaluatedQuestion.question.options.map((opt, idx) => {
                       const isCorrect = idx === evaluatedQuestion.question.correctAnswerIndex;
+                      const label = typeof opt === 'string' ? opt : (opt.label ?? opt.value ?? `Option ${idx + 1}`);
+                      const media = getOptionMediaContent(opt);
+                      const hasMedia = !!media;
+
                       return (
                         <div
-                          key={opt.id}
+                          key={opt.id || idx}
                           className={`${styles.optionBtn} ${isCorrect ? styles.optionBtnCorrect : ''}`}
+                          style={hasMedia ? {
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            minHeight: '150px',
+                            textAlign: 'center',
+                            padding: '16px',
+                            position: 'relative'
+                          } : {}}
                         >
-                          {isInlineSvg(opt.label) ? (
-                            <div dangerouslySetInnerHTML={{ __html: opt.label }} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80px', padding: '8px' }} />
-                          ) : (
-                            <span>{opt.label}</span>
+                          {hasMedia && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              maxHeight: '100px',
+                              flex: '1 1 auto',
+                              overflow: 'hidden',
+                              padding: '4px'
+                            }}>
+                              {media.type === 'image' && (
+                                <img
+                                  src={media.content}
+                                  alt=""
+                                  style={{
+                                    maxWidth: '120px',
+                                    maxHeight: '90px',
+                                    objectFit: 'contain',
+                                    borderRadius: '8px'
+                                  }}
+                                />
+                              )}
+                              {media.type === 'svg' && (
+                                <div
+                                  dangerouslySetInnerHTML={{ __html: cleanSvgContent(media.content) }}
+                                  style={{
+                                    width: '90px',
+                                    height: '90px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                />
+                              )}
+                              {media.type === 'emoji' && (
+                                <span style={{ fontSize: '48px', lineHeight: 1 }}>{media.content}</span>
+                              )}
+                            </div>
                           )}
-                          {isCorrect && <span className={styles.optionBadge}>Correct</span>}
+
+                          {(!media || (label && !isInlineSvg(label) && !getImageUrlPreview(label))) ? (
+                            <span style={hasMedia ? { fontSize: '14px', fontWeight: 600, color: '#334155', marginTop: '4px' } : {}}>
+                              {String(label)}
+                            </span>
+                          ) : null}
+
+                          {isCorrect && (
+                            <span
+                              className={styles.optionBadge}
+                              style={hasMedia ? {
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                margin: 0
+                              } : {}}
+                            >
+                              Correct
+                            </span>
+                          )}
                         </div>
                       );
                     })}
@@ -8942,8 +10006,881 @@ export default function VisualTemplateBuilderPage() {
           </div>
         </div>
       )}
+
+      {/* Create Vocabulary Pool Modal */}
+      {showCreatePoolModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '640px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                  🧪 Create Vocabulary Pool
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Define a reusable options dataset for this and other templates.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreatePoolModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  lineHeight: 1
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div
+              style={{
+                display: 'flex',
+                background: '#f8fafc',
+                borderBottom: '1px solid #e2e8f0',
+                padding: '10px 24px 0 24px',
+                gap: '8px'
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setNewPoolTab('quick')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: newPoolTab === 'quick' ? '#4f46e5' : '#64748b',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: newPoolTab === 'quick' ? '3px solid #4f46e5' : '3px solid transparent',
+                  cursor: 'pointer',
+                  paddingBottom: '10px'
+                }}
+              >
+                ⚡ Quick Create
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewPoolTab('json')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: newPoolTab === 'json' ? '#4f46e5' : '#64748b',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: newPoolTab === 'json' ? '3px solid #4f46e5' : '3px solid transparent',
+                  cursor: 'pointer',
+                  paddingBottom: '10px'
+                }}
+              >
+                📝 Import JSON Recipe
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              style={{
+                padding: '24px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                flex: 1
+              }}
+            >
+              {createPoolStatus && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    backgroundColor: createPoolStatus.includes('Error') ? '#fef2f2' : '#f0fdf4',
+                    border: createPoolStatus.includes('Error') ? '1px solid #fca5a5' : '1px solid #86efac',
+                    color: createPoolStatus.includes('Error') ? '#991b1b' : '#166534',
+                    marginBottom: '8px'
+                  }}
+                >
+                  {createPoolStatus}
+                </div>
+              )}
+
+              {newPoolTab === 'quick' ? (
+                <>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        Pool ID (Unique identifier)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. science-lkg-ukg-light-heavy"
+                        value={newPoolId}
+                        onChange={(e) => setNewPoolId(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        Subject
+                      </label>
+                      <select
+                        value={newPoolSubject}
+                        onChange={(e) => setNewPoolSubject(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          background: '#ffffff'
+                        }}
+                      >
+                        <option value="science">Science</option>
+                        <option value="math">Math</option>
+                        <option value="english">English</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        Topic
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. light-heavy or general"
+                        value={newPoolTopic}
+                        onChange={(e) => setNewPoolTopic(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Categories (comma-separated list)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. light, heavy"
+                      value={newPoolCategories}
+                      onChange={(e) => setNewPoolCategories(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                      Use lowercase letters and underscores. We will auto-convert spaces to underscores.
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Paste Pool JSON Recipe
+                  </label>
+                  <textarea
+                    rows={8}
+                    placeholder={`{\n  "poolId": "science-lkg-ukg-shapes-pool",\n  "subject": "science",\n  "topic": "shapes",\n  "pools": {\n    "round": [\n      { "id": "circle_wheel", "label": "Wheel", "active": true }\n    ],\n    "pointed": []\n  }\n}`}
+                    value={newPoolJson}
+                    onChange={(e) => setNewPoolJson(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '12px',
+                background: '#f8fafc'
+              }}
+            >
+              <button
+                type="button"
+                className={styles.btn + ' ' + styles.btnSecondary}
+                onClick={() => setShowCreatePoolModal(false)}
+                disabled={createPoolSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.btn + ' ' + styles.btnPrimary}
+                onClick={handleCreateVocabularyPool}
+                disabled={createPoolSaving}
+              >
+                {createPoolSaving ? 'Saving...' : '💾 Save Pool'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Option Pool Library Modal */}
+      {showPoolLibraryModal && activeLibraryPool && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '1100px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📖 Option Pool Library
+                  <span style={{ fontSize: '12px', fontWeight: 500, padding: '2px 8px', background: '#e0f2fe', color: '#0369a1', borderRadius: '12px' }}>
+                    {activeLibraryPool.poolId}
+                  </span>
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search words..."
+                  value={librarySearchQuery}
+                  onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.btn + ' ' + styles.btnPrimary}
+                  style={{ padding: '6px 14px', fontSize: '13px' }}
+                  onClick={savePoolLibrary}
+                  disabled={librarySaving}
+                >
+                  {librarySaving ? 'Saving...' : '💾 Save Pool Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPoolLibraryModal(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '22px',
+                    cursor: 'pointer',
+                    lineHeight: 1
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Status Alert Bar */}
+            {libraryStatus && (
+              <div
+                style={{
+                  padding: '8px 24px',
+                  fontSize: '12px',
+                  fontWeight: 650,
+                  backgroundColor: libraryStatus.includes('Error') || libraryStatus.includes('❌') ? '#fef2f2' : '#f0fdf4',
+                  borderBottom: '1px solid #e2e8f0',
+                  color: libraryStatus.includes('Error') || libraryStatus.includes('❌') ? '#991b1b' : '#166534'
+                }}
+              >
+                {libraryStatus}
+              </div>
+            )}
+
+            {/* Quick Actions Panel */}
+            <div
+              style={{
+                padding: '12px 24px',
+                background: '#f8fafc',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px'
+              }}
+            >
+              {/* Category selector and adder */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569' }}>Category:</span>
+                <select
+                  value={activeLibraryCategory}
+                  onChange={(e) => setActiveLibraryCategory(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: '#ffffff',
+                    outline: 'none',
+                    fontWeight: 700
+                  }}
+                >
+                  {Object.keys(activeLibraryPool.pools || {}).map(cat => (
+                    <option key={cat} value={cat}>{cat} ({(activeLibraryPool.pools[cat] || []).length} items)</option>
+                  ))}
+                </select>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="New category..."
+                    value={libraryNewCategory}
+                    onChange={(e) => setLibraryNewCategory(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      width: '120px'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.btn + ' ' + styles.btnSecondary}
+                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                    onClick={handleLibraryAddCategory}
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Bulk add words */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifySelf: 'flex-end', justifyContent: 'flex-end', maxWidth: '520px' }}>
+                <input
+                  type="text"
+                  placeholder="Bulk add words (comma or newline separated)..."
+                  value={libraryNewWords}
+                  onChange={(e) => setLibraryNewWords(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleLibraryAddWords(); }}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    outline: 'none',
+                    flex: 1
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.btn + ' ' + styles.btnPrimary}
+                  style={{ padding: '6px 12px', fontSize: '12px' }}
+                  onClick={handleLibraryAddWords}
+                >
+                  Add Words
+                </button>
+              </div>
+            </div>
+
+            {/* Grid Container */}
+            <div
+              style={{
+                flex: 1,
+                padding: '24px',
+                overflowY: 'auto',
+                background: '#f1f5f9'
+              }}
+            >
+              {(() => {
+                const rawItems = activeLibraryPool.pools?.[activeLibraryCategory] || [];
+                const filteredItems = rawItems.filter(item => {
+                  if (!librarySearchQuery.trim()) return true;
+                  const q = librarySearchQuery.toLowerCase();
+                  return (item.label || '').toLowerCase().includes(q) || (item.id || '').toLowerCase().includes(q);
+                });
+
+                if (filteredItems.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', background: '#ffffff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+                      <span style={{ fontSize: '28px' }}>📦</span>
+                      <p style={{ margin: '8px 0 0 0', fontWeight: 600 }}>No items in category "{activeLibraryCategory}" matching filter.</p>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>Add some words using the text input above.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                    {filteredItems.map((item, idx) => {
+                      const actualIdxInPool = rawItems.findIndex(x => x.id === item.id);
+                      const isImageSearchActive = libraryImageSearchIndex?.cat === activeLibraryCategory && libraryImageSearchIndex?.idx === actualIdxInPool;
+                      
+                      return (
+                        <div
+                          key={item.id || idx}
+                          style={{
+                            background: '#ffffff',
+                            borderRadius: '16px',
+                            border: '1px solid #e2e8f0',
+                            padding: '14px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          {/* Image Box */}
+                          <div
+                            style={{
+                              height: '110px',
+                              borderRadius: '10px',
+                              background: '#f8fafc',
+                              border: '1px solid #f1f5f9',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                              position: 'relative'
+                            }}
+                          >
+                            {item.imageUrl ? (
+                              <>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={item.imageUrl} alt={item.label} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                <button
+                                  type="button"
+                                  onClick={() => handleLibraryUpdateField(activeLibraryCategory, actualIdxInPool, 'imageUrl', '')}
+                                  style={{
+                                    position: 'absolute',
+                                    top: '4px',
+                                    right: '4px',
+                                    background: 'rgba(239, 68, 68, 0.85)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '18px',
+                                    height: '18px',
+                                    fontSize: '9px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '24px' }}>🖼️</span>
+                                <button
+                                  type="button"
+                                  onClick={() => searchImageForLibraryItem(activeLibraryCategory, actualIdxInPool, item.label)}
+                                  style={{
+                                    border: '1px solid #cbd5e1',
+                                    background: '#ffffff',
+                                    borderRadius: '6px',
+                                    padding: '2px 8px',
+                                    fontSize: '10px',
+                                    fontWeight: 650,
+                                    cursor: 'pointer',
+                                    color: '#475569'
+                                  }}
+                                >
+                                  Search Clipart
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Image search results overlay inside the card */}
+                          {isImageSearchActive && (
+                            <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', justifySelf: 'space-between', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569' }}>Select Image:</span>
+                                <button type="button" onClick={() => setLibraryImageSearchIndex(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#64748b' }}>✕</button>
+                              </div>
+                              {libraryImageSearching ? (
+                                <span style={{ fontSize: '10px', color: '#64748b' }}>Searching...</span>
+                              ) : libraryImageSearchResults.length === 0 ? (
+                                <span style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>No cliparts found.</span>
+                              ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                                  {libraryImageSearchResults.slice(0, 8).map((result, rIdx) => (
+                                    <div
+                                      key={rIdx}
+                                      onClick={() => selectImageForLibraryItem(activeLibraryCategory, actualIdxInPool, result.image)}
+                                      style={{
+                                        aspectRatio: '1',
+                                        borderRadius: '4px',
+                                        background: '#ffffff',
+                                        border: '1px solid #e2e8f0',
+                                        overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={result.thumbnail} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'cover' }} alt="" />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Label input */}
+                          <div>
+                            <input
+                              type="text"
+                              value={item.label || ''}
+                              onChange={(e) => handleLibraryUpdateField(activeLibraryCategory, actualIdxInPool, 'label', e.target.value)}
+                              style={{
+                                width: '100%',
+                                padding: '6px 8px',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '8px',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                            <div style={{ fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8', marginTop: '3px', paddingLeft: '2px' }}>
+                              ID: {item.id}
+                            </div>
+                          </div>
+
+                          {/* Audio File Controller */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '6px 10px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '13px' }}>🗣️</span>
+                            {item.audioUrl ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const audio = new Audio(item.audioUrl);
+                                    audio.play().catch(e => console.error(e));
+                                  }}
+                                  style={{
+                                    border: 'none',
+                                    background: '#e0f2fe',
+                                    color: '#0369a1',
+                                    borderRadius: '6px',
+                                    padding: '2px 8px',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    flex: 1
+                                  }}
+                                >
+                                  Play Audio
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleLibraryUpdateField(activeLibraryCategory, actualIdxInPool, 'audioUrl', '')}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#ef4444',
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Remove audio"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => generateTTSForLibraryItem(activeLibraryCategory, actualIdxInPool)}
+                                style={{
+                                  border: '1px solid #cbd5e1',
+                                  background: '#ffffff',
+                                  borderRadius: '6px',
+                                  padding: '2px 8px',
+                                  fontSize: '11px',
+                                  fontWeight: 650,
+                                  cursor: 'pointer',
+                                  color: '#0284c7',
+                                  flex: 1
+                                }}
+                              >
+                                Generate Audio
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Key Value Metadata Properties Editor */}
+                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b' }}>Custom Properties:</span>
+                            
+                            {/* Listed properties */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {Object.entries(item).map(([k, v]) => {
+                                if (['id', 'label', 'active', 'audioUrl', 'imageUrl'].includes(k)) return null;
+                                return (
+                                  <div
+                                    key={k}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                      fontSize: '9px',
+                                      fontWeight: 700,
+                                      padding: '2px 6px',
+                                      background: '#f1f5f9',
+                                      borderRadius: '4px',
+                                      border: '1px solid #cbd5e1'
+                                    }}
+                                  >
+                                    <span style={{ color: '#475569' }}>{k}:{String(v)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleLibraryItemMetadataChange(activeLibraryCategory, actualIdxInPool, k, '')}
+                                      style={{ border: 'none', background: 'none', color: '#ef4444', fontSize: '9px', padding: 0, cursor: 'pointer' }}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Add property sub-form */}
+                            <div style={{ display: 'flex', gap: '3px', marginTop: '4px' }}>
+                              <input
+                                type="text"
+                                placeholder="Key"
+                                id={`new-prop-k-${item.id}`}
+                                style={{ flex: 1, padding: '3px 6px', fontSize: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                              />
+                              <input
+                                type="text"
+                                placeholder="Val"
+                                id={`new-prop-v-${item.id}`}
+                                style={{ flex: 1, padding: '3px 6px', fontSize: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const kInput = document.getElementById(`new-prop-k-${item.id}`);
+                                  const vInput = document.getElementById(`new-prop-v-${item.id}`);
+                                  if (kInput?.value && vInput?.value) {
+                                    handleLibraryItemMetadataChange(activeLibraryCategory, actualIdxInPool, kInput.value, vInput.value);
+                                    kInput.value = '';
+                                    vInput.value = '';
+                                  }
+                                }}
+                                style={{
+                                  border: 'none',
+                                  background: '#4f46e5',
+                                  color: '#ffffff',
+                                  borderRadius: '4px',
+                                  padding: '2px 6px',
+                                  fontSize: '10px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Delete Item Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleLibraryRemoveItem(activeLibraryCategory, actualIdxInPool)}
+                            style={{
+                              border: 'none',
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              borderRadius: '8px',
+                              padding: '5px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              marginTop: 'auto',
+                              textAlign: 'center'
+                            }}
+                          >
+                            🗑️ Delete Word
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '14px 24px',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '12px',
+                background: '#f8fafc'
+              }}
+            >
+              <button
+                type="button"
+                className={styles.btn + ' ' + styles.btnSecondary}
+                onClick={() => setShowPoolLibraryModal(false)}
+              >
+                Close / Exit
+              </button>
+              <button
+                type="button"
+                className={styles.btn + ' ' + styles.btnPrimary}
+                onClick={savePoolLibrary}
+                disabled={librarySaving}
+              >
+                {librarySaving ? 'Saving...' : '💾 Save Pool Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
+}
+
+// Matches property filters for dynamic vocabulary pool options
+function matchesPropertyFilter(option, property, value) {
+  const prop = String(property || '').trim();
+  const expected = String(value || '').trim();
+  if (!prop || !expected) return true;
+  const actual = option?.[prop];
+  if (Array.isArray(actual)) {
+    return actual.map(entry => String(entry).toLowerCase()).includes(expected.toLowerCase());
+  }
+  return String(actual ?? '').toLowerCase() === expected.toLowerCase();
 }
 
 // Helper functions for parsing/serializing comma-separated labels and URLs

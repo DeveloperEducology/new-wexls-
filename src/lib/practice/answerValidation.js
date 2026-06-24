@@ -75,14 +75,32 @@ function getSelectedOptionValue(question, userAnswer) {
 
 function getRuleActualValue(rule, question, userAnswer) {
   const target = String(rule?.target || rule?.field || '').toLowerCase();
-  if (target === 'selectedoption' || target === 'selected_option' || target === 'optionlabel' || target === 'option_label') {
+  const type = String(question?.type || '').toLowerCase();
+  const interaction = String(question?.interaction || '').toLowerCase();
+  const isMcq = ['mcq', 'imagechoice', 'multiplechoice', 'visual_choice', 'picture_mcq', 'picture_choice', 'audio_mcq', 'multi_select', 'hotspot_select', 'hotspot'].includes(type) || 
+                ['mcq', 'imagechoice', 'multiplechoice', 'visual_choice', 'picture_mcq', 'picture_choice', 'audio_mcq', 'multi_select', 'hotspot_select', 'hotspot'].includes(interaction);
+
+  if (
+    target === 'selectedoption' || 
+    target === 'selected_option' || 
+    target === 'optionlabel' || 
+    target === 'option_label' ||
+    (target === 'answer' && isMcq)
+  ) {
     return getSelectedOptionValue(question, userAnswer);
   }
   return getAnswerPrimitive(userAnswer);
 }
 
 function hasUnresolvedPlaceholder(value) {
-  return /\[[A-Za-z_][A-Za-z0-9_]*\]/.test(String(value ?? ''));
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) {
+      return value.some(hasUnresolvedPlaceholder);
+    }
+    return Object.values(value).some(hasUnresolvedPlaceholder);
+  }
+  return /\[[A-Za-z_][A-Za-z0-9_]*\]/.test(String(value));
 }
 
 function validateRule(rule, question, userAnswer) {

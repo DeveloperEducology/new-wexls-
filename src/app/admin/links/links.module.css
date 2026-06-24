@@ -1,0 +1,395 @@
+/* Admin and Developer Links Page Stylesheet */
+
+.container {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --color-text-main: #0f172a;
+  --color-text-muted: #475569;
+  --color-border: #0f172a;
+  --color-border-subtle: #cbd5e1;
+  --color-primary: #4f46e5;
+  --color-primary-hover: #3f51b5;
+  --color-success: #10b981;
+  --color-success-bg: #d1fae5;
+  --color-danger: #ef4444;
+  --color-danger-bg: #fee2e2;
+  --color-warning: #f97316;
+  --color-warning-bg: #ffedd5;
+  --color-info-bg: #e0f2fe;
+  --color-info-text: #0369a1;
+
+  min-height: 100vh;
+  padding: 32px 24px;
+  background-color: var(--bg-secondary);
+  color: var(--color-text-main);
+  font-family: 'Outfit', Inter, system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Mode Support */
+.darkMode {
+  --bg-primary: #0f172a;
+  --bg-secondary: #020617;
+  --bg-tertiary: #1e293b;
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #f8fafc;
+  --color-border-subtle: #334155;
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-success: #10b981;
+  --color-success-bg: #064e3b;
+  --color-danger: #ef4444;
+  --color-danger-bg: #7f1d1d;
+  --color-warning: #f97316;
+  --color-warning-bg: #7c2d12;
+  --color-info-bg: #0c4a6e;
+  --color-info-text: #38bdf8;
+}
+
+/* Ocean Blue Mode Support */
+.blueMode {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0f7ff;
+  --bg-tertiary: #e0f2fe;
+  --color-text-main: #0c4a6e;
+  --color-text-muted: #0369a1;
+  --color-border: #0284c7;
+  --color-border-subtle: #bae6fd;
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+  --color-success: #10b981;
+  --color-success-bg: #d1fae5;
+  --color-danger: #ef4444;
+  --color-danger-bg: #fee2e2;
+  --color-warning: #f97316;
+  --color-warning-bg: #ffedd5;
+  --color-info-bg: #e0f2fe;
+  --color-info-text: #0369a1;
+}
+
+.header {
+  width: min(1400px, 100%);
+  margin-bottom: 32px;
+  border-bottom: 2.5px solid var(--color-border);
+  padding-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.headerInfo h1 {
+  margin: 0 0 6px;
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--color-text-main);
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.headerInfo p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.themeBtn {
+  background-color: var(--bg-primary);
+  border: 2px solid var(--color-border);
+  color: var(--color-text-main);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: 3px 3px 0px var(--color-border);
+  transition: all 0.15s ease;
+}
+
+.themeBtn:active {
+  box-shadow: 0px 0px 0px var(--color-border);
+  transform: translate(3px, 3px);
+}
+
+.mainLayout {
+  width: min(1400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Search and Filters */
+.searchSection {
+  background-color: var(--bg-primary);
+  border: 2.5px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 4px 4px 0px var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.searchBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 16px;
+  font-size: 18px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  background-color: var(--bg-tertiary);
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-main);
+  font-size: 16px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.filterChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  background-color: var(--bg-tertiary);
+  border: 1.5px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  border-color: var(--color-border);
+  color: var(--color-text-main);
+}
+
+.chipActive {
+  background-color: var(--color-primary);
+  border-color: var(--color-border);
+  color: #ffffff;
+  box-shadow: 2px 2px 0px var(--color-border);
+}
+
+/* Grid & Cards */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+.categorySection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.categoryTitle {
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin: 12px 0 0px 0;
+  color: var(--color-text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryTitle::after {
+  content: '';
+  flex-grow: 1;
+  height: 2px;
+  background-color: var(--color-border-subtle);
+  margin-left: 12px;
+}
+
+.card {
+  background-color: var(--bg-primary);
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 4px 4px 0px var(--color-border);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  height: 100%;
+}
+
+.card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px var(--color-border);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--color-text-main);
+  line-height: 1.3;
+}
+
+.cardIcon {
+  font-size: 22px;
+  background-color: var(--bg-tertiary);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1.5px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.cardDesc {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  border: 1px solid var(--color-border);
+  letter-spacing: 0.02em;
+}
+
+.badgeAdmin {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.badgeDeveloper {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badgeTest {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.badgeApplet {
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 12px;
+  margin-top: 6px;
+}
+
+.routeText {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background-color: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-subtle);
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardLink {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1.5px solid var(--color-border);
+  box-shadow: 2px 2px 0px var(--color-border);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.1s ease;
+}
+
+.cardLink:active {
+  box-shadow: 0px 0px 0px var(--color-border);
+  transform: translate(2px, 2px);
+}
+
+.cardLink:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.noResults {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border: 2px dashed var(--color-border-subtle);
+  border-radius: 12px;
+  background-color: var(--bg-primary);
+}
