@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { countTodaySessions } from '../../../../lib/exam/session-store.js';
 
-const FREE_DAILY_LIMIT = 1; // 1 free session per section per day
+const FREE_DAILY_LIMIT = 100; // 100 free sessions per section per day
 
 export async function GET(req) {
   try {
