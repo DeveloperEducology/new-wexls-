@@ -345,9 +345,13 @@ export function evaluateTemplate(template, seed) {
 
     // Attach fill-in-the-blank fields so QuestionRenderer picks the right renderer
     if (interactionEngine === 'fill_blank' || interactionEngine === 'fillInTheBlank' || interactionEngine === 'number_input') {
+      result.type = 'fillInTheBlank';
       result.interaction = { engine: 'fill_blank', inputMode: 'number' };
       result.validationRules = validationRules;
       if (answer) result.answer = answer;
+    } else {
+      result.type = 'mcq';
+      result.interaction = 'mcq';
     }
 
     return result;
