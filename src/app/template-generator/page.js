@@ -1504,6 +1504,25 @@ export default function TemplateMasterclass() {
               <div>💡 <strong>Placeholder variables:</strong> Wrap name/range in <code>{"{{variable_name}}"}</code> (e.g. <code>{"{{apples}}"}</code>)</div>
               <div>✏️ <strong>Fill-in-the-Blank:</strong> Type <code>{"[]"}</code> to make an entry blank (e.g. <code>{"How many [] apples does..."}</code>)</div>
             </div>
+            
+            <div style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              background: extractBlanks(blueprint).length > 0 ? '#eff6ff' : '#ecfdf5',
+              border: extractBlanks(blueprint).length > 0 ? '1px solid #bfdbfe' : '1px solid #a7f3d0',
+              color: extractBlanks(blueprint).length > 0 ? '#1e40af' : '#065f46',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              fontSize: '0.85rem',
+              fontWeight: '800',
+              marginBottom: '16px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <span>Active Question Type:</span>
+              <strong>{extractBlanks(blueprint).length > 0 ? '✏️ Fill-in-the-Blank (Answer Config Enabled)' : '🔢 Multiple-Choice (MCQ Options Enabled)'}</strong>
+            </div>
+
             <textarea
               className="mc-textarea"
               value={blueprint}
@@ -1527,44 +1546,46 @@ export default function TemplateMasterclass() {
               />
             </div>
 
-            <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
-              <h3 className="mc-card-title">
-                <span className="mc-step-badge mc-step-badge-blue">1c</span>
-                Configure Options / Distractors
-              </h3>
-              <p className="mc-card-desc">
-                Define the formulas or values for MCQ choices. Use <code>{"{{variable_name}}"}</code> to refer to variables (e.g. <code>{"{{Result}} - 10"}</code>).
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {optionsState.map((opt, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="radio"
-                      name="correctOptionRadio"
-                      checked={opt.isCorrect}
-                      onChange={() => {
-                        setOptionsState(prev => prev.map((o, idx) => ({ ...o, isCorrect: idx === i })));
-                      }}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4f46e5' }}
-                    />
-                    <span style={{ fontSize: '0.9rem', fontWeight: '800', width: '90px', color: opt.isCorrect ? '#4f46e5' : '#64748b' }}>
-                      {opt.isCorrect ? 'Correct ✅' : `Option ${i + 1}`}
-                    </span>
-                    <input
-                      type="text"
-                      className="mc-input"
-                      style={{ flex: 1, margin: 0, padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                      value={opt.label}
-                      onChange={(e) => {
-                        const newVal = e.target.value;
-                        setOptionsState(prev => prev.map((o, idx) => idx === i ? { ...o, label: newVal } : o));
-                      }}
-                      placeholder={i === 0 ? 'e.g. {{Result}}' : `e.g. {{Result}} - 10`}
-                    />
-                  </div>
-                ))}
+            {extractBlanks(blueprint).length === 0 && (
+              <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
+                <h3 className="mc-card-title">
+                  <span className="mc-step-badge mc-step-badge-blue">1c</span>
+                  Configure Options / Distractors
+                </h3>
+                <p className="mc-card-desc">
+                  Define the formulas or values for MCQ choices. Use <code>{"{{variable_name}}"}</code> to refer to variables (e.g. <code>{"{{Result}} - 10"}</code>).
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {optionsState.map((opt, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input
+                        type="radio"
+                        name="correctOptionRadio"
+                        checked={opt.isCorrect}
+                        onChange={() => {
+                          setOptionsState(prev => prev.map((o, idx) => ({ ...o, isCorrect: idx === i })));
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4f46e5' }}
+                      />
+                      <span style={{ fontSize: '0.9rem', fontWeight: '800', width: '90px', color: opt.isCorrect ? '#4f46e5' : '#64748b' }}>
+                        {opt.isCorrect ? 'Correct ✅' : `Option ${i + 1}`}
+                      </span>
+                      <input
+                        type="text"
+                        className="mc-input"
+                        style={{ flex: 1, margin: 0, padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={opt.label}
+                        onChange={(e) => {
+                          const newVal = e.target.value;
+                          setOptionsState(prev => prev.map((o, idx) => idx === i ? { ...o, label: newVal } : o));
+                        }}
+                        placeholder={i === 0 ? 'e.g. {{Result}}' : `e.g. {{Result}} - 10`}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             
             {extractBlanks(blueprint).length > 0 && (
               <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
