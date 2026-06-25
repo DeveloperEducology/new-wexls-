@@ -17,7 +17,10 @@ export async function getMongoDb() {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 3000,
     });
-    globalForMongo.__wexlsMongoClientPromise = client.connect();
+    globalForMongo.__wexlsMongoClientPromise = client.connect().catch(err => {
+      globalForMongo.__wexlsMongoClientPromise = null;
+      throw err;
+    });
   }
 
   const client = await globalForMongo.__wexlsMongoClientPromise;

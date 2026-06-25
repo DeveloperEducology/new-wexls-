@@ -198,6 +198,9 @@ const VISUAL_COMPONENTS_CONFIG = {
 export default function TemplateMasterclass() {
   // Main inputs
   const [blueprint, setBlueprint] = useState(EXAMPLES[0].blueprint);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null);
   const [solution, setSolution] = useState(EXAMPLES[0].solution);
   const [placeholders, setPlaceholders] = useState(Object.keys(EXAMPLES[0].placeholders));
   const [placeholderValues, setPlaceholderValues] = useState(EXAMPLES[0].placeholders);
@@ -772,6 +775,47 @@ export default function TemplateMasterclass() {
     }
   };
 
+  const handleGenerateAiTemplate = async () => {
+    if (!aiPrompt.trim()) {
+      setAiStatus({ success: false, message: 'Please enter a prompt first.' });
+      return;
+    }
+    setIsGeneratingAi(true);
+    setAiStatus({ success: true, message: 'Constructing template...' });
+    try {
+      const res = await fetch('/api/admin/templates/generate-masterclass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const payload = data.data;
+        if (payload.blueprint) setBlueprint(payload.blueprint);
+        if (payload.solution) setSolution(payload.solution);
+        if (payload.title) setTitle(payload.title);
+        if (payload.subject) setSubject(payload.subject);
+        if (payload.topic) setTopic(payload.topic);
+        if (payload.grade) setGrade(payload.grade);
+        if (payload.placeholders) {
+          setPlaceholderValues(prev => ({
+            ...prev,
+            ...payload.placeholders
+          }));
+          setPlaceholders(Object.keys(payload.placeholders));
+        }
+        setAiStatus({ success: true, message: 'Template populated successfully!' });
+      } else {
+        setAiStatus({ success: false, message: data.error || 'Failed to generate template.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setAiStatus({ success: false, message: 'Network error. Please try again.' });
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   // 6. Handle loading Example Presets
   const loadPreset = (preset) => {
     if (preset.examId === 'jnvst' || preset.exam === 'jnvst') {
@@ -922,6 +966,7 @@ export default function TemplateMasterclass() {
         .mc-card-blue { border-left: 6px solid #4f46e5; }
         .mc-card-amber { border-left: 6px solid #f59e0b; }
         .mc-card-green { border-left: 6px solid #10b981; }
+        .mc-card-purple { border-left: 6px solid #a855f7; }
 
         /* Step Badges */
         .mc-step-badge {
@@ -938,6 +983,7 @@ export default function TemplateMasterclass() {
         .mc-step-badge-blue { background: #eef2ff; color: #4f46e5; }
         .mc-step-badge-amber { background: #fffbeb; color: #d97706; }
         .mc-step-badge-green { background: #f0fdf4; color: #059669; }
+        .mc-step-badge-purple { background: #faf5ff; color: #a855f7; }
 
         /* Headings */
         .mc-card-title {
@@ -1232,6 +1278,48 @@ export default function TemplateMasterclass() {
       <div className="mc-grid">
         {/* Left column: Editor */}
         <div className="mc-editor-col">
+
+          {/* AI Template Generator Card */}
+          <div className="mc-card mc-card-purple" style={{ marginBottom: '24px' }}>
+            <h3 className="mc-card-title">
+              <span className="mc-step-badge mc-step-badge-purple">🪄</span>
+              AI Template Generator
+            </h3>
+            <p className="mc-card-desc">
+              Enter a raw math problem and solution example below. The AI will convert it into a dynamic, parameterized template.
+            </p>
+            <textarea
+              className="mc-textarea"
+              style={{ minHeight: '90px', border: '1px solid #d8b4fe' }}
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="e.g., Sofia has 9 apples. They get 8 more apples from their friend Aarav. How many apples does Sofia have now? Solution: Step 1: Start with 9 apples. Step 2: Add 8 more apples from Aarav. Step 3: Add them together: 9 + 8 = 17 apples!"
+            />
+            <div style={{ marginTop: '12px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                className="mc-publish-btn"
+                style={{ 
+                  background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)', 
+                  boxShadow: '0 4px 12px rgba(168,85,247,0.25)',
+                  padding: '10px 20px',
+                  fontSize: '0.9rem'
+                }}
+                onClick={handleGenerateAiTemplate}
+                disabled={isGeneratingAi}
+              >
+                {isGeneratingAi ? '✨ Constructing Blueprint...' : '🪄 Generate Template blueprint'}
+              </button>
+              {aiStatus && (
+                <span style={{ 
+                  color: aiStatus.success ? '#16a34a' : '#dc2626', 
+                  fontSize: '0.88rem', 
+                  fontWeight: '800' 
+                }}>
+                  {aiStatus.message}
+                </span>
+              )}
+            </div>
+          </div>
           
           {/* Card 1: Blueprint & Solution */}
           <div className="mc-card mc-card-blue">
