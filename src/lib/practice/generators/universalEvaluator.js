@@ -116,6 +116,26 @@ function fillTemplate(tmpl, ctx) {
     // Replace [key]
     result = result.replace(new RegExp(`\\[(\\s*)${key}(\\s*)\\]`, 'g'), String(val));
   }
+
+  // Evaluate any math expressions wrapped in {= expression =}
+  result = result.replace(/\{=\s*(.*?)\s*=\}/g, (match, expr) => {
+    try {
+      return String(evalDerivation(expr, ctx));
+    } catch {
+      return match;
+    }
+  });
+
+  // Evaluate any math expressions wrapped in [expression]
+  result = result.replace(/\[\s*(.*?)\s*\]/g, (match, expr) => {
+    if (ctx[expr] !== undefined) return String(ctx[expr]);
+    try {
+      return String(evalDerivation(expr, ctx));
+    } catch {
+      return match;
+    }
+  });
+
   return result;
 }
 
@@ -168,11 +188,34 @@ export function evaluateTemplate(template, seed) {
     const combos = buildCombinations(variables);
     if (!combos.length) return { questionText: '', options: [], correctAnswerIndex: -1 };
 
+    // Filter combinations to only keep those that produce integer-only outputs for all derivations
+    let validCombos = [];
+    for (const combo of combos) {
+      const tempCtx = { ...combo };
+      let hasDecimal = false;
+      for (const [key, expr] of Object.entries(derivations)) {
+        try {
+          const val = evalDerivation(expr, tempCtx);
+          tempCtx[key] = val;
+          if (typeof val === 'number' && !Number.isInteger(val)) {
+            hasDecimal = true;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (!hasDecimal) {
+        validCombos.push(tempCtx);
+      }
+    }
+
+    const finalCombos = validCombos.length > 0 ? validCombos : combos;
+
     const rng = seededRandom(seed);
-    const idx = Math.floor(rng() * combos.length);
-    const combo = combos[idx];
+    const idx = Math.floor(rng() * finalCombos.length);
+    const combo = finalCombos[idx];
     
-    // Compute derivations
+    // Compute/populate derivations
     const ctx = { ...combo };
     for (const [key, expr] of Object.entries(derivations)) {
       try { 

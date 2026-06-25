@@ -210,6 +210,7 @@ export default function TemplateMasterclass() {
   ]);
   const [placeholders, setPlaceholders] = useState(Object.keys(EXAMPLES[0].placeholders));
   const [placeholderValues, setPlaceholderValues] = useState(EXAMPLES[0].placeholders);
+  const [blankAnswers, setBlankAnswers] = useState({});
 
   // Visual component configuration states
   const [visualComponent, setVisualComponent] = useState(EXAMPLES[0].visualComponent || 'none');
@@ -278,6 +279,56 @@ export default function TemplateMasterclass() {
     });
   }, [blueprint, solution]);
 
+  const extractBlanks = (text) => {
+    if (!text) return [];
+    const regex = /(\[\]|\[\[([a-zA-Z0-9_-]+)\]\])/g;
+    const list = [];
+    let match;
+    let anonCount = 0;
+    while ((match = regex.exec(text)) !== null) {
+      if (match[1] === '[]') {
+        anonCount++;
+        list.push(`blank${anonCount}`);
+      } else {
+        list.push(match[2]);
+      }
+    }
+    return list;
+  };
+
+  useEffect(() => {
+    const detected = extractBlanks(blueprint);
+    setBlankAnswers(prev => {
+      const next = { ...prev };
+      let updated = false;
+      detected.forEach((blankId, index) => {
+        if (!(blankId in next)) {
+          updated = true;
+          // Default guess logic
+          const matchedVar = placeholders.find(p => p.toLowerCase() === blankId.toLowerCase());
+          if (matchedVar) {
+            next[blankId] = `{{${matchedVar}}}`;
+          } else {
+            // Fallback to Result, or Result_N based on index
+            const num = index + 1;
+            const exprName = num === 1 ? 'Result' : `Result_${num}`;
+            next[blankId] = `{{${exprName}}}`;
+          }
+        }
+      });
+      
+      // Remove deleted blanks
+      Object.keys(next).forEach(key => {
+        if (!detected.includes(key)) {
+          delete next[key];
+          updated = true;
+        }
+      });
+      
+      return updated ? next : prev;
+    });
+  }, [blueprint, placeholders]);
+
   // 2. Resolve placeholers to active values (triggered initially & on Shuffle)
   const handleShuffle = () => {
     setShuffleClass('shuffling');
@@ -310,6 +361,36 @@ export default function TemplateMasterclass() {
       }
     });
 
+    // Evaluate math expressions from solution and store in resolved for preview
+    const mathRegex = /\{=\s*(.*?)\s*=\}/g;
+    let exprCount = 0;
+    let match;
+    while ((match = mathRegex.exec(solution)) !== null) {
+      exprCount++;
+      const exprName = exprCount === 1 ? 'Result' : `Result_${exprCount}`;
+      const expr = match[1].trim();
+      
+      let substitutedExpr = expr;
+      Object.keys(resolved).forEach(k => {
+        const val = resolved[k];
+        if (typeof val === 'number' || !isNaN(Number(val))) {
+          const varRegex = new RegExp(`\\b${k}\\b`, 'g');
+          substitutedExpr = substitutedExpr.replace(varRegex, val);
+        }
+      });
+      
+      const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
+      try {
+        let evaluated = Function('return (' + sanitized + ')')();
+        if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
+          evaluated = Math.round(evaluated * 100) / 100;
+        }
+        resolved[exprName] = evaluated;
+      } catch (err) {
+        resolved[exprName] = `[Error: ${expr}]`;
+      }
+    }
+
     setResolvedValues(resolved);
     setShuffledCount(prev => prev + 1);
   };
@@ -319,20 +400,22 @@ export default function TemplateMasterclass() {
     if (placeholders.length > 0) {
       handleShuffle();
     }
-  }, [placeholders, placeholderValues]);
+  }, [placeholders, placeholderValues, solution]);
 
   // 3. Helper to evaluate math expressions and substitute placeholders
   const evaluateText = (tplText) => {
     if (!tplText) return '';
     let result = tplText;
 
-    // Substitute {{placeholder}} variables
+    // Substitute {{placeholder}} and [placeholder] variables
     Object.keys(resolvedValues).forEach(key => {
       const val = resolvedValues[key];
       // Escape special regex characters in the placeholder key
       const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const regex = new RegExp(`\\{\\{\\s*${escapedKey}\\s*\\}\\}`, 'g');
-      result = result.replace(regex, val);
+      // Replace {{key}}
+      result = result.replace(new RegExp(`\\{\\{\\s*${escapedKey}\\s*\\}\\}`, 'g'), val);
+      // Replace [key]
+      result = result.replace(new RegExp(`\\[\\s*${escapedKey}\\s*\\]`, 'g'), val);
     });
 
     // Evaluate math expressions: {= expression =}
@@ -656,32 +739,22 @@ export default function TemplateMasterclass() {
         };
         answerObj = {};
         
-        // Smart Auto-Mapping
-        // If there are exactly 3 blanks and we have count1, count2, and Result variables/expressions
-        const hasStandardMathVars = compiledVariables.some(v => v.name === 'count1') &&
-                                    compiledVariables.some(v => v.name === 'count2') &&
-                                    compiledVariables.some(v => v.name === 'Result');
-        
-        foundBlanks.forEach((blankId, index) => {
-          // 1. Exact variable match (case-insensitive)
-          const matchedVar = compiledVariables.find(v => v.name.toLowerCase() === blankId.toLowerCase());
-          if (matchedVar) {
-            answerObj[blankId] = `[${matchedVar.name}]`;
-          } else if (hasStandardMathVars && foundBlanks.length === 3 && /^blank\d+$/i.test(blankId)) {
-            // Auto map blank1 -> count1, blank2 -> count2, blank3 -> Result
-            if (index === 0) answerObj[blankId] = '[count1]';
-            if (index === 1) answerObj[blankId] = '[count2]';
-            if (index === 2) answerObj[blankId] = '[Result]';
+        foundBlanks.forEach((blankId) => {
+          if (blankAnswers[blankId]) {
+            answerObj[blankId] = blankAnswers[blankId].replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]');
           } else {
-            // 2. Check if the blank name matches blankN
-            const numMatch = blankId.match(/^blank(\d+)$/i);
-            if (numMatch) {
-              const num = parseInt(numMatch[1], 10);
-              const exprName = num === 1 ? 'Result' : `Result_${num}`;
-              answerObj[blankId] = `[${exprName}]`;
+            const matchedVar = compiledVariables.find(v => v.name.toLowerCase() === blankId.toLowerCase());
+            if (matchedVar) {
+              answerObj[blankId] = `[${matchedVar.name}]`;
             } else {
-              // 3. Fallback: assume the blank name itself is a variable/expression reference
-              answerObj[blankId] = `[${blankId}]`;
+              const numMatch = blankId.match(/^blank(\d+)$/i);
+              if (numMatch) {
+                const num = parseInt(numMatch[1], 10);
+                const exprName = num === 1 ? 'Result' : `Result_${num}`;
+                answerObj[blankId] = `[${exprName}]`;
+              } else {
+                answerObj[blankId] = `[${blankId}]`;
+              }
             }
           }
         });
@@ -1438,6 +1511,38 @@ export default function TemplateMasterclass() {
                 ))}
               </div>
             </div>
+            
+            {extractBlanks(blueprint).length > 0 && (
+              <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
+                <h3 className="mc-card-title">
+                  <span className="mc-step-badge mc-step-badge-blue">1d</span>
+                  Configure Fill-in-the-Blank Answers
+                </h3>
+                <p className="mc-card-desc">
+                  Map each blank input to its correct answer formula. Use <code>{"{{variable_name}}"}</code> (e.g. <code>{"{{Result}}"}</code>).
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.keys(blankAnswers).map((blankId) => (
+                    <div key={blankId} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '800', width: '150px', color: '#4f46e5' }}>
+                        Blank ({blankId}):
+                      </span>
+                      <input
+                        type="text"
+                        className="mc-input"
+                        style={{ flex: 1, margin: 0, padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={blankAnswers[blankId] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBlankAnswers(prev => ({ ...prev, [blankId]: val }));
+                        }}
+                        placeholder="e.g. {{Result}}"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Card 2: Fill in the Blanks */}
