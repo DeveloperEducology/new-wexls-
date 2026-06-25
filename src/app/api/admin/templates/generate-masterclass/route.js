@@ -46,6 +46,20 @@ Guidelines for parameterization:
    - Turn the raw solution steps into a step-by-step kid-friendly template using the same variable placeholders.
    - For any dynamic math calculation inside the solution text, wrap the JavaScript-compatible mathematical expression using the "{= expression =}" syntax (e.g. "{= count1 + count2 =}" or "{= total / friends =}" or "{= principal * rate * time / 100 =}").
 5. **Classify**: Assign an appropriate title, subject (e.g. "math", "english", "science"), topic (e.g. "addition", "division", "simple-interest"), and target grade (e.g. "1", "2", "3", "4", "5", "6").
+6. **MCQ Options (Distractors)**:
+   - Provide exactly 4 options. One option must be correct (isCorrect: true) and the other 3 incorrect distractors (isCorrect: false).
+   - If the correct answer is a math formula/result, the correct option should refer to the result variable, e.g. "{{Result}}" or "{{Result_2}}".
+   - The distractors must use formulas that simulate realistic mistakes (e.g. off-by-ten, incorrect operations, or logical rounding errors) using the same placeholders or the Result variables.
+   - Example for addition (Result = count1 + count2):
+     * Correct: "{{Result}}"
+     * Distractor 1: "{{Result}} + 10" (off-by-ten)
+     * Distractor 2: "{{Result}} - 5"
+     * Distractor 3: "{{count1}} - {{count2}}" (wrong operation)
+   - Example for rounding (Result = rounded sum, e.g. 800):
+     * Correct: "{{Result}}"
+     * Distractor 1: "{{Result}} - 100" (rounds down too much)
+     * Distractor 2: "{{Result}} + 100"
+     * Distractor 3: "{{count1}} + {{count2}}" (uses the exact sum without rounding)
 
 Input text from the user:
 "${prompt}"
@@ -63,7 +77,13 @@ Output MUST be a single JSON object (no markdown wrapping, no comments) matching
     "fruit": "apples, bananas, strawberries, oranges",
     "count1": "5-12",
     "count2": "3-8"
-  }
+  },
+  "options": [
+    { "label": "{{Result}}", "isCorrect": true },
+    { "label": "{{Result}} + 10", "isCorrect": false },
+    { "label": "{{Result}} - 10", "isCorrect": false },
+    { "label": "{{count1}} + {{count2}} + 5", "isCorrect": false }
+  ]
 }
 `;
 

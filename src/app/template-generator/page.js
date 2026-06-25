@@ -202,6 +202,12 @@ export default function TemplateMasterclass() {
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
   const [solution, setSolution] = useState(EXAMPLES[0].solution);
+  const [optionsState, setOptionsState] = useState([
+    { label: '{{Result}}', isCorrect: true },
+    { label: '{{Result}} + 1', isCorrect: false },
+    { label: '{{Result}} - 1', isCorrect: false },
+    { label: '{{Result}} + 2', isCorrect: false }
+  ]);
   const [placeholders, setPlaceholders] = useState(Object.keys(EXAMPLES[0].placeholders));
   const [placeholderValues, setPlaceholderValues] = useState(EXAMPLES[0].placeholders);
 
@@ -546,12 +552,10 @@ export default function TemplateMasterclass() {
           },
           variables: jnvstVariables,
           derivations: jnvstDerivations,
-          options: [
-            { label: `{{${exprCount === 1 ? 'Result' : `Result_${exprCount}`}}}`, isCorrect: true },
-            { label: `{{${exprCount === 1 ? 'Result' : `Result_${exprCount}`}}} + 1`, isCorrect: false },
-            { label: `{{${exprCount === 1 ? 'Result' : `Result_${exprCount}`}}} - 1`, isCorrect: false },
-            { label: `{{${exprCount === 1 ? 'Result' : `Result_${exprCount}`}}} + 2`, isCorrect: false }
-          ],
+          options: optionsState.map(opt => ({
+            label: opt.label,
+            isCorrect: opt.isCorrect
+          })),
           questionTemplate: modifiedBlueprint,
           explanationTemplate: modifiedSolution
         }
@@ -691,24 +695,22 @@ export default function TemplateMasterclass() {
         ];
       } else {
         const finalResultVar = exprCount === 1 ? 'Result' : `Result_${exprCount}`;
-        options = hasMathResult ? [
-          { label: `[${finalResultVar}]`, isCorrect: true },
-          { label: `[${finalResultVar}] + 1`, isCorrect: false },
-          { label: `[${finalResultVar}] - 1`, isCorrect: false },
-          { label: `[${finalResultVar}] + 2`, isCorrect: false }
-        ] : [
-          { label: 'Option A', isCorrect: true },
-          { label: 'Option B', isCorrect: false },
-          { label: 'Option C', isCorrect: false }
-        ];
+        options = optionsState.map(opt => {
+          const labelWithBrackets = opt.label.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]');
+          return {
+            label: labelWithBrackets,
+            isCorrect: opt.isCorrect
+          };
+        });
 
-        validationRules = hasMathResult ? [
+        const correctOpt = options.find(o => o.isCorrect);
+        validationRules = [
           {
             type: 'exact_match',
             target: 'answer',
-            value: `[${finalResultVar}]`
+            value: correctOpt ? correctOpt.label : (hasMathResult ? `[${finalResultVar}]` : '')
           }
-        ] : [];
+        ];
       }
 
       const compiledJson = {
@@ -804,6 +806,16 @@ export default function TemplateMasterclass() {
           }));
           setPlaceholders(Object.keys(payload.placeholders));
         }
+        if (payload.options && Array.isArray(payload.options)) {
+          setOptionsState(payload.options);
+        } else {
+          setOptionsState([
+            { label: '{{Result}}', isCorrect: true },
+            { label: '{{Result}} + 1', isCorrect: false },
+            { label: '{{Result}} - 1', isCorrect: false },
+            { label: '{{Result}} + 2', isCorrect: false }
+          ]);
+        }
         setAiStatus({ success: true, message: 'Template populated successfully!' });
       } else {
         setAiStatus({ success: false, message: data.error || 'Failed to generate template.' });
@@ -850,6 +862,21 @@ export default function TemplateMasterclass() {
       setPlaceholderValues(initialPlaceholders);
       setVisualComponent('none');
       setVisualProps({});
+
+      if (config.options && Array.isArray(config.options)) {
+        const mapped = config.options.map(opt => ({
+          label: String(opt.label || opt.value || '').replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}'),
+          isCorrect: opt.isCorrect === true || opt.isCorrect === 'true'
+        }));
+        setOptionsState(mapped);
+      } else {
+        setOptionsState([
+          { label: '{{Result}}', isCorrect: true },
+          { label: '{{Result}} + 1', isCorrect: false },
+          { label: '{{Result}} - 1', isCorrect: false },
+          { label: '{{Result}} + 2', isCorrect: false }
+        ]);
+      }
     } else {
       setTargetCollection('dynamic_templates');
       setTitle(preset.title);
@@ -861,6 +888,21 @@ export default function TemplateMasterclass() {
       setPlaceholderValues(preset.placeholders);
       setVisualComponent(preset.visualComponent || 'none');
       setVisualProps(preset.visualProps || {});
+
+      if (preset.options && Array.isArray(preset.options)) {
+        const mapped = preset.options.map(opt => ({
+          label: String(opt.label || opt.value || '').replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}'),
+          isCorrect: opt.isCorrect === true || opt.isCorrect === 'true'
+        }));
+        setOptionsState(mapped);
+      } else {
+        setOptionsState([
+          { label: '{{Result}}', isCorrect: true },
+          { label: '{{Result}} + 1', isCorrect: false },
+          { label: '{{Result}} - 1', isCorrect: false },
+          { label: '{{Result}} + 2', isCorrect: false }
+        ]);
+      }
     }
     setPublishStatus(null);
     setPublishError(null);
@@ -1356,6 +1398,45 @@ export default function TemplateMasterclass() {
                 onChange={(e) => setSolution(e.target.value)}
                 placeholder="e.g. Step 1: Draw {{apples}}..."
               />
+            </div>
+
+            <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
+              <h3 className="mc-card-title">
+                <span className="mc-step-badge mc-step-badge-blue">1c</span>
+                Configure Options / Distractors
+              </h3>
+              <p className="mc-card-desc">
+                Define the formulas or values for MCQ choices. Use <code>{"{{variable_name}}"}</code> to refer to variables (e.g. <code>{"{{Result}} - 10"}</code>).
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {optionsState.map((opt, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <input
+                      type="radio"
+                      name="correctOptionRadio"
+                      checked={opt.isCorrect}
+                      onChange={() => {
+                        setOptionsState(prev => prev.map((o, idx) => ({ ...o, isCorrect: idx === i })));
+                      }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4f46e5' }}
+                    />
+                    <span style={{ fontSize: '0.9rem', fontWeight: '800', width: '90px', color: opt.isCorrect ? '#4f46e5' : '#64748b' }}>
+                      {opt.isCorrect ? 'Correct ✅' : `Option ${i + 1}`}
+                    </span>
+                    <input
+                      type="text"
+                      className="mc-input"
+                      style={{ flex: 1, margin: 0, padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                      value={opt.label}
+                      onChange={(e) => {
+                        const newVal = e.target.value;
+                        setOptionsState(prev => prev.map((o, idx) => idx === i ? { ...o, label: newVal } : o));
+                      }}
+                      placeholder={i === 0 ? 'e.g. {{Result}}' : `e.g. {{Result}} - 10`}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
