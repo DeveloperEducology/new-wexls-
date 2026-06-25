@@ -160,7 +160,7 @@ export function evaluateTemplate(template, seed) {
 
   const isParameterized = template?.type === 'parameterized' ||
     (template?.examId === 'jnvst' || template?.exam === 'jnvst') ||
-    (config.variables && !Array.isArray(config.variables));
+    (config.variables && (Array.isArray(config.variables) ? config.variables.some(v => v && v.name) : true));
 
   if (isParameterized) {
     let variables = config.variables || {};
