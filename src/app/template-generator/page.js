@@ -354,12 +354,66 @@ export default function TemplateMasterclass() {
           resolved[key] = valString;
         }
       }
-      // Constant / literal
+      // Constant / literal or formula
       else {
         const num = Number(valString);
-        resolved[key] = Number.isFinite(num) ? num : valString;
+        if (Number.isFinite(num)) {
+          resolved[key] = num;
+        } else {
+          // If it contains math operators and variable names, treat as formula
+          const isFormula = /[+\-*/]/.test(valString) && !valString.includes(',');
+          if (isFormula) {
+            resolved[key] = { isFormula: true, formula: valString };
+          } else {
+            resolved[key] = valString;
+          }
+        }
       }
     });
+
+    // Resolve formula placeholders dynamically (handles dependencies between placeholders)
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 5) {
+      changed = false;
+      iterations++;
+      for (const [k, val] of Object.entries(resolved)) {
+        if (val && typeof val === 'object' && val.isFormula) {
+          let substitutedExpr = val.formula;
+          let canEvaluate = true;
+          
+          Object.keys(resolved).forEach(varKey => {
+            const varVal = resolved[varKey];
+            if (varVal && typeof varVal === 'object' && varVal.isFormula) {
+              return; // wait until referenced variable is resolved
+            }
+            if (typeof varVal === 'number' || (typeof varVal === 'string' && !isNaN(Number(varVal)))) {
+              const varRegex = new RegExp(`\\b${varKey}\\b`, 'g');
+              substitutedExpr = substitutedExpr.replace(varRegex, varVal);
+            }
+          });
+          
+          if (/[a-zA-Z_]/.test(substitutedExpr)) {
+            canEvaluate = false;
+          }
+          
+          if (canEvaluate) {
+            const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
+            try {
+              let evaluated = Function('return (' + sanitized + ')')();
+              if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
+                evaluated = Math.round(evaluated * 100) / 100;
+              }
+              resolved[k] = evaluated;
+              changed = true;
+            } catch {
+              resolved[k] = `[Error]`;
+              changed = true;
+            }
+          }
+        }
+      }
+    }
 
     // Evaluate math expressions from solution and store in resolved for preview
     const mathRegex = /\{=\s*(.*?)\s*=\}/g;
