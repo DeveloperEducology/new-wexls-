@@ -45,9 +45,12 @@ Guidelines for parameterization:
 4. **Kid-Friendly Solution**:
    - Turn the raw solution steps into a step-by-step kid-friendly template using the same variable placeholders.
    - For any dynamic math calculation inside the solution text, wrap the JavaScript-compatible mathematical expression using the "{= expression =}" syntax (e.g. "{= count1 + count2 =}" or "{= total / friends =}" or "{= principal * rate * time / 100 =}").
-5. **Classify**: Assign an appropriate title, subject (e.g. "math", "english", "science"), topic (e.g. "addition", "division", "simple-interest"), and target grade (e.g. "1", "2", "3", "4", "5", "6").
-6. **MCQ Options (Distractors)**:
-   - Provide exactly 4 options. One option must be correct (isCorrect: true) and the other 3 incorrect distractors (isCorrect: false).
+5. **Determine Question Type (MCQ vs. Fill-in-the-Blank)**:
+   - If the question asks for a direct numerical value or values, design it as a **Fill-in-the-Blank** question by including empty square brackets '[]' in the blueprint where the student should type their answer (e.g. "There are [] plates, and each has [] apples.").
+   - If the question is not a simple numerical entry, design it as a **Multiple-Choice (MCQ)** question (do NOT include '[]' in the blueprint).
+6. **Classify**: Assign an appropriate title, subject (e.g. "math", "english", "science"), topic (e.g. "addition", "division", "simple-interest"), and target grade (e.g. "1", "2", "3", "4", "5", "6").
+7. **MCQ Options (Distractors)**:
+   - Provide exactly 4 options (Required for Multiple-Choice questions; optional/fallback for Fill-in-the-Blank). One option must be correct (isCorrect: true) and the other 3 incorrect distractors (isCorrect: false).
    - If the correct answer is a math formula/result, the correct option should refer to the result variable, e.g. "{{Result}}" or "{{Result_2}}".
    - The distractors must use formulas that simulate realistic mistakes (e.g. off-by-ten, incorrect operations, or logical rounding errors) using the same placeholders or the Result variables.
    - Example for addition (Result = count1 + count2):
