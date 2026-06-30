@@ -53,6 +53,7 @@ function buildCombinations(variables) {
     if (v.items && Array.isArray(v.items)) return v.items;
     
     if (typeof v === 'object') {
+      if (v.value !== undefined) return [ v.value ];
       if (typeof v.min === 'number' && typeof v.max === 'number') {
         const step = Math.max(1, Math.floor((v.max - v.min) / 15));
         const pool = [];
@@ -192,16 +193,32 @@ export function evaluateTemplate(template, seed) {
     let validCombos = [];
     for (const combo of combos) {
       const tempCtx = { ...combo };
-      let hasDecimal = false;
-      for (const [key, expr] of Object.entries(derivations)) {
-        try {
-          const val = evalDerivation(expr, tempCtx);
-          tempCtx[key] = val;
-          if (typeof val === 'number' && !Number.isInteger(val)) {
-            hasDecimal = true;
+      let remaining = { ...derivations };
+      let changed = true;
+      let iterations = 0;
+      
+      while (changed && iterations < 5 && Object.keys(remaining).length > 0) {
+        changed = false;
+        iterations++;
+        for (const [key, expr] of Object.entries(remaining)) {
+          try {
+            const val = evalDerivation(expr, tempCtx);
+            if (val !== null && val !== undefined && !isNaN(val)) {
+              tempCtx[key] = val;
+              delete remaining[key];
+              changed = true;
+            }
+          } catch {
+            // ignore and wait for next iteration when dependencies are resolved
           }
-        } catch {
-          // ignore
+        }
+      }
+      
+      let hasDecimal = false;
+      for (const key of Object.keys(derivations)) {
+        const val = tempCtx[key];
+        if (val === undefined || val === null || (typeof val === 'number' && !Number.isInteger(val))) {
+          hasDecimal = true;
         }
       }
       if (!hasDecimal) {
@@ -215,14 +232,30 @@ export function evaluateTemplate(template, seed) {
     const idx = Math.floor(rng() * finalCombos.length);
     const combo = finalCombos[idx];
     
-    // Compute/populate derivations
+    // Compute/populate derivations with dependency resolution
     const ctx = { ...combo };
-    for (const [key, expr] of Object.entries(derivations)) {
-      try { 
-        ctx[key] = evalDerivation(expr, ctx); 
-      } catch { 
-        ctx[key] = null; 
+    let remainingDerivations = { ...derivations };
+    let changed = true;
+    let iterations = 0;
+    
+    while (changed && iterations < 5 && Object.keys(remainingDerivations).length > 0) {
+      changed = false;
+      iterations++;
+      for (const [key, expr] of Object.entries(remainingDerivations)) {
+        try {
+          const val = evalDerivation(expr, ctx);
+          if (val !== null && val !== undefined && !isNaN(val)) {
+            ctx[key] = val;
+            delete remainingDerivations[key];
+            changed = true;
+          }
+        } catch {
+          // ignore and wait for next iteration when dependencies are resolved
+        }
       }
+    }
+    for (const key of Object.keys(remainingDerivations)) {
+      ctx[key] = null;
     }
 
     const questionText = fillTemplate(questionTemplate, ctx);

@@ -722,11 +722,20 @@ export default function TemplateMasterclass() {
             values: valString.split(',').map(s => s.trim()).filter(Boolean)
           });
         } else {
-          compiledVariables.push({
-            name: key,
-            type: 'constant',
-            value: Number.isFinite(Number(valString)) ? Number(valString) : valString
-          });
+          const isFormula = /[+\-*/]/.test(valString) && !valString.includes(',');
+          if (isFormula) {
+            compiledVariables.push({
+              name: key,
+              type: 'computed',
+              formula: valString
+            });
+          } else {
+            compiledVariables.push({
+              name: key,
+              type: 'constant',
+              value: Number.isFinite(Number(valString)) ? Number(valString) : valString
+            });
+          }
         }
       });
 
