@@ -102,11 +102,16 @@ function evalDerivation(expr, ctx) {
       resolved = resolved.replace(new RegExp(`${key}_denominator`, 'g'), String(den));
       resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), `(${num}/${den})`);
     } else {
-      resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), String(val));
+      const isNumeric = typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)));
+      const replacement = isNumeric ? String(val) : JSON.stringify(val);
+      resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), replacement);
     }
   }
   const result = new Function(`return (${resolved})`)();
-  return Math.round(result * 100) / 100;
+  if (typeof result === 'number') {
+    return Math.round(result * 100) / 100;
+  }
+  return result;
 }
 
 function fillTemplate(tmpl, ctx) {
@@ -203,7 +208,7 @@ export function evaluateTemplate(template, seed) {
         for (const [key, expr] of Object.entries(remaining)) {
           try {
             const val = evalDerivation(expr, tempCtx);
-            if (val !== null && val !== undefined && !isNaN(val)) {
+            if (val !== null && val !== undefined && (typeof val === 'number' ? !isNaN(val) : true)) {
               tempCtx[key] = val;
               delete remaining[key];
               changed = true;
@@ -244,7 +249,7 @@ export function evaluateTemplate(template, seed) {
       for (const [key, expr] of Object.entries(remainingDerivations)) {
         try {
           const val = evalDerivation(expr, ctx);
-          if (val !== null && val !== undefined && !isNaN(val)) {
+          if (val !== null && val !== undefined && (typeof val === 'number' ? !isNaN(val) : true)) {
             ctx[key] = val;
             delete remainingDerivations[key];
             changed = true;

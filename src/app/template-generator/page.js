@@ -387,28 +387,38 @@ export default function TemplateMasterclass() {
             if (varVal && typeof varVal === 'object' && varVal.isFormula) {
               return; // wait until referenced variable is resolved
             }
-            if (typeof varVal === 'number' || (typeof varVal === 'string' && !isNaN(Number(varVal)))) {
-              const varRegex = new RegExp(`\\b${varKey}\\b`, 'g');
-              substitutedExpr = substitutedExpr.replace(varRegex, varVal);
-            }
+            const isNumeric = typeof varVal === 'number' || (typeof varVal === 'string' && !isNaN(Number(varVal)));
+            const replacement = isNumeric ? String(varVal) : JSON.stringify(varVal);
+            const varRegex = new RegExp(`\\b${varKey}\\b`, 'g');
+            substitutedExpr = substitutedExpr.replace(varRegex, replacement);
           });
           
-          if (/[a-zA-Z_]/.test(substitutedExpr)) {
+          const strippedExpr = substitutedExpr.replace(/'[^']*'/g, '').replace(/"[^"]*"/g, '');
+          if (/[a-zA-Z_]/.test(strippedExpr)) {
             canEvaluate = false;
           }
           
           if (canEvaluate) {
-            const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
             try {
-              let evaluated = Function('return (' + sanitized + ')')();
+              let evaluated = Function('return (' + substitutedExpr + ')')();
               if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
                 evaluated = Math.round(evaluated * 100) / 100;
               }
               resolved[k] = evaluated;
               changed = true;
             } catch {
-              resolved[k] = `[Error]`;
-              changed = true;
+              const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
+              try {
+                let evaluated = Function('return (' + sanitized + ')')();
+                if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
+                  evaluated = Math.round(evaluated * 100) / 100;
+                }
+                resolved[k] = evaluated;
+                changed = true;
+              } catch {
+                resolved[k] = `[Error]`;
+                changed = true;
+              }
             }
           }
         }
@@ -427,21 +437,29 @@ export default function TemplateMasterclass() {
       let substitutedExpr = expr;
       Object.keys(resolved).forEach(k => {
         const val = resolved[k];
-        if (typeof val === 'number' || !isNaN(Number(val))) {
-          const varRegex = new RegExp(`\\b${k}\\b`, 'g');
-          substitutedExpr = substitutedExpr.replace(varRegex, val);
-        }
+        const isNumeric = typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)));
+        const replacement = isNumeric ? String(val) : JSON.stringify(val);
+        const varRegex = new RegExp(`\\b${k}\\b`, 'g');
+        substitutedExpr = substitutedExpr.replace(varRegex, replacement);
       });
       
-      const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
       try {
-        let evaluated = Function('return (' + sanitized + ')')();
+        let evaluated = Function('return (' + substitutedExpr + ')')();
         if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
           evaluated = Math.round(evaluated * 100) / 100;
         }
         resolved[exprName] = evaluated;
-      } catch (err) {
-        resolved[exprName] = `[Error: ${expr}]`;
+      } catch {
+        const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
+        try {
+          let evaluated = Function('return (' + sanitized + ')')();
+          if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
+            evaluated = Math.round(evaluated * 100) / 100;
+          }
+          resolved[exprName] = evaluated;
+        } catch {
+          resolved[exprName] = `[Math Error: ${expr}]`;
+        }
       }
     }
 
