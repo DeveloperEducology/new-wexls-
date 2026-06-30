@@ -190,7 +190,7 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
   return variable?.value ?? '';
 }
 
-function resolveValidationRules(rules, resolvedVariables) {
+export function resolveValidationRules(rules, resolvedVariables) {
   if (!Array.isArray(rules)) return [];
   const resolveTemplateValue = (value) => {
     if (typeof value === 'string') return interpolateString(value, resolvedVariables);

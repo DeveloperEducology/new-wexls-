@@ -1,5 +1,5 @@
 // Gateway wrapper for the refactored modular Universal Template Evaluator pipeline
-import { seededRandom, evaluateTemplate as baseEvaluateTemplate } from './universal/evaluator.js';
+import { seededRandom, evaluateTemplate as baseEvaluateTemplate, resolveValidationRules } from './universal/evaluator.js';
 import { resolveExpression } from './universal/expressionParser.js';
 import { interpolateString, resolveLabelOrExpression, getCleanNameFromUrl, parseLabeledEntry } from './universal/interpolator.js';
 import { renderTenFrame } from './universal/components/TenFrame.js';
@@ -380,8 +380,17 @@ export function evaluateTemplate(template, seed) {
     if (interactionEngine === 'fill_blank' || interactionEngine === 'fillInTheBlank' || interactionEngine === 'number_input') {
       result.type = 'fillInTheBlank';
       result.interaction = { engine: 'fill_blank', inputMode: 'number' };
-      result.validationRules = validationRules;
-      if (answer) result.answer = answer;
+      
+      const resolvedRules = resolveValidationRules(validationRules, ctx);
+      result.validationRules = resolvedRules;
+      
+      // Extract correct answer object from validation rules for display in PracticeFeedback
+      const exactMatchRule = resolvedRules.find(r => r && r.type === 'exact_match' && r.target === 'answer');
+      if (exactMatchRule && exactMatchRule.value) {
+        result.answer = exactMatchRule.value;
+      } else if (answer) {
+        result.answer = answer;
+      }
     } else {
       result.type = 'mcq';
       result.interaction = 'mcq';
