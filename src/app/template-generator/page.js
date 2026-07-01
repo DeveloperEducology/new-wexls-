@@ -329,6 +329,14 @@ export default function TemplateMasterclass() {
     });
   }, [blueprint, placeholders]);
 
+  const checkIsFormula = (valString) => {
+    const trimmed = valString.trim();
+    if (Number.isFinite(Number(trimmed))) return false;
+    if (/[a-zA-Z_]\.[a-zA-Z_]/.test(trimmed)) return true;
+    if (/[+\-*/]/.test(trimmed)) return true;
+    return false;
+  };
+
   // 2. Resolve placeholers to active values (triggered initially & on Shuffle)
   const handleShuffle = () => {
     setShuffleClass('shuffling');
@@ -375,8 +383,8 @@ export default function TemplateMasterclass() {
         if (Number.isFinite(num)) {
           resolved[key] = num;
         } else {
-          // If it contains math operators and variable names, treat as formula
-          const isFormula = /[+\-*/]/.test(valString) && !valString.includes(',');
+          // If it contains math operators or property access, treat as formula
+          const isFormula = checkIsFormula(valString);
           if (isFormula) {
             resolved[key] = { isFormula: true, formula: valString };
           } else {
@@ -783,7 +791,7 @@ export default function TemplateMasterclass() {
             values: valString.split(',').map(s => s.trim()).filter(Boolean)
           });
         } else {
-          const isFormula = /[+\-*/]/.test(valString) && !valString.includes(',');
+          const isFormula = checkIsFormula(valString);
           if (isFormula) {
             compiledVariables.push({
               name: key,
