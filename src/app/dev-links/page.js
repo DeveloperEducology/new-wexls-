@@ -48,6 +48,7 @@ export default function DevLinksPage() {
   const docLinks = [
     '/docs/dynamic-templates',
     '/docs/option-pooling',
+    '/docs/question-guide',
   ];
 
   return (
