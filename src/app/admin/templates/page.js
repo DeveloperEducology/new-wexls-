@@ -4408,14 +4408,39 @@ export default function VisualTemplateBuilderPage() {
                               {isExpanded && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
                                   {list.map(tpl => (
-                                    <button
-                                      key={`dynamic-${tpl.id}`}
-                                      className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                                      onClick={() => handleSelectTemplate(tpl)}
-                                    >
-                                      <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
-                                      <div className={styles.templateItemMeta}>{tpl.topic} • {tpl.id}</div>
-                                    </button>
+                                    <div key={`dynamic-${tpl.id}`} style={{ position: 'relative' }}>
+                                      <button
+                                        className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                        onClick={() => handleSelectTemplate(tpl)}
+                                        style={{ width: '100%', paddingRight: '45px', textAlign: 'left' }}
+                                      >
+                                        <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
+                                        <div className={styles.templateItemMeta}>{tpl.topic} • {tpl.id}</div>
+                                      </button>
+                                      <a
+                                        href={`/practice?skill=${tpl.id}&subject=${tpl.subject || subjKey || 'math'}&topic=${tpl.topic || 'addition'}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Test template in practice page"
+                                        style={{
+                                          position: 'absolute',
+                                          right: '8px',
+                                          top: '50%',
+                                          transform: 'translateY(-50%)',
+                                          background: '#f1f5f9',
+                                          border: '1px solid #cbd5e1',
+                                          borderRadius: '4px',
+                                          padding: '2px 6px',
+                                          fontSize: '10px',
+                                          fontWeight: 'bold',
+                                          textDecoration: 'none',
+                                          color: '#475569',
+                                          zIndex: 5
+                                        }}
+                                      >
+                                        Test
+                                      </a>
+                                    </div>
                                   ))}
                                 </div>
                               )}
@@ -4439,17 +4464,42 @@ export default function VisualTemplateBuilderPage() {
                     
                     {isSectionExpanded("referenceExamples") && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
-                        {list.map(tpl => (
-                          <button
-                            key={`ref-${tpl.id}`}
-                            className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                            onClick={() => handleSelectTemplate(tpl)}
-                          >
-                            <div className={styles.templateItemTitle}>{tpl.title}</div>
-                            <div className={styles.templateItemMeta}>{tpl.topic} • Example</div>
-                          </button>
-                        ))}
-                      </div>
+                                    {list.map(tpl => (
+                                      <div key={`ref-${tpl.id}`} style={{ position: 'relative' }}>
+                                        <button
+                                          className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                          onClick={() => handleSelectTemplate(tpl)}
+                                          style={{ width: '100%', paddingRight: '45px', textAlign: 'left' }}
+                                        >
+                                          <div className={styles.templateItemTitle}>{tpl.title}</div>
+                                          <div className={styles.templateItemMeta}>{tpl.topic} • Example</div>
+                                        </button>
+                                        <a
+                                          href={`/practice?skill=${tpl.id}&subject=${tpl.subject || 'math'}&topic=${tpl.topic || 'addition'}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          title="Test template in practice page"
+                                          style={{
+                                            position: 'absolute',
+                                            right: '8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: '#f1f5f9',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            padding: '2px 6px',
+                                            fontSize: '10px',
+                                            fontWeight: 'bold',
+                                            textDecoration: 'none',
+                                            color: '#475569',
+                                            zIndex: 5
+                                          }}
+                                        >
+                                          Test
+                                        </a>
+                                      </div>
+                                    ))}
+                                  </div>
                     )}
                   </>
                 );
@@ -4466,18 +4516,42 @@ export default function VisualTemplateBuilderPage() {
                     
                     {isSectionExpanded("mathStarters") && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
-                        {list.map(tpl => (
-                          <button
-                            key={`starter-${tpl.id}`}
-                            className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                            onClick={() => handleSelectTemplate(tpl)}
-                            style={{ borderLeft: '3px solid #f59e0b' }}
-                          >
-                            <div className={styles.templateItemTitle}>{tpl.emoji} {tpl.title}</div>
-                            <div className={styles.templateItemMeta}>{tpl.topic} • Starter</div>
-                          </button>
-                        ))}
-                      </div>
+                                    {list.map(tpl => (
+                                      <div key={`starter-${tpl.id}`} style={{ position: 'relative' }}>
+                                        <button
+                                          className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                          onClick={() => handleSelectTemplate(tpl)}
+                                          style={{ width: '100%', paddingRight: '45px', textAlign: 'left', borderLeft: '3px solid #f59e0b' }}
+                                        >
+                                          <div className={styles.templateItemTitle}>{tpl.emoji} {tpl.title}</div>
+                                          <div className={styles.templateItemMeta}>{tpl.topic} • Starter</div>
+                                        </button>
+                                        <a
+                                          href={`/practice?skill=${tpl.id}&subject=${tpl.subject || 'math'}&topic=${tpl.topic || 'addition'}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          title="Test template in practice page"
+                                          style={{
+                                            position: 'absolute',
+                                            right: '8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: '#f1f5f9',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            padding: '2px 6px',
+                                            fontSize: '10px',
+                                            fontWeight: 'bold',
+                                            textDecoration: 'none',
+                                            color: '#475569',
+                                            zIndex: 5
+                                          }}
+                                        >
+                                          Test
+                                        </a>
+                                      </div>
+                                    ))}
+                                  </div>
                     )}
                   </>
                 );
@@ -4512,14 +4586,39 @@ export default function VisualTemplateBuilderPage() {
                               {isExpanded && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
                                   {list.map(tpl => (
-                                    <button
-                                      key={`static-${tpl.subject}-${tpl.topic}-${tpl.id}`}
-                                      className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                                      onClick={() => handleSelectTemplate(tpl)}
-                                    >
-                                      <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
-                                      <div className={styles.templateItemMeta}>{tpl.topic} • Static</div>
-                                    </button>
+                                    <div key={`static-${tpl.subject}-${tpl.topic}-${tpl.id}`} style={{ position: 'relative' }}>
+                                      <button
+                                        className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                        onClick={() => handleSelectTemplate(tpl)}
+                                        style={{ width: '100%', paddingRight: '45px', textAlign: 'left' }}
+                                      >
+                                        <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
+                                        <div className={styles.templateItemMeta}>{tpl.topic} • Static</div>
+                                      </button>
+                                      <a
+                                        href={`/practice?skill=${tpl.id}&subject=${tpl.subject || subjKey || 'math'}&topic=${tpl.topic || 'addition'}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Test template in practice page"
+                                        style={{
+                                          position: 'absolute',
+                                          right: '8px',
+                                          top: '50%',
+                                          transform: 'translateY(-50%)',
+                                          background: '#f1f5f9',
+                                          border: '1px solid #cbd5e1',
+                                          borderRadius: '4px',
+                                          padding: '2px 6px',
+                                          fontSize: '10px',
+                                          fontWeight: 'bold',
+                                          textDecoration: 'none',
+                                          color: '#475569',
+                                          zIndex: 5
+                                        }}
+                                      >
+                                        Test
+                                      </a>
+                                    </div>
                                   ))}
                                 </div>
                               )}
@@ -7651,6 +7750,25 @@ export default function VisualTemplateBuilderPage() {
                   <span>{template.title || template.id || 'Untitled template'}</span>
                 </div>
                 <div className={styles.livePreviewActions}>
+                  {template && template.id && (
+                    <a
+                      href={`/practice?skill=${template.id}&subject=${template.subject || 'math'}&topic=${template.topic || 'addition'}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.sidebarMiniButton}
+                      style={{
+                        textDecoration: 'none',
+                        background: '#ecfdf5',
+                        color: '#047857',
+                        border: '1px solid #a7f3d0',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      🔗 Test in Practice
+                    </a>
+                  )}
                   <button
                     type="button"
                     className={styles.sidebarMiniButton}

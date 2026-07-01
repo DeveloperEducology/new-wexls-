@@ -1,0 +1,85 @@
+{
+  "id": "template-estimate-lengths",
+  "title": "Estimate Lengths of Objects",
+  "subject": "math",
+  "topic": "measurement",
+  "grade": "3",
+  "optionsType": "mcq",
+  "interaction": {
+    "engine": "choice"
+  },
+  "questionText": "Which is a better estimate for the height of a [objectName]?",
+  "explanation": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "A [objectName] is usually [estimateVal] [correctUnitVal]."
+      }
+    ]
+  },
+  "options": [
+    {
+      "label": "[estimateVal] [correctUnitVal]",
+      "isCorrect": true
+    },
+    {
+      "label": "[estimateVal] [incorrectUnitVal]",
+      "isCorrect": false
+    }
+  ],
+  "variables": [
+    {
+      "name": "scenario",
+      "type": "array",
+      "values": [
+        {
+          "name": "boot",
+          "estimate": 32,
+          "correctUnit": "centimetres",
+          "allowedUnits": [
+            "metres",
+            "centimetres"
+          ]
+        },
+        {
+          "name": "pencil",
+          "estimate": 15,
+          "correctUnit": "centimetres",
+          "allowedUnits": [
+            "metres",
+            "centimetres"
+          ]
+        },
+        {
+          "name": "room height",
+          "estimate": 3,
+          "correctUnit": "metres",
+          "allowedUnits": [
+            "metres",
+            "centimetres"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "objectName",
+      "type": "computed",
+      "formula": "scenario.name"
+    },
+    {
+      "name": "estimateVal",
+      "type": "computed",
+      "formula": "scenario.estimate"
+    },
+    {
+      "name": "correctUnitVal",
+      "type": "computed",
+      "formula": "scenario.correctUnit"
+    },
+    {
+      "name": "incorrectUnitVal",
+      "type": "computed",
+      "formula": "scenario.allowedUnits.find(u => u !== scenario.correctUnit)"
+    }
+  ]
+}

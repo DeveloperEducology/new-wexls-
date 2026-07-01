@@ -416,7 +416,7 @@ export default function TemplateMasterclass() {
             substitutedExpr = substitutedExpr.replace(varRegex, replacement);
           });
           
-          const strippedExpr = substitutedExpr.replace(/'[^']*'/g, '').replace(/"[^"]*"/g, '');
+          const strippedExpr = substitutedExpr.replace(/'[^']*'/g, '').replace(/"[^"]*"/g, '').replace(/\.[a-zA-Z_][a-zA-Z0-9_]*/g, '');
           if (/[a-zA-Z_]/.test(strippedExpr)) {
             canEvaluate = false;
           }

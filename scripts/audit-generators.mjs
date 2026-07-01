@@ -154,8 +154,8 @@ const topicCases = [
     if (!generator) throw new Error(`could not resolve generator for ${skillId}`);
     return generator.generate({ seed: seedFor('solar-system', skillId), difficulty: 'adaptive' });
   }),
-  topicCase('english/grammar', flattenSkillsByGrade(grammarSkillsByGrade), (skillId) => {
-    const generator = resolveGrammarGenerator(skillId, baseConfig('grammar', skillId));
+  topicCase('english/grammar', flattenSkillsByGrade(grammarSkillsByGrade), async (skillId) => {
+    const generator = await resolveGrammarGenerator(skillId, baseConfig('grammar', skillId));
     if (!generator) throw new Error(`could not resolve generator for ${skillId}`);
     return generator.generate({ seed: seedFor('grammar', skillId), difficulty: 'adaptive' });
   }),
@@ -170,7 +170,7 @@ for (const entry of topicCases) {
   let passed = 0;
   for (const skillId of entry.skillIds) {
     try {
-      const question = entry.generate(skillId);
+      const question = await entry.generate(skillId);
       const result = validateQuestion(question, { topic: entry.topic, skillId });
       errors.push(...result.errors);
       warnings.push(...result.warnings);
