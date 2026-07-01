@@ -338,6 +338,21 @@ export default function TemplateMasterclass() {
     placeholders.forEach(key => {
       const valString = String(placeholderValues[key] || '').trim();
       
+      // JSON Array or Object parse
+      if ((valString.startsWith('[') && valString.endsWith(']')) || (valString.startsWith('{') && valString.endsWith('}'))) {
+        try {
+          const parsed = JSON.parse(valString);
+          if (Array.isArray(parsed)) {
+            resolved[key] = parsed[Math.floor(Math.random() * parsed.length)];
+          } else {
+            resolved[key] = parsed;
+          }
+          return;
+        } catch {
+          // fallback
+        }
+      }
+
       // Range parse (e.g. 5-10)
       const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(valString);
       if (rangeMatch) {
@@ -637,8 +652,20 @@ export default function TemplateMasterclass() {
       const jnvstVariables = {};
       placeholders.forEach(key => {
         const valString = String(placeholderValues[key] || '').trim();
+        
+        let isJson = false;
+        let parsedJson = null;
+        if ((valString.startsWith('[') && valString.endsWith(']')) || (valString.startsWith('{') && valString.endsWith('}'))) {
+          try {
+            parsedJson = JSON.parse(valString);
+            isJson = true;
+          } catch {}
+        }
+
         const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(valString);
-        if (rangeMatch) {
+        if (isJson) {
+          jnvstVariables[key] = parsedJson;
+        } else if (rangeMatch) {
           jnvstVariables[key] = {
             min: parseInt(rangeMatch[1], 10),
             max: parseInt(rangeMatch[2], 10)
@@ -724,9 +751,25 @@ export default function TemplateMasterclass() {
 
       placeholders.forEach(key => {
         const valString = String(placeholderValues[key] || '').trim();
+        
+        let isJson = false;
+        let parsedJson = null;
+        if ((valString.startsWith('[') && valString.endsWith(']')) || (valString.startsWith('{') && valString.endsWith('}'))) {
+          try {
+            parsedJson = JSON.parse(valString);
+            isJson = true;
+          } catch {}
+        }
+
         const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(valString);
         
-        if (rangeMatch) {
+        if (isJson) {
+          compiledVariables.push({
+            name: key,
+            type: 'array',
+            values: Array.isArray(parsedJson) ? parsedJson : [parsedJson]
+          });
+        } else if (rangeMatch) {
           compiledVariables.push({
             name: key,
             type: 'integer',
