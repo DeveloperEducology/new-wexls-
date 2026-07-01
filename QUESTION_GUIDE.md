@@ -201,7 +201,109 @@ interface CategorizationQuestion extends BaseQuestion {
 
 ---
 
-## 3. Auditing and Verification
+## 3. Creating Dynamic Templates & Option Pools
+
+Dynamic templates allow parameterizing text, values, and options so that each student gets a unique version of a question. 
+
+### 3.1 Placeholders and Math Expressions
+- **Placeholders**: Wrap names, ranges, or lists in `{{variable_name}}` (e.g., `{{student}}`, `{{count1}}`).
+- **Math Expressions**: Wrap mathematical calculations or JavaScript expressions in `{= expression =}` (e.g., `{= count1 + count2 =}`). These are computed dynamically at runtime.
+
+### 3.2 Dynamic Option Pooling
+A dynamic option pool is a JSON array of objects representing different question scenarios. The template generator randomly picks one scenario object and makes its properties available as variables.
+
+#### Scenario Definition Example:
+```json
+[
+  {"name": "boot", "estimate": 32, "correctUnit": "centimetres", "allowedUnits": ["metres", "centimetres"]},
+  {"name": "pencil", "estimate": 15, "correctUnit": "centimetres", "allowedUnits": ["metres", "centimetres"]}
+]
+```
+
+#### Blueprint Reference:
+- Refer to properties of the selected object using dot notation: `{= scenario.name =}`, `{= scenario.estimate =}`, `{= scenario.correctUnit =}`.
+- To compute a dynamic distractor (incorrect option): `{= scenario.allowedUnits.find(u => u !== scenario.correctUnit) =}`.
+
+---
+
+## 4. Subject Context Walkthroughs (Step-by-Step)
+
+Here is how to design templates and option pools for each subject area in this project.
+
+### 4.1 Math Context (e.g., Estimation & Measurement)
+Math templates focus on numerical variance, unit conversions, and dynamic calculations.
+
+#### Step-by-Step Creation:
+1. **Identify the Core Logic**: For example, estimating the length of real-world objects.
+2. **Define the Scenario Pool**: Create a JSON array of objects with an estimate and correct/incorrect units.
+3. **Write the Blueprint**:
+   > Which is a better estimate for the height of a {{scenario.name}}?
+4. **Configure MCQ Choices (Card 1c)**:
+   - Option 1 (Correct): `{= scenario.estimate =} {= scenario.correctUnit =}`
+   - Option 2 (Incorrect): `{= scenario.estimate =} {= scenario.allowedUnits.find(u => u !== scenario.correctUnit) =}`
+5. **Add explanation (Card 1b)**:
+   > A {{scenario.name}} is usually `{= scenario.estimate =}` `{= scenario.correctUnit =}` tall.
+
+---
+
+### 4.2 English Grammar Context (e.g., Noun Identification & Word Sorting)
+Grammar templates focus on sentence structures, parts of speech, and text categorizations.
+
+#### Step-by-Step Creation:
+1. **Identify the Parts of Speech**: For example, sorting words into Nouns and Verbs.
+2. **Define the Word Lists**:
+   - `{{nouns}}`: `"apple, school, teacher, dog"`
+   - `{{verbs}}`: `"run, jump, write, sleep"`
+3. **Select Categorization Layout**:
+   - Category 1: `Nouns`
+   - Category 2: `Verbs`
+4. **Write the Instruction Blueprint**:
+   > Sort these words into Nouns and Verbs.
+5. **Assign Correct Bins (Card 1d)**:
+   - Set the correct mapping for dynamic items.
+
+---
+
+### 4.3 Science Context (e.g., Solar System & Units of Measurement)
+Science templates focus on factual associations, ordering, and properties.
+
+#### Step-by-Step Creation:
+1. **Define the Facts Database**: For example, planets and their relative position from the Sun.
+   ```json
+   [
+     {"name": "Mercury", "position": 1, "temp": "hot"},
+     {"name": "Earth", "position": 3, "temp": "moderate"},
+     {"name": "Neptune", "position": 8, "temp": "cold"}
+   ]
+   ```
+2. **Write the Blueprint**:
+   > Which planet is the {{scenario.position}} planet from the Sun?
+3. **Define MCQ Choices**:
+   - Option 1 (Correct): `{= scenario.name =}`
+   - Options 2 & 3 (Distractors): Generate from other planets or random distractors.
+
+---
+
+### 4.4 Social Studies & GK Context (e.g., Personalities & Matches)
+GK templates utilize associations between historical facts, locations, and titles.
+
+#### Step-by-Step Creation:
+1. **Define the GK Option Pool**:
+   ```json
+   [
+     {"leader": "Mahatma Gandhi", "title": "Father of the Nation"},
+     {"leader": "Jawaharlal Nehru", "title": "First Prime Minister"}
+   ]
+   ```
+2. **Write the Matching Blueprint**:
+   > Match the famous leader with their title.
+3. **Configure Left/Right Pairs**:
+   - Left: `{= scenario.leader =}`
+   - Right: `{= scenario.title =}`
+
+---
+
+## 5. Auditing and Verification
 
 Run the compiler audit check to verify that all question templates evaluate correctly:
 ```bash
