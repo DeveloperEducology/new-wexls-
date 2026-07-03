@@ -4,7 +4,7 @@ import { getQuestion, getAdaptiveCandidates } from '../../../../lib/exam/questio
 import { updateTheta, selectNextQuestion, updateTopicMastery, computeSessionReport } from '../../../../lib/exam/adaptive-engine.js';
 import { updateProfileAfterSession } from '../../../../lib/exam/profile-store.js';
 
-const SESSION_LENGTH = 15;
+const DEFAULT_SESSION_LENGTH = 15;
 
 export async function POST(req) {
   try {
@@ -39,7 +39,9 @@ export async function POST(req) {
     });
 
     const answeredCount = session.responses.length + 1;
-    const isSessionComplete = answeredCount >= SESSION_LENGTH;
+    // Use session's own length (set at start — dynamic for PYQs, 15 for adaptive)
+    const sessionLength = session.sessionLength || DEFAULT_SESSION_LENGTH;
+    const isSessionComplete = answeredCount >= sessionLength;
 
     let nextQuestion = null;
     let report = null;
@@ -51,6 +53,7 @@ export async function POST(req) {
         examId: session.examId,
         section: session.section,
         topic: session.topic || null,
+        templateId: session.templateId || null,
         theta: newTheta,
         usedIds,
         limit: 30,
@@ -83,7 +86,7 @@ export async function POST(req) {
       explanationMath: question.explanationMath || null,
       updatedTheta: newTheta,
       answeredCount,
-      sessionLength: SESSION_LENGTH,
+      sessionLength,
       sessionComplete: isSessionComplete,
       nextQuestion,
       report,

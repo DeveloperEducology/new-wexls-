@@ -54,7 +54,7 @@ export async function getQuestion(id) {
  * Fetch candidate questions for adaptive selection.
  * Returns questions near `theta` difficulty, excluding already-used IDs.
  */
-export async function getAdaptiveCandidates({ examId, section, topic = null, theta, usedIds = [], limit = 20 }) {
+export async function getAdaptiveCandidates({ examId, section, topic = null, templateId = null, theta, usedIds = [], limit = 20 }) {
   const db = await getMongoDb();
   if (!db) return [];
   const { ObjectId } = await import('mongodb');
@@ -71,6 +71,7 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, the
     status: 'active',
     difficulty: { $gte: low, $lte: high },
     ...(topic ? { topic } : {}),
+    ...(templateId ? { templateId } : {}),
     ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
   };
 
@@ -83,6 +84,7 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, the
       section,
       status: 'active',
       ...(topic ? { topic } : {}),
+      ...(templateId ? { templateId } : {}),
       ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
     };
     questions = await db.collection('questions').find(fallbackFilter).sort({ difficulty: 1 }).limit(limit).toArray();

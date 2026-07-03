@@ -235,7 +235,134 @@ export function evaluateTemplate(template, seed) {
 
     const rng = seededRandom(seed);
     const idx = Math.floor(rng() * finalCombos.length);
-    const combo = finalCombos[idx];
+    const combo = { ...finalCombos[idx] };
+    
+    // Image pool selection and variable mapping (similar to base evaluator)
+    if (Array.isArray(config.visuals)) {
+      for (const v of config.visuals) {
+        if (v.component === 'ItemCounter' && v.props) {
+          const rawItemType = v.props.itemType;
+          let itemTypeVal = 'item';
+          let itemTypeLabel = null;
+          if (rawItemType) {
+            if (combo[rawItemType] !== undefined) {
+              itemTypeVal = combo[rawItemType];
+            } else {
+              itemTypeVal = rawItemType;
+            }
+          }
+          
+          let itemTypesList = [];
+          if (Array.isArray(itemTypeVal)) {
+            itemTypesList = itemTypeVal.map(e => parseLabeledEntry(String(e)));
+          } else if (typeof itemTypeVal === 'string' && itemTypeVal.includes(',')) {
+            itemTypesList = itemTypeVal.split(',').map(s => parseLabeledEntry(s.trim())).filter(e => e.url);
+          }
+          
+          if (itemTypesList.length > 0) {
+            const idx = Math.floor(rng() * itemTypesList.length);
+            const chosen = itemTypesList[idx];
+            itemTypeVal = chosen.url;
+            itemTypeLabel = chosen.label;
+          } else {
+            const parsed = parseLabeledEntry(String(itemTypeVal));
+            itemTypeVal = parsed.url;
+            itemTypeLabel = parsed.label;
+          }
+          
+          combo["_ItemCounter_resolvedType"] = itemTypeVal;
+          
+          let cleanItemName;
+          if (itemTypeLabel) {
+            cleanItemName = itemTypeLabel;
+          } else if (typeof itemTypeVal === 'string' && (
+            itemTypeVal.startsWith('http://') || 
+            itemTypeVal.startsWith('https://') || 
+            itemTypeVal.startsWith('/') || 
+            itemTypeVal.includes('.')
+          )) {
+            cleanItemName = getCleanNameFromUrl(itemTypeVal);
+          } else {
+            cleanItemName = itemTypeVal;
+          }
+          
+          const makePlural = (noun) => {
+            if (!noun) return '';
+            if (noun.endsWith('y')) return noun.slice(0, -1) + 'ies';
+            if (noun.endsWith('s') || noun.endsWith('x') || noun.endsWith('ch') || noun.endsWith('sh')) return noun + 'es';
+            return noun + 's';
+          };
+          const pluralName = makePlural(cleanItemName);
+
+          if (combo["Item"] === undefined) combo["Item"] = cleanItemName;
+          if (combo["item"] === undefined) combo["item"] = cleanItemName;
+          if (combo["itemPlural"] === undefined) combo["itemPlural"] = pluralName;
+          if (combo["ItemPlural"] === undefined) combo["ItemPlural"] = pluralName.charAt(0).toUpperCase() + pluralName.slice(1);
+          if (combo["item_plural"] === undefined) combo["item_plural"] = pluralName;
+        }
+        
+        if (v.component === 'Image' && v.props) {
+          const rawImageUrl = v.props.imageUrl || v.props.src;
+          let imageUrlVal = '';
+          let imageUrlLabel = null;
+          if (rawImageUrl) {
+            if (combo[rawImageUrl] !== undefined) {
+              imageUrlVal = combo[rawImageUrl];
+            } else {
+              imageUrlVal = rawImageUrl;
+            }
+          }
+          
+          let imageUrlsList = [];
+          if (Array.isArray(imageUrlVal)) {
+            imageUrlsList = imageUrlVal.map(e => parseLabeledEntry(String(e)));
+          } else if (typeof imageUrlVal === 'string' && imageUrlVal.includes(',')) {
+            imageUrlsList = imageUrlVal.split(',').map(s => parseLabeledEntry(s.trim())).filter(e => e.url);
+          }
+          
+          if (imageUrlsList.length > 0) {
+            const idx = Math.floor(rng() * imageUrlsList.length);
+            const chosen = imageUrlsList[idx];
+            imageUrlVal = chosen.url;
+            imageUrlLabel = chosen.label;
+          } else {
+            const parsed = parseLabeledEntry(String(imageUrlVal));
+            imageUrlVal = parsed.url;
+            imageUrlLabel = parsed.label;
+          }
+          
+          combo["_Image_resolvedUrl"] = imageUrlVal;
+          
+          let cleanItemName;
+          if (imageUrlLabel) {
+            cleanItemName = imageUrlLabel;
+          } else if (typeof imageUrlVal === 'string' && (
+            imageUrlVal.startsWith('http://') || 
+            imageUrlVal.startsWith('https://') || 
+            imageUrlVal.startsWith('/') || 
+            imageUrlVal.includes('.')
+          )) {
+            cleanItemName = getCleanNameFromUrl(imageUrlVal);
+          } else {
+            cleanItemName = imageUrlVal;
+          }
+          
+          const makePlural = (noun) => {
+            if (!noun) return '';
+            if (noun.endsWith('y')) return noun.slice(0, -1) + 'ies';
+            if (noun.endsWith('s') || noun.endsWith('x') || noun.endsWith('ch') || noun.endsWith('sh')) return noun + 'es';
+            return noun + 's';
+          };
+          const pluralName = makePlural(cleanItemName);
+
+          if (combo["Item"] === undefined) combo["Item"] = cleanItemName;
+          if (combo["item"] === undefined) combo["item"] = cleanItemName;
+          if (combo["itemPlural"] === undefined) combo["itemPlural"] = pluralName;
+          if (combo["ItemPlural"] === undefined) combo["ItemPlural"] = pluralName.charAt(0).toUpperCase() + pluralName.slice(1);
+          if (combo["item_plural"] === undefined) combo["item_plural"] = pluralName;
+        }
+      }
+    }
     
     // Compute/populate derivations with dependency resolution
     const ctx = { ...combo };
@@ -346,7 +473,11 @@ export function evaluateTemplate(template, seed) {
         if (!builder) continue;
         const resolvedProps = {};
         for (const [key, val] of Object.entries(v.props || {})) {
-          if (typeof val === 'string' && ctx[val] !== undefined) {
+          if (v.component === 'ItemCounter' && key === 'itemType' && ctx["_ItemCounter_resolvedType"]) {
+            resolvedProps[key] = ctx["_ItemCounter_resolvedType"];
+          } else if (v.component === 'Image' && key === 'imageUrl' && ctx["_Image_resolvedUrl"]) {
+            resolvedProps[key] = ctx["_Image_resolvedUrl"];
+          } else if (typeof val === 'string' && ctx[val] !== undefined) {
             resolvedProps[key] = ctx[val];
           } else {
             const num = Number(val);
@@ -355,10 +486,19 @@ export function evaluateTemplate(template, seed) {
         }
         try {
           const result = builder(resolvedProps, rng);
-          if (result && typeof result === 'object' && result.type) {
-            parts.push(result);
-          } else if (typeof result === 'string') {
-            parts.push({ type: 'svg', content: result });
+          const visualPart = (result && typeof result === 'object' && result.type) 
+            ? { ...result, position: v.position } 
+            : { type: 'svg', content: result, position: v.position };
+          if (v.position === 'top') {
+            parts.unshift(visualPart);
+          } else if (v.position === 'middle') {
+            if (parts.length > 0) {
+              parts.splice(1, 0, visualPart);
+            } else {
+              parts.push(visualPart);
+            }
+          } else {
+            parts.push(visualPart);
           }
         } catch (err) {
           console.error(`[universalEvaluator] Failed to render visual ${v.component}:`, err);

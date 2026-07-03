@@ -12,13 +12,16 @@ export function renderItemCounter(props) {
   const rowHeight = Math.round(colWidth * 1.11);
   const scale = colWidth / 90;
   
-  // Arrange in grid (max 5 items per row)
-  const itemsPerRow = 5;
+  // Arrange in grid (custom items per row, defaults to 5)
+  const itemsPerRow = Number(props.itemsPerRow) || 5;
   const numRows = Math.ceil(count / itemsPerRow);
   const numCols = Math.min(count, itemsPerRow);
   
   const svgWidth = numCols * colWidth + 20;
   const svgHeight = numRows * rowHeight + 20;
+
+  const showBorder = props.showBorder === true || props.showBorder === 'true' || props.showBorder === 1;
+  const borderMarkup = showBorder ? `<rect x="5" y="5" width="80" height="90" rx="6" fill="none" stroke="#475569" stroke-width="2" />` : '';
   
   let itemsMarkup = '';
   
@@ -116,6 +119,7 @@ export function renderItemCounter(props) {
         <rect x="0" y="0" width="${colWidth}" height="${rowHeight}" fill="transparent" />
         
         <g transform="scale(${scale})">
+          ${borderMarkup}
           <!-- Graphic -->
           ${graphicPaths}
           

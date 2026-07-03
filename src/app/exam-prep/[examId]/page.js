@@ -6,8 +6,11 @@ import Link from 'next/link';
 import SiteHeader from '../../../components/layout/SiteHeader';
 import PracticeGate from '../../../components/exam/PracticeGate';
 
-export default function JnvstDashboard() {
+export default function JnvstDashboard({ params }) {
   const router = useRouter();
+  const resolvedParams = React.use(params);
+  const examId = resolvedParams.examId;
+
   const [session, setSession] = useState(null);
   const [exam, setExam] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -15,7 +18,23 @@ export default function JnvstDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedGateSection, setSelectedGateSection] = useState(null);
   const [showGate, setShowGate] = useState(false);
-  const [activeTab, setActiveTab] = useState('mat');
+  const [activeTab, setActiveTab] = useState('');
+  const [templates, setTemplates] = useState([]);
+  const [expandedTopics, setExpandedTopics] = useState({});
+
+  const toggleTopic = (topicId) => {
+    setExpandedTopics(prev => ({
+      ...prev,
+      [topicId]: !prev[topicId]
+    }));
+  };
+
+  // Set default active tab once exam sections load
+  useEffect(() => {
+    if (exam?.sections?.length > 0 && !activeTab) {
+      setActiveTab(exam.sections[0].id);
+    }
+  }, [exam, activeTab]);
 
   // 1. Load User Session
   useEffect(() => {
@@ -32,41 +51,51 @@ export default function JnvstDashboard() {
     loadUser();
   }, []);
 
-  // 2. Load JNVST details & User Profile once session is loaded
+  // 2. Load exam details, templates & User Profile once session is loaded
   useEffect(() => {
-    if (!session) return;
+    if (!session || !examId) return;
 
     async function loadData() {
       try {
-        const res = await fetch(`/api/exams/jnvst?userId=${session.userId}`);
+        // Fetch exam and profile
+        const res = await fetch(`/api/exams/${examId}?userId=${session.userId}`);
         const data = await res.json();
         if (data.success) {
           setExam(data.exam);
           setProfile(data.profile);
           
-          // Check limits for all three sections
-          const matGateRes = await fetch(`/api/practice/gate?examId=jnvst&section=mat&userId=${session.userId}`);
-          const matGate = await matGateRes.json();
-          const arithGateRes = await fetch(`/api/practice/gate?examId=jnvst&section=arithmetic&userId=${session.userId}`);
-          const arithGate = await arithGateRes.json();
-          const langGateRes = await fetch(`/api/practice/gate?examId=jnvst&section=language&userId=${session.userId}`);
-          const langGate = await langGateRes.json();
-
-          setGateStatus({
-            mat: matGate.success ? matGate : { allowed: true },
-            arithmetic: arithGate.success ? arithGate : { allowed: true },
-            language: langGate.success ? langGate : { allowed: true }
-          });
+          // Check limits dynamically for all sections of this exam
+          const gateStatuses = {};
+          if (data.exam && data.exam.sections) {
+            for (const section of data.exam.sections) {
+              try {
+                const gateRes = await fetch(`/api/practice/gate?examId=${examId}&section=${section.id}&userId=${session.userId}`);
+                const gateData = await gateRes.json();
+                gateStatuses[section.id] = gateData.success ? gateData : { allowed: true };
+              } catch (e) {
+                gateStatuses[section.id] = { allowed: true };
+              }
+            }
+          }
+          setGateStatus(gateStatuses);
         }
+
+        // Fetch templates
+        const templatesRes = await fetch(`/api/admin/templates?examId=${examId}`);
+        const templatesData = await templatesRes.json();
+        if (templatesData.success) {
+          setTemplates(templatesData.templates || []);
+        }
+
       } catch (e) {
-        console.error("Failed to load JNVST dashboard data:", e);
+        console.error("Failed to load dashboard data:", e);
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-  }, [session]);
+  }, [session, examId]);
 
   const handleStartSection = (sectionId, sectionName) => {
     const isAllowed = gateStatus[sectionId]?.allowed !== false;
@@ -74,7 +103,7 @@ export default function JnvstDashboard() {
       setSelectedGateSection({ id: sectionId, name: sectionName });
       setShowGate(true);
     } else {
-      router.push(`/exam-prep/jnvst/practice/${sectionId}?userId=${session?.userId || 'guest_child'}`);
+      router.push(`/exam-prep/${examId}/practice/${sectionId}?userId=${session?.userId || 'guest_child'}`);
     }
   };
 
@@ -84,7 +113,17 @@ export default function JnvstDashboard() {
       setSelectedGateSection({ id: sectionId, name: sectionName });
       setShowGate(true);
     } else {
-      router.push(`/exam-prep/jnvst/practice/${sectionId}?userId=${session?.userId || 'guest_child'}&topic=${topicId}`);
+      router.push(`/exam-prep/${examId}/practice/${sectionId}?userId=${session?.userId || 'guest_child'}&topic=${topicId}`);
+    }
+  };
+
+  const handleStartTemplate = (sectionId, sectionName, topicId, templateId) => {
+    const isAllowed = gateStatus[sectionId]?.allowed !== false;
+    if (!isAllowed) {
+      setSelectedGateSection({ id: sectionId, name: sectionName });
+      setShowGate(true);
+    } else {
+      router.push(`/exam-prep/${examId}/practice/${sectionId}?userId=${session?.userId || 'guest_child'}&topic=${topicId}&templateId=${templateId}`);
     }
   };
 
@@ -97,7 +136,8 @@ export default function JnvstDashboard() {
   };
 
   const getTopicPrefix = (sectionId, index) => {
-    const char = sectionId === 'mat' ? 'M' : sectionId === 'arithmetic' ? 'A' : 'L';
+    const sec = exam?.sections?.find(s => s.id === sectionId);
+    const char = sec ? (sec.shortName || sec.name || 'S').charAt(0).toUpperCase() : 'S';
     return `${char}.${index + 1}`;
   };
 
@@ -207,7 +247,7 @@ export default function JnvstDashboard() {
 
         .section-tabs {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 16px;
           margin-bottom: 32px;
         }
@@ -308,28 +348,80 @@ export default function JnvstDashboard() {
         }
 
         .skills-list {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 16px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
           margin-bottom: 40px;
         }
 
         .skill-list-item {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 18px;
+          flex-direction: column;
           background: white;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
+          border-radius: 16px;
+          padding: 18px 24px;
           transition: all 0.2s ease;
         }
 
         .skill-list-item:hover {
           border-color: #cbd5e1;
+          box-shadow: 0 6px 15px rgba(0, 0, 0, 0.02);
+        }
+
+        .topic-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .micro-skills-container {
+          border-top: 1px solid #f1f5f9;
+          margin-top: 14px;
+          padding-top: 12px;
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+        }
+
+        .micro-skill-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 14px;
           background: #f8fafc;
-          transform: translateX(3px);
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+          border-radius: 10px;
+          font-size: 14px;
+          border: 1px solid #f1f5f9;
+          transition: background 0.15s, border-color 0.15s;
+        }
+
+        .micro-skill-row:hover {
+          background: #f1f5f9;
+          border-color: #e2e8f0;
+        }
+
+        .micro-skill-name {
+          font-weight: 700;
+          color: #334155;
+        }
+
+        .btn-micro-practice {
+          background: #6366f1;
+          color: white;
+          border: none;
+          font-size: 11.5px;
+          font-weight: 700;
+          padding: 5px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-micro-practice:hover {
+          background: #4f46e5;
+          transform: translateY(-1px);
         }
 
         .skill-left {
@@ -545,6 +637,9 @@ export default function JnvstDashboard() {
         }
 
         @media (max-width: 640px) {
+          .micro-skills-container {
+            grid-template-columns: 1fr !important;
+          }
           .section-tabs {
             grid-template-columns: 1fr;
             gap: 12px;
@@ -567,9 +662,9 @@ export default function JnvstDashboard() {
             <Link href="/exam-prep" className="back-link">
               ← Back to Exams
             </Link>
-            <h1 className="header-title">JNVST Dashboard</h1>
+            <h1 className="header-title">{exam?.name || 'Exam'} Dashboard</h1>
             <p className="header-subtitle">
-              Welcome back, <strong>{session?.name}</strong>. Practice and monitor your prep for Jawahar Navodaya Vidyalaya Selection Test.
+              Welcome back, <strong>{session?.name}</strong>. Practice and monitor your prep for {exam?.fullName || exam?.name || 'your competitive exam'}.
             </p>
           </div>
         </div>
@@ -629,7 +724,7 @@ export default function JnvstDashboard() {
               </div>
             )}
 
-            {/* Skill Cards Grid -> replaced with IXL style list */}
+            {/* Hierarchical Topic and Micro-Skills list */}
             {activeSectionObj && (
               <div className="skills-list">
                 {activeSectionObj.topics?.map((topicId, idx) => {
@@ -651,47 +746,107 @@ export default function JnvstDashboard() {
                   }
 
                   const isAllowed = gateStatus[activeTab]?.allowed !== false;
+                  // Find templates (micro-skills) linked to this topic
+                  const topicTemplatesAll = templates.filter(t => {
+                    const cleanTplTopic = String(t.topic || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+                    const cleanTargetTopic = String(topicId || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+                    return cleanTplTopic === cleanTargetTopic ||
+                           cleanTplTopic.includes(cleanTargetTopic) ||
+                           cleanTargetTopic.includes(cleanTplTopic);
+                  });
+
+                  // Deduplicate by name/title
+                  const seenNames = new Set();
+                  const topicTemplates = [];
+                  for (const t of topicTemplatesAll) {
+                    const tName = (t.name || t.title || '').trim();
+                    if (seenNames.has(tName)) continue;
+                    seenNames.add(tName);
+                    topicTemplates.push(t);
+                  }
+
+                  const isExpanded = !!expandedTopics[topicId];
 
                   return (
                     <div key={topicId} className="skill-list-item">
-                      <div className="skill-left">
-                        <span className="skill-index">{getTopicPrefix(activeTab, idx)}</span>
-                        <span 
-                          className="skill-name-link"
-                          onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
+                      <div className="topic-header-row">
+                        <div 
+                          className="skill-left" 
+                          style={{ cursor: 'pointer', flexGrow: 1, display: 'flex', alignItems: 'center' }} 
+                          onClick={() => toggleTopic(topicId)}
                         >
-                          {formatTopicName(topicId)}
-                        </span>
-                        {badgeText && (
-                          <span className={`topic-pill ${badgeClass}`} style={{ padding: '2px 6px', fontSize: '11px', margin: 0 }}>
-                            {badgeText}
+                          <span className="skill-index">{getTopicPrefix(activeTab, idx)}</span>
+                          <span className="skill-name-link" style={{ textDecoration: 'none' }}>
+                            {formatTopicName(topicId)}
                           </span>
-                        )}
+                          {badgeText && (
+                            <span className={`topic-pill ${badgeClass}`} style={{ padding: '2px 6px', fontSize: '11px', margin: '0 6px' }}>
+                              {badgeText}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '6px', fontWeight: 600 }}>
+                            ({topicTemplates.length} {topicTemplates.length === 1 ? 'skill' : 'skills'})
+                          </span>
+                          <span style={{
+                            marginLeft: '8px',
+                            transition: 'transform 0.2s',
+                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            display: 'inline-block',
+                            fontSize: '10px',
+                            color: '#64748b'
+                          }}>
+                            ▼
+                          </span>
+                        </div>
+
+                        <div className="skill-right" style={{ flexShrink: 0 }}>
+                          {isPracticed && (
+                            <span className="skill-score-badge">
+                              {masteryPercent}%
+                            </span>
+                          )}
+
+                          {isAllowed ? (
+                            <button
+                              className="btn-skill-practice"
+                              onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
+                              style={{ background: '#475569' }}
+                            >
+                              Practice Topic (All)
+                            </button>
+                          ) : (
+                            <button
+                              className="btn-skill-lock"
+                              onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
+                            >
+                              🔒 Locked
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="skill-right">
-                        {isPracticed && (
-                          <span className="skill-score-badge">
-                            {masteryPercent}%
-                          </span>
-                        )}
-
-                        {isAllowed ? (
-                          <button
-                            className="btn-skill-practice"
-                            onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
-                          >
-                            Practice
-                          </button>
-                        ) : (
-                          <button
-                            className="btn-skill-lock"
-                            onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
-                          >
-                            🔒 Locked
-                          </button>
-                        )}
-                      </div>
+                      {/* Nested micro-skills (templates) - only visible if expanded */}
+                      {isExpanded && topicTemplates.length > 0 && (
+                        <div className="micro-skills-container">
+                          {topicTemplates.map((tpl) => (
+                            <div key={tpl.id || tpl._id} className="micro-skill-row">
+                              <span className="micro-skill-name" style={{ marginRight: '8px', wordBreak: 'break-word' }}>
+                                📝 {tpl.name || tpl.title || 'Micro skill'}
+                              </span>
+                              {isAllowed ? (
+                                <button
+                                  className="btn-micro-practice"
+                                  onClick={() => handleStartTemplate(activeTab, activeSectionObj.name, topicId, tpl.id || tpl._id)}
+                                >
+                                  Practice Skill
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>🔒 Locked</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

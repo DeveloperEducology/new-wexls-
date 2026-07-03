@@ -1,11 +1,20 @@
 import { getMongoDb } from '../db/mongo.js';
 
 // ── Seed JNVST exam definition ──────────────────────────────────────────
+// ── Seed JNVST exam definition ──────────────────────────────────────────
 const JNVST_EXAM = {
   _id: 'jnvst',
+  id: 'jnvst',
   name: 'JNVST',
   fullName: 'Jawahar Navodaya Vidyalaya Selection Test',
   targetClass: 6,
+  status: 'active',
+  icon: '🏫',
+  description: 'Highly competitive admission test for Jawahar Navodaya Vidyalayas. Consists of Mental Ability, Arithmetic, and Language sections.',
+  metrics: '3 Sections • 100 Marks',
+  color: '#4f46e5',
+  colorGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+  bgLight: '#eef2ff',
   sections: [
     {
       id: 'mat',
@@ -51,19 +60,196 @@ const JNVST_EXAM = {
   availableLanguages: ['english', 'hindi', 'telugu', 'kannada', 'marathi', 'tamil', 'gujarati'],
 };
 
+// ── Seed AISSEE exam definition ──────────────────────────────────────────
+const AISSEE_EXAM = {
+  _id: 'aissee',
+  id: 'aissee',
+  name: 'AISSEE',
+  fullName: 'All India Sainik Schools Entrance Examination',
+  targetClass: 6,
+  status: 'active',
+  icon: '🎖️',
+  description: 'National level entrance examination for admission to Class VI and Class IX in Sainik Schools across India.',
+  metrics: '5 Sections • 300 Marks + PYQs',
+  color: '#0891b2',
+  colorGradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+  bgLight: '#ecfeff',
+  sections: [
+    {
+      id: 'mathematics',
+      name: 'Mathematics',
+      shortName: 'Math',
+      questionCount: 50,
+      maxMarks: 150,
+      timeLimitMinutes: 60,
+      negativeMarking: 0,
+      icon: '🔢',
+      description: 'Tests mathematical concepts and calculation skills',
+      topics: ['integers', 'fractions-decimals', 'equations', 'geometry', 'mensuration', 'data-handling'],
+    },
+    {
+      id: 'intelligence',
+      name: 'Intelligence',
+      shortName: 'Intelligence',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 30,
+      negativeMarking: 0,
+      icon: '🧠',
+      description: 'Tests logical reasoning, patterns, and analogical thinking',
+      topics: ['analogies', 'classification', 'series', 'pattern-completion', 'logical-reasoning'],
+    },
+    {
+      id: 'english',
+      name: 'Language (English)',
+      shortName: 'English',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 30,
+      negativeMarking: 0,
+      icon: '📝',
+      description: 'Tests reading comprehension, grammar, and sentence structure',
+      topics: ['comprehension', 'prepositions', 'verbs', 'articles', 'vocabulary', 'spelling-check'],
+    },
+    {
+      id: 'general_knowledge',
+      name: 'General Knowledge',
+      shortName: 'GK',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 30,
+      negativeMarking: 0,
+      icon: '🌍',
+      description: 'Tests social studies and general science knowledge',
+      topics: ['history', 'geography', 'general-science', 'culture-sports', 'civics'],
+    },
+    {
+      id: 'previous_years',
+      name: 'Previous Year Papers',
+      shortName: 'PYQs',
+      questionCount: 48,
+      maxMarks: 150,
+      timeLimitMinutes: 90,
+      negativeMarking: 0,
+      icon: '📅',
+      description: 'Practice actual questions from previous year AISSEE papers',
+      topics: ['aissee-2026-arithmetic', 'aissee-2026-english'],
+    },
+  ],
+  totalDuration: 150,
+  totalMarks: 300,
+  examFrequency: 'annual',
+  passingCriteria: { general: 120, obc: 110, sc: 100, st: 95 },
+  availableLanguages: ['english', 'hindi'],
+};
+
+// ── Seed SSC CGL exam definition ──────────────────────────────────────────
+const SSC_EXAM = {
+  _id: 'ssc',
+  id: 'ssc',
+  name: 'SSC CGL',
+  fullName: 'Staff Selection Commission - Combined Graduate Level',
+  targetClass: 16,
+  status: 'active',
+  icon: '💼',
+  description: 'Government service entrance exam for recruiting staff to various posts in ministries, departments and organizations.',
+  metrics: '4 Sections • Tier I & II',
+  color: '#059669',
+  colorGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  bgLight: '#ecfdf5',
+  sections: [
+    {
+      id: 'quantitative_aptitude',
+      name: 'Quantitative Aptitude',
+      shortName: 'Quant',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 20,
+      negativeMarking: 0.5,
+      icon: '🔢',
+      description: 'Tests numerical ability and quantitative reasoning',
+      topics: ['algebra', 'trigonometry', 'geometry', 'mensuration', 'arithmetic-ability', 'data-interpretation'],
+    },
+    {
+      id: 'reasoning',
+      name: 'General Intelligence & Reasoning',
+      shortName: 'Reasoning',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 20,
+      negativeMarking: 0.5,
+      icon: '🧠',
+      description: 'Tests logical and analytical reasoning capabilities',
+      topics: ['syllogisms', 'blood-relations', 'direction-sense', 'coding-decoding', 'non-verbal-reasoning'],
+    },
+    {
+      id: 'english_comprehension',
+      name: 'English Comprehension',
+      shortName: 'English',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 20,
+      negativeMarking: 0.5,
+      icon: '📝',
+      description: 'Tests English language proficiency, grammar, and vocabulary',
+      topics: ['reading-comprehension', 'spot-the-error', 'synonyms-antonyms', 'one-word-substitution', 'idioms-phrases'],
+    },
+    {
+      id: 'general_awareness',
+      name: 'General Awareness',
+      shortName: 'GK/GA',
+      questionCount: 25,
+      maxMarks: 50,
+      timeLimitMinutes: 20,
+      negativeMarking: 0.5,
+      icon: '🌍',
+      description: 'Tests knowledge of current events, history, economy, and general science',
+      topics: ['current-affairs', 'indian-history', 'geography', 'economics', 'general-science', 'polity'],
+    },
+  ],
+  totalDuration: 60,
+  totalMarks: 200,
+  examFrequency: 'annual',
+  passingCriteria: { general: 130, obc: 120, sc: 110, st: 100 },
+  availableLanguages: ['english', 'hindi'],
+};
+
 export async function getExam(examId) {
   const db = await getMongoDb();
-  if (!db) return null;
+  if (!db) {
+    if (examId === 'jnvst') return JNVST_EXAM;
+    if (examId === 'aissee') return AISSEE_EXAM;
+    if (examId === 'ssc') return SSC_EXAM;
+    return null;
+  }
   const exam = await db.collection('exams').findOne({ _id: examId });
-  if (!exam && examId === 'jnvst') return JNVST_EXAM; // fallback
+  if (!exam) {
+    if (examId === 'jnvst') return JNVST_EXAM;
+    if (examId === 'aissee') return AISSEE_EXAM;
+    if (examId === 'ssc') return SSC_EXAM;
+  }
   return exam;
 }
 
 export async function listExams() {
   const db = await getMongoDb();
-  if (!db) return [JNVST_EXAM];
+  const fallbacks = [JNVST_EXAM, AISSEE_EXAM, SSC_EXAM];
+  if (!db) return fallbacks;
+
+  try {
+    for (const fallback of fallbacks) {
+      await db.collection('exams').updateOne(
+        { _id: fallback._id },
+        { $set: { ...fallback, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+  } catch (err) {
+    console.error('Failed to auto-seed exams:', err);
+  }
+
   const exams = await db.collection('exams').find({}).toArray();
-  if (exams.length === 0) return [JNVST_EXAM];
+  if (exams.length === 0) return fallbacks;
   return exams;
 }
 

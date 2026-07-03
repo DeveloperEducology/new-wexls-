@@ -47,6 +47,29 @@ const EXAMS_LIST = [
 ];
 
 export default function ExamPrepLanding() {
+  const [exams, setExams] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function loadExams() {
+      try {
+        const res = await fetch('/api/exams', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success && data.exams && data.exams.length > 0) {
+          setExams(data.exams);
+        } else {
+          setExams(EXAMS_LIST.map(e => ({ ...e, status: 'active' })));
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic exams list:", err);
+        setExams(EXAMS_LIST.map(e => ({ ...e, status: 'active' })));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadExams();
+  }, []);
+
   return (
     <div className="exam-prep-root">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -140,7 +163,7 @@ export default function ExamPrepLanding() {
           background: var(--bg-light);
           display: flex;
           align-items: center;
-          justify-content: center;
+          justifyContent: center;
           font-size: 28px;
           margin-bottom: 24px;
         }
@@ -267,48 +290,60 @@ export default function ExamPrepLanding() {
         </div>
 
         <div className="exams-grid">
-          {EXAMS_LIST.map((exam) => {
-            const isActive = exam.status === 'active';
-            return (
-              <div
-                key={exam.id}
-                className={`exam-card ${!isActive ? 'card-inactive' : ''}`}
-                style={{
-                  '--card-gradient': exam.colorGradient,
-                  '--bg-light': exam.bgLight
-                }}
-              >
-                <span className={`exam-badge ${isActive ? 'badge-active' : 'badge-soon'}`}>
-                  {isActive ? 'Available' : 'Coming Soon'}
-                </span>
+          {loading ? (
+            <div style={{ textAlign: 'center', width: '100%', padding: '80px 40px', gridColumn: '1 / -1', color: '#64748b', fontSize: '18px', fontWeight: 600 }}>
+              <div style={{ display: 'inline-block', width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }}></div>
+              <div>Loading competitive exams...</div>
+              <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}} />
+            </div>
+          ) : (
+            exams.map((exam) => {
+              const isActive = exam.status === 'active';
+              return (
+                <div
+                  key={exam.id || exam._id}
+                  className={`exam-card ${!isActive ? 'card-inactive' : ''}`}
+                  style={{
+                    '--card-gradient': exam.colorGradient || 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    '--bg-light': exam.bgLight || '#eef2ff'
+                  }}
+                >
+                  <span className={`exam-badge ${isActive ? 'badge-active' : 'badge-soon'}`}>
+                    {isActive ? 'Available' : 'Coming Soon'}
+                  </span>
 
-                <div className="exam-icon-wrapper">
-                  {exam.icon}
+                  <div className="exam-icon-wrapper">
+                    {exam.icon || '📝'}
+                  </div>
+
+                  <div className="exam-title-group">
+                    <span className="exam-target">{exam.classTarget || `Class ${exam.targetClass} Target`}</span>
+                    <h2 className="exam-name">{exam.name}</h2>
+                    <div className="exam-fullname">{exam.fullName}</div>
+                  </div>
+
+                  <p className="exam-desc">{exam.description}</p>
+
+                  <div className="exam-footer">
+                    <span className="exam-metrics">{exam.metrics}</span>
+                    {isActive ? (
+                      <Link href={`/exam-prep/${exam.id || exam._id}`} className="btn-card-action btn-active">
+                        Start Prep →
+                      </Link>
+                    ) : (
+                      <button className="btn-card-action btn-disabled" disabled>
+                        Locked
+                      </button>
+                    )}
+                  </div>
                 </div>
-
-                <div className="exam-title-group">
-                  <span className="exam-target">{exam.classTarget}</span>
-                  <h2 className="exam-name">{exam.name}</h2>
-                  <div className="exam-fullname">{exam.fullName}</div>
-                </div>
-
-                <p className="exam-desc">{exam.description}</p>
-
-                <div className="exam-footer">
-                  <span className="exam-metrics">{exam.metrics}</span>
-                  {isActive ? (
-                    <Link href="/exam-prep/jnvst" className="btn-card-action btn-active">
-                      Start Prep →
-                    </Link>
-                  ) : (
-                    <button className="btn-card-action btn-disabled" disabled>
-                      Locked
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </main>
     </div>

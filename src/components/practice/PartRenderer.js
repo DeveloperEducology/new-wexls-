@@ -48,7 +48,7 @@ export function SvgPart({ part, question, userAnswer, onAnswer, isAnswered, inGr
         maxWidth: resolvedMaxWidth,
         flex: inGroup ? '0 0 auto' : 'initial',
         display: 'flex',
-        justifyContent: 'flex-start',
+        justifyContent: style.justifyContent || part.align || 'center',
         pointerEvents: isAnswered ? 'none' : 'auto',
         ...style,
       }}

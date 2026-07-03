@@ -178,6 +178,31 @@ export function resolveExpression(expr, context) {
   if (typeof expr === 'number') return expr;
   if (!expr) return 0;
 
+  // Interpolate list-like visual props (e.g. coordinates "h,k" or point lists) containing variables
+  if (typeof expr === 'string') {
+    let interpolated = expr.trim();
+    let hasReplacements = false;
+    const sortedKeys = Object.keys(context || {}).sort((a, b) => b.length - a.length);
+
+    sortedKeys.forEach(key => {
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      if (regex.test(interpolated)) {
+        interpolated = interpolated.replace(regex, context[key]);
+        hasReplacements = true;
+      }
+    });
+
+    if (hasReplacements) {
+      const num = Number(interpolated);
+      if (Number.isFinite(num)) {
+        return num;
+      }
+      if (/[,;]/.test(interpolated)) {
+        return interpolated;
+      }
+    }
+  }
+
   let cleanedExpr = String(expr);
   if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
     cleanedExpr = cleanedExpr.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {

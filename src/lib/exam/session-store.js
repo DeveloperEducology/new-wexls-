@@ -15,7 +15,7 @@ import { ObjectId } from 'mongodb';
  * }
  */
 
-export async function createSession({ userId, examId, section, sessionType = 'adaptive', initialTheta = 0.5, topic = null }) {
+export async function createSession({ userId, examId, section, sessionType = 'adaptive', initialTheta = 0.5, topic = null, templateId = null, sessionLength = 15 }) {
   const db = await getMongoDb();
   if (!db) throw new Error('DB not available');
   const doc = {
@@ -24,6 +24,8 @@ export async function createSession({ userId, examId, section, sessionType = 'ad
     section,
     sessionType,
     topic,
+    templateId,
+    sessionLength,
     status: 'active',
     startedAt: new Date(),
     completedAt: null,

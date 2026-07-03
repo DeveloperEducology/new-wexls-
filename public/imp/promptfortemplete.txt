@@ -1,0 +1,13 @@
+Create a [JNVST/AISSEE/SSC] template for [Topic Name]:
+
+1. The Question: 
+   (e.g., "A basket has X red apples and Y green apples. If you pick one, what is the probability of picking a red apple?")
+
+2. What to Randomize:
+   (e.g., "X should be between 2 and 10. Y should be between 3 and 12.")
+
+3. The Distractors (Wrong Answers):
+   (e.g., "Show options as simplified fractions. Make distractors reverse the ratio or shift the counts.")
+
+4. Explanation Style:
+   (e.g., "Keep it kid-friendly, explaining step-by-step how to simplify fractions.")

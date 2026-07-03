@@ -78,16 +78,7 @@ export default function SiteHeader() {
           {!loading && session ? (
             <>
               {/* Competitive Prep Link */}
-              <Link href="/exam-prep" style={{
-                textDecoration: 'none',
-                color: '#4f46e5',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                marginRight: '15px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
+              <Link href="/exam-prep" className="header-comp-link">
                 🏆 Competitive Prep
               </Link>
 
@@ -158,23 +149,15 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/exam-prep" style={{ textDecoration: 'none', color: '#4f46e5', fontWeight: 700, fontSize: '0.9rem', marginRight: '15px' }}>
+              <Link href="/exam-prep" className="header-comp-link">
                 🏆 Competitive Prep
               </Link>
-              <Link href="/docs/option-pooling" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem' }}>
-                Option Pooling Docs
-              </Link>
-              <Link href="/docs/dynamic-templates" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem', marginRight: '10px' }}>
-                Template Builder Docs
-              </Link>
+
               {!loading && (
                 <Link href="/login" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem' }}>
                   Sign In
                 </Link>
               )}
-              <Link href="/practice" className="btn-start-practice">
-                Quick Practice
-              </Link>
             </>
           )}
         </div>

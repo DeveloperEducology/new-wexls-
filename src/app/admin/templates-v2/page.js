@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { evaluateTemplate } from '@/lib/practice/generators/universalEvaluator';
 import { generateFromDynamicPool } from '@/lib/practice/engine/DynamicPoolGenerator';
-import styles from './templates.module.css';
+import styles from './templates-v2.module.css';
 
 const DEFAULT_TEMPLATE = {
   id: 'math-subtraction-ten-frame-auto',
@@ -1868,6 +1868,10 @@ export default function VisualTemplateBuilderPage() {
   const [editorMode, setEditorMode] = useState('form'); // 'form' or 'json'
   const [jsonText, setJsonText] = useState(JSON.stringify(normalizeTemplateForBuilder(DEFAULT_TEMPLATE), null, 2));
   const [jsonError, setJsonError] = useState(null);
+
+  // Focus and help states
+  const [showHelpBanner, setShowHelpBanner] = useState(true);
+  const [lastFocusedInputId, setLastFocusedInputId] = useState(null);
 
   // Gallery and Custom Selector States
   const [useCustomItemType, setUseCustomItemType] = useState(false);
@@ -5250,7 +5254,7 @@ export default function VisualTemplateBuilderPage() {
                     <button type="button" className={styles.btn + ' ' + styles.btnSecondary} onClick={addDataSource}>
                       + Add Data Source
                     </button>
-                     <button
+                    <button
                       type="button"
                       className={styles.btn + ' ' + styles.btnSecondary}
                       onClick={() => {
@@ -5263,15 +5267,6 @@ export default function VisualTemplateBuilderPage() {
                     >
                       🧪 Create Pool
                     </button>
-                    <a
-                      href="/admin/vocabulary-pools"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.btn + ' ' + styles.btnSecondary}
-                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
-                    >
-                      📦 Manage Pools
-                    </a>
                   </div>
                 </div>
                 {(template.dataSources || []).length === 0 ? (

@@ -380,11 +380,28 @@ export function evaluateTemplate(originalTemplate, seed) {
           cleanItemName = itemTypeVal;
         }
         
+        const makePlural = (noun) => {
+          if (!noun) return '';
+          if (noun.endsWith('y')) return noun.slice(0, -1) + 'ies';
+          if (noun.endsWith('s') || noun.endsWith('x') || noun.endsWith('ch') || noun.endsWith('sh')) return noun + 'es';
+          return noun + 's';
+        };
+        const pluralName = makePlural(cleanItemName);
+
         if (resolvedVariables["Item"] === undefined) {
           resolvedVariables["Item"] = cleanItemName;
         }
         if (resolvedVariables["item"] === undefined) {
           resolvedVariables["item"] = cleanItemName;
+        }
+        if (resolvedVariables["itemPlural"] === undefined) {
+          resolvedVariables["itemPlural"] = pluralName;
+        }
+        if (resolvedVariables["ItemPlural"] === undefined) {
+          resolvedVariables["ItemPlural"] = pluralName.charAt(0).toUpperCase() + pluralName.slice(1);
+        }
+        if (resolvedVariables["item_plural"] === undefined) {
+          resolvedVariables["item_plural"] = pluralName;
         }
       }
       
@@ -874,7 +891,18 @@ export function evaluateTemplate(originalTemplate, seed) {
       return resolvedPart;
     });
   } else {
-    parts = [{ type: 'text', content: questionText }];
+    // Split the questionText by newlines to support placing visuals in the middle
+    const textBlocks = questionText.split(/\n\n/);
+    if (textBlocks.length > 1) {
+      parts = textBlocks.map(block => ({ type: 'text', content: block }));
+    } else {
+      const textLines = questionText.split(/\n/);
+      if (textLines.length > 1) {
+        parts = textLines.map(line => ({ type: 'text', content: line }));
+      } else {
+        parts = [{ type: 'text', content: questionText }];
+      }
+    }
   }
   
   if (Array.isArray(template.visuals)) {
@@ -946,10 +974,18 @@ export function evaluateTemplate(originalTemplate, seed) {
         
         try {
           const result = builder(resolvedProps, rng);
-          if (result && typeof result === 'object' && result.type) {
-            parts.push(result);
-          } else if (typeof result === 'string') {
-            parts.push({ type: 'svg', content: result });
+          const visualPart = (result && typeof result === 'object' && result.type) ? result : { type: 'svg', content: result };
+          
+          if (v.position === 'top') {
+            parts.unshift(visualPart);
+          } else if (v.position === 'middle') {
+            if (parts.length > 0) {
+              parts.splice(1, 0, visualPart);
+            } else {
+              parts.push(visualPart);
+            }
+          } else {
+            parts.push(visualPart);
           }
         } catch (err) {
           console.error(`Failed to draw visual component ${v.component}:`, err);

@@ -6,7 +6,7 @@ export default function HomeHero({
   subtitle = "Master Math, English, and Science with gamified worksheets and interactive visual tools built for your level.",
   showCTA = false,
   ctaText = "Explore Grade Curriculum ›",
-  ctaHref = "/grades"
+  ctaHref = "/grades-v2"
 }) {
   return (
     <section className="home-hero" aria-label="KlassChamp learning hero">

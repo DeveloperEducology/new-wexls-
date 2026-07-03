@@ -9,6 +9,10 @@ export function renderCoordinatePlane(props) {
   const rawPoints = props.points ? String(props.points).split(';').map(s => s.trim()).filter(Boolean) : [];
   const rawPoly = props.polygon ? String(props.polygon).split(';').map(s => s.trim()).filter(Boolean) : [];
 
+  const parabolaDirection = props.parabolaDirection ? String(props.parabolaDirection).trim().toLowerCase() : '';
+  const parabolaVertex = props.parabolaVertex ? String(props.parabolaVertex).trim() : '';
+  const parabolaA = Number(props.parabolaA) !== undefined && !isNaN(Number(props.parabolaA)) ? Number(props.parabolaA) : 0.15;
+
   const width = 360;
   const height = 360;
   const padding = 35;
@@ -106,13 +110,69 @@ export function renderCoordinatePlane(props) {
     }
   });
 
+  // Calculate and draw parabola curve if directions are set
+  let parabolaMarkup = '';
+  if (parabolaDirection && parabolaVertex) {
+    const parts = parabolaVertex.split(',');
+    const h = Number(parts[0]);
+    const k = Number(parts[1]);
+
+    if (!isNaN(h) && !isNaN(k)) {
+      const points = [];
+      const step = 0.1;
+
+      if (parabolaDirection === 'right') {
+        for (let y = yMin - 5; y <= yMax + 5; y += step) {
+          const x = parabolaA * Math.pow(y - k, 2) + h;
+          if (x >= xMin - 5 && x <= xMax + 5) {
+            points.push({ x, y });
+          }
+        }
+      } else if (parabolaDirection === 'left') {
+        for (let y = yMin - 5; y <= yMax + 5; y += step) {
+          const x = -parabolaA * Math.pow(y - k, 2) + h;
+          if (x >= xMin - 5 && x <= xMax + 5) {
+            points.push({ x, y });
+          }
+        }
+      } else if (parabolaDirection === 'up') {
+        for (let x = xMin - 5; x <= xMax + 5; x += step) {
+          const y = parabolaA * Math.pow(x - h, 2) + k;
+          if (y >= yMin - 5 && y <= yMax + 5) {
+            points.push({ x, y });
+          }
+        }
+      } else if (parabolaDirection === 'down') {
+        for (let x = xMin - 5; x <= xMax + 5; x += step) {
+          const y = -parabolaA * Math.pow(x - h, 2) + k;
+          if (y >= yMin - 5 && y <= yMax + 5) {
+            points.push({ x, y });
+          }
+        }
+      }
+
+      if (points.length > 1) {
+        const pathD = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${scaleX(p.x)} ${scaleY(p.y)}`).join(' ');
+        parabolaMarkup = `
+          <path d="${pathD}" fill="none" stroke="#00b0ff" stroke-width="3.5" stroke-linecap="round" marker-start="url(#curve-arrow)" marker-end="url(#curve-arrow)" />
+        `;
+      }
+    }
+  }
+
   return `
     <svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="max-width: 360px; display: block; margin: 10px auto;">
       ${SVG_DEFS}
+      <defs>
+        <marker id="curve-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#00b0ff" />
+        </marker>
+      </defs>
       <rect x="5" y="5" width="${width - 10}" height="${height - 10}" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
       <g>
         ${gridLines}
         ${polyMarkup}
+        ${parabolaMarkup}
         ${axes}
         ${tickMarks}
         ${pointsMarkup}

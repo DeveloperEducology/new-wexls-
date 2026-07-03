@@ -18,7 +18,7 @@ export default async function HomePage() {
           subtitle="Master Math, English, and Science with gamified worksheets, visual tools, and adaptive questions customized to your child's pace."
           showCTA={true}
           ctaText="Explore Grade-wise Skills ›"
-          ctaHref="/grades"
+          ctaHref="/grades-v2"
         />
 
         {/* Feature Highlights Grid */}
@@ -111,7 +111,7 @@ export default async function HomePage() {
           <div className="cta-content">
             <h2>Ready to start learning?</h2>
             <p>Browse grade curriculum and try interactive visual questions now.</p>
-            <Link href="/grades" className="btn-explore-large">
+            <Link href="/grades-v2" className="btn-explore-large">
               Go to Grades Page ›
             </Link>
           </div>

@@ -310,3 +310,322 @@ Run the compiler audit check to verify that all question templates evaluate corr
 npm run audit:generators
 ```
 This runs `scripts/audit-generators.mjs` synchronously across all topics to make sure no generator raises JavaScript exceptions or has missing fields.
+
+---
+
+## 6. Creating Templates with Option Pools (Visual Template Editor)
+
+> **Where:** Go to `/admin/templates` → open or create a template → scroll to the **Data & Logic Board** → **Data Sources** panel.
+
+Option Pools let you attach a vocabulary/image/audio database to your template. The engine randomly picks items from your chosen categories and injects them as variables you can use anywhere in the question layout.
+
+---
+
+### 6.1 Understanding the Pool Data Structure
+
+Every pool in the database (`vocabulary_pools` collection) looks like:
+
+```json
+{
+  "poolId": "maths-shapes-2d",
+  "subject": "math",
+  "topic": "shapes",
+  "pools": {
+    "circle":    [ { "id": "circle_1", "label": "Circle",   "imageUrl": "/images/shapes/circle.svg" } ],
+    "triangle":  [ { "id": "tri_1",   "label": "Triangle",  "imageUrl": "/images/shapes/triangle.svg" } ],
+    "rectangle": [ { "id": "rect_1",  "label": "Rectangle", "imageUrl": "/images/shapes/rect.svg" } ],
+    "square":    [ { "id": "sq_1",    "label": "Square",    "imageUrl": "/images/shapes/square.svg" } ]
+  }
+}
+```
+
+Key rules:
+- **`poolId`** — unique slug, lowercase, hyphenated. e.g. `maths-shapes-2d`, `english-nouns-animals`.
+- **`pools`** — an object whose keys are **category names** and values are **arrays of items**.
+- Each item can have: `id`, `label`, `imageUrl`, `audioUrl`, `content`, and any custom properties.
+- **Target categories** = the correct-answer bucket. **All other categories** automatically become distractor buckets.
+
+---
+
+### 6.2 Step 1 — Pick an Existing Pool or Create a New One
+
+#### Using an existing pool
+1. In the Data Sources panel click **`+ Add Pool Source`**.
+2. A new pool source card appears. In the **Pool ID** dropdown, all pools are listed grouped by subject. Choose one (e.g. `maths-shapes-2d (4 categories)`).
+3. The **Category** dropdown auto-fills with all available categories from that pool.
+
+#### Creating a new pool (Quick Mode)
+1. Click **`🧪 Create Pool`** (top-right of the Data Sources panel).
+2. The Create Pool modal opens. Fill in:
+   - **Pool ID**: e.g. `science-animals-mammals`
+   - **Subject**: e.g. `science`
+   - **Topic**: e.g. `animals`
+   - **Categories (comma-separated)**: e.g. `mammals, reptiles, birds`
+3. Click **Save Pool**. An empty pool skeleton is created in the DB.
+4. Then click **`📦 Manage Pools`** or visit `/admin/vocabulary-pools` to add items to each category.
+
+#### Creating a new pool (JSON Mode)
+1. Click **`🧪 Create Pool`** → switch to the **JSON** tab.
+2. Paste a full pool document:
+```json
+{
+  "poolId": "science-animals-farm",
+  "subject": "science",
+  "topic": "animals",
+  "pools": {
+    "farm": [
+      { "id": "cow",  "label": "Cow",  "imageUrl": "/images/animals/cow.png" },
+      { "id": "hen",  "label": "Hen",  "imageUrl": "/images/animals/hen.png" },
+      { "id": "goat", "label": "Goat", "imageUrl": "/images/animals/goat.png" }
+    ],
+    "wild": [
+      { "id": "lion",  "label": "Lion",  "imageUrl": "/images/animals/lion.png" },
+      { "id": "tiger", "label": "Tiger", "imageUrl": "/images/animals/tiger.png" }
+    ]
+  }
+}
+```
+3. Click **Save Pool**. The pool is immediately available in the dropdown.
+
+---
+
+### 6.3 Step 2 — Configure the Pool Source Card
+
+After selecting a Pool ID, fill in the rest of the source card:
+
+| Field | What it does | Example |
+|---|---|---|
+| **Source ID** | Internal identifier for this data source | `source_1` |
+| **Pool ID** | Which pool to draw from | `maths-shapes-2d` |
+| **Category** | The primary category to sample | `circle` |
+| **🎯 Target Categories** | Checkboxes — items from these categories become **correct answer** candidates | ☑ `circle` |
+| **Count** | How many items to randomly pick from the target category | `1` |
+| **🎯 Target Filter Property** | *(optional)* Filter correct items by an item property name | `kind` |
+| **🎯 Target Filter Value** | *(optional)* Filter correct items matching this value | `2d` |
+| **👾 Distractor Filter Property** | *(optional)* Filter distractor items by property | `tags` |
+| **👾 Distractor Filter Value** | *(optional)* Filter distractors matching this value | `basic` |
+| **Save as variable** | The variable name to use in prompts/options | `TargetShape` |
+
+> **Important:** When you check categories under **🎯 Target Categories**, those items become **correct** options. Every other category in the pool automatically becomes a **distractor** pool.
+
+After filling in all fields, click **Save Variable**. This creates a `pool_selection` variable in the Variables section.
+
+---
+
+### 6.4 Step 3 — Reference the Variable in Your Template
+
+Once saved, the variable (e.g. `TargetShape`) is an **array** of selected items. Use index `[0]` to access the first item. The available tokens are:
+
+| Token | Outputs |
+|---|---|
+| `[TargetShape[0].label]` | The text label of the selected item (e.g. "Circle") |
+| `[TargetShape[0].imageUrl]` | The image URL of the selected item |
+| `[TargetShape[0].audioUrl]` | The audio URL of the selected item |
+| `[TargetShape[0].content]` | The `content` property (if set on the item) |
+| `[TargetShape[0].id]` | The item's unique ID |
+
+#### In the Question Prompt:
+```
+Identify the [TargetShape[0].label].
+```
+Or with an image shown in the visual:
+```
+What shape is shown above?
+```
+(and the visual panel displays `[TargetShape[0].imageUrl]`)
+
+---
+
+### 6.5 Step 4 — Build MCQ Options Using the Pool
+
+In the **Options** section of the layout builder, set up choices like this:
+
+#### Text-label MCQ (identify the shape by name)
+
+| Option | Label | isCorrect |
+|---|---|---|
+| Option 1 | `[TargetShape[0].label]` | `true` |
+| Option 2 | *(auto distractor from pool)* | `false` |
+| Option 3 | *(auto distractor from pool)* | `false` |
+| Option 4 | *(auto distractor from pool)* | `false` |
+
+> The engine automatically fills distractor slots from the pool's **non-target categories**.
+
+#### Image MCQ (picture_mcq — choose the correct image)
+
+| Option | imageUrl | isCorrect |
+|---|---|---|
+| Option 1 | `[TargetShape[0].imageUrl]` | `true` |
+| Option 2–4 | *(distractor images from pool)* | `false` |
+
+Set the **Interaction Engine** to `picture_mcq` in the Layout Config panel.
+
+#### Audio MCQ (audio_mcq — listen and choose)
+
+| Option | audioUrl | Label | isCorrect |
+|---|---|---|---|
+| Option 1 | `[TargetSound[0].audioUrl]` | `[TargetSound[0].label]` | `true` |
+| Option 2–4 | *(distractor audio)* | *(distractor labels)* | `false` |
+
+Set the **Interaction Engine** to `audio_mcq`.
+
+---
+
+### 6.6 Step 5 — Set the Prompt Preview and Interaction Engine
+
+In the **Question Text / Prompt** field:
+```
+What is the name of this shape?
+```
+
+Or dynamic:
+```
+Identify the [TargetShape[0].label] from the options below.
+```
+
+In **Layout Config**:
+- **Interaction Engine**: `mcq` (text choices), `picture_mcq` (image choices), `audio_mcq` (audio choices)
+- **Layout Mode**: `prompt_top` (question above) or `visual_center` (image/audio in the centre)
+
+---
+
+### 6.7 Complete Worked Example — Shapes MCQ with Pool
+
+Here is a complete template JSON (as it would be saved to the DB) for a shapes MCQ using pool `maths-shapes-2d`:
+
+```json
+{
+  "id": "math-shapes-identify-mcq",
+  "title": "Identify the 2D Shape",
+  "subject": "math",
+  "topic": "shapes",
+  "dataSources": [
+    {
+      "id": "source_1",
+      "type": "pool_selection",
+      "poolId": "maths-shapes-2d",
+      "category": "circle",
+      "targetCategories": ["circle"],
+      "count": 1,
+      "variableName": "TargetShape"
+    }
+  ],
+  "variables": [
+    {
+      "name": "TargetShape",
+      "type": "pool_selection",
+      "source": "source_1",
+      "poolId": "maths-shapes-2d",
+      "category": "circle",
+      "count": 1
+    }
+  ],
+  "questionText": "What is the name of this shape?",
+  "visuals": [
+    {
+      "component": "Image",
+      "props": {
+        "src": "[TargetShape[0].imageUrl]",
+        "alt": "[TargetShape[0].label]"
+      }
+    }
+  ],
+  "optionsType": "mcq",
+  "options": [
+    { "label": "[TargetShape[0].label]", "isCorrect": true },
+    { "label": "[distractor_1]", "isCorrect": false },
+    { "label": "[distractor_2]", "isCorrect": false },
+    { "label": "[distractor_3]", "isCorrect": false }
+  ],
+  "explanation": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "This shape is a [TargetShape[0].label]. It has the properties of a [TargetShape[0].label]."
+      }
+    ]
+  },
+  "interaction": { "engine": "mcq" },
+  "metadata": {
+    "subject": "math",
+    "topic": "shapes",
+    "difficulty": "easy"
+  }
+}
+```
+
+> **How distractors work:** The engine reads the pool's `pools` object. Items from `targetCategories` (`circle`) are correct options. Items from all other categories (`triangle`, `rectangle`, `square`) are shuffled and used as distractors.
+
+---
+
+### 6.8 Other Question Types with Option Pools
+
+#### Fill-in-the-Blank with Pool
+```
+The shape that has no corners is called a [[ans]].
+```
+Answer:
+```json
+{ "ans": "[TargetShape[0].label]" }
+```
+
+#### Matching with Pool (two sources)
+Set up **two** pool sources:
+- Source 1: `TargetShape` — picks a shape
+- Source 2: `TargetAnimal` — picks an animal
+
+Then define matching pairs:
+```json
+"pairs": [
+  { "left": { "content": "[TargetShape[0].imageUrl]" },  "right": { "content": "[TargetShape[0].label]" } },
+  { "left": { "content": "[TargetAnimal[0].imageUrl]" }, "right": { "content": "[TargetAnimal[0].label]" } }
+]
+```
+
+#### Categorization with Pool
+Use pool items as **draggable cards** sorted into category bins:
+```json
+"parts": [
+  {
+    "type": "categorizationv2",
+    "categories": [
+      { "id": "farm", "label": "Farm Animals" },
+      { "id": "wild", "label": "Wild Animals" }
+    ],
+    "items": [
+      { "id": "[TargetAnimal[0].id]", "content": "[TargetAnimal[0].label]", "imageUrl": "[TargetAnimal[0].imageUrl]" }
+    ],
+    "answerKey": {
+      "[TargetAnimal[0].id]": "farm"
+    }
+  }
+]
+```
+
+---
+
+### 6.9 Quick Reference — Pool Variable Tokens
+
+| You want to show | Use this token |
+|---|---|
+| The text label | `[VarName[0].label]` |
+| An image | `[VarName[0].imageUrl]` |
+| An audio clip | `[VarName[0].audioUrl]` |
+| The raw content field | `[VarName[0].content]` |
+| The item's ID | `[VarName[0].id]` |
+| Second item (if count ≥ 2) | `[VarName[1].label]` |
+
+> Pool variable names are **case-sensitive**. Use `TargetShape`, not `targetshape`.
+
+---
+
+### 6.10 Checklist Before Saving
+
+- [ ] Pool ID exists in DB (check `/admin/vocabulary-pools`)
+- [ ] Target categories are checked in the pool source card
+- [ ] Variable name set and "Save Variable" clicked
+- [ ] Token `[VarName[0].label]` used correctly in question text / options
+- [ ] Interaction engine set (`mcq`, `picture_mcq`, `audio_mcq`, etc.)
+- [ ] Layout mode selected (`prompt_top`, `visual_center`, etc.)
+- [ ] Click **Save Template** in the top action bar
+- [ ] Click **🔗 Test in Practice** to verify it renders correctly in the practice session

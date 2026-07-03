@@ -16,7 +16,7 @@ function parseMathAndText(text) {
       />
     );
   }
-  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$)/g);
+  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
   return parts.map((part, i) => {
     if (part.startsWith('\\(') && part.endsWith('\\)')) {
       const formula = part.slice(2, -2);
@@ -41,6 +41,14 @@ function parseMathAndText(text) {
         return <div key={i} dangerouslySetInnerHTML={{ __html: html }} />;
       } catch {
         return <div key={i}>{part}</div>;
+      }
+    } else if (part.startsWith('$') && part.endsWith('$')) {
+      const formula = part.slice(1, -1);
+      try {
+        const html = katex.renderToString(formula, { displayMode: false, throwOnError: false });
+        return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch {
+        return <span key={i}>{part}</span>;
       }
     }
     
@@ -108,9 +116,11 @@ export default function SessionReport({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const router = useRouter();
   const sessionId = params.sessionId;
+  const examId = params.examId;
 
   const [report, setReport] = useState(null);
   const [session, setSession] = useState(null);
+  const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterTab, setFilterTab] = useState('all');
@@ -122,6 +132,23 @@ export default function SessionReport({ params: paramsPromise }) {
       [index]: !prev[index]
     }));
   };
+
+  // Fetch exam config dynamically
+  useEffect(() => {
+    if (!examId) return;
+    async function loadExam() {
+      try {
+        const res = await fetch(`/api/exams/${examId}`);
+        const data = await res.json();
+        if (data.success && data.exam) {
+          setExam(data.exam);
+        }
+      } catch (err) {
+        console.error("Failed to load exam config in report page:", err);
+      }
+    }
+    loadExam();
+  }, [examId]);
 
   useEffect(() => {
     async function fetchReport() {
@@ -206,7 +233,7 @@ export default function SessionReport({ params: paramsPromise }) {
         ` }} />
         <h2 className="error-title">Oops! Report Not Found</h2>
         <p style={{ color: '#475569' }}>{error || 'The requested practice session report could not be loaded.'}</p>
-        <button className="btn-err-back" onClick={() => router.push('/exam-prep/jnvst')}>
+        <button className="btn-err-back" onClick={() => router.push(`/exam-prep/${examId}`)}>
           Back to Dashboard
         </button>
       </div>
@@ -214,14 +241,19 @@ export default function SessionReport({ params: paramsPromise }) {
   }
 
   const { estimatedScore, accuracy, correct, total, avgTimeSec, topicBreakdown, weakTopics, strongTopics } = report;
-  const isPassing = estimatedScore >= 65; // JNVST General Cutoff is 65
+  const isPassing = estimatedScore >= (exam?.passingCriteria?.general || 65);
 
   // Pacing calculations
   const responses = session?.responses || [];
   const totalQuestions = responses.length;
   
-  // 1. Exceeded pace count (threshold 72 seconds)
-  const paceThreshold = 72;
+  // 1. Exceeded pace count (threshold paceThreshold computed dynamically)
+  const secId = session?.section || session?.sectionId;
+  const sec = exam?.sections?.find(s => s.id === secId);
+  const paceThreshold = sec && sec.timeLimitMinutes && sec.questionCount
+    ? Math.round((sec.timeLimitMinutes * 60) / sec.questionCount)
+    : 72;
+    
   const exceededPaceCount = responses.filter(r => Math.round((r.timeTakenMs || 0) / 1000) > paceThreshold).length;
   
   // 2. Average correct vs incorrect times
@@ -236,7 +268,7 @@ export default function SessionReport({ params: paramsPromise }) {
     ? Math.round(incorrectResponses.reduce((sum, r) => sum + (r.timeTakenMs || 0), 0) / incorrectResponses.length / 1000)
     : 0;
     
-  // 3. Total time spent vs allotted JNVST time (15 * 72s = 1080 seconds = 18 minutes)
+  // 3. Total time spent vs allotted exam time
   const totalTimeSec = Math.round(responses.reduce((sum, r) => sum + (r.timeTakenMs || 0), 0) / 1000);
   const totalAllottedSec = totalQuestions * paceThreshold;
   const timeDifferenceSec = totalAllottedSec - totalTimeSec;
@@ -886,19 +918,19 @@ export default function SessionReport({ params: paramsPromise }) {
           </div>
           <div className="score-info">
             {isPassing ? (
-              <span className="cutoff-badge cutoff-passing">✓ Clearing JNVST Cutoff (65)</span>
+              <span className="cutoff-badge cutoff-passing">✓ Clearing {exam?.name || 'Exam'} Cutoff ({exam?.passingCriteria?.general || 65})</span>
             ) : (
-              <span className="cutoff-badge cutoff-failing">⚠ Under JNVST Cutoff (65)</span>
+              <span className="cutoff-badge cutoff-failing">⚠ Under {exam?.name || 'Exam'} Cutoff ({exam?.passingCriteria?.general || 65})</span>
             )}
             <h2>
-              {estimatedScore >= 80 
+              {estimatedScore >= (exam?.passingCriteria?.general ? exam.passingCriteria.general + 15 : 80) 
                 ? 'Fantastic! You are exam-ready.' 
-                : estimatedScore >= 65 
+                : estimatedScore >= (exam?.passingCriteria?.general || 65) 
                   ? 'Great progress! Keep maintaining this level.' 
                   : 'Good attempt! Focus on weak areas to boost your score.'}
             </h2>
             <p>
-              Your estimated JNVST section proficiency is currently at <strong>{estimatedScore}/100</strong>.
+              Your estimated {exam?.name || 'exam'} section proficiency is currently at <strong>{estimatedScore}/100</strong>.
               This estimate is calibrated based on correct responses against questions of varying difficulties.
             </p>
           </div>
@@ -923,7 +955,7 @@ export default function SessionReport({ params: paramsPromise }) {
         {session && session.responses && session.responses.length > 0 && (
           <div className="pacing-insights-panel">
             <h3 className="panel-title" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>📊</span> JNVST Pacing & Coach Insights
+              <span>📊</span> {exam?.name || 'Exam'} Pacing & Coach Insights
             </h3>
             <div className="pacing-insights-grid">
               <div className="pacing-metric-card">
@@ -931,7 +963,7 @@ export default function SessionReport({ params: paramsPromise }) {
                 <span className="pacing-metric-val">
                   {totalQuestions - exceededPaceCount} / {totalQuestions}
                 </span>
-                <span className="pacing-metric-desc">answered within 72s pace</span>
+                <span className="pacing-metric-desc">answered within {paceThreshold}s pace</span>
               </div>
               <div className="pacing-metric-card">
                 <span className="pacing-metric-lbl">Avg Time / Question</span>
@@ -947,7 +979,7 @@ export default function SessionReport({ params: paramsPromise }) {
                 </span>
                 <span className="pacing-metric-desc">
                   {timeDifferenceSec >= 0 
-                    ? `Saved ${formatMinutesSeconds(timeDifferenceSec)} of 18m`
+                    ? `Saved ${formatMinutesSeconds(timeDifferenceSec)} of ${Math.round(totalAllottedSec / 60)}m`
                     : `Exceeded target by ${formatMinutesSeconds(timeDifferenceSec)}`}
                 </span>
               </div>
@@ -960,13 +992,13 @@ export default function SessionReport({ params: paramsPromise }) {
                 <strong style={{ fontSize: '15px', color: '#581c87' }}>Coach's Pacing Advice:</strong>
                 <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#3b0764', lineHeight: '1.5' }}>
                   {exceededPaceCount === 0 ? (
-                    "Incredible speed control! You stayed within the 72-second JNVST target pace on every single question. Maintaining this steady flow during the actual exam will give you ample time to verify answers."
+                    `Incredible speed control! You stayed within the ${paceThreshold}-second target pace on every single question. Maintaining this steady flow during the actual exam will give you ample time to verify answers.`
                   ) : avgIncorrectTime > avgCorrectTime + 15 ? (
-                    `You spent significantly longer on incorrect questions (${avgIncorrectTime}s) compared to correct ones (${avgCorrectTime}s). Remember the golden rule of JNVST pacing: if you get stuck on a calculation for over 60 seconds, make an educated guess, skip it, and move on!`
+                    `You spent significantly longer on incorrect questions (${avgIncorrectTime}s) compared to correct ones (${avgCorrectTime}s). Remember the golden rule of pacing: if you get stuck on a calculation for over 60 seconds, make an educated guess, skip it, and move on!`
                   ) : totalTimeSec < totalAllottedSec - 180 ? (
-                    `Excellent time management! You finished ${formatMinutesSeconds(timeDifferenceSec)} faster than the JNVST target of 18 minutes. Speed is a huge advantage, just make sure to double-check calculation steps to prevent silly mistakes.`
+                    `Excellent time management! You finished ${formatMinutesSeconds(timeDifferenceSec)} faster than the target of ${Math.round(totalAllottedSec / 60)} minutes. Speed is a huge advantage, just make sure to double-check calculation steps to prevent silly mistakes.`
                   ) : (
-                    `You exceeded the JNVST 72-second target pace on ${exceededPaceCount} questions. Work on mental math drills for BODMAS division and multiplication to shave off a few seconds and increase your overall buffer.`
+                    `You exceeded the ${paceThreshold}-second target pace on ${exceededPaceCount} questions. Work on mental math drills and calculation short-cuts to shave off a few seconds and increase your overall buffer.`
                   )}
                 </p>
               </div>
@@ -1156,7 +1188,7 @@ export default function SessionReport({ params: paramsPromise }) {
         )}
 
         <div className="action-bar">
-          <Link href="/exam-prep/jnvst" className="btn-action-primary">
+          <Link href={`/exam-prep/${examId}`} className="btn-action-primary">
             Back to dashboard
           </Link>
           <Link href="/exam-prep" className="btn-action-secondary">

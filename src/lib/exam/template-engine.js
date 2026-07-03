@@ -10,7 +10,12 @@
 /**
  * Compute GCD for fraction simplification
  */
-function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function gcd(a, b) {
+  a = Math.abs(parseInt(a, 10));
+  b = Math.abs(parseInt(b, 10));
+  if (isNaN(a) || isNaN(b)) return 1;
+  return b === 0 ? a : gcd(b, a % b);
+}
 
 /**
  * Shuffle array (Fisher-Yates)
@@ -29,18 +34,36 @@ function shuffle(arr) {
  * Returns null if the result equals correct answer or NaN.
  */
 function safeDistractor(value, correct) {
-  if (isNaN(value) || !isFinite(value) || value === correct || value <= 0) return null;
+  if (isNaN(value) || !isFinite(value) || value === correct) return null;
   return Math.round(value);
 }
 
 function evalOptionLabel(label, ctx) {
   if (typeof label !== 'string') return label;
-  let interpolated = label;
-  interpolated = interpolated.replace(/\{\{([^}]+)\}\}/g, (match, name) => {
+
+  // Step 1: substitute {{variable}} placeholders
+  let interpolated = label.replace(/\{\{([^}]+)\}\}/g, (match, name) => {
     const trimmed = name.trim();
     return ctx[trimmed] !== undefined ? String(ctx[trimmed]) : match;
   });
-  if (/^[0-9\s\+\-\*\/\(\)\.]+$/.test(interpolated)) {
+
+  // Step 2: evaluate {= expr =} inline expressions
+  interpolated = interpolated.replace(/\{=\s*(.*?)\s*=\}/g, (match, expr) => {
+    try {
+      // Substitute variable names in the expression
+      let resolved = expr;
+      for (const [key, val] of Object.entries(ctx)) {
+        resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), String(val));
+      }
+      const result = new Function(`return (${resolved})`)();
+      return result !== undefined && result !== null && !isNaN(result) ? String(Math.round(result * 100) / 100) : match;
+    } catch {
+      return match;
+    }
+  });
+
+  // Step 3: if entire string is a math expression, evaluate it
+  if (/^[-0-9\s\+\-\*\/\(\)\.]+$/.test(interpolated)) {
     try {
       return new Function(`return (${interpolated})`)();
     } catch {
@@ -59,7 +82,13 @@ export function instantiateParameterized(template, count) {
   if (config.config && (!config.variables || Array.isArray(config.variables))) {
     config = { ...config, ...config.config };
   }
-  const { questionTemplate, variables, derivations, explanationTemplate, examId, section, topic, difficulty, tags, options: configOptions } = config;
+  const examId = config.examId || template.examId;
+  const section = config.section || template.section || config.subject || template.subject;
+  const topic = config.topic || template.topic;
+  const difficulty = config.difficulty !== undefined ? config.difficulty : (template.difficulty !== undefined ? template.difficulty : 0.5);
+  const tags = config.tags || template.tags;
+
+  const { questionTemplate, variables, derivations, explanationTemplate, options: configOptions } = config;
 
   const generated = [];
   const seen = new Set();
@@ -79,7 +108,9 @@ export function instantiateParameterized(template, count) {
     for (const [key, expr] of Object.entries(derivations)) {
       try {
         ctx[key] = evalDerivation(expr, ctx);
-        if (ctx[key] === null || isNaN(ctx[key])) { valid = false; break; }
+        const val = ctx[key];
+        const isActuallyNaN = typeof val === 'number' ? Number.isNaN(val) : String(val) === 'NaN';
+        if (val === null || isActuallyNaN) { valid = false; break; }
       } catch { valid = false; break; }
     }
     if (!valid) continue;
@@ -98,11 +129,17 @@ export function instantiateParameterized(template, count) {
 
     if (derivations.correct_answer !== undefined) {
       correct = ctx.correct_answer;
-      if (!correct || isNaN(correct)) continue;
+      if (correct === undefined || correct === null || correct === '') continue;
 
       const seenD = new Set([String(correct)]);
       for (const d of [ctx.distractor_1, ctx.distractor_2, ctx.distractor_3]) {
-        const val = safeDistractor(d, correct);
+        if (d === undefined || d === null || d === '') continue;
+        let val;
+        if (typeof d === 'number' || (!isNaN(d) && !isNaN(parseFloat(d)))) {
+          val = safeDistractor(Number(d), correct);
+        } else {
+          val = String(d) === String(correct) ? null : d;
+        }
         if (val !== null && !seenD.has(String(val))) {
           seenD.add(String(val));
           distractors.push(val);
@@ -112,11 +149,9 @@ export function instantiateParameterized(template, count) {
       const correctOpt = configOptions.find(o => o.isCorrect);
       if (!correctOpt) continue;
 
+      // Keep the full evaluated label string (preserves units like "meters")
       const correctRaw = evalOptionLabel(correctOpt.label, ctx);
-      correct = typeof correctRaw === 'number' ? correctRaw : parseFloat(correctRaw);
-      if (isNaN(correct)) {
-        correct = correctRaw;
-      }
+      correct = correctRaw; // keep as string to preserve suffix like " meters"
 
       const seenD = new Set([String(correct)]);
       const distOpts = configOptions.filter(o => !o.isCorrect);
@@ -132,17 +167,32 @@ export function instantiateParameterized(template, count) {
 
     if (correct === undefined) continue;
 
-    // Fallback: if we have duplicate distractors, generate unique offsets to guarantee 4 options
+    // Fallback: if we don't have enough distractors, generate unique offsets
     let offsetIdx = 1;
     const seenD = new Set([String(correct), ...distractors.map(String)]);
+    
+    // Extract numeric core from correct answer (handle "X meters", "-X meters", etc.)
+    const correctStr = String(correct);
+    const numericMatch = correctStr.match(/^(-?\d+(?:\.\d+)?)/);
+    const numericCore = numericMatch ? parseFloat(numericMatch[1]) : NaN;
+    const suffix = numericMatch ? correctStr.slice(numericMatch[0].length) : '';
+
     while (distractors.length < 3) {
-      const numericCorrect = Number(correct);
-      const fallback = (isNaN(numericCorrect) ? 0 : numericCorrect) + (offsetIdx % 2 === 0 ? Math.ceil(offsetIdx / 2) : -Math.ceil(offsetIdx / 2));
-      if (!seenD.has(String(fallback)) && fallback > 0) {
+      const offset = offsetIdx % 2 === 0 ? Math.ceil(offsetIdx / 2) : -Math.ceil(offsetIdx / 2);
+      let fallback;
+      if (!isNaN(numericCore)) {
+        // Build distractor with same suffix (e.g. " meters")
+        const fallbackNum = numericCore + offset;
+        fallback = suffix ? `${fallbackNum}${suffix}` : fallbackNum;
+      } else {
+        fallback = `Option ${offsetIdx}`;
+      }
+      if (!seenD.has(String(fallback))) {
         seenD.add(String(fallback));
         distractors.push(fallback);
       }
       offsetIdx++;
+      if (offsetIdx > 30) break; // safety guard
     }
 
     const optionValues = shuffle([correct, ...distractors.slice(0, 3)]);
@@ -151,13 +201,14 @@ export function instantiateParameterized(template, count) {
     let correctOption = 'A';
     optionValues.forEach((val, i) => {
       options[optionLabels[i]] = String(val);
-      if (val === correct) correctOption = optionLabels[i];
+      if (String(val) === String(correct)) correctOption = optionLabels[i];
     });
 
     generated.push({
       examId,
       section,
       topic,
+      templateId: String(template._id || template.id || ''),
       difficulty,
       questionText,
       options,
@@ -208,6 +259,23 @@ function buildCombinations(variables) {
   return combos;
 }
 
+function escapeDerivationExpression(resolved) {
+  let result = '';
+  for (let i = 0; i < resolved.length; i++) {
+    if (resolved[i] === '\\') {
+      if (resolved[i + 1] === '\\') {
+        result += '\\\\';
+        i++; // skip next backslash
+      } else {
+        result += '\\\\';
+      }
+    } else {
+      result += resolved[i];
+    }
+  }
+  return result;
+}
+
 // ─── Derivation Evaluator ──────────────────────────────────────────────
 function evalDerivation(expr, ctx) {
   // expr can be a string like "result * denominator / numerator"
@@ -227,9 +295,13 @@ function evalDerivation(expr, ctx) {
     }
   }
 
+  const safeResolved = escapeDerivationExpression(resolved);
   // eslint-disable-next-line no-new-func
-  const result = new Function('gcd', `return (${resolved})`)(gcd);
-  return Math.round(result * 100) / 100;
+  const result = new Function('gcd', `return (${safeResolved})`)(gcd);
+  if (typeof result === 'number' || (!isNaN(result) && !isNaN(parseFloat(result)))) {
+    return Math.round(Number(result) * 100) / 100;
+  }
+  return result;
 }
 
 // ─── Template String Filler ────────────────────────────────────────────

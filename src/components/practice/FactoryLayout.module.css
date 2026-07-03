@@ -4217,3 +4217,20 @@
     background: #f8fafc;
     transform: translateY(-1px);
 }
+
+/* Center and scale down small SVG images inside Pre-K option cards to prevent top-left alignment stretching */
+.preKOptionButton .optionMedia {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.preKOptionButton .optionMedia :global(svg) {
+    width: clamp(70px, 10vw, 100px) !important;
+    height: auto !important;
+    max-width: 100%;
+    margin: 0 auto;
+    display: block;
+}

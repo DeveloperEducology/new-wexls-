@@ -306,6 +306,177 @@ export default function FillInTheBlankRenderer({
     return hasBlankToken(part.content || part.text || '');
   });
 
+  const visualParts = displayParts.filter(p => p && (p.type === 'svg' || p.type === 'image' || p.component || p.type === 'visual_panel'));
+  const nonVisualParts = displayParts.filter(p => !p || !(p.type === 'svg' || p.type === 'image' || p.component || p.type === 'visual_panel'));
+
+  const renderQuestionTextAndVisuals = () => {
+    const text = question.questionText || '';
+    
+    const topVisuals = visualParts.filter(p => p && p.position === 'top');
+    const middleVisuals = visualParts.filter(p => p && p.position === 'middle');
+    const bottomVisuals = visualParts.filter(p => p && p.position !== 'top' && p.position !== 'middle');
+    
+    const renderPartElement = (part, idx) => (
+      <PartRenderer
+        key={`vis-${idx}`}
+        part={part}
+        question={question}
+        userAnswer={userAnswer}
+        onAnswer={onAnswer}
+        isAnswered={isAnswered}
+      />
+    );
+
+    const topElements = topVisuals.map((part, idx) => renderPartElement(part, idx));
+    const bottomElements = bottomVisuals.map((part, idx) => renderPartElement(part, idx));
+    const nonVisualElements = nonVisualParts.map((part, idx) => (
+      <PartRenderer
+        key={`non-vis-${idx}`}
+        part={part}
+        question={question}
+        userAnswer={userAnswer}
+        onAnswer={onAnswer}
+        isAnswered={isAnswered}
+      />
+    ));
+    
+    let middleElements = [];
+    const paragraphs = text.split(/\n\n/);
+    if (paragraphs.length >= 2) {
+      middleElements.push(
+        <h2 key="p0" style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
+          <InlineTextWithBlanks
+            text={paragraphs[0]}
+            userAnswer={userAnswer}
+            onAnswer={onAnswer}
+            isAnswered={isAnswered}
+            question={question}
+          />
+        </h2>
+      );
+      if (middleVisuals.length > 0) {
+        middleVisuals.forEach((part, idx) => {
+          middleElements.push(
+            <div key={`mid-vis-${idx}`} style={{ margin: '16px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              {renderPartElement(part, idx)}
+            </div>
+          );
+        });
+      }
+      middleElements.push(
+        <h2 key="p1" style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
+          <InlineTextWithBlanks
+            text={paragraphs.slice(1).join('\n\n')}
+            userAnswer={userAnswer}
+            onAnswer={onAnswer}
+            isAnswered={isAnswered}
+            question={question}
+          />
+        </h2>
+      );
+    } else {
+      const lines = text.split(/\n/);
+      if (lines.length >= 2) {
+        middleElements.push(
+          <h2 key="l0" style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
+            <InlineTextWithBlanks
+              text={lines[0]}
+              userAnswer={userAnswer}
+              onAnswer={onAnswer}
+              isAnswered={isAnswered}
+              question={question}
+            />
+          </h2>
+        );
+        if (middleVisuals.length > 0) {
+          middleVisuals.forEach((part, idx) => {
+            middleElements.push(
+              <div key={`mid-vis-${idx}`} style={{ margin: '16px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                {renderPartElement(part, idx)}
+              </div>
+            );
+          });
+        }
+        middleElements.push(
+          <h2 key="l1" style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
+            <InlineTextWithBlanks
+              text={lines.slice(1).join('\n')}
+              userAnswer={userAnswer}
+              onAnswer={onAnswer}
+              isAnswered={isAnswered}
+              question={question}
+            />
+          </h2>
+        );
+      } else {
+        middleElements.push(
+          <h2 key="single" style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
+            <InlineTextWithBlanks
+              text={text}
+              userAnswer={userAnswer}
+              onAnswer={onAnswer}
+              isAnswered={isAnswered}
+              question={question}
+            />
+          </h2>
+        );
+        if (middleVisuals.length > 0) {
+          middleVisuals.forEach((part, idx) => {
+            middleElements.push(
+              <div key={`mid-vis-${idx}`} style={{ margin: '16px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                {renderPartElement(part, idx)}
+              </div>
+            );
+          });
+        }
+      }
+    }
+
+    return (
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
+        {topElements}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => speakText(speechText, question.voice || 'Puck', question.audioUrl)}
+              style={{
+                background: '#e0f2fe',
+                border: 'none',
+                borderRadius: '50%',
+                width: '38px',
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#0284c7',
+                boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+                transition: 'transform 0.2s ease, background 0.2s ease',
+                flexShrink: 0,
+                marginTop: 6
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+              title="Read instruction out loud"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+              {middleElements}
+            </div>
+          </div>
+        </div>
+        {nonVisualElements}
+        {bottomElements}
+      </div>
+    );
+  };
+
+  const hasVisualInterleaving = question.questionText && visualParts.length > 0;
+
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
       {hasClickToFill && !hasInlineInput && (
@@ -325,141 +496,148 @@ export default function FillInTheBlankRenderer({
           style={{ display: 'none' }}
         />
       )}
-      {question.questionText ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-          <button
-            type="button"
-            onClick={() => speakText(speechText, question.voice || 'Puck', question.audioUrl)}
-            style={{
-              background: '#e0f2fe',
-              border: 'none',
-              borderRadius: '50%',
-              width: '38px',
-              height: '38px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#0284c7',
-              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
-              transition: 'transform 0.2s ease, background 0.2s ease',
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-            title="Read instruction out loud"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-            </svg>
-          </button>
-          <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-            <InlineTextWithBlanks
-              text={question.questionText}
-              userAnswer={userAnswer}
-              onAnswer={onAnswer}
-              isAnswered={isAnswered}
-              question={question}
-            />
-          </h2>
-        </div>
-      ) : null}
-
-      {(() => {
-        if (question.arrangeImagesRow) {
-          const elements = [];
-          let currentImageRow = [];
-
-          const flushImageRow = (key) => {
-            if (currentImageRow.length > 0) {
-              const rowMode = question.imageRowMode || question.metadata?.imageRowMode || 'wrap';
-              const rowGap = Number(question.imageRowGap || question.metadata?.imageRowGap || 20);
-              const singleRow = rowMode === 'scroll';
-              const rowCount = currentImageRow.length;
-              const cardWidth = Number(question.commonImageWidth || question.metadata?.commonImageWidth || 170);
-              const rowMaxWidth = (rowCount * cardWidth) + (Math.max(0, rowCount - 1) * Math.max(8, rowGap));
-              elements.push(
-                <div
-                  key={`image-row-${key}`}
-                  style={{
-                    display: singleRow ? 'flex' : 'grid',
-                    flexDirection: singleRow ? 'row' : undefined,
-                    flexWrap: singleRow ? 'nowrap' : undefined,
-                    gridTemplateColumns: singleRow
-                      ? undefined
-                      : `repeat(${rowCount}, minmax(72px, 1fr))`,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
-                    width: '100%',
-                    maxWidth: singleRow ? 'min(100%, 1160px)' : `min(100%, ${rowMaxWidth}px)`,
-                    margin: '10px 0',
-                    overflowX: singleRow ? 'auto' : 'visible',
-                    overflowY: 'visible',
-                    padding: '2px clamp(16px, 4vw, 44px) 8px',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {currentImageRow.map((element) => cloneElement(element, {
-                    part: {
-                      ...element.props.part,
-                      rowImageCount: rowCount,
-                      rowImageGap: rowGap,
-                      rowImageMode: rowMode,
-                    }
-                  }))}
-                </div>
-              );
-              currentImageRow = [];
-            }
-          };
-
-          displayParts.forEach((part, index) => {
-            const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
-            const partElement = (
-              <PartRenderer
-                key={index}
-                part={{
-                  ...part,
-                  ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180, rowImage: true } : {})
+      
+      {hasVisualInterleaving ? (
+        renderQuestionTextAndVisuals()
+      ) : (
+        <>
+          {question.questionText ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+              <button
+                type="button"
+                onClick={() => speakText(speechText, question.voice || 'Puck', question.audioUrl)}
+                style={{
+                  background: '#e0f2fe',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#0284c7',
+                  boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
+                  transition: 'transform 0.2s ease, background 0.2s ease',
+                  flexShrink: 0,
                 }}
-                question={question}
-                userAnswer={userAnswer}
-                onAnswer={onAnswer}
-                isAnswered={isAnswered}
-                showSpeaker={!question.questionText && isFirstTextPart}
-                speakTextValue={speechText}
-              />
-            );
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+                title="Read instruction out loud"
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+              </button>
+              <h2 style={{ margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
+                <InlineTextWithBlanks
+                  text={question.questionText}
+                  userAnswer={userAnswer}
+                  onAnswer={onAnswer}
+                  isAnswered={isAnswered}
+                  question={question}
+                />
+              </h2>
+            </div>
+          ) : null}
 
-            if (part.type === 'image') {
-              currentImageRow.push(partElement);
-            } else {
-              flushImageRow(index);
-              elements.push(partElement);
+          {(() => {
+            if (question.arrangeImagesRow) {
+              const elements = [];
+              let currentImageRow = [];
+
+              const flushImageRow = (key) => {
+                if (currentImageRow.length > 0) {
+                  const rowMode = question.imageRowMode || question.metadata?.imageRowMode || 'wrap';
+                  const rowGap = Number(question.imageRowGap || question.metadata?.imageRowGap || 20);
+                  const singleRow = rowMode === 'scroll';
+                  const rowCount = currentImageRow.length;
+                  const cardWidth = Number(question.commonImageWidth || question.metadata?.commonImageWidth || 170);
+                  const rowMaxWidth = (rowCount * cardWidth) + (Math.max(0, rowCount - 1) * Math.max(8, rowGap));
+                  elements.push(
+                    <div
+                      key={`image-row-${key}`}
+                      style={{
+                        display: singleRow ? 'flex' : 'grid',
+                        flexDirection: singleRow ? 'row' : undefined,
+                        flexWrap: singleRow ? 'nowrap' : undefined,
+                        gridTemplateColumns: singleRow
+                          ? undefined
+                          : `repeat(${rowCount}, minmax(72px, 1fr))`,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
+                        width: '100%',
+                        maxWidth: singleRow ? 'min(100%, 1160px)' : `min(100%, ${rowMaxWidth}px)`,
+                        margin: '10px 0',
+                        overflowX: singleRow ? 'auto' : 'visible',
+                        overflowY: 'visible',
+                        padding: '2px clamp(16px, 4vw, 44px) 8px',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      {currentImageRow.map((element) => cloneElement(element, {
+                        part: {
+                          ...element.props.part,
+                          rowImageCount: rowCount,
+                          rowImageGap: rowGap,
+                          rowImageMode: rowMode,
+                        }
+                      }))}
+                    </div>
+                  );
+                  currentImageRow = [];
+                }
+              };
+
+              displayParts.forEach((part, index) => {
+                const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+                const partElement = (
+                  <PartRenderer
+                    key={index}
+                    part={{
+                      ...part,
+                      ...(part.type === 'image' ? { commonImageWidth: question.commonImageWidth || 180, rowImage: true } : {})
+                    }}
+                    question={question}
+                    userAnswer={userAnswer}
+                    onAnswer={onAnswer}
+                    isAnswered={isAnswered}
+                    showSpeaker={!question.questionText && isFirstTextPart}
+                    speakTextValue={speechText}
+                  />
+                );
+
+                if (part.type === 'image') {
+                  currentImageRow.push(partElement);
+                } else {
+                  flushImageRow(index);
+                  elements.push(partElement);
+                }
+              });
+
+              flushImageRow('end');
+              return elements;
             }
-          });
 
-          flushImageRow('end');
-          return elements;
-        }
-
-        return displayParts.map((part, index) => {
-          const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
-          return (
-            <PartRenderer
-              key={index}
-              part={part}
-              question={question}
-              userAnswer={userAnswer}
-              onAnswer={onAnswer}
-              isAnswered={isAnswered}
-              showSpeaker={!question.questionText && isFirstTextPart}
-              speakTextValue={speechText}
-            />
-          );
-        });
-      })()}
+            return displayParts.map((part, index) => {
+              const isFirstTextPart = index === 0 && (part.type === 'text' || !part.type);
+              return (
+                <PartRenderer
+                  key={index}
+                  part={part}
+                  question={question}
+                  userAnswer={userAnswer}
+                  onAnswer={onAnswer}
+                  isAnswered={isAnswered}
+                  showSpeaker={!question.questionText && isFirstTextPart}
+                  speakTextValue={speechText}
+                />
+              );
+            });
+          })()}
+        </>
+      )}
 
       {!hasClickToFill && !hasInlineInput && (
         <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start' }}>

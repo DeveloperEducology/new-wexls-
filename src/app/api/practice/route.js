@@ -466,7 +466,7 @@ export async function GET(request) {
   // ─────────────────────────────────────────────────────────────────────────
 
   const resolvedTopic = skillNode?.topicId || topic;
-  const targetTopic = skillNode?.engine || resolvedTopic;
+  const targetTopic = (skillNode?.engine && skillNode.engine !== 'questionBank' && skillNode.engine !== 'universal-template') ? skillNode.engine : resolvedTopic;
   let resolvedSkillId = skillNode?.skillId || skill;
 
   if (resolvedSkillId && resolvedSkillId.endsWith('-legacy')) {
@@ -668,6 +668,84 @@ export async function GET(request) {
     console.error('Error generating direct dynamic template:', err);
   }
 
+  // Second fallback: look up from the `templates` collection (saved via Template Masterclass / Admin)
+  try {
+    const db = await (await import('../../../lib/db/mongo.js')).getMongoDb();
+    if (db) {
+      const tmplDoc = await db.collection('templates').findOne({
+        $or: [{ _id: resolvedTemplateId }, { id: resolvedTemplateId }]
+      });
+
+      if (tmplDoc) {
+        const cfg = tmplDoc.config || tmplDoc;
+        // Convert to universal-template format expected by evaluateUniversalOrPoolTemplate
+        const universalDoc = {
+          id: resolvedTemplateId,
+          subject: tmplDoc.section || subject,
+          topic: tmplDoc.topic || resolvedTopic,
+          questionText: cfg.questionTemplate || cfg.questionText || '',
+          answer: cfg.answer || null,
+          explanation: cfg.explanationTemplate ? { sections: [{ type: 'text', content: cfg.explanationTemplate }] } : null,
+          options: cfg.options || null,
+          optionsType: cfg.interaction?.inputMode === 'choice' ? 'multipleChoice' : 'fillInTheBlank',
+          interaction: cfg.interaction || { engine: 'mcq', inputMode: 'choice' },
+          variables: cfg.variables || {},
+          derivations: cfg.derivations || {},
+          constraints: cfg.constraints || {},
+          visuals: cfg.visuals || [],
+          templateInfo: {
+            subject: tmplDoc.section || subject,
+            topic: tmplDoc.topic || resolvedTopic,
+            grade: cfg.grade || '6',
+          }
+        };
+
+        const resolvedTemplateDoc = await resolveTemplatePools(universalDoc);
+        const rawQuestion = await evaluateUniversalOrPoolTemplate({
+          resolvedTemplateDoc,
+          seed,
+          difficulty,
+          searchParams,
+          grade: cfg.grade || '6'
+        });
+        const question = {
+          ...rawQuestion,
+          id: `exam-template-${resolvedTemplateId}-${seed}`,
+          metadata: {
+            subject: universalDoc.subject,
+            topic: universalDoc.topic,
+            skillId: resolvedSkillId || resolvedTemplateId,
+            templateId: resolvedTemplateId,
+            engine: 'universal-template',
+            grade: cfg.grade || '6',
+            seed
+          }
+        };
+
+        const responsePayload = {
+          success: true,
+          question,
+          seed,
+          template: {
+            logicType: resolvedTemplateId,
+            logic_type: resolvedTemplateId,
+            templateId: resolvedTemplateId,
+            engine: 'universal-template'
+          }
+        };
+        if (question.pickedItemIds) responsePayload.pickedItemIds = question.pickedItemIds;
+
+        return respond(withCompetency(responsePayload, {
+          subject: universalDoc.subject,
+          topic: universalDoc.topic,
+          skill: resolvedSkillId || resolvedTemplateId
+        }));
+      }
+    }
+  } catch (err) {
+    console.error('Error generating template from `templates` collection:', err);
+  }
+
   let isDbTopicActive = false;
   try {
     let topicNode = await getCurriculumNode(targetTopic);
@@ -679,13 +757,36 @@ export async function GET(request) {
     console.error('Practice DB node check error:', error);
   }
 
-  const isMathTopic = subject === 'math' && ['addition', 'subtraction', 'multiplication', 'division', 'time', 'fractions', 'place-values', 'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement', 'standard-object-measurement', 'story-math', 'interactive-tools', 'cube-tools', 'ukg-numbers-counting'].includes(targetTopic);
+  const isMathTopic = (subject === 'math' || subject === 'arithmetic') && [
+    'addition', 'subtraction', 'multiplication', 'division', 'time', 'fractions', 'place-values', 
+    'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement', 'standard-object-measurement', 
+    'story-math', 'interactive-tools', 'cube-tools', 'ukg-numbers-counting',
+    'integers', 'equations', 'geometry', 'mensuration', 'data-handling', 'algebra', 'trigonometry', 
+    'data-interpretation', 'arithmetic-ability', 'decimals', 'simplification', 'percentage', 
+    'profit-loss', 'simple-interest', 'perimeter-area-volume', 'factors-multiples', 'numbers', 
+    'four-fundamental-operations'
+  ].includes(targetTopic);
 
-  const isSocialTopic = subject === 'social' && targetTopic === 'gk';
+  const isSocialTopic = (subject === 'social' || subject === 'gk' || subject === 'general_knowledge' || subject === 'general_awareness' || subject === 'intelligence') && [
+    'gk', 'history', 'geography', 'general-science', 'culture-sports', 'civics', 'current-affairs', 
+    'indian-history', 'economics', 'polity', 'general_knowledge', 'general_awareness',
+    'odd-one-out', 'figure-matching', 'pattern-completion', 'figure-series-completion', 'analogy', 
+    'geometrical-figure-completion', 'mirror-imaging', 'punched-hold-pattern', 'space-visualization', 
+    'embedded-figure', 'analogies', 'classification', 'series', 'logical-reasoning', 'syllogisms', 
+    'blood-relations', 'direction-sense', 'coding-decoding', 'non-verbal-reasoning'
+  ].includes(targetTopic);
 
   const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system', 'ukg-science'].includes(targetTopic);
-  const isEnglishTopic = subject === 'english' && (
-    ['grammar', 'lkg', 'english-lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 'phonics_vowels', 'phonics_images'].includes(targetTopic) ||
+  
+  const isEnglishTopic = (subject === 'english' || subject === 'language') && (
+    [
+      'grammar', 'lkg', 'english-lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 
+      'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 
+      'phonics_vowels', 'phonics_images',
+      'comprehension', 'vocabulary', 'fill-in-the-blanks', 'sentence-correction', 'prepositions', 
+      'verbs', 'articles', 'spelling-check', 'reading-comprehension', 'spot-the-error', 
+      'synonyms-antonyms', 'one-word-substitution', 'idioms-phrases'
+    ].includes(targetTopic) ||
     resolvedTopic === 'lkg' ||
     resolvedTopic === 'english-lkg' ||
     topic === 'lkg' ||
@@ -936,8 +1037,12 @@ export async function GET(request) {
     if (targetTopic === 'lkg') {
       const { generateLkgQuestion } = await import('../../../lib/practice/generators/math/topics/lkg/index.js');
       const question = normalizeGenericTopicQuestion(
-        generateLkgQuestion(config),
-        { topic: targetTopic, skill: resolvedTemplateId, seed, engine: 'lkg' },
+        generateLkgQuestion({
+          ...config,
+          logic_type: resolvedSkillId,
+          forcedTask: resolvedSkillId
+        }),
+        { topic: targetTopic, skill: resolvedSkillId, seed, engine: 'lkg' },
       );
 
       return respond(withCompetency({

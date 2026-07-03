@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { PRESET_EASY, PRESET_MEDIUM, PRESET_HARD } from './presets';
 import { COMPONENT_REGISTRY } from '../../lib/practice/generators/universal/components/index.js';
 
@@ -123,6 +125,74 @@ const EXAMPLES = [
   }
 ];
 
+const COMPONENT_SAMPLE_TEMPLATES = {
+  CoordinatePlane: {
+    blueprint: 'The graph shows a parabola. In which direction does it open?',
+    solution: 'Step 1: Locate the vertex at ({{h}}, {{k}}).\nStep 2: Observe the direction the curve points.\nStep 3: The parabola opens to the {{direction}}.',
+    title: 'Coordinate Plane – Parabola Direction',
+    subject: 'math',
+    topic: 'graphing',
+    grade: '4',
+    placeholders: {
+      direction: 'right, left, up, down',
+      h: '-8-8',
+      k: '-8-8'
+    },
+    options: [
+      { label: '{{direction}}', isCorrect: true },
+      { label: '= direction === "right" ? "left" : "right"', isCorrect: false },
+      { label: '= direction === "up" ? "down" : "up"', isCorrect: false },
+      { label: '= direction === "left" || direction === "right" ? "up" : "left"', isCorrect: false }
+    ],
+    visualProps: {
+      xMin: '-10',
+      xMax: '10',
+      yMin: '-10',
+      yMax: '10',
+      parabolaDirection: 'direction',
+      parabolaVertex: 'h,k',
+      parabolaA: '0.15'
+    }
+  },
+  Image: {
+    blueprint: 'Write the multiplication number sentence shown here:\n\nType the complete multiplication number sentence (for example, 2 x 3 = 6).\n[]',
+    solution: 'Step 1: Count the groups (number of boxes): 5 groups.\nStep 2: Count the items in each group: 2 pears.\nStep 3: Write the multiplication sentence: 5 x 2 = 10.',
+    title: 'Multiplication – Image Grouping',
+    subject: 'math',
+    topic: 'multiplication',
+    grade: '2',
+    placeholders: {
+      Result: '5 x 2 = 10'
+    },
+    options: [],
+    visualProps: {
+      imageUrl: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/2pears_group5.png',
+      width: '240'
+    }
+  },
+  ItemCounter: {
+    blueprint: 'Look at the groups of pears. Write the multiplication sentence:\n\nType the complete sentence (for example, 2 x 3 = 6).\n[]',
+    solution: 'Step 1: Count the groups: {{groups}} groups.\nStep 2: Each group has {{itemsPerGroup}} pears.\nStep 3: Multiply: {{groups}} x {{itemsPerGroup}} = {= groups * itemsPerGroup =}.',
+    title: 'Multiplication – Item Groups',
+    subject: 'math',
+    topic: 'multiplication',
+    grade: '2',
+    placeholders: {
+      groups: '5',
+      itemsPerGroup: '2',
+      Result: '= groups + " x " + itemsPerGroup + " = " + (groups * itemsPerGroup)'
+    },
+    options: [],
+    visualProps: {
+      count: 'groups',
+      itemType: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/2pears.png',
+      itemsPerRow: '1',
+      showBorder: 'true',
+      width: '90'
+    }
+  }
+};
+
 const VISUAL_COMPONENTS_CONFIG = {
   none: { name: 'None (Text Only)', props: [] },
   TenFrame: {
@@ -192,10 +262,277 @@ const VISUAL_COMPONENTS_CONFIG = {
       { key: 'leftLabel', label: 'Left Label', placeholder: 'e.g. L', default: 'L' },
       { key: 'rightLabel', label: 'Right Label', placeholder: 'e.g. R', default: 'R' }
     ]
+  },
+  CoordinatePlane: {
+    name: 'Coordinate Plane 🌐',
+    props: [
+      { key: 'xMin', label: 'X Min', placeholder: 'e.g. -10', default: '-10' },
+      { key: 'xMax', label: 'X Max', placeholder: 'e.g. 10', default: '10' },
+      { key: 'yMin', label: 'Y Min', placeholder: 'e.g. -10', default: '-10' },
+      { key: 'yMax', label: 'Y Max', placeholder: 'e.g. 10', default: '10' },
+      { key: 'points', label: 'Points (x,y,label;...)', placeholder: 'e.g. 2,3,A; -4,5,B', default: '' },
+      { key: 'polygon', label: 'Polygon (x,y;...)', placeholder: 'e.g. 0,0; 4,0; 4,3', default: '' },
+      { key: 'parabolaDirection', label: 'Parabola Direction', placeholder: 'up/down/left/right', default: '' },
+      { key: 'parabolaVertex', label: 'Parabola Vertex (h,k)', placeholder: 'e.g. -7,6', default: '' },
+      { key: 'parabolaA', label: 'Parabola scale (a)', placeholder: 'e.g. 0.15', default: '0.15' }
+    ]
+  },
+  ItemCounter: {
+    name: 'Item Counter (Grid/Group) 🍎',
+    props: [
+      { key: 'count', label: 'Item Count', placeholder: 'e.g. 5', default: '5' },
+      { key: 'itemType', label: 'Item Type (Name or Image URL)', placeholder: 'e.g. cupcake, apple, or http://...', default: 'apple' },
+      { key: 'itemsPerRow', label: 'Items Per Row (Columns)', placeholder: 'e.g. 5 or 1', default: '5' },
+      { key: 'showBorder', label: 'Show Border Box', placeholder: 'true/false', default: 'false' },
+      { key: 'showNumbers', label: 'Show Count Bubbles', placeholder: 'true/false', default: 'false' },
+      { key: 'notClickable', label: 'Disable Counting Clicks', placeholder: 'true/false', default: 'true' },
+      { key: 'width', label: 'Item Size (width)', placeholder: 'e.g. 90', default: '90' }
+    ]
+  },
+  Image: {
+    name: 'Image Clipart 🖼️',
+    props: [
+      { key: 'imageUrl', label: 'Image URL', placeholder: 'e.g. https://...', default: '' },
+      { key: 'width', label: 'Display Width', placeholder: 'e.g. 200', default: '200' }
+    ]
   }
 };
 
+const parseImagePoolString = (str) => {
+  if (!str) return [];
+  return str.split(',').map(s => {
+    const parts = s.split('::');
+    if (parts.length >= 2) {
+      return { label: parts[0].trim(), url: parts.slice(1).join('::').trim() };
+    }
+    return { label: '', url: s.trim() };
+  }).filter(e => e.url || e.label);
+};
+
+const stringifyImagePoolArray = (arr) => {
+  return arr.map(e => e.label ? `${e.label}::${e.url}` : e.url).join(', ');
+};
+
+const LatexToolbar = ({ activeField, theme = 'blue' }) => {
+  const insertLatex = (type) => {
+    if (!activeField || !activeField.element) return;
+    const textarea = activeField.element;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value || '';
+    const selectedText = value.substring(start, end);
+
+    let textToInsert = '';
+    let selectionOffsetStart = 0;
+    let selectionOffsetEnd = 0;
+
+    switch (type) {
+      case 'inline':
+        textToInsert = `\\(${selectedText || 'equation'}\\)`;
+        if (!selectedText) {
+          selectionOffsetStart = 2;
+          selectionOffsetEnd = 10;
+        }
+        break;
+      case 'block':
+        textToInsert = `\\[${selectedText || 'equation'}\\]`;
+        if (!selectedText) {
+          selectionOffsetStart = 2;
+          selectionOffsetEnd = 10;
+        }
+        break;
+      case 'frac':
+        textToInsert = `\\frac{${selectedText || 'a'}}{b}`;
+        if (!selectedText) {
+          selectionOffsetStart = 6;
+          selectionOffsetEnd = 7;
+        }
+        break;
+      case 'mixed_frac':
+        textToInsert = `3\\frac{${selectedText || '7'}}{11}`;
+        if (!selectedText) {
+          selectionOffsetStart = 8;
+          selectionOffsetEnd = 9;
+        }
+        break;
+      case 'parentheses':
+        textToInsert = `\\left(${selectedText || 'expression'}\\right)`;
+        if (!selectedText) {
+          selectionOffsetStart = 6;
+          selectionOffsetEnd = 16;
+        }
+        break;
+      case 'sqrt':
+        textToInsert = `\\sqrt{${selectedText || 'x'}}`;
+        if (!selectedText) {
+          selectionOffsetStart = 6;
+          selectionOffsetEnd = 7;
+        }
+        break;
+      case 'times':
+        textToInsert = '\\times';
+        break;
+      case 'div':
+        textToInsert = '\\div';
+        break;
+      case 'pm':
+        textToInsert = '\\pm';
+        break;
+      case 'approx':
+        textToInsert = '\\approx';
+        break;
+      case 'le':
+        textToInsert = '\\le';
+        break;
+      case 'ge':
+        textToInsert = '\\ge';
+        break;
+      case 'pi':
+        textToInsert = '\\pi';
+        break;
+      case 'degree':
+        textToInsert = '^{\\circ}';
+        break;
+      case 'angle':
+        textToInsert = '\\angle';
+        break;
+      default:
+        textToInsert = type;
+    }
+
+    const newValue = value.substring(0, start) + textToInsert + value.substring(end);
+    activeField.onChange(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      if (selectionOffsetStart > 0) {
+        textarea.setSelectionRange(start + selectionOffsetStart, start + selectionOffsetEnd);
+      } else {
+        const newCursorPos = start + textToInsert.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  const themeColors = {
+    purple: {
+      bg: '#faf5ff',
+      border: '#e9d5ff',
+      btnBg: '#f3e8ff',
+      btnText: '#7e22ce',
+      btnHover: '#e9d5ff',
+    },
+    blue: {
+      bg: '#eff6ff',
+      border: '#bfdbfe',
+      btnBg: '#dbeafe',
+      btnText: '#1d4ed8',
+      btnHover: '#bfdbfe',
+    },
+    amber: {
+      bg: '#fffbeb',
+      border: '#fef3c7',
+      btnBg: '#fef3c7',
+      btnText: '#b45309',
+      btnHover: '#fde68a',
+    },
+    disabled: {
+      bg: '#f8fafc',
+      border: '#e2e8f0',
+      btnBg: '#f1f5f9',
+      btnText: '#94a3b8',
+      btnHover: '#f1f5f9',
+    }
+  };
+
+  const isEnabled = activeField !== null;
+  const colors = isEnabled ? themeColors[theme] || themeColors.blue : themeColors.disabled;
+
+  const buttons = [
+    { label: 'Inline \\( ... \\)', value: 'inline', title: 'Insert inline math equation' },
+    { label: 'Block \\[ ... \\]', value: 'block', title: 'Insert centered display block equation' },
+    { label: 'Fraction \\frac{a}{b}', value: 'frac', title: 'Insert fraction' },
+    { label: 'Mixed Fraction a\\frac{b}{c}', value: 'mixed_frac', title: 'Insert mixed fraction' },
+    { label: '( ... ) Parentheses', value: 'parentheses', title: 'Insert scalable parentheses \\left( ... \\right)' },
+    { label: 'Square Root \\sqrt{x}', value: 'sqrt', title: 'Insert square root' },
+    { label: '× (Multiply)', value: 'times', title: 'Insert multiplication symbol' },
+    { label: '÷ (Divide)', value: 'div', title: 'Insert division symbol' },
+    { label: '±', value: 'pm', title: 'Insert plus-minus symbol' },
+    { label: '≈', value: 'approx', title: 'Insert approximation symbol' },
+    { label: '≤', value: 'le', title: 'Insert less than or equal to' },
+    { label: '≥', value: 'ge', title: 'Insert greater than or equal to' },
+    { label: 'π (Pi)', value: 'pi', title: 'Insert Pi' },
+    { label: '° (Degree)', value: 'degree', title: 'Insert degree symbol' },
+    { label: '∠ (Angle)', value: 'angle', title: 'Insert angle symbol' },
+  ];
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      flexWrap: 'wrap',
+      background: colors.bg,
+      border: `1.5px solid ${colors.border}`,
+      padding: '10px 14px',
+      borderRadius: '12px',
+      marginBottom: '16px',
+      boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
+      transition: 'all 0.2s ease',
+      position: 'sticky',
+      top: '0',
+      zIndex: 10
+    }}>
+      <span style={{ fontSize: '0.78rem', fontWeight: '900', color: colors.btnText, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {isEnabled ? `∑ LaTeX INSERT (Editing: ${activeField.label}):` : '∑ LaTeX INSERT (Click any field below to start):'}
+      </span>
+      {buttons.map((btn, idx) => (
+        <button
+          key={idx}
+          type="button"
+          disabled={!isEnabled}
+          onMouseDown={(e) => {
+            // Prevent input blur
+            e.preventDefault();
+          }}
+          onClick={() => insertLatex(btn.value)}
+          title={btn.title}
+          style={{
+            background: colors.btnBg,
+            color: colors.btnText,
+            border: 'none',
+            borderRadius: '6px',
+            padding: '4px 8px',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            cursor: isEnabled ? 'pointer' : 'not-allowed',
+            transition: 'all 0.15s ease',
+            outline: 'none',
+            opacity: isEnabled ? 1 : 0.6
+          }}
+          onMouseOver={(e) => {
+            if (isEnabled) e.currentTarget.style.filter = 'brightness(0.93)';
+          }}
+          onMouseOut={(e) => {
+            if (isEnabled) e.currentTarget.style.filter = 'none';
+          }}
+        >
+          {btn.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 export default function TemplateMasterclass() {
+  // Refs for textarea inserts
+  const aiPromptRef = useRef(null);
+  const blueprintRef = useRef(null);
+  const solutionRef = useRef(null);
+
+  // Active focused field for LaTeX insertion toolbar
+  const [activeField, setActiveField] = useState(null);
+
   // Main inputs
   const [blueprint, setBlueprint] = useState(EXAMPLES[0].blueprint);
   const [aiPrompt, setAiPrompt] = useState('');
@@ -215,6 +552,9 @@ export default function TemplateMasterclass() {
   // Visual component configuration states
   const [visualComponent, setVisualComponent] = useState(EXAMPLES[0].visualComponent || 'none');
   const [visualProps, setVisualProps] = useState(EXAMPLES[0].visualProps || {});
+  const [showImagePoolMap, setShowImagePoolMap] = useState({});
+  const [lastUsedImageUrl, setLastUsedImageUrl] = useState('');
+  const [visualPosition, setVisualPosition] = useState('bottom');
 
   // Meta configurations for Publishing
   const [title, setTitle] = useState(EXAMPLES[0].title);
@@ -422,15 +762,19 @@ export default function TemplateMasterclass() {
           }
           
           if (canEvaluate) {
+            let exprToEval = substitutedExpr.trim();
+            if (exprToEval.startsWith('=')) {
+              exprToEval = exprToEval.substring(1).trim();
+            }
             try {
-              let evaluated = Function('return (' + substitutedExpr + ')')();
+              let evaluated = Function('return (' + exprToEval + ')')();
               if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
                 evaluated = Math.round(evaluated * 100) / 100;
               }
               resolved[k] = evaluated;
               changed = true;
             } catch {
-              const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
+              const sanitized = exprToEval.replace(/[^0-9+\-*/().\s%]/g, '');
               try {
                 let evaluated = Function('return (' + sanitized + ')')();
                 if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
@@ -483,6 +827,13 @@ export default function TemplateMasterclass() {
         } catch {
           resolved[exprName] = `[Math Error: ${expr}]`;
         }
+      }
+    }
+
+    // Clean up any remaining {isFormula, formula} objects before setting state to avoid React render crashes
+    for (const [k, val] of Object.entries(resolved)) {
+      if (val && typeof val === 'object' && val.isFormula) {
+        resolved[k] = val.formula;
       }
     }
 
@@ -544,6 +895,70 @@ export default function TemplateMasterclass() {
     return result;
   };
 
+  // Helper to parse mixed plain text and LaTeX math formulas (e.g. \(...\) or \[...\])
+  const renderMathText = (text) => {
+    if (!text) return '';
+    
+    // Split text by block math \[...\], inline math \(...\), or dollar math $...$
+    const regex = /(\\\[[\s\S]*?\\\]|\\\(.*?\\\)|\\\$[^$]*?\\\$|\$[^\$]+\$)/g;
+    const parts = String(text).split(regex);
+    
+    return parts.map((part, index) => {
+      // Check block: \[...\]
+      if (part.startsWith('\\[') && part.endsWith('\\]')) {
+        const math = part.slice(2, -2);
+        try {
+          const html = katex.renderToString(math, { displayMode: true, throwOnError: false });
+          return <div key={index} dangerouslySetInnerHTML={{ __html: html }} style={{ margin: '12px 0' }} />;
+        } catch (e) {
+          return <span key={index} style={{ color: 'red' }}>{part}</span>;
+        }
+      }
+      // Check inline: \(...\)
+      if (part.startsWith('\\(') && part.endsWith('\\)')) {
+        const math = part.slice(2, -2);
+        try {
+          const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
+          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} style={{ verticalAlign: 'middle' }} />;
+        } catch (e) {
+          return <span key={index} style={{ color: 'red' }}>{part}</span>;
+        }
+      }
+      // Check dollar inline: $...$
+      if ((part.startsWith('$') && part.endsWith('$')) || (part.startsWith('\\$') && part.endsWith('\\$'))) {
+        const math = part.startsWith('\\$') ? part.slice(2, -2) : part.slice(1, -1);
+        try {
+          const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
+          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} style={{ verticalAlign: 'middle' }} />;
+        } catch (e) {
+          return <span key={index} style={{ color: 'red' }}>{part}</span>;
+        }
+      }
+      
+      // Fallback: if it looks like a raw LaTeX command without wrappers, render it as math
+      if (/^\\[a-zA-Z]+/.test(part.trim())) {
+        try {
+          const html = katex.renderToString(part, { displayMode: false, throwOnError: false });
+          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} style={{ verticalAlign: 'middle' }} />;
+        } catch (e) {
+          // Fallback to normal text
+        }
+      }
+
+      // Plain text with line breaks preserved
+      return (
+        <span key={index}>
+          {part.split('\n').map((line, lineIdx, lines) => (
+            <React.Fragment key={lineIdx}>
+              {line}
+              {lineIdx < lines.length - 1 && <br />}
+            </React.Fragment>
+          ))}
+        </span>
+      );
+    });
+  };
+
   // 3b. Helper to render text with styled input blanks for live preview
   const renderEvaluatedText = (tplText) => {
     if (!tplText) return null;
@@ -583,7 +998,7 @@ export default function TemplateMasterclass() {
           </span>
         );
       }
-      return <span key={index}>{part}</span>;
+      return <span key={index}>{renderMathText(part)}</span>;
     });
   };
 
@@ -601,19 +1016,66 @@ export default function TemplateMasterclass() {
         const rawVal = visualProps[key];
         if (rawVal === undefined || rawVal === null || rawVal === '') return;
         const strVal = String(rawVal).trim();
-        // If it references a resolved variable
-        if (resolvedValues[strVal] !== undefined) {
-          const num = Number(resolvedValues[strVal]);
-          resolvedProps[key] = Number.isFinite(num) ? num : resolvedValues[strVal];
+        // Resolve variable names embedded in the prop string
+        let resolvedStr = strVal;
+        let hasReplacements = false;
+        const sortedKeys = Object.keys(resolvedValues || {}).sort((a, b) => b.length - a.length);
+
+        sortedKeys.forEach(key => {
+          const regex = new RegExp(`\\b${key}\\b`, 'g');
+          if (regex.test(resolvedStr)) {
+            resolvedStr = resolvedStr.replace(regex, resolvedValues[key]);
+            hasReplacements = true;
+          }
+        });
+
+        if (hasReplacements) {
+          const num = Number(resolvedStr);
+          resolvedProps[key] = Number.isFinite(num) ? num : resolvedStr;
         } else {
           const num = Number(strVal);
           resolvedProps[key] = Number.isFinite(num) ? num : strVal;
+        }
+
+        // Fix preview of UI when using image pools (randomizer): extract the first URL to show in preview
+        if (key === 'itemType' || key === 'imageUrl') {
+          const valToParse = resolvedProps[key] !== undefined ? resolvedProps[key] : (hasReplacements ? resolvedStr : strVal);
+          const pool = parseImagePoolString(String(valToParse));
+          if (pool.length > 0) {
+            resolvedProps[key] = pool[0].url;
+          }
         }
       });
     }
 
     try {
       const result = builder(resolvedProps, () => Math.random());
+      
+      if (result && result.type === 'image') {
+        return (
+          <div style={{
+            marginTop: 16,
+            borderRadius: 16,
+            border: '2px solid rgba(16, 185, 129, 0.2)',
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              🎨 Live Visual Preview — Image Clipart
+            </div>
+            <img 
+              src={result.imageUrl} 
+              alt="Clipart Aid" 
+              style={{ maxWidth: '100%', height: 'auto', maxHeight: '240px', borderRadius: '8px', border: '1px solid #cbd5e1' }} 
+            />
+          </div>
+        );
+      }
+
       let svgContent = null;
       if (typeof result === 'string') {
         svgContent = result;
@@ -930,6 +1392,7 @@ export default function TemplateMasterclass() {
           visuals: [
             {
               component: visualComponent,
+              position: visualPosition,
               props: visualProps
             }
           ]
@@ -951,7 +1414,7 @@ export default function TemplateMasterclass() {
 
       setJsonText(JSON.stringify(compiledJson, null, 2));
     }
-  }, [blueprint, solution, placeholderValues, title, subject, topic, grade, customTopic, placeholders, targetCollection, jnvstSection, jnvstTopic, jnvstDifficulty, visualComponent, visualProps]);
+  }, [blueprint, solution, placeholderValues, title, subject, topic, grade, customTopic, placeholders, targetCollection, jnvstSection, jnvstTopic, jnvstDifficulty, visualComponent, visualProps, visualPosition]);
 
   // 5. Publish generated dynamic template to MongoDB
   const handlePublish = async () => {
@@ -1030,6 +1493,285 @@ export default function TemplateMasterclass() {
       setAiStatus({ success: false, message: 'Network error. Please try again.' });
     } finally {
       setIsGeneratingAi(false);
+    }
+  };
+
+  const handleParseWithoutAi = () => {
+    if (!aiPrompt.trim()) {
+      setAiStatus({ success: false, message: 'Please paste some text in the box first.' });
+      return;
+    }
+
+    try {
+      let text = aiPrompt.trim();
+      let cleanText = text;
+      let solutionText = "";
+
+      // If the user pastes a prompt containing "solution:" or "explanation:", split it
+      const solIndex = cleanText.toLowerCase().indexOf("solution:");
+      const expIndex = cleanText.toLowerCase().indexOf("explanation:");
+      const splitIndex = solIndex !== -1 ? solIndex : expIndex;
+
+      if (splitIndex !== -1) {
+        cleanText = text.substring(0, splitIndex).trim();
+        solutionText = text.substring(splitIndex).trim();
+      }
+
+      // 1b. Try to parse multiple choice options from the end of cleanText
+      const lines = cleanText.split('\n');
+      const optionLines = [];
+      const nonOptionLines = [];
+      const optionPattern = /^\s*([A-Da-d1-4])[\.\)\s-]\s*(.+)$/;
+
+      lines.forEach(line => {
+        const match = line.match(optionPattern);
+        if (match) {
+          optionLines.push({
+            letter: match[1].toUpperCase(),
+            content: match[2].trim()
+          });
+        } else {
+          if (optionLines.length === 0) {
+            nonOptionLines.push(line);
+          } else if (line.trim()) {
+            optionLines[optionLines.length - 1].content += ' ' + line.trim();
+          }
+        }
+      });
+
+      let extractedOptions = [];
+      if (optionLines.length >= 2) {
+        cleanText = nonOptionLines.join('\n').trim();
+        extractedOptions = optionLines.map((opt, i) => ({
+          label: opt.content,
+          isCorrect: i === 0 // default first to correct, user can change
+        }));
+      }
+
+      // 1. Identify numbers
+      const numberRegex = /\b\d+\b/g;
+      const numbers = [];
+      let match;
+      while ((match = numberRegex.exec(cleanText)) !== null) {
+        numbers.push({ value: match[0], index: match.index });
+      }
+
+      const uniqueNumbers = [...new Set(numbers.map(n => n.value))];
+
+      // 2. Identify common names
+      const commonNames = [
+        'Emma', 'Priya', 'Marcus', 'Jamal', 'Sofia', 'Aarav', 'Liam', 'Chloe', 
+        'John', 'Sarah', 'David', 'Nina', 'Kabir', 'Ria', 'Dev', 'Myra', 'Kian',
+        'Aanya', 'Vihaan', 'Aditya', 'Sai', 'Ananya', 'Rahul', 'Arjun', 'Diya',
+        'Anya', 'Sam', 'Dan', 'Ben', 'Leo', 'Max', 'Zoe', 'Mia', 'Eva', 'Ali'
+      ];
+
+      const words = cleanText.match(/[a-zA-Z]+/g) || [];
+      const detectedNames = [];
+
+      words.forEach(word => {
+        if (word.length < 2) return;
+        const isCommon = commonNames.some(cn => cn.toLowerCase() === word.toLowerCase());
+        const isCapitalized = /^[A-Z][a-z]+$/.test(word);
+
+        if (isCommon) {
+          if (!detectedNames.includes(word)) {
+            detectedNames.push(word);
+          }
+        } else if (isCapitalized) {
+          const index = cleanText.indexOf(word);
+          if (index > 0) {
+            const precedingText = cleanText.substring(0, index).trim();
+            const lastChar = precedingText[precedingText.length - 1];
+            const isStartOfSentence = !lastChar || ['.', '!', '?'].includes(lastChar);
+            if (!isStartOfSentence && !detectedNames.includes(word)) {
+              detectedNames.push(word);
+            }
+          }
+        }
+      });
+
+      detectedNames.sort((a, b) => b.length - a.length);
+
+      // 3. Identify common nouns / items
+      const commonItems = [
+        'apples', 'apple', 'bananas', 'banana', 'strawberries', 'strawberry',
+        'chocolates', 'chocolate', 'cookies', 'cookie', 'candies', 'candy',
+        'balloons', 'balloon', 'toys', 'toy', 'pencils', 'pencil', 'books', 'book',
+        'pens', 'pen', 'marbles', 'marble', 'sweets', 'sweet', 'pears', 'pear',
+        'oranges', 'orange', 'stickers', 'sticker', 'stamps', 'stamp', 'cards', 'card',
+        'points', 'point'
+      ];
+
+      const detectedItems = [];
+      words.forEach(word => {
+        const wordLower = word.toLowerCase();
+        if (commonItems.includes(wordLower)) {
+          if (!detectedItems.includes(wordLower)) {
+            detectedItems.push(wordLower);
+          }
+        }
+      });
+      detectedItems.sort((a, b) => b.length - a.length);
+
+      // Group singular/plural forms of the same word (e.g. points & point)
+      const itemGroups = [];
+      detectedItems.forEach(item => {
+        let parentGroup = itemGroups.find(g => 
+          g.includes(item) || 
+          g.some(member => member === item + 's' || item === member + 's' || member === item + 'es' || item === member + 'es')
+        );
+        if (parentGroup) {
+          if (!parentGroup.includes(item)) parentGroup.push(item);
+        } else {
+          itemGroups.push([item]);
+        }
+      });
+
+      // Replacement mapping
+      let blueprintResult = cleanText;
+      let solutionResult = solutionText || "";
+      const newPlaceholders = {};
+
+      // Replace names
+      detectedNames.forEach((name, idx) => {
+        const placeholderKey = idx === 0 ? 'student' : idx === 1 ? 'friend' : `person${idx + 1}`;
+        const escapedName = name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedName}\\b`, 'g');
+        
+        blueprintResult = blueprintResult.replace(regex, `{{${placeholderKey}}}`);
+        if (solutionResult) {
+          solutionResult = solutionResult.replace(regex, `{{${placeholderKey}}}`);
+        }
+        if (extractedOptions.length > 0) {
+          extractedOptions = extractedOptions.map(o => ({
+            ...o,
+            label: o.label.replace(regex, `{{${placeholderKey}}}`)
+          }));
+        }
+
+        if (placeholderKey === 'student') {
+          newPlaceholders[placeholderKey] = `${name}, Sofia, Marcus, Jamal`;
+        } else if (placeholderKey === 'friend') {
+          newPlaceholders[placeholderKey] = `${name}, Aarav, Liam, Chloe`;
+        } else {
+          newPlaceholders[placeholderKey] = `${name}, Dev, Priya, Nina`;
+        }
+      });
+
+      // Replace items
+      itemGroups.forEach((group, idx) => {
+        const placeholderKey = idx === 0 ? 'item' : `item${idx + 1}`;
+        group.sort((a, b) => b.length - a.length);
+        group.forEach(item => {
+          const escapedItem = item.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex = new RegExp(`\\b${escapedItem}\\b`, 'ig');
+
+          blueprintResult = blueprintResult.replace(regex, `{{${placeholderKey}}}`);
+          if (solutionResult) {
+            solutionResult = solutionResult.replace(regex, `{{${placeholderKey}}}`);
+          }
+          if (extractedOptions.length > 0) {
+            extractedOptions = extractedOptions.map(o => ({
+              ...o,
+              label: o.label.replace(regex, `{{${placeholderKey}}}`)
+            }));
+          }
+        });
+
+        const primaryWord = group[0];
+        const isPlural = primaryWord.endsWith('s');
+        if (isPlural) {
+          newPlaceholders[placeholderKey] = `${primaryWord}, bananas, cookies, balloons`;
+        } else {
+          newPlaceholders[placeholderKey] = `${primaryWord}, banana, cookie, balloon`;
+        }
+      });
+
+      // Replace numbers
+      uniqueNumbers.forEach((num, idx) => {
+        const placeholderKey = `count${idx + 1}`;
+        const regex = new RegExp(`\\b${num}\\b`, 'g');
+        
+        blueprintResult = blueprintResult.replace(regex, `{{${placeholderKey}}}`);
+        if (solutionResult) {
+          solutionResult = solutionResult.replace(regex, `{{${placeholderKey}}}`);
+        }
+        if (extractedOptions.length > 0) {
+          extractedOptions = extractedOptions.map(o => ({
+            ...o,
+            label: o.label.replace(regex, `{{${placeholderKey}}}`)
+          }));
+        }
+
+        const val = parseInt(num, 10);
+        if (!isNaN(val)) {
+          if (val > 1) {
+            newPlaceholders[placeholderKey] = `${Math.max(1, val - 4)}-${val + 6}`;
+          } else {
+            newPlaceholders[placeholderKey] = `1-10`;
+          }
+        } else {
+          newPlaceholders[placeholderKey] = num;
+        }
+      });
+
+      // If solution was not provided, auto-generate it
+      if (!solutionResult) {
+        const textLower = cleanText.toLowerCase();
+        let isSubtraction = textLower.includes('left') || textLower.includes('popped') || textLower.includes('lost') || textLower.includes('gave') || textLower.includes('remain') || textLower.includes('minus') || textLower.includes('subtract');
+        let isDivision = textLower.includes('share') || textLower.includes('divide') || textLower.includes('split') || textLower.includes('each');
+        let isMultiplication = textLower.includes('times') || textLower.includes('each has') || textLower.includes('groups of') || textLower.includes('multiply');
+
+        const itemPlaceholder = detectedItems.length > 0 ? '{{item}}' : 'items';
+        const friendPlaceholder = detectedNames.length > 1 ? '{{friend}}' : 'friend';
+
+        if (isSubtraction) {
+          solutionResult = `Step 1: Start with {{count1}} ${itemPlaceholder}.\nStep 2: Subtract {{count2}} ${itemPlaceholder}.\nStep 3: {{count1}} − {{count2}} = {= count1 - count2 =} ${itemPlaceholder} left!`;
+        } else if (isDivision) {
+          solutionResult = `Step 1: Start with {{count1}} ${itemPlaceholder}.\nStep 2: Split them into {{count2}} equal groups.\nStep 3: {{count1}} ÷ {{count2}} = {= count1 / count2 =} ${itemPlaceholder} each!`;
+        } else if (isMultiplication) {
+          solutionResult = `Step 1: Start with {{count1}} groups of {{count2}} ${itemPlaceholder}.\nStep 2: Multiply: {{count1}} × {{count2}} = {= count1 * count2 =} ${itemPlaceholder} in total!`;
+        } else {
+          solutionResult = `Step 1: Start with {{count1}} ${itemPlaceholder}.\nStep 2: Add {{count2}} more ${itemPlaceholder} from ${friendPlaceholder}.\nStep 3: Add them together: {{count1}} + {{count2}} = {= count1 + count2 =} ${itemPlaceholder}!`;
+        }
+      } else {
+        const mathEqRegex = /\{\{(count\d+)\}\}\s*([\+\-\*\/÷×−])\s*\{\{(count\d+)\}\}\s*=\s*([^\s\n\.,!]+)/g;
+        solutionResult = solutionResult.replace(mathEqRegex, (match, c1, op, c2, res) => {
+          let jsOp = op;
+          if (op === '÷') jsOp = '/';
+          if (op === '×') jsOp = '*';
+          if (op === '−') jsOp = '-';
+          return `{{${c1}}} ${op} {{${c2}}} = {= ${c1} ${jsOp} ${c2} =}`;
+        });
+      }
+
+      setBlueprint(blueprintResult);
+      setSolution(solutionResult);
+      setPlaceholderValues(newPlaceholders);
+      setPlaceholders(Object.keys(newPlaceholders));
+      
+      if (extractedOptions.length > 0) {
+        while (extractedOptions.length < 4) {
+          extractedOptions.push({
+            label: `Option ${extractedOptions.length + 1}`,
+            isCorrect: false
+          });
+        }
+        setOptionsState(extractedOptions);
+      } else {
+        setOptionsState([
+          { label: '{{Result}}', isCorrect: true },
+          { label: '{{Result}} + 1', isCorrect: false },
+          { label: '{{Result}} - 1', isCorrect: false },
+          { label: '{{Result}} + 2', isCorrect: false }
+        ]);
+      }
+
+      setAiStatus({ success: true, message: 'Parsed instantly locally without AI!' });
+    } catch (e) {
+      console.error(e);
+      setAiStatus({ success: false, message: 'Failed parsing: ' + e.message });
     }
   };
 
@@ -1525,6 +2267,7 @@ export default function TemplateMasterclass() {
       <div className="mc-grid">
         {/* Left column: Editor */}
         <div className="mc-editor-col">
+          <LatexToolbar activeField={activeField} theme="blue" />
 
           {/* AI Template Generator Card */}
           <div className="mc-card mc-card-purple" style={{ marginBottom: '24px' }}>
@@ -1536,10 +2279,16 @@ export default function TemplateMasterclass() {
               Enter a raw math problem and solution example below. The AI will convert it into a dynamic, parameterized template.
             </p>
             <textarea
+              ref={aiPromptRef}
               className="mc-textarea"
               style={{ minHeight: '90px', border: '1px solid #d8b4fe' }}
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
+              onFocus={(e) => setActiveField({
+                label: 'AI Prompt',
+                element: e.target,
+                onChange: setAiPrompt
+              })}
               placeholder="e.g., Sofia has 9 apples. They get 8 more apples from their friend Aarav. How many apples does Sofia have now? Solution: Step 1: Start with 9 apples. Step 2: Add 8 more apples from Aarav. Step 3: Add them together: 9 + 8 = 17 apples!"
             />
             <div style={{ marginTop: '12px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1555,6 +2304,19 @@ export default function TemplateMasterclass() {
                 disabled={isGeneratingAi}
               >
                 {isGeneratingAi ? '✨ Constructing Blueprint...' : '🪄 Generate Template blueprint'}
+              </button>
+              <button
+                className="mc-publish-btn"
+                style={{ 
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
+                  boxShadow: '0 4px 12px rgba(59,130,246,0.25)',
+                  padding: '10px 20px',
+                  fontSize: '0.9rem'
+                }}
+                onClick={handleParseWithoutAi}
+                disabled={isGeneratingAi}
+              >
+                ⚡ Parse Instantly (No AI)
               </button>
               {aiStatus && (
                 <span style={{ 
@@ -1602,9 +2364,15 @@ export default function TemplateMasterclass() {
             </div>
 
             <textarea
+              ref={blueprintRef}
               className="mc-textarea"
               value={blueprint}
               onChange={(e) => setBlueprint(e.target.value)}
+              onFocus={(e) => setActiveField({
+                label: 'Blueprint',
+                element: e.target,
+                onChange: setBlueprint
+              })}
               placeholder="e.g. {{student}} has {{apples}} apples..."
             />
 
@@ -1617,9 +2385,15 @@ export default function TemplateMasterclass() {
                 Explain the steps simply. Use <code>{"{= math =}"}</code> to automatically calculate the answer! (e.g., <code>{"{= apples + more_apples =}"}</code>)
               </p>
               <textarea
+                ref={solutionRef}
                 className="mc-textarea"
                 value={solution}
                 onChange={(e) => setSolution(e.target.value)}
+                onFocus={(e) => setActiveField({
+                  label: 'Solution Steps',
+                  element: e.target,
+                  onChange: setSolution
+                })}
                 placeholder="e.g. Step 1: Draw {{apples}}..."
               />
             </div>
@@ -1657,6 +2431,13 @@ export default function TemplateMasterclass() {
                           const newVal = e.target.value;
                           setOptionsState(prev => prev.map((o, idx) => idx === i ? { ...o, label: newVal } : o));
                         }}
+                        onFocus={(e) => setActiveField({
+                          label: `Option ${i + 1}`,
+                          element: e.target,
+                          onChange: (val) => {
+                            setOptionsState(prev => prev.map((o, idx) => idx === i ? { ...o, label: val } : o));
+                          }
+                        })}
                         placeholder={i === 0 ? 'e.g. {{Result}}' : `e.g. {{Result}} - 10`}
                       />
                     </div>
@@ -1689,6 +2470,13 @@ export default function TemplateMasterclass() {
                           const val = e.target.value;
                           setBlankAnswers(prev => ({ ...prev, [blankId]: val }));
                         }}
+                        onFocus={(e) => setActiveField({
+                          label: `Blank (${blankId})`,
+                          element: e.target,
+                          onChange: (val) => {
+                            setBlankAnswers(prev => ({ ...prev, [blankId]: val }));
+                          }
+                        })}
                         placeholder="e.g. {{Result}}"
                       />
                     </div>
@@ -1732,6 +2520,13 @@ export default function TemplateMasterclass() {
                           [key]: val
                         }));
                       }}
+                      onFocus={(e) => setActiveField({
+                        label: `Placeholder [${key}]`,
+                        element: e.target,
+                        onChange: (val) => {
+                          setPlaceholderValues(prev => ({ ...prev, [key]: val }));
+                        }
+                      })}
                       placeholder="e.g. 5-10 or Alice, Bob"
                     />
                   </div>
@@ -1759,14 +2554,50 @@ export default function TemplateMasterclass() {
                 onChange={(e) => {
                   const comp = e.target.value;
                   setVisualComponent(comp);
-                  // Reset to defaults for the newly selected component
-                  const defaults = {};
-                  if (VISUAL_COMPONENTS_CONFIG[comp]) {
-                    VISUAL_COMPONENTS_CONFIG[comp].props.forEach(p => {
-                      defaults[p.key] = p.default || '';
-                    });
+                  
+                  // Check if there's a pre-configured sample template for this component
+                  const sample = COMPONENT_SAMPLE_TEMPLATES[comp];
+                  if (sample) {
+                    if (sample.blueprint !== undefined) setBlueprint(sample.blueprint);
+                    if (sample.solution !== undefined) setSolution(sample.solution);
+                    if (sample.title !== undefined) setTitle(sample.title);
+                    if (sample.subject !== undefined) setSubject(sample.subject);
+                    if (sample.topic !== undefined) setTopic(sample.topic);
+                    if (sample.grade !== undefined) setGrade(sample.grade);
+                    if (sample.placeholders !== undefined) {
+                      setPlaceholderValues(sample.placeholders);
+                      setPlaceholders(Object.keys(sample.placeholders));
+                    }
+                    if (sample.options !== undefined) {
+                      setOptionsState(sample.options);
+                    }
                   }
-                  setVisualProps(defaults);
+
+                  let targetProps = {};
+                  if (sample && sample.visualProps) {
+                    targetProps = { ...sample.visualProps };
+                  } else {
+                    if (VISUAL_COMPONENTS_CONFIG[comp]) {
+                      VISUAL_COMPONENTS_CONFIG[comp].props.forEach(p => {
+                        targetProps[p.key] = p.default || '';
+                      });
+                    }
+                  }
+
+                  // Override image properties with lastUsedImageUrl to prevent auto-clearing
+                  if (lastUsedImageUrl) {
+                    if (targetProps.hasOwnProperty('itemType')) {
+                      const currentVal = String(targetProps.itemType || '').trim();
+                      if (!currentVal || currentVal.startsWith('http') || currentVal.includes('/')) {
+                        targetProps.itemType = lastUsedImageUrl;
+                      }
+                    }
+                    if (targetProps.hasOwnProperty('imageUrl')) {
+                      targetProps.imageUrl = lastUsedImageUrl;
+                    }
+                  }
+
+                  setVisualProps(targetProps);
                 }}
                 style={{ fontSize: '1rem', fontWeight: 700, borderRadius: 12, border: '2px solid #ddd6fe', padding: '10px 14px', outline: 'none', cursor: 'pointer' }}
               >
@@ -1776,6 +2607,23 @@ export default function TemplateMasterclass() {
               </select>
             </div>
 
+            {/* Layout Position Selector */}
+            {visualComponent !== 'none' && (
+              <div style={{ marginBottom: 16 }}>
+                <label className="mc-dev-label" style={{ marginBottom: 8, display: 'block' }}>Visual Layout Position</label>
+                <select
+                  className="mc-input"
+                  value={visualPosition}
+                  onChange={(e) => setVisualPosition(e.target.value)}
+                  style={{ fontSize: '1rem', fontWeight: 700, borderRadius: 12, border: '2px solid #ddd6fe', padding: '10px 14px', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="bottom">Below Question Text (Bottom)</option>
+                  <option value="middle">Between Sentences/Paragraphs (Middle)</option>
+                  <option value="top">Above Question Text (Top)</option>
+                </select>
+              </div>
+            )}
+
             {/* Dynamic prop inputs for the selected component */}
             {visualComponent !== 'none' && VISUAL_COMPONENTS_CONFIG[visualComponent] && (
               <div>
@@ -1783,19 +2631,146 @@ export default function TemplateMasterclass() {
                   🎯 <strong>Tip:</strong> Use variable names like <code>A</code>, <code>count1</code> or <code>Result</code> to make props dynamic!
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
-                  {VISUAL_COMPONENTS_CONFIG[visualComponent].props.map(({ key, label, placeholder }) => (
-                    <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#6b21a8' }}>{label}</label>
-                      <input
-                        type="text"
-                        className="mc-input"
-                        value={visualProps[key] || ''}
-                        onChange={(e) => setVisualProps(prev => ({ ...prev, [key]: e.target.value }))}
-                        placeholder={placeholder}
-                        style={{ borderColor: '#ddd6fe' }}
-                      />
-                    </div>
-                  ))}
+                  {VISUAL_COMPONENTS_CONFIG[visualComponent].props.map(({ key, label, placeholder }) => {
+                    const isImageProp = key === 'itemType' || key === 'imageUrl';
+                    const valStr = String(visualProps[key] || '');
+                    const hasPool = valStr.includes('::') || valStr.includes(',');
+                    const isEditingPool = isImageProp && (hasPool || showImagePoolMap[key]);
+
+                    if (isEditingPool) {
+                      const pool = parseImagePoolString(valStr);
+                      if (pool.length === 0) {
+                        pool.push({ label: 'item1', url: '' });
+                      }
+                      return (
+                        <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: 'span 2', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 12, padding: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#6b21a8' }}>{label} (Randomized Pool)</label>
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setShowImagePoolMap(prev => ({ ...prev, [key]: false }));
+                                const pool = parseImagePoolString(valStr);
+                                setVisualProps(prev => ({ ...prev, [key]: pool[0]?.url || '' }));
+                              }}
+                              style={{ fontSize: '0.72rem', background: 'none', border: 'none', color: '#ef4444', textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}
+                            >
+                              Switch to Single URL / Variable Name
+                            </button>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {pool.map((entry, idx) => (
+                              <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Label (e.g. apples)"
+                                  value={entry.label}
+                                  onChange={(e) => {
+                                    const updated = [...pool];
+                                    updated[idx].label = e.target.value;
+                                    setVisualProps(prev => ({ ...prev, [key]: stringifyImagePoolArray(updated) }));
+                                  }}
+                                  className="mc-input"
+                                  style={{ width: '150px', fontSize: '0.85rem', borderColor: '#ddd6fe' }}
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Image URL (https://...)"
+                                  value={entry.url}
+                                  onChange={(e) => {
+                                    const val = e.target.value.trim();
+                                    if (val.startsWith('http') || val.includes('.') || val.includes('/')) {
+                                      setLastUsedImageUrl(val);
+                                    }
+                                    const updated = [...pool];
+                                    updated[idx].url = e.target.value;
+                                    setVisualProps(prev => ({ ...prev, [key]: stringifyImagePoolArray(updated) }));
+                                  }}
+                                  className="mc-input"
+                                  style={{ flex: 1, fontSize: '0.85rem', borderColor: '#ddd6fe' }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = pool.filter((_, i) => i !== idx);
+                                    setVisualProps(prev => ({ ...prev, [key]: stringifyImagePoolArray(updated) }));
+                                  }}
+                                  style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontWeight: 800 }}
+                                  title="Remove image"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...pool, { label: `item${pool.length + 1}`, url: '' }];
+                              setVisualProps(prev => ({ ...prev, [key]: stringifyImagePoolArray(updated) }));
+                            }}
+                            style={{ 
+                              marginTop: 4,
+                              padding: '6px 12px',
+                              background: '#ffffff',
+                              border: '1px dashed #7c3aed',
+                              color: '#7c3aed',
+                              borderRadius: 8,
+                              fontSize: '0.8rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              alignSelf: 'flex-start'
+                            }}
+                          >
+                            ➕ Add Another Image URL
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#6b21a8' }}>{label}</label>
+                          {isImageProp && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowImagePoolMap(prev => ({ ...prev, [key]: true }));
+                                setVisualProps(prev => ({ ...prev, [key]: valStr ? `item1::${valStr}` : 'item1::' }));
+                              }}
+                              style={{ fontSize: '0.72rem', background: 'none', border: 'none', color: '#7c3aed', textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}
+                            >
+                              Randomize Pool
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          className="mc-input"
+                          value={visualProps[key] || ''}
+                          onChange={(e) => {
+                            const val = e.target.value.trim();
+                            if (val.startsWith('http') || val.includes('.') || val.includes('/')) {
+                              setLastUsedImageUrl(val);
+                            }
+                            setVisualProps(prev => ({ ...prev, [key]: e.target.value }));
+                          }}
+                          onFocus={(e) => setActiveField({
+                            label: `Visual Prop [${label}]`,
+                            element: e.target,
+                            onChange: (val) => {
+                              setVisualProps(prev => ({ ...prev, [key]: val }));
+                            }
+                          })}
+                          placeholder={placeholder}
+                          style={{ borderColor: '#ddd6fe' }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2079,13 +3054,55 @@ export default function TemplateMasterclass() {
 
             {/* Simulated inner card */}
             <div className="mc-sim-box">
-              {/* Problem text */}
+              {/* Problem text & visual component rendered according to layout position */}
               <div className="mc-sim-problem">
-                {blueprint ? renderEvaluatedText(blueprint) : 'Provide blueprint content...'}
+                {(() => {
+                  if (!blueprint) return 'Provide blueprint content...';
+                  const visual = renderVisualPreview();
+                  const hasVisual = visual !== null;
+                  
+                  if (hasVisual && visualPosition === 'top') {
+                    return (
+                      <>
+                        <div style={{ marginBottom: 16 }}>{visual}</div>
+                        <div>{renderEvaluatedText(blueprint)}</div>
+                      </>
+                    );
+                  }
+                  
+                  if (hasVisual && visualPosition === 'middle') {
+                    const paragraphs = blueprint.split(/\n\n/);
+                    if (paragraphs.length >= 2) {
+                      return (
+                        <>
+                          <div>{renderEvaluatedText(paragraphs[0])}</div>
+                          <div style={{ margin: '16px 0' }}>{visual}</div>
+                          <div>{renderEvaluatedText(paragraphs.slice(1).join('\n\n'))}</div>
+                        </>
+                      );
+                    } else {
+                      const lines = blueprint.split(/\n/);
+                      if (lines.length >= 2) {
+                        return (
+                          <>
+                            <div>{renderEvaluatedText(lines[0])}</div>
+                            <div style={{ margin: '16px 0' }}>{visual}</div>
+                            <div>{renderEvaluatedText(lines.slice(1).join('\n'))}</div>
+                          </>
+                        );
+                      }
+                    }
+                  }
+                  
+                  // Default/bottom
+                  return (
+                    <>
+                      <div>{renderEvaluatedText(blueprint)}</div>
+                      {hasVisual && <div style={{ marginTop: 16 }}>{visual}</div>}
+                    </>
+                  );
+                })()}
               </div>
-
-              {/* Live SVG visual preview */}
-              {renderVisualPreview()}
 
               {/* Solution box */}
               {solution.trim() && (
@@ -2094,7 +3111,7 @@ export default function TemplateMasterclass() {
                     🎒 {targetCollection === 'templates' ? 'Step-by-Step JNVST Solution:' : `Step-by-Step ${grade ? (grade === 'lkg' || grade === 'ukg' ? grade.toUpperCase() : (grade === '1' ? '1st' : (grade === '2' ? '2nd' : (grade === '3' ? '3rd' : `${grade}th`)))) : '1st'} Grade Solution:`}
                   </div>
                   <div className="mc-sim-solution-steps">
-                    {evaluateText(solution)}
+                    {renderMathText(evaluateText(solution))}
                   </div>
                 </div>
               )}

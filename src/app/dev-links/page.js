@@ -31,6 +31,8 @@ export default function DevLinksPage() {
     '/blog-generator',
     '/svg-tools',
     '/question-bank',
+    '/admin/option-pooling-playground',
+    '/admin/vocabulary-pools',
   ];
 
   const otherDashboards = [
@@ -46,9 +48,9 @@ export default function DevLinksPage() {
   ];
 
   const docLinks = [
-    '/docs/dynamic-templates',
-    '/docs/option-pooling',
-    '/docs/question-guide',
+    { href: '/docs/option-pooling', label: 'Option Pooling Docs' },
+    { href: '/docs/dynamic-templates', label: 'Template Builder Docs' },
+    { href: '/docs/question-guide', label: 'Question Guide' },
   ];
 
   return (
@@ -109,12 +111,19 @@ export default function DevLinksPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mb-4 text-red-600">Exam Prep & Docs</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-red-600">Exam Prep &amp; Docs</h2>
           <ul className="space-y-2">
-            {[...examPrepLinks, ...docLinks].map((link) => (
+            {examPrepLinks.map((link) => (
               <li key={link}>
                 <Link href={link} className="text-gray-700 hover:text-red-500 hover:underline">
                   {link}
+                </Link>
+              </li>
+            ))}
+            {docLinks.map(({ href, label }) => (
+              <li key={href}>
+                <Link href={href} className="text-gray-700 hover:text-red-500 hover:underline">
+                  📄 {label}
                 </Link>
               </li>
             ))}

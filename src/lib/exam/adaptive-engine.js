@@ -43,7 +43,9 @@ export function selectNextQuestion(theta, topicMastery = {}, candidates = []) {
     const diffGap = Math.abs(q.difficulty - theta);
     const mastery = topicMastery[q.topic] ?? 0.5; // unknown = medium
     const weakBonus = (1 - mastery) * 0.15; // weak topics get priority
-    return { q, score: diffGap - weakBonus };
+    // Add small random jitter to shuffle candidates with identical/similar scores
+    const jitter = Math.random() * 0.05;
+    return { q, score: diffGap - weakBonus + jitter };
   });
 
   scored.sort((a, b) => a.score - b.score);

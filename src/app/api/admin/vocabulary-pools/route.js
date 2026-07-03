@@ -152,3 +152,31 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const poolId = searchParams.get('poolId');
+
+    if (!poolId) {
+      return NextResponse.json({ success: false, error: 'Missing poolId parameter' }, { status: 400 });
+    }
+
+    const db = await getMongoDb();
+    if (!db) {
+      return NextResponse.json({ success: false, error: 'Database connection failed' }, { status: 500 });
+    }
+
+    const collection = db.collection('vocabulary_pools');
+    const result = await collection.deleteOne({ poolId });
+    clearVocabularyPoolCache(poolId);
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Delete vocabulary pool error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
