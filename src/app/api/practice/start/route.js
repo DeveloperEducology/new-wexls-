@@ -116,6 +116,7 @@ async function generateFromTemplates({ examId, section, topic, templateId = null
     ...(templateIds ? {
       $or: [
         { id: { $in: templateIds } },
+        { _id: { $in: templateIds } },
         ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
       ]
     } : {})
