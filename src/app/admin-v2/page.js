@@ -907,12 +907,38 @@ export default function AdminV2Page() {
           return secObj ? (secObj.topics || []).map(topicName => ({ id: topicName, name: topicName, title: topicName })) : [];
         }
         case 'skill': {
-          return allTemplates.filter(t => {
+          const filtered = allTemplates.filter(t => {
             const matchesExam = !selectedExamId || t.examId === selectedExamId || t.exam === selectedExamId;
             const matchesSection = !selectedSectionId || t.section === selectedSectionId || t.subject === selectedSectionId;
             const matchesTopic = !selectedTopicId || t.topic === selectedTopicId;
             return matchesExam && matchesSection && matchesTopic;
           });
+
+          // Group by name
+          const grouped = [];
+          const nameMap = {};
+          filtered.forEach(t => {
+            const name = (t.name || t.title || '').trim();
+            if (!name) return;
+            if (!nameMap[name]) {
+              nameMap[name] = {
+                id: name, // use name as group key
+                name: name,
+                type: t.type || 'parameterized',
+                difficulty: t.difficulty || 0.5,
+                status: t.status || 'active',
+                templateIds: [],
+                rawTemplates: []
+              };
+              grouped.push(nameMap[name]);
+            }
+            const tid = t.id || String(t._id);
+            if (!nameMap[name].templateIds.includes(tid)) {
+              nameMap[name].templateIds.push(tid);
+            }
+            nameMap[name].rawTemplates.push(t);
+          });
+          return grouped;
         }
         case 'question': return examQuestions;
         default: return [];
