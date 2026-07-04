@@ -569,6 +569,57 @@ export default function TemplateMasterclass() {
   const [jnvstTopic, setJnvstTopic] = useState('simplification');
   const [jnvstDifficulty, setJnvstDifficulty] = useState(0.5);
 
+  const [exams, setExams] = useState([]);
+  const [selectedExamId, setSelectedExamId] = useState('jnvst');
+
+  // Fetch Exams list from DB
+  useEffect(() => {
+    async function fetchExams() {
+      try {
+        const res = await fetch('/api/exams');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.exams)) {
+          setExams(data.exams);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch exams catalog:', err);
+      }
+    }
+    fetchExams();
+  }, []);
+
+  // Sync section and topic selections when exam or section list changes
+  useEffect(() => {
+    if (exams.length === 0) return;
+    const examObj = exams.find(e => e.id === selectedExamId);
+    if (!examObj) return;
+
+    // Check if current jnvstSection is valid for the new examObj
+    const sections = examObj.sections || [];
+    const hasSection = sections.some(s => s.id === jnvstSection);
+    if (!hasSection && sections.length > 0) {
+      setJnvstSection(sections[0].id);
+    }
+  }, [selectedExamId, exams]);
+
+  useEffect(() => {
+    if (exams.length === 0) return;
+    const examObj = exams.find(e => e.id === selectedExamId);
+    if (!examObj) return;
+    const sections = examObj.sections || [];
+    const secObj = sections.find(s => s.id === jnvstSection);
+    if (!secObj) return;
+
+    // Check if current jnvstTopic is valid for the new secObj
+    const topics = secObj.topics || [];
+    const hasTopic = topics.includes(jnvstTopic);
+    if (!hasTopic && topics.length > 0) {
+      setJnvstTopic(topics[0]);
+    } else if (topics.length === 0) {
+      setJnvstTopic('custom');
+    }
+  }, [jnvstSection, selectedExamId, exams]);
+
   // Simulator / Shuffled active values
   const [resolvedValues, setResolvedValues] = useState({});
   const [shuffledCount, setShuffledCount] = useState(0);
@@ -1173,7 +1224,7 @@ export default function TemplateMasterclass() {
         _id: templateId,
         name: title || 'Custom JNVST Template',
         type: 'parameterized',
-        examId: 'jnvst',
+        examId: selectedExamId,
         section: jnvstSection,
         topic: activeJnvstTopic,
         difficulty: Number(jnvstDifficulty),
@@ -1414,7 +1465,7 @@ export default function TemplateMasterclass() {
 
       setJsonText(JSON.stringify(compiledJson, null, 2));
     }
-  }, [blueprint, solution, placeholderValues, title, subject, topic, grade, customTopic, placeholders, targetCollection, jnvstSection, jnvstTopic, jnvstDifficulty, visualComponent, visualProps, visualPosition]);
+  }, [blueprint, solution, placeholderValues, title, subject, topic, grade, customTopic, placeholders, targetCollection, selectedExamId, jnvstSection, jnvstTopic, jnvstDifficulty, visualComponent, visualProps, visualPosition]);
 
   // 5. Publish generated dynamic template to MongoDB
   const handlePublish = async () => {
@@ -2835,7 +2886,7 @@ export default function TemplateMasterclass() {
                         transition: 'all 0.15s'
                       }}
                     >
-                      🏆 Competitive Exam / JNVST (templates)
+                      🏆 Competitive Exam (templates)
                     </button>
                   </div>
                 </div>
@@ -2914,29 +2965,56 @@ export default function TemplateMasterclass() {
                   ) : (
                     <>
                       <div className="mc-dev-form-group">
-                        <label className="mc-dev-label">JNVST Section</label>
+                        <label className="mc-dev-label">Exam Category</label>
+                        <select
+                          className="mc-input"
+                          value={selectedExamId}
+                          onChange={e => setSelectedExamId(e.target.value)}
+                        >
+                          {exams.map(e => (
+                            <option key={e.id} value={e.id}>{e.name || e.id.toUpperCase()}</option>
+                          ))}
+                          {exams.length === 0 && <option value="jnvst">JNVST</option>}
+                        </select>
+                      </div>
+                      <div className="mc-dev-form-group">
+                        <label className="mc-dev-label">Section</label>
                         <select 
                           className="mc-input" 
                           value={jnvstSection} 
                           onChange={e => setJnvstSection(e.target.value)}
                         >
-                          <option value="arithmetic">arithmetic</option>
-                          <option value="mental-ability">mental-ability</option>
-                          <option value="language">language</option>
+                          {(() => {
+                            const examObj = exams.find(e => e.id === selectedExamId);
+                            const sections = examObj?.sections || [];
+                            return sections.map(s => (
+                              <option key={s.id} value={s.id}>{s.name || s.id}</option>
+                            ));
+                          })()}
+                          {(!exams.find(e => e.id === selectedExamId)?.sections?.length) && (
+                            <>
+                              <option value="arithmetic">arithmetic</option>
+                              <option value="mental-ability">mental-ability</option>
+                              <option value="language">language</option>
+                            </>
+                          )}
                         </select>
                       </div>
                       <div className="mc-dev-form-group">
-                        <label className="mc-dev-label">JNVST Topic</label>
+                        <label className="mc-dev-label">Topic</label>
                         <select 
                           className="mc-input" 
                           value={jnvstTopic} 
                           onChange={e => setJnvstTopic(e.target.value)}
                         >
-                          <option value="simplification">simplification</option>
-                          <option value="number-system">number-system</option>
-                          <option value="fraction">fraction</option>
-                          <option value="percentage">percentage</option>
-                          <option value="interest">interest</option>
+                          {(() => {
+                            const examObj = exams.find(e => e.id === selectedExamId);
+                            const secObj = examObj?.sections?.find(s => s.id === jnvstSection);
+                            const topics = secObj?.topics || [];
+                            return topics.map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ));
+                          })()}
                           <option value="custom">-- Custom Topic --</option>
                         </select>
                       </div>
