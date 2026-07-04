@@ -72,13 +72,26 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, tem
   const low = Math.max(0, theta - window);
   const high = Math.min(1, theta + window);
 
+  let templateFilter = null;
+  if (templateId) {
+    if (Array.isArray(templateId)) {
+      templateFilter = { $in: templateId };
+    } else if (typeof templateId === 'string') {
+      if (templateId.includes(',')) {
+        templateFilter = { $in: templateId.split(',').map(s => s.trim()) };
+      } else {
+        templateFilter = templateId;
+      }
+    }
+  }
+
   const filter = {
     examId,
     section,
     status: 'active',
     difficulty: { $gte: low, $lte: high },
     ...(topic ? { topic } : {}),
-    ...(templateId ? { templateId } : {}),
+    ...(templateFilter ? { templateId: templateFilter } : {}),
     ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
   };
 
@@ -91,7 +104,7 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, tem
       section,
       status: 'active',
       ...(topic ? { topic } : {}),
-      ...(templateId ? { templateId } : {}),
+      ...(templateFilter ? { templateId: templateFilter } : {}),
       ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
     };
     questions = await db.collection('questions').find(fallbackFilter).sort({ difficulty: 1 }).limit(limit).toArray();

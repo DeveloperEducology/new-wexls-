@@ -88,13 +88,21 @@ async function generateFromTemplates({ examId, section, topic, templateId = null
   const db = await getMongoDb();
   if (!db) return [];
 
-  let queryId = templateId;
+  let templateIds = null;
+  let objectIds = [];
   if (templateId) {
-    try {
-      const { ObjectId } = await import('mongodb');
-      queryId = new ObjectId(templateId);
-    } catch {
-      queryId = templateId;
+    if (typeof templateId === 'string' && templateId.includes(',')) {
+      templateIds = templateId.split(',').map(s => s.trim());
+    } else if (Array.isArray(templateId)) {
+      templateIds = templateId;
+    } else {
+      templateIds = [templateId];
+    }
+    const { ObjectId } = await import('mongodb');
+    for (const id of templateIds) {
+      try {
+        objectIds.push(new ObjectId(id));
+      } catch {}
     }
   }
 
@@ -105,7 +113,12 @@ async function generateFromTemplates({ examId, section, topic, templateId = null
     type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] },
     status: { $ne: 'inactive' },
     ...(topic ? { topic } : {}),
-    ...(templateId ? { $or: [{ _id: queryId }, { id: templateId }] } : {})
+    ...(templateIds ? {
+      $or: [
+        { id: { $in: templateIds } },
+        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
+      ]
+    } : {})
   };
 
   const templates = await db.collection('templates').find(filter).limit(10).toArray();
