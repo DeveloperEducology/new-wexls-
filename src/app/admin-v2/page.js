@@ -691,29 +691,52 @@ export default function AdminV2Page() {
             return;
           }
 
-          const payload = {
-            id: editingId || formData.id || undefined,
-            name: formData.title,
-            type: formData.engine || 'parameterized',
-            examId: selectedExamId,
-            section: selectedSectionId,
-            topic: selectedTopicId,
-            difficulty: Number(formData.difficulty) || 0.5,
-            status: formData.status || 'active'
-          };
-
-          const res = await fetch('/api/admin/templates', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          const data = await res.json();
-          if (data.success) {
-            handleCancelEdit();
-            fetchData();
-          } else {
-            setError(data.error || 'Failed to save skill.');
+          const templateIds = formData.id.split(',').map(s => s.trim()).filter(Boolean);
+          if (templateIds.length === 0) {
+            setError('Please provide at least one Template ID.');
+            setLoading(false);
+            return;
           }
+
+          // If editing, find removed template IDs and delete them
+          if (editingId) {
+            const oldGroup = currentList.find(g => g.name === editingId);
+            if (oldGroup) {
+              const removedIds = oldGroup.templateIds.filter(id => !templateIds.includes(id));
+              for (const removedId of removedIds) {
+                await fetch(`/api/admin/templates?id=${removedId}&exam=true`, { method: 'DELETE' });
+              }
+            }
+          }
+
+          // Save/update each template ID
+          for (const templateId of templateIds) {
+            const payload = {
+              id: templateId,
+              name: formData.title,
+              type: formData.engine || 'parameterized',
+              examId: selectedExamId,
+              section: selectedSectionId,
+              topic: selectedTopicId,
+              difficulty: Number(formData.difficulty) || 0.5,
+              status: formData.status || 'active'
+            };
+
+            const res = await fetch('/api/admin/templates', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!data.success) {
+              setError(data.error || `Failed to save template ID: ${templateId}`);
+              setLoading(false);
+              return;
+            }
+          }
+
+          handleCancelEdit();
+          fetchData();
         } else if (activeTab === 'question') {
           if (!selectedExamId || !selectedSectionId || !selectedTopicId) {
             setError('Please select Exam, Section, and Topic for the question first.');
@@ -830,14 +853,14 @@ export default function AdminV2Page() {
             fetchData();
           }
         } else if (activeTab === 'skill') {
-          const res = await fetch(`/api/admin/templates?id=${id}&exam=true`, { method: 'DELETE' });
-          const data = await res.json();
-          if (data.success) {
-            if (editingId === id) handleCancelEdit();
-            fetchData();
-          } else {
-            alert(`Delete failed: ${data.error}`);
+          const group = currentList.find(g => g.id === id || g.name === id);
+          if (group && group.templateIds) {
+            for (const tid of group.templateIds) {
+              await fetch(`/api/admin/templates?id=${tid}&exam=true`, { method: 'DELETE' });
+            }
           }
+          if (editingId === id) handleCancelEdit();
+          fetchData();
         } else if (activeTab === 'question') {
           const res = await fetch(`/api/admin/questions?id=${id}`, { method: 'DELETE' });
           const data = await res.json();
@@ -1956,7 +1979,13 @@ export default function AdminV2Page() {
                     return (
                       <tr key={rowId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.8rem', fontFamily: 'monospace', color: '#0f172a', fontWeight: 700 }}>
-                          {adminMode === 'exam' && activeTab === 'question' ? (
+                          {adminMode === 'exam' && activeTab === 'skill' ? (
+                            <>
+                              <span style={{ display: 'block', background: '#f0fdf4', color: '#15803d', padding: '2px 6px', borderRadius: '4px', textAlign: 'center', fontSize: '9.5px', fontWeight: 800 }}>
+                                📑 {item.templateIds?.length} {item.templateIds?.length === 1 ? 'Template' : 'Templates'}
+                              </span>
+                            </>
+                          ) : adminMode === 'exam' && activeTab === 'question' ? (
                             <>
                               <span style={{ display: 'block', background: '#eef2ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px', textAlign: 'center', fontSize: '9px', fontWeight: 800, marginBottom: '4px' }}>
                                 {item.examId?.toUpperCase()}
@@ -2026,16 +2055,23 @@ export default function AdminV2Page() {
                               {activeTab === 'skill' && (
                                 <>
                                   <div style={{ fontSize: '14.5px', fontWeight: 800 }}>⚡ {item.name || item.title}</div>
+                                  <div style={{ margin: '6px 0', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {item.templateIds?.map(tid => (
+                                      <span key={tid} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', borderRadius: '4px', padding: '2px 6px', fontSize: '10.5px', fontFamily: 'monospace' }}>
+                                        <code>{tid}</code>
+                                      </span>
+                                    ))}
+                                  </div>
                                   <div style={{ color: '#64748b', fontWeight: 500, fontSize: '11.5px' }}>
                                     Type: <code>{item.type}</code> | Diff: <code>{item.difficulty}</code> | Status: <span style={{ color: item.status === 'active' ? '#16a34a' : '#ef4444', fontWeight: 700 }}>{item.status || 'active'}</span>
                                   </div>
                                   <a 
-                                    href={`/exam-prep/${selectedExamId}/practice?templateId=${item.id || item._id}`}
+                                    href={`/exam-prep/${selectedExamId}/practice?templateId=${item.templateIds?.join(',')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ color: '#0891b2', textDecoration: 'underline', fontSize: '11px', display: 'inline-block', marginTop: '0.25rem' }}
+                                    style={{ color: '#0891b2', textDecoration: 'underline', fontSize: '11.5px', fontWeight: 'bold', display: 'inline-block', marginTop: '0.35rem' }}
                                   >
-                                    🔗 Practice Skill Template
+                                    🔗 Practice Combined Skill ({item.templateIds?.length} templates)
                                   </a>
                                 </>
                               )}
