@@ -99,11 +99,11 @@ export async function POST(req) {
       return NextResponse.json({ success: false, error: 'Template object is required' }, { status: 400 });
     }
 
-    // If it has a competitive examId, save to JNVST templates collection
-    if (tData.examId === 'jnvst' || tData.exam === 'jnvst') {
+    // If it has a competitive examId, save to templates collection
+    if (tData.examId || tData.exam) {
       const name = tData.name || tData.title;
       const type = tData.type || 'parameterized';
-      const examId = tData.examId || tData.exam || 'jnvst';
+      const examId = tData.examId || tData.exam;
       const section = tData.section || tData.subject;
       const topic = tData.topic;
       const difficulty = Number(tData.difficulty) || 0.5;
@@ -181,9 +181,9 @@ export async function POST(req) {
         finalId = String(insertRes.insertedId);
       }
 
-      // Automatic JNVST exam topic registration
+      // Automatic exam topic registration
       try {
-        const examDoc = await db.collection('exams').findOne({ _id: 'jnvst' });
+        const examDoc = await db.collection('exams').findOne({ _id: examId });
         if (examDoc) {
           let updated = false;
           const updatedSections = examDoc.sections.map(s => {
@@ -197,14 +197,14 @@ export async function POST(req) {
           });
           if (updated) {
             await db.collection('exams').updateOne(
-              { _id: 'jnvst' },
+              { _id: examId },
               { $set: { sections: updatedSections, updatedAt: new Date() } }
             );
-            console.log(`Auto-registered new JNVST topic "${topic}" under section "${section}"`);
+            console.log(`Auto-registered new ${examId} topic "${topic}" under section "${section}"`);
           }
         }
       } catch (examErr) {
-        console.error('Failed to auto-register JNVST topic in exams collection:', examErr);
+        console.error(`Failed to auto-register ${examId} topic in exams collection:`, examErr);
       }
 
       return NextResponse.json({

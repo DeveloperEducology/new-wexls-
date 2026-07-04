@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export default function AdminV2Page() {
   const [adminMode, setAdminMode] = useState('school'); // school, exam
-  const [activeTab, setActiveTab] = useState('grade'); // school: grade, subject, unit, chapter, skill. exam: exam, section, topic, question
+  const [activeTab, setActiveTab] = useState('grade'); // school: grade, subject, unit, chapter, skill. exam: exam, section, topic, skill, question
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null); // ID of the node currently being edited
@@ -384,6 +384,14 @@ export default function AdminV2Page() {
         setFormData({
           topicId: item.name || '',
         });
+      } else if (activeTab === 'skill') {
+        setFormData({
+          id: item.id || item._id || '',
+          title: item.name || item.title || '',
+          engine: item.type || 'parameterized',
+          difficulty: item.difficulty || 0.5,
+          status: item.status || 'active',
+        });
       } else if (activeTab === 'question') {
         setFormData({
           id: item._id || item.id || '',
@@ -676,6 +684,36 @@ export default function AdminV2Page() {
           } else {
             setError(data.error || 'Failed to save topic.');
           }
+        } else if (activeTab === 'skill') {
+          if (!selectedExamId || !selectedSectionId || !selectedTopicId) {
+            setError('Please select Exam, Section, and Topic for the skill first.');
+            setLoading(false);
+            return;
+          }
+
+          const payload = {
+            id: editingId || formData.id || undefined,
+            name: formData.title,
+            type: formData.engine || 'parameterized',
+            examId: selectedExamId,
+            section: selectedSectionId,
+            topic: selectedTopicId,
+            difficulty: Number(formData.difficulty) || 0.5,
+            status: formData.status || 'active'
+          };
+
+          const res = await fetch('/api/admin/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (data.success) {
+            handleCancelEdit();
+            fetchData();
+          } else {
+            setError(data.error || 'Failed to save skill.');
+          }
         } else if (activeTab === 'question') {
           if (!selectedExamId || !selectedSectionId || !selectedTopicId) {
             setError('Please select Exam, Section, and Topic for the question first.');
@@ -791,6 +829,15 @@ export default function AdminV2Page() {
             if (editingId === id) handleCancelEdit();
             fetchData();
           }
+        } else if (activeTab === 'skill') {
+          const res = await fetch(`/api/admin/templates?id=${id}&exam=true`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            if (editingId === id) handleCancelEdit();
+            fetchData();
+          } else {
+            alert(`Delete failed: ${data.error}`);
+          }
         } else if (activeTab === 'question') {
           const res = await fetch(`/api/admin/questions?id=${id}`, { method: 'DELETE' });
           const data = await res.json();
@@ -835,6 +882,14 @@ export default function AdminV2Page() {
           const examObj = exams.find(e => e.id === selectedExamId);
           const secObj = examObj?.sections?.find(s => s.id === selectedSectionId);
           return secObj ? (secObj.topics || []).map(topicName => ({ id: topicName, name: topicName, title: topicName })) : [];
+        }
+        case 'skill': {
+          return allTemplates.filter(t => {
+            const matchesExam = !selectedExamId || t.examId === selectedExamId || t.exam === selectedExamId;
+            const matchesSection = !selectedSectionId || t.section === selectedSectionId || t.subject === selectedSectionId;
+            const matchesTopic = !selectedTopicId || t.topic === selectedTopicId;
+            return matchesExam && matchesSection && matchesTopic;
+          });
         }
         case 'question': return examQuestions;
         default: return [];
@@ -924,6 +979,15 @@ export default function AdminV2Page() {
               <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800 }}>🔒 Topic Creation Guide</h4>
               <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.4 }}>
                 Add topics within sections (e.g. <code>fractions</code>, <code>analogy</code>).
+              </p>
+            </div>
+          );
+        case 'skill':
+          return (
+            <div style={examGuideStyle}>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800 }}>💡 Skill (Template) Mapping Guide</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.4 }}>
+                Map dynamic templates to this section/topic. For example, Template ID <code>fractions-g5-add-unlike</code> with Name <code>Add Unlike Fractions</code>.
               </p>
             </div>
           );
@@ -1049,7 +1113,7 @@ export default function AdminV2Page() {
       <nav style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid #cbd5e1' }}>
         {(adminMode === 'school' 
           ? ['grade', 'subject', 'unit', 'chapter', 'skill']
-          : ['exam', 'section', 'topic', 'question']
+          : ['exam', 'section', 'topic', 'skill', 'question']
         ).map((tab) => (
           <button
             key={tab}
@@ -1634,6 +1698,75 @@ export default function AdminV2Page() {
                   </div>
                 )}
 
+                {/* 3.5. Skill (Template) Tab */}
+                {activeTab === 'skill' && (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Template ID / Unique Code</label>
+                      <input 
+                        type="text" 
+                        name="id" 
+                        disabled={!!editingId}
+                        required
+                        value={formData.id} 
+                        onChange={handleInputChange}
+                        placeholder="e.g. fractions-g5-add-unlike"
+                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: editingId ? '#f1f5f9' : '#fff' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Skill Name / Display Title</label>
+                      <input 
+                        type="text" 
+                        name="title" 
+                        required
+                        value={formData.title} 
+                        onChange={handleInputChange}
+                        placeholder="e.g. Add Unlike Fractions"
+                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Template Engine / Type</label>
+                      <select 
+                        name="engine" 
+                        value={formData.engine || 'parameterized'} 
+                        onChange={handleInputChange}
+                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                      >
+                        <option value="parameterized">Parameterized Question Generator</option>
+                        <option value="svg-figure">SVG/Geometry Figure Generator</option>
+                        <option value="visual-transformation">Visual Grid/Fraction Block Transformation</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Difficulty (0.0 - 1.0)</label>
+                      <input 
+                        type="number" 
+                        step="0.05" 
+                        min="0" 
+                        max="1" 
+                        name="difficulty" 
+                        value={formData.difficulty} 
+                        onChange={handleInputChange} 
+                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Status</label>
+                      <select 
+                        name="status" 
+                        value={formData.status || 'active'} 
+                        onChange={handleInputChange}
+                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
                 {/* 4. Question Tab */}
                 {activeTab === 'question' && (
                   <>
@@ -1888,6 +2021,23 @@ export default function AdminV2Page() {
                                 <div style={{ fontSize: '14px', fontWeight: 800, color: '#334155' }}>
                                   🏷️ {item.name}
                                 </div>
+                              )}
+
+                              {activeTab === 'skill' && (
+                                <>
+                                  <div style={{ fontSize: '14.5px', fontWeight: 800 }}>⚡ {item.name || item.title}</div>
+                                  <div style={{ color: '#64748b', fontWeight: 500, fontSize: '11.5px' }}>
+                                    Type: <code>{item.type}</code> | Diff: <code>{item.difficulty}</code> | Status: <span style={{ color: item.status === 'active' ? '#16a34a' : '#ef4444', fontWeight: 700 }}>{item.status || 'active'}</span>
+                                  </div>
+                                  <a 
+                                    href={`/exam-prep/${selectedExamId}/practice?templateId=${item.id || item._id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: '#0891b2', textDecoration: 'underline', fontSize: '11px', display: 'inline-block', marginTop: '0.25rem' }}
+                                  >
+                                    🔗 Practice Skill Template
+                                  </a>
+                                </>
                               )}
 
                               {activeTab === 'question' && (
