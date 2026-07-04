@@ -755,14 +755,21 @@ export default function JnvstDashboard({ params }) {
                            cleanTargetTopic.includes(cleanTplTopic);
                   });
 
-                  // Deduplicate by name/title
-                  const seenNames = new Set();
-                  const topicTemplates = [];
+                  // Group templates by name/title and collect all matching IDs
+                  const groupedTemplates = [];
+                  const nameToGroup = {};
                   for (const t of topicTemplatesAll) {
-                    const tName = (t.name || t.title || '').trim();
-                    if (seenNames.has(tName)) continue;
-                    seenNames.add(tName);
-                    topicTemplates.push(t);
+                    const tName = (t.name || t.title || 'Micro skill').trim();
+                    if (!nameToGroup[tName]) {
+                      nameToGroup[tName] = {
+                        name: tName,
+                        ids: [],
+                        id: t.id || String(t._id),
+                        _id: t._id,
+                      };
+                      groupedTemplates.push(nameToGroup[tName]);
+                    }
+                    nameToGroup[tName].ids.push(t.id || String(t._id));
                   }
 
                   const isExpanded = !!expandedTopics[topicId];
@@ -785,7 +792,7 @@ export default function JnvstDashboard({ params }) {
                             </span>
                           )}
                           <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '6px', fontWeight: 600 }}>
-                            ({topicTemplates.length} {topicTemplates.length === 1 ? 'skill' : 'skills'})
+                            ({groupedTemplates.length} {groupedTemplates.length === 1 ? 'skill' : 'skills'})
                           </span>
                           <span style={{
                             marginLeft: '8px',
@@ -826,17 +833,17 @@ export default function JnvstDashboard({ params }) {
                       </div>
 
                       {/* Nested micro-skills (templates) - only visible if expanded */}
-                      {isExpanded && topicTemplates.length > 0 && (
+                      {isExpanded && groupedTemplates.length > 0 && (
                         <div className="micro-skills-container">
-                          {topicTemplates.map((tpl) => (
-                            <div key={tpl.id || tpl._id} className="micro-skill-row">
+                          {groupedTemplates.map((group) => (
+                            <div key={group.id} className="micro-skill-row">
                               <span className="micro-skill-name" style={{ marginRight: '8px', wordBreak: 'break-word' }}>
-                                📝 {tpl.name || tpl.title || 'Micro skill'}
+                                📝 {group.name}
                               </span>
                               {isAllowed ? (
                                 <button
                                   className="btn-micro-practice"
-                                  onClick={() => handleStartTemplate(activeTab, activeSectionObj.name, topicId, tpl.id || tpl._id)}
+                                  onClick={() => handleStartTemplate(activeTab, activeSectionObj.name, topicId, group.ids.join(','))}
                                 >
                                   Practice Skill
                                 </button>
