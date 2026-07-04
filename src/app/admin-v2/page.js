@@ -2092,7 +2092,7 @@ export default function AdminV2Page() {
                                     Type: <code>{item.type}</code> | Diff: <code>{item.difficulty}</code> | Status: <span style={{ color: item.status === 'active' ? '#16a34a' : '#ef4444', fontWeight: 700 }}>{item.status || 'active'}</span>
                                   </div>
                                   <a 
-                                    href={`/exam-prep/${selectedExamId}/practice?templateId=${item.templateIds?.join(',')}`}
+                                    href={`/exam-prep/${selectedExamId}/practice/${selectedSectionId}?userId=guest_child&topic=${selectedTopicId}&templateId=${item.templateIds?.join(',')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{ color: '#0891b2', textDecoration: 'underline', fontSize: '11.5px', fontWeight: 'bold', display: 'inline-block', marginTop: '0.35rem' }}
