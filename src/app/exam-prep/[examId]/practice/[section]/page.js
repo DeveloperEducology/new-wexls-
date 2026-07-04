@@ -440,8 +440,10 @@ export default function PracticePlayer({ params: paramsPromise }) {
         .question-meta {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
+          flex-wrap: wrap;
           margin-bottom: 14px;
+          gap: 8px;
         }
 
         .topic-badge {
@@ -873,8 +875,23 @@ export default function PracticePlayer({ params: paramsPromise }) {
           <div className="question-box" key={question.id}>
             <div className="question-meta">
               <span className="topic-badge">📘 {question.topic}</span>
+              {question.cognitiveLevel && (
+                <span className="topic-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
+                  🧠 {question.cognitiveLevel}
+                </span>
+              )}
+              {question.metadata?.source && (
+                <span className="topic-badge" style={{ background: '#f3f4f6', color: '#4b5563' }}>
+                  🏷️ {question.metadata.source}
+                </span>
+              )}
+              {Array.isArray(question.metadata?.exam) && question.metadata.exam.map(ex => (
+                <span key={ex} className="topic-badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>
+                  📝 {ex}
+                </span>
+              ))}
               {!isAnswered && (
-                <span className="kbd-hint">
+                <span className="kbd-hint" style={{ marginLeft: 'auto' }}>
                   Press&nbsp;
                   {['A','B','C','D'].map(k => <kbd key={k} className="kbd">{k}</kbd>)}
                   &nbsp;to select

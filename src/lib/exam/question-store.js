@@ -5,12 +5,19 @@ import { getMongoDb } from '../db/mongo.js';
  * {
  *   _id, examId, section, topic, subTopic?,
  *   difficulty: 0.0–1.0,
+ *   cognitiveLevel: 'recall'|'comprehension'|'application'|'analytical',
  *   questionText, questionImageUrl?,
  *   options: { A, B, C, D },
  *   correctOption: 'A'|'B'|'C'|'D',
  *   explanationText, explanationMath?,
  *   isPYQ: bool, pyqYear?,
  *   templateId?, templateVariables?,
+ *   metadata: {
+ *     source: string,
+ *     exam: string[],
+ *     isBilingual: bool,
+ *     language: string
+ *   },
  *   tags: [],
  *   status: 'active'|'draft'|'rejected',
  *   createdAt, updatedAt,

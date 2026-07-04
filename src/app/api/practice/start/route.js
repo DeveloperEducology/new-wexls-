@@ -156,6 +156,8 @@ function sanitizeQuestion(q) {
     topic: q.topic,
     difficulty: q.difficulty,
     section: q.section,
+    cognitiveLevel: q.cognitiveLevel || null,
+    metadata: q.metadata || null,
   };
   // correctOption is intentionally excluded — sent only after answer
 }
