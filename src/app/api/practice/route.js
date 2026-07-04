@@ -1358,6 +1358,7 @@ function normalizeGenericTopicQuestion(question, { topic, skill, seed, engine, s
     shownLetterSvg: question.shownLetterSvg,
     backgroundUrl: question.backgroundUrl,
     backgroundImage: question.backgroundImage,
+    cognitiveLevel: question.cognitiveLevel || null,
     solution: normalizeSolution(question.solution || question.explanation),
     metadata: {
       ...(question.metadata || {}),
