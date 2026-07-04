@@ -2992,29 +2992,48 @@ export default function TemplateMasterclass() {
                       <span className="mc-db-status" style={{ color: '#16a34a' }}>
                         🎉 Published successfully as ID: <code>{publishStatus.id}</code> ({publishStatus.mode})!
                       </span>
-                      <a
-                        href={`/practice?skill=${encodeURIComponent(publishStatus.id)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic === 'custom' ? (customTopic || 'custom-topic') : topic)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                          color: '#fff',
-                          padding: '10px 20px',
-                          borderRadius: 12,
-                          fontWeight: 900,
-                          fontSize: '0.9rem',
-                          textDecoration: 'none',
-                          boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                          transition: 'transform 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                      >
-                        ▶ Play in Practice
-                      </a>
+                      {(() => {
+                        let href = '';
+                        if (targetCollection === 'templates') {
+                          let finalExamId = 'jnvst';
+                          let finalSection = jnvstSection || 'arithmetic';
+                          let finalTopic = jnvstTopic === 'custom' ? (customTopic || 'custom') : jnvstTopic;
+                          try {
+                            const parsed = JSON.parse(jsonText);
+                            if (parsed.examId) finalExamId = parsed.examId;
+                            if (parsed.section) finalSection = parsed.section;
+                            if (parsed.topic) finalTopic = parsed.topic;
+                          } catch {}
+                          href = `/exam-prep/${finalExamId}/practice/${finalSection}?userId=guest_child&topic=${encodeURIComponent(finalTopic)}&templateId=${encodeURIComponent(publishStatus.id)}`;
+                        } else {
+                          href = `/practice?skill=${encodeURIComponent(publishStatus.id)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic === 'custom' ? (customTopic || 'custom-topic') : topic)}`;
+                        }
+                        return (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                              color: '#fff',
+                              padding: '10px 20px',
+                              borderRadius: 12,
+                              fontWeight: 900,
+                              fontSize: '0.9rem',
+                              textDecoration: 'none',
+                              boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                              transition: 'transform 0.15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                          >
+                            ▶ Play in Practice
+                          </a>
+                        );
+                      })()}
                     </div>
                   )}
 
