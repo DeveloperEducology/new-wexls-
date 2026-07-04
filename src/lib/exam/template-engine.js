@@ -225,7 +225,7 @@ export function instantiateParameterized(template, count) {
 }
 
 // ─── Variable Combination Builder ─────────────────────────────────────
-function buildCombinations(variables) {
+function buildCombinations(variables, maxCombos = 1000) {
   const keys = Object.keys(variables);
   const pools = keys.map(k => {
     const v = variables[k];
@@ -244,18 +244,56 @@ function buildCombinations(variables) {
       }
       return Object.values(v);
     }
-    return [];
+    // For string, number, or other primitive values, treat as a single-value pool
+    return [v];
   });
-  const combos = [{}];
-  for (let i = 0; i < keys.length; i++) {
-    const expanded = [];
-    for (const partial of combos) {
-      for (const val of pools[i]) {
-        expanded.push({ ...partial, [keys[i]]: val });
-      }
-    }
-    combos.splice(0, combos.length, ...expanded);
+
+  // Calculate total Cartesian product size
+  let totalSize = 1;
+  for (const pool of pools) {
+    if (pool.length === 0) return [];
+    totalSize *= pool.length;
   }
+
+  // If size is small, build the full Cartesian product
+  if (totalSize <= maxCombos) {
+    const combos = [{}];
+    for (let i = 0; i < keys.length; i++) {
+      const expanded = [];
+      const pool = pools[i];
+      for (const partial of combos) {
+        for (const val of pool) {
+          expanded.push({ ...partial, [keys[i]]: val });
+        }
+      }
+      combos.splice(0, combos.length, ...expanded);
+    }
+    return combos;
+  }
+
+  // Otherwise, randomly sample unique combinations to prevent Memory/Stack Overflows
+  const combos = [];
+  const seen = new Set();
+  let attempts = 0;
+  const maxAttempts = maxCombos * 10;
+
+  while (combos.length < maxCombos && attempts < maxAttempts) {
+    attempts++;
+    const combo = {};
+    const indices = [];
+    for (let i = 0; i < keys.length; i++) {
+      const pool = pools[i];
+      const idx = Math.floor(Math.random() * pool.length);
+      indices.push(idx);
+      combo[keys[i]] = pool[idx];
+    }
+    const key = indices.join(',');
+    if (!seen.has(key)) {
+      seen.add(key);
+      combos.push(combo);
+    }
+  }
+
   return combos;
 }
 
@@ -282,8 +320,14 @@ function evalDerivation(expr, ctx) {
   // or a number
   if (typeof expr === 'number') return expr;
 
+  // Clean curly braces if they are present in expression (e.g. "{{variable_name}}")
+  let cleanExpr = expr;
+  if (typeof cleanExpr === 'string') {
+    cleanExpr = cleanExpr.replace(/\{\{([^}]+)\}\}/g, '$1');
+  }
+
   // Parse fraction variables
-  let resolved = expr;
+  let resolved = cleanExpr;
   for (const [key, val] of Object.entries(ctx)) {
     if (typeof val === 'string' && val.includes('/')) {
       const [num, den] = val.split('/').map(Number);
