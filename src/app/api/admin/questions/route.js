@@ -213,20 +213,35 @@ export async function POST(request) {
         section: payload.section,
         topic: payload.topic || '',
         difficulty: Number(payload.difficulty) || 0.5,
+        cognitiveLevel: payload.cognitiveLevel || '',
         questionText: payload.questionText,
         options: payload.options,
         correctOption: payload.correctOption,
         explanationText: payload.explanationText || '',
         isPYQ: Boolean(payload.isPYQ),
         pyqYear: payload.pyqYear ? Number(payload.pyqYear) : null,
+        metadata: payload.metadata || {},
         tags: payload.tags || [],
         status: payload.status || 'active',
-        createdAt: new Date(),
         updatedAt: new Date()
       };
       
-      const result = await collection.insertOne(doc);
-      return NextResponse.json({ success: true, id: String(result.insertedId) });
+      const idToUpdate = payload._id || payload.id;
+      if (idToUpdate) {
+        const { ObjectId } = await import('mongodb');
+        let queryObj = {};
+        try {
+          queryObj = { _id: new ObjectId(idToUpdate) };
+        } catch {
+          queryObj = { id: idToUpdate };
+        }
+        await collection.updateOne(queryObj, { $set: doc });
+        return NextResponse.json({ success: true, id: String(idToUpdate) });
+      } else {
+        doc.createdAt = new Date();
+        const result = await collection.insertOne(doc);
+        return NextResponse.json({ success: true, id: String(result.insertedId) });
+      }
     }
 
     const mode = body?.mode === 'insert' ? 'insert' : 'upsert';

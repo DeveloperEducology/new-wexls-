@@ -267,3 +267,9 @@ export async function getExamSection(examId, sectionId) {
   const exam = await getExam(examId);
   return exam?.sections?.find(s => s.id === sectionId) || null;
 }
+
+export async function deleteExam(examId) {
+  const db = await getMongoDb();
+  if (!db) throw new Error('DB not available');
+  return db.collection('exams').deleteOne({ _id: examId });
+}
