@@ -11,7 +11,7 @@ const JNVST_EXAM = {
   status: 'active',
   icon: '🏫',
   description: 'Highly competitive admission test for Jawahar Navodaya Vidyalayas. Consists of Mental Ability, Arithmetic, and Language sections.',
-  metrics: '3 Sections • 100 Marks',
+  metrics: '4 Sections • 100 Marks + PYQs',
   color: '#4f46e5',
   colorGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
   bgLight: '#eef2ff',
@@ -52,6 +52,32 @@ const JNVST_EXAM = {
       description: 'Tests reading comprehension and grammar',
       topics: ['comprehension', 'grammar', 'vocabulary', 'fill-in-the-blanks', 'sentence-correction'],
     },
+    {
+      id: 'previous_years',
+      name: 'Previous Year Papers',
+      shortName: 'PYQs',
+      questionCount: 40,
+      maxMarks: 50,
+      timeLimitMinutes: 60,
+      negativeMarking: 0,
+      icon: '📅',
+      description: 'Practice actual questions from previous year JNVST papers',
+      topics: [
+        'jnvst-2025-arithmetic',
+        'jnvst-2025-language',
+        'jnvst-2025-mat',
+        'jnvst-2024-arithmetic',
+        'jnvst-2024-language',
+        'jnvst-2023-arithmetic',
+        'jnvst-2023-language',
+        'jnvst-2020-arithmetic',
+        'jnvst-2020-language',
+        'jnvst-2019-arithmetic',
+        'jnvst-2019-language',
+        'jnvst-2018-arithmetic',
+        'jnvst-2018-language'
+      ],
+    },
   ],
   totalDuration: 120,
   totalMarks: 100,
@@ -59,6 +85,15 @@ const JNVST_EXAM = {
   passingCriteria: { general: 65, obc: 60, sc: 55, st: 50 },
   availableLanguages: ['english', 'hindi', 'telugu', 'kannada', 'marathi', 'tamil', 'gujarati'],
 };
+
+
+
+
+
+
+
+
+
 
 // ── Seed AISSEE exam definition ──────────────────────────────────────────
 const AISSEE_EXAM = {

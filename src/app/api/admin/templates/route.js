@@ -207,6 +207,22 @@ export async function POST(req) {
         console.error(`Failed to auto-register ${examId} topic in exams collection:`, examErr);
       }
 
+      // Link to original question if provided
+      const linkId = body.linkToQuestionId || tData.linkToQuestionId;
+      if (linkId) {
+        let questionQuery;
+        try {
+          questionQuery = { _id: new ObjectId(linkId) };
+        } catch {
+          questionQuery = { _id: linkId };
+        }
+        await db.collection('questions').updateOne(
+          questionQuery,
+          { $set: { drillTemplateId: finalId } }
+        );
+        console.log(`Successfully linked template ${finalId} to question ${linkId}`);
+      }
+
       return NextResponse.json({
         success: true,
         id: finalId,
@@ -238,7 +254,6 @@ export async function DELETE(req) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'Template id query parameter is required.' }, { status: 400 });
     }
-
     if (isExam) {
       const { ObjectId } = await import('mongodb');
       const { getMongoDb } = await import('../../../../lib/db/mongo.js');
@@ -259,3 +274,44 @@ export async function DELETE(req) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+
+// PATCH /api/admin/templates — update an existing template's config by id
+export async function PATCH(req) {
+  try {
+    const body = await req.json();
+    const { id, updates, isExam } = body;
+
+    if (!id || !updates) {
+      return NextResponse.json({ success: false, error: 'id and updates are required.' }, { status: 400 });
+    }
+
+    if (isExam !== false) {
+      // Update competitive exam template in 'templates' collection
+      const { updateTemplate } = await import('../../../../lib/exam/template-store.js');
+      await updateTemplate(id, updates);
+      return NextResponse.json({ success: true, message: `Template ${id} updated.` });
+    } else {
+      // Update curriculum template in 'dynamic_templates' collection
+      const { getMongoDb } = await import('../../../../lib/db/mongo.js');
+      const { ObjectId } = await import('mongodb');
+      const db = await getMongoDb();
+      let res;
+      try {
+        res = await db.collection('dynamic_templates').updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { ...updates, updatedAt: new Date() } }
+        );
+      } catch {
+        res = await db.collection('dynamic_templates').updateOne(
+          { _id: id },
+          { $set: { ...updates, updatedAt: new Date() } }
+        );
+      }
+      return NextResponse.json({ success: true, result: res });
+    }
+  } catch (err) {
+    console.error('Templates API PATCH error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+

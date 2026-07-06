@@ -125,12 +125,45 @@ export default function SessionReport({ params: paramsPromise }) {
   const [error, setError] = useState(null);
   const [filterTab, setFilterTab] = useState('all');
   const [expandedExplanations, setExpandedExplanations] = useState({});
+  const [generatingStates, setGeneratingStates] = useState({});
 
   const toggleExplanation = (index) => {
     setExpandedExplanations(prev => ({
       ...prev,
       [index]: !prev[index]
     }));
+  };
+
+  const handleAiGridGenerate = async (resp) => {
+    setGeneratingStates(prev => ({ ...prev, [resp.questionId]: true }));
+    try {
+      const subject = examId === 'jnvst' ? 'math' : 'math';
+      const topic = resp.topic || 'general';
+      const body = {
+        questionText: resp.questionText,
+        options: resp.options || [],
+        explanation: resp.explanationText || '',
+        subject: subject,
+        topic: topic
+      };
+
+      const res = await fetch('/api/admin/templates/generate-grid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success && data.template) {
+        localStorage.setItem('klasschamp_grid_loader', JSON.stringify(data.template));
+        window.open('/template-generator-grid', '_blank');
+      } else {
+        alert('Failed to generate template: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Error calling AI generation API: ' + err.message);
+    } finally {
+      setGeneratingStates(prev => ({ ...prev, [resp.questionId]: false }));
+    }
   };
 
   // Fetch exam config dynamically
@@ -1149,24 +1182,75 @@ export default function SessionReport({ params: paramsPromise }) {
                         {renderOptionsReview(resp.options, resp.selectedOption, resp.correctOption, resp.isCorrect)}
                       </div>
 
-                      {resp.explanationText && (
-                        <div>
-                          <button 
-                            className="review-explanation-btn"
-                            onClick={() => toggleExplanation(resp.questionId)}
-                          >
-                            {expandedExplanations[resp.questionId] ? '▼ Hide Explanation' : '▶ Show Explanation'}
-                          </button>
-                          {expandedExplanations[resp.questionId] && (
-                            <div className="review-explanation-content">
-                              <strong>Explanation:</strong>
-                              <div style={{ marginTop: '8px' }}>
-                                {parseMathAndText(resp.explanationText)}
-                              </div>
-                            </div>
+                      <div style={{ marginTop: '12px' }}>
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          {resp.explanationText && (
+                            <button 
+                              className="review-explanation-btn"
+                              onClick={() => toggleExplanation(resp.questionId)}
+                            >
+                              {expandedExplanations[resp.questionId] ? '▼ Hide Explanation' : '▶ Show Explanation'}
+                            </button>
                           )}
+                          {resp.drillTemplateId && (
+                            <a
+                              href={`/exam-prep/${examId}/practice/${resp.section || session?.section || 'arithmetic'}?templateId=${resp.drillTemplateId}&userId=${session?.userId || 'guest_child'}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-drill-concept-mini"
+                              style={{
+                                padding: '5px 12px',
+                                backgroundColor: '#f59e0b',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontWeight: '700',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
+                                textDecoration: 'none',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                            >
+                              🔥 Drill Concept (Infinite Practice)
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleAiGridGenerate(resp)}
+                            disabled={generatingStates[resp.questionId]}
+                            style={{
+                              padding: '5px 12px',
+                              backgroundColor: '#6366f1',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: '700',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'background-color 0.2s',
+                              opacity: generatingStates[resp.questionId] ? 0.7 : 1
+                            }}
+                          >
+                            {generatingStates[resp.questionId] ? '⏳ Generating...' : '🪄 AI Grid Template (Dev)'}
+                          </button>
                         </div>
-                      )}
+                        {resp.explanationText && expandedExplanations[resp.questionId] && (
+                          <div className="review-explanation-content">
+                            <strong>Explanation:</strong>
+                            <div style={{ marginTop: '8px' }}>
+                              {parseMathAndText(resp.explanationText)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createSession } from '../../../../lib/exam/session-store.js';
-import { getAdaptiveCandidates, insertQuestions } from '../../../../lib/exam/question-store.js';
+import { getAdaptiveCandidates, insertQuestions, generateFromTemplates } from '../../../../lib/exam/question-store.js';
 import { selectNextQuestion } from '../../../../lib/exam/adaptive-engine.js';
 import { getOrCreateProfile } from '../../../../lib/exam/profile-store.js';
-import { instantiateParameterized } from '../../../../lib/exam/template-engine.js';
-import { instantiateSvgTemplate, isSvgTemplate } from '../../../../lib/exam/svg-template-engine.js';
-import { instantiateVisualTransformationTemplate } from '../../../../lib/exam/visual-transformation-engine.js';
 import { getMongoDb } from '../../../../lib/db/mongo.js';
 
 const INITIAL_THETA = 0.5;
 const DEFAULT_SESSION_LENGTH = 15;
 const MIN_QUESTIONS_NEEDED = 5;
-const GENERATE_COUNT = 30; // generate this many per template on first use
 
 export async function POST(req) {
   try {
@@ -24,22 +20,50 @@ export async function POST(req) {
       );
     }
 
+    // Resolve the actual target section of the drill template, if specified
+    let targetSection = section;
+    if (templateId) {
+      const db = await getMongoDb();
+      if (db) {
+        let lookupId = templateId;
+        if (typeof templateId === 'string' && templateId.includes(',')) {
+          lookupId = templateId.split(',')[0].trim();
+        } else if (Array.isArray(templateId) && templateId.length > 0) {
+          lookupId = templateId[0];
+        }
+        const { ObjectId } = await import('mongodb');
+        let objectId = null;
+        try { objectId = new ObjectId(lookupId); } catch {}
+        
+        const tpl = await db.collection('templates').findOne({
+          $or: [
+            { id: lookupId },
+            { _id: lookupId },
+            ...(objectId ? [{ _id: objectId }] : [])
+          ]
+        });
+        if (tpl && tpl.section) {
+          targetSection = tpl.section;
+        }
+      }
+    }
+
     // Get user's existing profile for theta continuity
     const profile = await getOrCreateProfile(userId, examId);
-    const theta = profile?.sectionTheta?.[section] ?? INITIAL_THETA;
+    const theta = profile?.sectionTheta?.[targetSection] ?? INITIAL_THETA;
 
     // For PYQ sections: use all available questions (no adaptive limit)
-    const isPyq = section === 'previous_years';
+    const isPyq = targetSection === 'previous_years';
 
     // Fetch candidates BEFORE creating session so we know the exact count
-    let candidates = await getAdaptiveCandidates({ examId, section, topic, templateId, theta, usedIds: [], limit: isPyq ? 200 : 30 });
+    let candidates = await getAdaptiveCandidates({ examId, section: targetSection, topic, templateId, theta, usedIds: [], limit: isPyq ? 200 : 30 });
 
     // ── AUTO-GENERATE from templates if bank is empty/thin ─────────────
-    if (!isPyq && candidates.length < MIN_QUESTIONS_NEEDED) {
-      const generated = await generateFromTemplates({ examId, section, topic, templateId });
+    if ((!isPyq || templateId) && candidates.length < MIN_QUESTIONS_NEEDED) {
+      const generated = await generateFromTemplates({ examId, section: targetSection, topic, templateId });
       if (generated.length > 0) {
         await insertQuestions(generated);
-        candidates = await getAdaptiveCandidates({ examId, section, topic, templateId, theta, usedIds: [], limit: 30 });
+        candidates = await getAdaptiveCandidates({ examId, section: targetSection, topic, templateId, theta, usedIds: [], limit: 30 });
       }
     }
 
@@ -50,7 +74,7 @@ export async function POST(req) {
     const session = await createSession({
       userId,
       examId,
-      section,
+      section: targetSection,
       sessionType: templateId ? 'skill-drill' : topic ? 'topic-drill' : 'adaptive',
       initialTheta: theta,
       topic,
@@ -64,7 +88,7 @@ export async function POST(req) {
       return NextResponse.json(
         {
           success: false,
-          error: `No questions available for "${section}${topic ? ` › ${topic}` : ''}". Add templates in the admin panel first.`
+          error: `No questions available for "${targetSection}${topic ? ` › ${topic}` : ''}". Add templates in the admin panel first.`
         },
         { status: 404 }
       );
@@ -83,83 +107,7 @@ export async function POST(req) {
   }
 }
 
-// ── Template → Question Generator ─────────────────────────────────────
-async function generateFromTemplates({ examId, section, topic, templateId = null }) {
-  const db = await getMongoDb();
-  if (!db) return [];
-
-  let templateIds = null;
-  let objectIds = [];
-  if (templateId) {
-    if (typeof templateId === 'string' && templateId.includes(',')) {
-      templateIds = templateId.split(',').map(s => s.trim());
-    } else if (Array.isArray(templateId)) {
-      templateIds = templateId;
-    } else {
-      templateIds = [templateId];
-    }
-    const { ObjectId } = await import('mongodb');
-    for (const id of templateIds) {
-      try {
-        objectIds.push(new ObjectId(id));
-      } catch {}
-    }
-  }
-
-  // Find matching templates (parameterized OR svg-figure OR visual-transformation)
-  const filter = {
-    examId,
-    section,
-    type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] },
-    status: { $ne: 'inactive' },
-    ...(topic ? { topic } : {}),
-    ...(templateIds ? {
-      $or: [
-        { id: { $in: templateIds } },
-        { _id: { $in: templateIds } },
-        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
-      ]
-    } : {})
-  };
-
-  const templates = await db.collection('templates').find(filter).limit(10).toArray();
-  if (templates.length === 0 && topic && !templateId) {
-    const allSection = await db.collection('templates').find({
-      examId, section,
-      type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] }
-    }).limit(10).toArray();
-    templates.push(...allSection);
-  }
-
-  const allGenerated = [];
-  for (const tpl of templates) {
-    try {
-      if (tpl.type === 'visual-transformation') {
-        // Visual Transformation Scene template
-        const questions = instantiateVisualTransformationTemplate(tpl, GENERATE_COUNT);
-        allGenerated.push(...questions);
-      } else if (isSvgTemplate(tpl)) {
-        // SVG figure template — generate image-based questions
-        const questions = instantiateSvgTemplate(tpl, GENERATE_COUNT);
-        allGenerated.push(...questions);
-      } else {
-        // Parameterized numeric/text template
-        let config = tpl.config || {};
-        if (config.config && (!config.variables || Array.isArray(config.variables))) {
-          config = { ...config, ...config.config };
-        }
-        if (!config.variables || Array.isArray(config.variables) || !config.derivations) continue;
-        const normalizedTpl = { ...tpl, config };
-        const questions = instantiateParameterized(normalizedTpl, GENERATE_COUNT);
-        allGenerated.push(...questions);
-      }
-    } catch (e) {
-      console.warn(`[practice/start] Failed to instantiate template ${tpl._id}:`, e.message);
-    }
-  }
-
-  return allGenerated;
-}
+// generateFromTemplates is exported from question-store.js
 
 function sanitizeQuestion(q) {
   return {
@@ -172,6 +120,7 @@ function sanitizeQuestion(q) {
     section: q.section,
     cognitiveLevel: q.cognitiveLevel || null,
     metadata: q.metadata || null,
+    drillTemplateId: q.drillTemplateId || null,
   };
-  // correctOption is intentionally excluded — sent only after answer
 }
+

@@ -32,6 +32,25 @@ function InlineMarkdown({ text }) {
               if (mathMatch) {
                 return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
               }
+              if (subPiece.includes('<svg')) {
+                const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
+                return (
+                  <span key={subIndex}>
+                    {svgParts.map((svgPart, pIdx) => {
+                      if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+                        return (
+                          <span
+                            key={pIdx}
+                            dangerouslySetInnerHTML={{ __html: svgPart }}
+                            style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                          />
+                        );
+                      }
+                      return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+                    })}
+                  </span>
+                );
+              }
               return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
             })}
           </span>

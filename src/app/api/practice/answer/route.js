@@ -108,5 +108,7 @@ function sanitizeQuestion(q) {
     section: q.section,
     cognitiveLevel: q.cognitiveLevel || null,
     metadata: q.metadata || null,
+    drillTemplateId: q.drillTemplateId || null,
   };
 }
+

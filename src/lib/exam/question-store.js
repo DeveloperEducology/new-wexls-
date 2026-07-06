@@ -1,4 +1,9 @@
 import { getMongoDb } from '../db/mongo.js';
+import { instantiateParameterized } from './template-engine.js';
+import { instantiateSvgTemplate, isSvgTemplate } from './svg-template-engine.js';
+import { instantiateVisualTransformationTemplate } from './visual-transformation-engine.js';
+
+const GENERATE_COUNT = 30;
 
 /**
  * question document shape:
@@ -61,6 +66,84 @@ export async function getQuestion(id) {
  * Fetch candidate questions for adaptive selection.
  * Returns questions near `theta` difficulty, excluding already-used IDs.
  */
+export async function generateFromTemplates({ examId, section, topic, templateId = null }) {
+  const db = await getMongoDb();
+  if (!db) return [];
+
+  let templateIds = null;
+  let objectIds = [];
+  if (templateId) {
+    if (typeof templateId === 'string' && templateId.includes(',')) {
+      templateIds = templateId.split(',').map(s => s.trim());
+    } else if (Array.isArray(templateId)) {
+      templateIds = templateId;
+    } else {
+      templateIds = [templateId];
+    }
+    const { ObjectId } = await import('mongodb');
+    for (const id of templateIds) {
+      try {
+        objectIds.push(new ObjectId(id));
+      } catch {}
+    }
+  }
+
+  // Find matching templates (parameterized OR svg-figure OR visual-transformation)
+  const filter = {
+    examId,
+    type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] },
+    status: { $ne: 'inactive' },
+    ...(!templateIds ? { section } : {}),
+    ...(!templateIds && topic ? { topic } : {}),
+    ...(templateIds ? {
+      $or: [
+        { id: { $in: templateIds } },
+        { _id: { $in: templateIds } },
+        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
+      ]
+    } : {})
+  };
+
+  const templates = await db.collection('templates').find(filter).limit(10).toArray();
+  if (templates.length === 0 && topic && !templateId) {
+    const allSection = await db.collection('templates').find({
+      examId, section,
+      type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] }
+    }).limit(10).toArray();
+    templates.push(...allSection);
+  }
+
+  const allGenerated = [];
+  for (const tpl of templates) {
+    try {
+      if (tpl.type === 'visual-transformation') {
+        const questions = instantiateVisualTransformationTemplate(tpl, GENERATE_COUNT);
+        allGenerated.push(...questions);
+      } else if (isSvgTemplate(tpl)) {
+        const questions = instantiateSvgTemplate(tpl, GENERATE_COUNT);
+        allGenerated.push(...questions);
+      } else {
+        let config = tpl.config || {};
+        if (config.config && (!config.variables || Array.isArray(config.variables))) {
+          config = { ...config, ...config.config };
+        }
+        if (!config.variables || Array.isArray(config.variables) || !config.derivations) continue;
+        const normalizedTpl = { ...tpl, config };
+        const questions = instantiateParameterized(normalizedTpl, GENERATE_COUNT);
+        allGenerated.push(...questions);
+      }
+    } catch (e) {
+      console.warn(`[generateFromTemplates] Failed to instantiate template ${tpl._id}:`, e.message);
+    }
+  }
+
+  return allGenerated;
+}
+
+/**
+ * Fetch candidate questions for adaptive selection.
+ * Returns questions near `theta` difficulty, excluding already-used IDs.
+ */
 export async function getAdaptiveCandidates({ examId, section, topic = null, templateId = null, theta, usedIds = [], limit = 20 }) {
   const db = await getMongoDb();
   if (!db) return [];
@@ -110,7 +193,47 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, tem
     questions = await db.collection('questions').find(fallbackFilter).sort({ difficulty: 1 }).limit(limit).toArray();
   }
 
-  return questions;
+  // Resolve replacements for any candidate that has drillTemplateId
+  const resolvedQuestions = [];
+  for (const q of questions) {
+    if (q.drillTemplateId) {
+      const dynamicFilter = {
+        examId,
+        templateId: q.drillTemplateId,
+        status: 'active',
+        ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
+      };
+      let dynamicCandidates = await db.collection('questions').find(dynamicFilter).toArray();
+
+      if (dynamicCandidates.length < 5) {
+        try {
+          const generated = await generateFromTemplates({
+            examId,
+            section: q.section,
+            topic: q.topic,
+            templateId: q.drillTemplateId
+          });
+          if (generated.length > 0) {
+            await insertQuestions(generated);
+            dynamicCandidates = await db.collection('questions').find(dynamicFilter).toArray();
+          }
+        } catch (e) {
+          console.warn(`[getAdaptiveCandidates] Failed to auto-generate for template ${q.drillTemplateId}:`, e);
+        }
+      }
+
+      if (dynamicCandidates.length > 0) {
+        const randIndex = Math.floor(Math.random() * dynamicCandidates.length);
+        const replacement = dynamicCandidates[randIndex];
+        resolvedQuestions.push(replacement);
+        usedObjectIds.push(replacement._id);
+        continue;
+      }
+    }
+    resolvedQuestions.push(q);
+  }
+
+  return resolvedQuestions;
 }
 
 export async function listQuestions({ examId, section, topic, status, isPYQ, limit = 50, skip = 0 } = {}) {

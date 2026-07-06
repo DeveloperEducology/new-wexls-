@@ -41,8 +41,12 @@ function safeDistractor(value, correct) {
 function evalOptionLabel(label, ctx) {
   if (typeof label !== 'string') return label;
 
-  // Step 1: substitute {{variable}} placeholders
+  // Step 1: substitute {{variable}} and [variable] placeholders
   let interpolated = label.replace(/\{\{([^}]+)\}\}/g, (match, name) => {
+    const trimmed = name.trim();
+    return ctx[trimmed] !== undefined ? String(ctx[trimmed]) : match;
+  });
+  interpolated = interpolated.replace(/\[([^\]]+)\]/g, (match, name) => {
     const trimmed = name.trim();
     return ctx[trimmed] !== undefined ? String(ctx[trimmed]) : match;
   });
@@ -73,6 +77,68 @@ function evalOptionLabel(label, ctx) {
   return interpolated;
 }
 
+function normalizeConfigVariables(config) {
+  if (!config || !config.variables) return config;
+  const variables = {};
+  const renameMap = {};
+  
+  // Detect keys to rename
+  for (const key of Object.keys(config.variables)) {
+    const cleanKey = key.replace(/^\{+/, '').replace(/\}+$/, '').trim();
+    variables[cleanKey] = config.variables[key];
+    if (cleanKey !== key) {
+      renameMap[key] = cleanKey;
+    }
+  }
+  
+  // Clean triple braces to prevent LaTeX conflicts ({{{ -> { {{, }}} -> }} })
+  let questionTemplate = (config.questionTemplate || '').replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
+  let explanationTemplate = (config.explanationTemplate || '').replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
+  
+  // Rename in derivations
+  const derivations = {};
+  if (config.derivations) {
+    for (const [key, expr] of Object.entries(config.derivations)) {
+      const cleanKey = key.replace(/^\{+/, '').replace(/\}+$/, '').trim();
+      let cleanExpr = typeof expr === 'string' ? expr : String(expr);
+      for (const [oldKey, newKey] of Object.entries(renameMap)) {
+        cleanExpr = cleanExpr.replace(new RegExp(`\\b${oldKey}\\b`, 'g'), newKey);
+        if (oldKey.startsWith('{')) {
+          const escapedOld = oldKey.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          cleanExpr = cleanExpr.replace(new RegExp(escapedOld, 'g'), newKey);
+        }
+      }
+      derivations[cleanKey] = cleanExpr;
+    }
+  }
+  
+  // Rename in templates (if any left)
+  for (const [oldKey, newKey] of Object.entries(renameMap)) {
+    const escapedOld = oldKey.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    questionTemplate = questionTemplate.replace(new RegExp(`\\{\\{\\s*${escapedOld}\\s*\\}\\}`, 'g'), `{{${newKey}}}`);
+    explanationTemplate = explanationTemplate.replace(new RegExp(`\\{\\{\\s*${escapedOld}\\s*\\}\\}`, 'g'), `{{${newKey}}}`);
+  }
+  
+  // Rename in options
+  const options = (config.options || []).map(opt => {
+    let label = (opt.label || '').replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
+    for (const [oldKey, newKey] of Object.entries(renameMap)) {
+      const escapedOld = oldKey.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      label = label.replace(new RegExp(`\\{\\{\\s*${escapedOld}\\s*\\}\\}`, 'g'), `{{${newKey}}}`);
+    }
+    return { ...opt, label };
+  });
+  
+  return {
+    ...config,
+    variables,
+    derivations,
+    questionTemplate,
+    explanationTemplate,
+    options
+  };
+}
+
 /**
  * Main instantiation function for parameterized templates.
  * Returns array of question-ready objects.
@@ -82,6 +148,7 @@ export function instantiateParameterized(template, count) {
   if (config.config && (!config.variables || Array.isArray(config.variables))) {
     config = { ...config, ...config.config };
   }
+  config = normalizeConfigVariables(config);
   const examId = config.examId || template.examId;
   const section = config.section || template.section || config.subject || template.subject;
   const topic = config.topic || template.topic;
@@ -122,6 +189,38 @@ export function instantiateParameterized(template, count) {
     // Fill templates
     const questionText = fillTemplate(questionTemplate, ctx);
     const explanationText = fillTemplate(explanationTemplate, ctx);
+
+    // ── FIB mode: answerMap produces multi-blank answer object ──────────
+    const answerMap = config.answerMap;
+    if (answerMap && typeof answerMap === 'object') {
+      // Resolve each blank's value from ctx
+      const answer = {};
+      for (const [blankId, template_expr] of Object.entries(answerMap)) {
+        // template_expr may be "{{tens_digit}}" or a raw expression
+        const filled = fillTemplate(String(template_expr), ctx);
+        answer[blankId] = String(filled);
+      }
+
+      generated.push({
+        examId,
+        section,
+        topic,
+        templateId: String(template.id || template._id || ''),
+        difficulty,
+        questionText,
+        options: {},
+        correctOption: 'fib',
+        answer,
+        interactionConfig: { engine: 'fillintheblank', inputMode: 'text' },
+        explanationText,
+        isPYQ: false,
+        tags: tags || [topic],
+        templateVariables: combo,
+        status: 'active',
+      });
+      continue;
+    }
+    // ────────────────────────────────────────────────────────────────────
 
     // Build options (correct + 3 distractors), shuffle
     let correct;
@@ -208,7 +307,7 @@ export function instantiateParameterized(template, count) {
       examId,
       section,
       topic,
-      templateId: String(template._id || template.id || ''),
+      templateId: String(template.id || template._id || ''),
       difficulty,
       questionText,
       options,
@@ -353,6 +452,7 @@ function fillTemplate(template, ctx) {
   let result = template;
   for (const [key, val] of Object.entries(ctx)) {
     result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(val));
+    result = result.replace(new RegExp(`\\[${key}\\]`, 'g'), String(val));
   }
   return result;
 }
@@ -420,7 +520,7 @@ export function parseAiGeneratedQuestions(rawText, template) {
       explanationText: q.explanationText,
       isPYQ: false,
       tags: template.config.tags || [template.section],
-      templateId: String(template._id),
+      templateId: String(template.id || template._id),
       status: 'draft', // requires admin review
     }));
   } catch {

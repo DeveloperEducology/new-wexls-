@@ -9,6 +9,13 @@ export default function AdminV2Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null); // ID of the node currently being edited
+  const [generatingStates, setGeneratingStates] = useState({});
+
+  // School filter states
+  const [filterGradeId, setFilterGradeId] = useState('');
+  const [filterSubjectId, setFilterSubjectId] = useState('');
+  const [filterUnitId, setFilterUnitId] = useState('');
+  const [filterChapterId, setFilterChapterId] = useState('');
 
   // ── School Data Lists ───────────────────────────────────────────────────
   const [grades, setGrades] = useState([]);
@@ -499,6 +506,12 @@ export default function AdminV2Page() {
           ? formData.remediation.split(',').map(s => s.trim()).filter(Boolean)
           : [];
         
+        const selectedChapter = chapters.find(c => c.id === formData.chapterId);
+        if (selectedChapter) {
+          payloadData.unitId = selectedChapter.unitId;
+          payloadData.gradeId = selectedChapter.gradeId;
+        }
+        
         if (skillDifficultyScaling) {
           const cleanedLevels = skillTemplateLevels.map(l => ({
             level: l.level,
@@ -791,6 +804,52 @@ export default function AdminV2Page() {
     }
   };
 
+  const handleAiGridGenerate = async (item) => {
+    const questionId = item.id || item._id;
+    setGeneratingStates(prev => ({ ...prev, [questionId]: true }));
+    try {
+      const optionsArray = [];
+      const opts = item.options || {};
+      ['A', 'B', 'C', 'D'].forEach(letter => {
+        if (opts[letter]) {
+          optionsArray.push({
+            label: opts[letter],
+            isCorrect: String(item.correctOption || '').toUpperCase() === letter
+          });
+        }
+      });
+
+      const body = {
+        questionText: item.questionText,
+        options: optionsArray,
+        explanation: item.explanationText || '',
+        subject: selectedExamId === 'jnvst' ? 'math' : 'math',
+        topic: selectedTopicId || item.topic || 'general'
+      };
+
+      const res = await fetch('/api/admin/templates/generate-grid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success && data.template) {
+        const templateWithLink = {
+          ...data.template,
+          linkToQuestionId: questionId
+        };
+        localStorage.setItem('klasschamp_grid_loader', JSON.stringify(templateWithLink));
+        window.open('/template-generator-grid', '_blank');
+      } else {
+        alert('Failed to generate template: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Error calling AI generation API: ' + err.message);
+    } finally {
+      setGeneratingStates(prev => ({ ...prev, [questionId]: false }));
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!confirm(`Are you sure you want to delete this ${activeTab}?`)) return;
     setLoading(true);
@@ -889,9 +948,61 @@ export default function AdminV2Page() {
       switch (activeTab) {
         case 'grade': return grades;
         case 'subject': return subjects;
-        case 'unit': return units;
-        case 'chapter': return chapters;
-        case 'skill': return skills;
+        case 'unit': {
+          let list = units;
+          if (filterSubjectId) {
+            list = list.filter(u => u.subjectId === filterSubjectId);
+          }
+          return list;
+        }
+        case 'chapter': {
+          let list = chapters;
+          if (filterGradeId) {
+            list = list.filter(c => c.gradeId === filterGradeId);
+          }
+          if (filterSubjectId) {
+            list = list.filter(c => {
+              const un = units.find(u => u.id === c.unitId);
+              return un && un.subjectId === filterSubjectId;
+            });
+          }
+          if (filterUnitId) {
+            list = list.filter(c => c.unitId === filterUnitId);
+          }
+          return list;
+        }
+        case 'skill': {
+          let list = skills;
+          if (filterGradeId) {
+            list = list.filter(item => {
+              if (item.gradeId === filterGradeId) return true;
+              const ch = chapters.find(c => c.id === item.chapterId);
+              return ch && ch.gradeId === filterGradeId;
+            });
+          }
+          if (filterSubjectId) {
+            list = list.filter(item => {
+              if (item.subjectId === filterSubjectId) return true;
+              const ch = chapters.find(c => c.id === item.chapterId);
+              if (ch) {
+                const un = units.find(u => u.id === ch.unitId);
+                if (un && un.subjectId === filterSubjectId) return true;
+              }
+              return false;
+            });
+          }
+          if (filterUnitId) {
+            list = list.filter(item => {
+              if (item.unitId === filterUnitId) return true;
+              const ch = chapters.find(c => c.id === item.chapterId);
+              return ch && ch.unitId === filterUnitId;
+            });
+          }
+          if (filterChapterId) {
+            list = list.filter(item => item.chapterId === filterChapterId);
+          }
+          return list;
+        }
         default: return [];
       }
     } else {
@@ -1184,6 +1295,119 @@ export default function AdminV2Page() {
           </button>
         ))}
       </nav>
+
+      {/* School Mode Filters */}
+      {adminMode === 'school' && (
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          padding: '12px 18px',
+          borderRadius: '12px',
+          marginBottom: '1.5rem',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            🔍 Filter List:
+          </span>
+          
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Grade</label>
+            <select
+              value={filterGradeId}
+              onChange={e => {
+                setFilterGradeId(e.target.value);
+                setFilterChapterId('');
+              }}
+              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+            >
+              <option value="">-- All Grades --</option>
+              {grades.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Subject</label>
+            <select
+              value={filterSubjectId}
+              onChange={e => {
+                setFilterSubjectId(e.target.value);
+                setFilterUnitId('');
+                setFilterChapterId('');
+              }}
+              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+            >
+              <option value="">-- All Subjects --</option>
+              {subjects.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Unit</label>
+            <select
+              value={filterUnitId}
+              disabled={!filterSubjectId}
+              onChange={e => {
+                setFilterUnitId(e.target.value);
+                setFilterChapterId('');
+              }}
+              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+            >
+              <option value="">-- All Units --</option>
+              {units.filter(u => !filterSubjectId || u.subjectId === filterSubjectId).map(u => (
+                <option key={u.id} value={u.id}>{u.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Chapter</label>
+            <select
+              value={filterChapterId}
+              disabled={!filterUnitId && !filterGradeId}
+              onChange={e => setFilterChapterId(e.target.value)}
+              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+            >
+              <option value="">-- All Chapters --</option>
+              {chapters.filter(c => {
+                const matchesUnit = !filterUnitId || c.unitId === filterUnitId;
+                const matchesGrade = !filterGradeId || c.gradeId === filterGradeId;
+                return matchesUnit && matchesGrade;
+              }).map(c => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          </div>
+
+          {(filterGradeId || filterSubjectId || filterUnitId || filterChapterId) && (
+            <button
+              onClick={() => {
+                setFilterGradeId('');
+                setFilterSubjectId('');
+                setFilterUnitId('');
+                setFilterChapterId('');
+              }}
+              style={{
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                color: '#475569',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+              onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Exam Mode Filters (displayed as dropdown select bar above list view) */}
       {adminMode === 'exam' && (
@@ -2131,6 +2355,11 @@ export default function AdminV2Page() {
                                         🏷️ {item.metadata.source}
                                       </span>
                                     )}
+                                    {item.drillTemplateId && (
+                                      <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>
+                                        🎯 Drill: {item.drillTemplateId}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               )}
@@ -2142,6 +2371,46 @@ export default function AdminV2Page() {
                         )}
                         <td style={{ padding: '0.75rem 0.5rem' }}>
                           <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            {activeTab === 'question' && (
+                              <button
+                                onClick={() => handleAiGridGenerate(item)}
+                                disabled={loading || generatingStates[item.id || item._id]}
+                                style={{
+                                  background: '#faf5ff',
+                                  color: '#7c3aed',
+                                  border: 'none',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '4px',
+                                  fontWeight: 800,
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                  opacity: generatingStates[item.id || item._id] ? 0.7 : 1
+                                }}
+                              >
+                                {generatingStates[item.id || item._id] ? '⏳...' : '🪄 AI Grid'}
+                              </button>
+                            )}
+                            {activeTab === 'question' && item.drillTemplateId && (
+                              <button
+                                onClick={() => {
+                                  const section = item.section || selectedSectionId || 'arithmetic';
+                                  const url = `/exam-prep/${selectedExamId || 'jnvst'}/practice/${section}?templateId=${item.drillTemplateId}&userId=guest_child`;
+                                  window.open(url, '_blank');
+                                }}
+                                style={{
+                                  background: '#ecfdf5',
+                                  color: '#059669',
+                                  border: 'none',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '4px',
+                                  fontWeight: 800,
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                🧪 Test
+                              </button>
+                            )}
                             <button
                               onClick={() => handleEditClick(item)}
                               disabled={loading}

@@ -120,6 +120,25 @@ function InlineMarkdown({ text }) {
               if (mathMatch) {
                 return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
               }
+              if (subPiece.includes('<svg')) {
+                const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
+                return (
+                  <span key={subIndex}>
+                    {svgParts.map((svgPart, pIdx) => {
+                      if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+                        return (
+                          <span
+                            key={pIdx}
+                            dangerouslySetInnerHTML={{ __html: svgPart }}
+                            style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                          />
+                        );
+                      }
+                      return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+                    })}
+                  </span>
+                );
+              }
               return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
             })}
           </span>
@@ -3036,9 +3055,20 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
         if (region === 'outside') {
           return { x, y, isSnapped: true, type: 'outside' };
         } else {
-          const target = part.targets?.find(t => t.type === region);
-          if (target) {
-            return { x: target.x, y: target.y, isSnapped: true, type: region };
+          const matchingTargets = part.targets?.filter(t => t.type === region) || [];
+          if (matchingTargets.length > 0) {
+            let closestTarget = matchingTargets[0];
+            let minDistance = Infinity;
+            for (const targetItem of matchingTargets) {
+              const dx = x - targetItem.x;
+              const dy = y - targetItem.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < minDistance) {
+                minDistance = dist;
+                closestTarget = targetItem;
+              }
+            }
+            return { x: closestTarget.x, y: closestTarget.y, isSnapped: true, type: region };
           }
         }
       }
@@ -3109,6 +3139,11 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
   };
 
   const [placements, setPlacements] = useState(placementsFromAnswer);
+
+  const activePlacement = placements.find(p => p.id === draggingId);
+  const activeVennRegion = (part.isVenn && activePlacement)
+    ? getVennRegion(activePlacement.x, activePlacement.y)
+    : null;
 
   useEffect(() => {
     const nextPlacements = placementsFromAnswer();
@@ -3499,6 +3534,51 @@ function InteractiveStickersPart({ part, userAnswer, onAnswer, isAnswered }) {
             <div style={{ position: 'absolute', fontSize: 'clamp(36px, 6vw, 64px)', right: '7%', bottom: '3%' }}>🌼</div>
           </>
         ) : null}
+
+        {/* Venn Diagram target area hover highlights */}
+        {part.isVenn && activeVennRegion && (
+          <svg 
+            viewBox="0 0 550 240" 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          >
+            <defs>
+              <clipPath id="venn-left-circle-clip">
+                <circle cx="215" cy="120" r="90" />
+              </clipPath>
+              <mask id="venn-left-crescent-mask">
+                <rect x="0" y="0" width="550" height="240" fill="white" />
+                <circle cx="335" cy="120" r="90" fill="black" />
+              </mask>
+              <mask id="venn-right-crescent-mask">
+                <rect x="0" y="0" width="550" height="240" fill="white" />
+                <circle cx="215" cy="120" r="90" fill="black" />
+              </mask>
+            </defs>
+
+            {/* Left Crescent Highlight */}
+            {activeVennRegion === 'left' && (
+              <circle cx="215" cy="120" r="90" fill="rgba(14, 165, 233, 0.15)" mask="url(#venn-left-crescent-mask)" />
+            )}
+
+            {/* Right Crescent Highlight */}
+            {activeVennRegion === 'right' && (
+              <circle cx="335" cy="120" r="90" fill="rgba(14, 165, 233, 0.15)" mask="url(#venn-right-crescent-mask)" />
+            )}
+
+            {/* Middle Overlap Highlight */}
+            {activeVennRegion === 'middle' && (
+              <circle cx="335" cy="120" r="90" fill="rgba(14, 165, 233, 0.15)" clipPath="url(#venn-left-circle-clip)" />
+            )}
+          </svg>
+        )}
 
         {/* Scoped CSS animations for shadow match click-to-place */}
         {isShadowMatch && (

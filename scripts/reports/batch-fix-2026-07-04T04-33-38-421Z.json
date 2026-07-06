@@ -1,0 +1,79 @@
+{
+  "ts": "2026-07-04T04:33:38.422Z",
+  "results": [
+    {
+      "id": "template-equivalent-fractions-identification",
+      "name": "Equivalent Fractions Identification",
+      "examId": "ssc",
+      "topic": "algebra",
+      "status": "fixed",
+      "score": 20,
+      "issues": [
+        {
+          "severity": "blocker",
+          "field": "variables",
+          "message": "Undefined placeholders: w_num_1, w_denom_1, w_num_2, w_denom_2, eq_num, eq_denom, w_num_3, w_denom_3"
+        },
+        {
+          "severity": "blocker",
+          "field": "variables",
+          "message": "Variable keys contain expressions — should be simple identifiers"
+        }
+      ]
+    },
+    {
+      "id": "template-equivalent-fractions",
+      "name": "Equivalent Fractions",
+      "examId": "jnvst",
+      "topic": "fractions",
+      "status": "fixed",
+      "score": 20,
+      "issues": [
+        {
+          "severity": "blocker",
+          "field": "variables",
+          "message": "Undefined placeholders: multiplied_numerator, multiplied_denominator, incorrect_numerator_option_2, incorrect_denominator_option_3, incorrect_denominator_option_4"
+        },
+        {
+          "severity": "blocker",
+          "field": "variables",
+          "message": "Variable keys contain expressions — should be simple identifiers"
+        }
+      ]
+    },
+    {
+      "id": "template-identifying-proper-fractions",
+      "name": "Identifying Proper Fractions",
+      "examId": "ssc",
+      "topic": "algebra",
+      "status": "fixed",
+      "score": 50,
+      "issues": [
+        {
+          "severity": "blocker",
+          "field": "config.variables",
+          "message": "Variable keys in the 'variables' object are malformed. They should be plain identifiers (e.g., 'improper_num_1') instead of starting with '{{' or '{'. This will prevent proper variable resolution.",
+          "fix": "Remove leading '{' from all variable keys in the 'variables' object (e.g., change \"{improper_num_1\": {... to \"improper_num_1\": {...)."
+        },
+        {
+          "severity": "blocker",
+          "field": "config.variables",
+          "message": "Mathematical soundness: The min/max ranges for variables do not guarantee the generation of proper and improper fractions as required by the question. For improper fractions (options 1, 3, 4), the numerator (e.g., 'improper_num_1') must be greater than or equal to its denominator ('improper_denom_1'). For the proper fraction (correct option), the numerator ('numerator_val') must be strictly less than its denominator ('denominator_val'). Currently, all variables have a min/max of 2-6, which means any fraction type can be generated for any option.",
+          "fix": "Adjust variable ranges or add specific generation logic to enforce proper/improper fraction conditions. For example: For proper fractions, set 'numerator_val': {min: 2, max: 3} and 'denominator_val': {min: 4, max: 6}. For improper fractions, set 'improper_denom_1': {min: 2, max: 3} and 'improper_num_1': {min: 4, max: 6}."
+        },
+        {
+          "severity": "blocker",
+          "field": "config.explanationTemplate",
+          "message": "Explanation logic is inconsistent with variable generation. The explanation text (e.g., 'the numerator {{Result}} is not less than the denominator {{Result_2}}') assumes fixed relationships between numerators and denominators for 'improper' options, which are not guaranteed by the current variable ranges. If variables randomly generate a proper fraction for an 'improper' option, the explanation will be factually incorrect.",
+          "fix": "This issue is directly tied to the mathematical soundness of variable generation (Issue 2). Once the variable generation correctly ensures proper/improper fractions for their respective options, this explanation will become logically sound."
+        },
+        {
+          "severity": "major",
+          "field": "config.explanationTemplate",
+          "message": "Placeholder consistency: The explanation template uses redundant derivation placeholders (e.g., '{{Result}}', '{{Result_2}}') instead of directly referencing the original variable names (e.g., '{{improper_num_1}}', '{{improper_denom_1}}'). This reduces clarity and adds unnecessary indirection.",
+          "fix": "Replace '{{Result}}' with '{{improper_num_1}}', '{{Result_2}}' with '{{improper_denom_1}}', and so on for all 'Result_N' placeholders in the explanation. Afterward, the redundant derivations themselves can be removed."
+        }
+      ]
+    }
+  ]
+}

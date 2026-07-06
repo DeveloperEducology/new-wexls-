@@ -799,6 +799,31 @@ export function evaluateTemplate(originalTemplate, seed) {
         }
       }
 
+      if (resolvedPart.type === 'interactive_stickers') {
+        if (typeof resolvedPart.sceneImageUrl === 'string') {
+          resolvedPart.sceneImageUrl = interpolateString(resolvedPart.sceneImageUrl, resolvedVariables);
+        }
+        if (typeof resolvedPart.stickers === 'string') {
+          const varName = resolvedPart.stickers.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.stickers = resolvedVariables[varName];
+          }
+        }
+        if (Array.isArray(resolvedPart.stickers)) {
+          resolvedPart.stickers = resolvedPart.stickers.map(stk => ({
+            ...stk,
+            name: stk.name ? interpolateString(stk.name, resolvedVariables) : stk.name,
+            imageUrl: stk.imageUrl ? interpolateString(stk.imageUrl, resolvedVariables) : stk.imageUrl
+          }));
+        }
+        if (typeof resolvedPart.initialPlacements === 'string') {
+          const varName = resolvedPart.initialPlacements.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.initialPlacements = resolvedVariables[varName];
+          }
+        }
+      }
+
       for (const prop of ['value', 'min', 'max', 'marker', 'hour', 'minute', 'numerator', 'denominator']) {
         if (resolvedPart[prop] !== undefined) {
           resolvedPart[prop] = resolveExpression(resolvedPart[prop], resolvedVariables);

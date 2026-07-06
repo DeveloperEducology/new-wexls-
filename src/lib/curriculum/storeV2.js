@@ -2,6 +2,7 @@ import { getMongoDb } from '@/lib/db/mongo';
 import { lkgEnglishMicroSkillRegistry } from '@/lib/practice/generators/english/topics/lkg/registry';
 import { lkgMicroSkillRegistry, lkgTemplateRegistry } from '@/lib/practice/generators/math/topics/lkg/registry';
 import { ukgNumbersCountingSkills } from '@/lib/practice/generators/math/topics/ukg-numbers-counting/skills';
+import { grade1MathSkills } from './grade1MathRegistry';
 
 const COLLECTION_MAP = {
   grade: 'grades_v2',
@@ -276,8 +277,51 @@ export async function seedV2Initial() {
         status: 'active'
       });
     }
+
+    // 7. Seed Grade 1 Math Curriculum
+    await createV2Node('grade', { id: 'grade-1', title: 'Grade 1', order: 3 });
+
+    const grade1Units = [
+      { id: 'counting', title: 'Counting & number patterns', subjectId: 'math', color: '#3b82f6', order: 4 },
+      { id: 'place-values', title: 'Place values', subjectId: 'math', color: '#f59e0b', order: 5 },
+      { id: 'addition-concepts', title: 'Understand addition', subjectId: 'math', color: '#10b981', order: 6 },
+      { id: 'addition-builders', title: 'Addition skill builders', subjectId: 'math', color: '#10b981', order: 7 },
+      { id: 'addition-facts', title: 'Addition', subjectId: 'math', color: '#10b981', order: 8 },
+      { id: 'subtraction-concepts', title: 'Understand subtraction', subjectId: 'math', color: '#ef4444', order: 9 },
+      { id: 'subtraction-builders', title: 'Subtraction skill builders', subjectId: 'math', color: '#ef4444', order: 10 },
+      { id: 'subtraction-facts', title: 'Subtraction', subjectId: 'math', color: '#ef4444', order: 11 },
+      { id: 'shapes-2d', title: 'Two-dimensional shapes', subjectId: 'math', color: '#8b5cf6', order: 12 },
+      { id: 'shapes-3d', title: 'Three-dimensional shapes', subjectId: 'math', color: '#8b5cf6', order: 13 },
+      { id: 'time-measurement', title: 'Time', subjectId: 'math', color: '#f59e0b', order: 14 }
+    ];
+
+    for (const unit of grade1Units) {
+      await createV2Node('unit', unit);
+    }
+
+    const grade1Chapters = [
+      { id: 'grade1-counting', title: 'Counting & Patterns', unitId: 'counting', gradeId: 'grade-1', order: 1 },
+      { id: 'grade1-place-values', title: 'Place Values', unitId: 'place-values', gradeId: 'grade-1', order: 2 },
+      { id: 'grade1-addition-concepts', title: 'Understand Addition', unitId: 'addition-concepts', gradeId: 'grade-1', order: 3 },
+      { id: 'grade1-addition-builders', title: 'Addition Skill Builders', unitId: 'addition-builders', gradeId: 'grade-1', order: 4 },
+      { id: 'grade1-addition-facts', title: 'Addition Facts', unitId: 'addition-facts', gradeId: 'grade-1', order: 5 },
+      { id: 'grade1-subtraction-concepts', title: 'Understand Subtraction', unitId: 'subtraction-concepts', gradeId: 'grade-1', order: 6 },
+      { id: 'grade1-subtraction-builders', title: 'Subtraction Skill Builders', unitId: 'subtraction-builders', gradeId: 'grade-1', order: 7 },
+      { id: 'grade1-subtraction-facts', title: 'Subtraction Facts', unitId: 'subtraction-facts', gradeId: 'grade-1', order: 8 },
+      { id: 'grade1-shapes-2d', title: 'Two-Dimensional Shapes', unitId: 'shapes-2d', gradeId: 'grade-1', order: 9 },
+      { id: 'grade1-shapes-3d', title: 'Three-Dimensional Shapes', unitId: 'shapes-3d', gradeId: 'grade-1', order: 10 },
+      { id: 'grade1-time-measurement', title: 'Time & Calendars', unitId: 'time-measurement', gradeId: 'grade-1', order: 11 }
+    ];
+
+    for (const ch of grade1Chapters) {
+      await createV2Node('chapter', ch);
+    }
+
+    for (const sk of grade1MathSkills) {
+      await createV2Node('skill', sk);
+    }
     
-    console.log('Successfully seeded grades_v2, subjects_v2, units_v2, chapters_v2, and skills_v2 with Registry English and Math skills.');
+    console.log('Successfully seeded grades_v2, subjects_v2, units_v2, chapters_v2, and skills_v2 with Registry English, Math LKG/UKG, and Grade 1 Math skills.');
   } catch (error) {
     console.error('Error seeding initial v2 database:', error);
   }

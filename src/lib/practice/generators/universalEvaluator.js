@@ -93,33 +93,48 @@ function buildCombinations(variables) {
 
 
 function evalDerivation(expr, ctx) {
-  if (typeof expr === 'number') return expr;
-  let resolved = String(expr);
-  for (const [key, val] of Object.entries(ctx)) {
-    if (typeof val === 'string' && val.includes('/')) {
-      const [num, den] = val.split('/').map(Number);
-      resolved = resolved.replace(new RegExp(`${key}_numerator`, 'g'), String(num));
-      resolved = resolved.replace(new RegExp(`${key}_denominator`, 'g'), String(den));
-      resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), `(${num}/${den})`);
-    } else {
-      const isNumeric = typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)));
-      const replacement = isNumeric ? String(val) : JSON.stringify(val);
-      resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), replacement);
+  try {
+    return resolveExpression(expr, ctx);
+  } catch (err) {
+    if (typeof expr === 'number') return expr;
+    let resolved = String(expr);
+    for (const [key, val] of Object.entries(ctx)) {
+      if (typeof val === 'string' && val.includes('/')) {
+        const [num, den] = val.split('/').map(Number);
+        resolved = resolved.replace(new RegExp(`${key}_numerator`, 'g'), String(num));
+        resolved = resolved.replace(new RegExp(`${key}_denominator`, 'g'), String(den));
+        resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), `(${num}/${den})`);
+      } else {
+        const isNumeric = typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)));
+        const replacement = isNumeric ? String(val) : JSON.stringify(val);
+        resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), replacement);
+      }
     }
+    const result = new Function(`return (${resolved})`)();
+    if (typeof result === 'number') {
+      return Math.round(result * 100) / 100;
+    }
+    return result;
   }
-  const result = new Function(`return (${resolved})`)();
-  if (typeof result === 'number') {
-    return Math.round(result * 100) / 100;
-  }
-  return result;
 }
 
 function fillTemplate(tmpl, ctx) {
   let result = tmpl;
+
+  // Temporarily protect [[blank_id]] double-bracket tokens (used by FIB renderer)
+  // Replace [[...]] with a placeholder so inner [key] substitutions don't strip one bracket
+  const doubleBracketMap = {};
+  let dbIndex = 0;
+  result = result.replace(/\[\[([^\]]+)\]\]/g, (match) => {
+    const placeholder = `__DBLBRACKET_${dbIndex++}__`;
+    doubleBracketMap[placeholder] = match;
+    return placeholder;
+  });
+
   for (const [key, val] of Object.entries(ctx)) {
     // Replace {{key}}
     result = result.replace(new RegExp(`\\{\\{(\\s*)${key}(\\s*)\\}\\}`, 'g'), String(val));
-    // Replace [key]
+    // Replace [key] — but only single brackets (double-bracket tokens already protected above)
     result = result.replace(new RegExp(`\\[(\\s*)${key}(\\s*)\\]`, 'g'), String(val));
   }
 
@@ -132,8 +147,10 @@ function fillTemplate(tmpl, ctx) {
     }
   });
 
-  // Evaluate any math expressions wrapped in [expression]
+  // Evaluate any math expressions wrapped in [expression] — skip if starts with [ (double bracket already gone)
   result = result.replace(/\[\s*(.*?)\s*\]/g, (match, expr) => {
+    // Skip placeholders and double-bracket-like patterns
+    if (match.startsWith('[[') || expr.startsWith('[')) return match;
     if (ctx[expr] !== undefined) return String(ctx[expr]);
     try {
       return String(evalDerivation(expr, ctx));
@@ -141,6 +158,11 @@ function fillTemplate(tmpl, ctx) {
       return match;
     }
   });
+
+  // Restore [[blank_id]] double-bracket tokens
+  for (const [placeholder, original] of Object.entries(doubleBracketMap)) {
+    result = result.replaceAll(placeholder, original);
+  }
 
   return result;
 }
@@ -534,7 +556,14 @@ export function evaluateTemplate(template, seed) {
       if (exactMatchRule && exactMatchRule.value) {
         result.answer = exactMatchRule.value;
       } else if (answer) {
-        result.answer = answer;
+        // Resolve answer placeholders using ctx (e.g. {{Result}} → actual value)
+        if (typeof answer === 'object' && !Array.isArray(answer)) {
+          result.answer = Object.fromEntries(
+            Object.entries(answer).map(([k, v]) => [k, fillTemplate(String(v), ctx)])
+          );
+        } else {
+          result.answer = answer;
+        }
       }
     } else {
       result.type = 'mcq';

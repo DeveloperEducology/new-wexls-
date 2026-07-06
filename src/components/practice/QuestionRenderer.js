@@ -97,13 +97,28 @@ export default function QuestionRenderer({
 
   const normalizedType = String(question?.type || '').trim();
   const normalizedInteraction = String(question?.interaction || '').trim().toLowerCase();
+  // interactionConfig (set by parameterized FIB templates) takes priority
+  const interactionConfigEngine = String(question?.interactionConfig?.engine || '').toLowerCase();
+  if (interactionConfigEngine === 'fillintheblank' || question?.correctOption === 'fib') {
+    return (
+      <FillInTheBlankRenderer
+        question={question}
+        userAnswer={userAnswer}
+        onAnswer={onAnswer}
+        onSubmit={onSubmit}
+        isAnswered={isAnswered}
+        isCorrect={isCorrect}
+      />
+    );
+  }
+
   const Renderer = normalizedInteraction === 'pictograph_mcq'
     ? PictographMCQRenderer
     : normalizedInteraction === 'interactive_stickers'
     ? MCQRenderer
     : (normalizedInteraction === 'categorization' || normalizedInteraction === 'categorizationv2')
     ? CategorizationRenderer
-    : RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
+    : RENDERERS[schemaEngine] || RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
 
   if (!question) return null;
 

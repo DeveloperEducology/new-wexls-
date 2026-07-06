@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration Portal - Extension Testing Playground</title>
+    <!-- Google Fonts for modern aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <h1>Extension Testing Playground</h1>
+            <p class="subtitle">Simulate real user input, trigger custom events, and test form filling extensions locally.</p>
+        </div>
+    </header>
+
+    <main class="playground-layout">
+        <!-- Registration Form Card -->
+        <section class="card form-card">
+            <div class="card-header">
+                <h2>Student Registration Form</h2>
+                <span class="required-notice">* Required fields</span>
+            </div>
+            
+            <form id="studentRegistrationForm" class="card-body" novalidate>
+                <!-- Section: Personal Details -->
+                <fieldset class="form-section">
+                    <legend>Personal Details</legend>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-12">
+                            <label for="studentName">Student Name <span class="required-star">*</span></label>
+                            <input type="text" id="studentName" name="studentName" placeholder="Enter student's full name" autocomplete="name" required>
+                            <div class="error-msg" id="studentNameError">Please enter the student's name</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="fatherName">Father's Name <span class="required-star">*</span></label>
+                            <input type="text" id="fatherName" name="fatherName" placeholder="Father's full name" autocomplete="father-name" required>
+                            <div class="error-msg" id="fatherNameError">Please enter the father's name</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="motherName">Mother's Name <span class="required-star">*</span></label>
+                            <input type="text" id="motherName" name="motherName" placeholder="Mother's full name" autocomplete="mother-name" required>
+                            <div class="error-msg" id="motherNameError">Please enter the mother's name</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="dob">Date of Birth <span class="required-star">*</span></label>
+                            <input type="date" id="dob" name="dob" autocomplete="bday" required>
+                            <div class="error-msg" id="dobError">Please select a valid date of birth</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Gender <span class="required-star">*</span></label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" id="genderMale" name="gender" value="Male" required>
+                                    <span>Male</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" id="genderFemale" name="gender" value="Female" required>
+                                    <span>Female</span>
+                                </label>
+                            </div>
+                            <div class="error-msg" id="genderError">Please select a gender</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="mobile">Mobile Number <span class="required-star">*</span></label>
+                            <input type="tel" id="mobile" name="mobile" placeholder="10-digit mobile number" autocomplete="tel" pattern="[6-9][0-9]{9}" required>
+                            <div class="error-msg" id="mobileError">Enter a valid 10-digit mobile number starting with 6-9</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="email">Email <span class="required-star">*</span></label>
+                            <input type="email" id="email" name="email" placeholder="student@example.com" autocomplete="email" required>
+                            <div class="error-msg" id="emailError">Please enter a valid email address</div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Section: Address -->
+                <fieldset class="form-section">
+                    <legend>Address Details</legend>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-4">
+                            <label for="houseNumber">House Number <span class="required-star">*</span></label>
+                            <input type="text" id="houseNumber" name="houseNumber" placeholder="Flat / Plot / House No." autocomplete="address-line1" required>
+                            <div class="error-msg" id="houseNumberError">Please enter house number</div>
+                        </div>
+                        <div class="form-group col-8">
+                            <label for="street">Street <span class="required-star">*</span></label>
+                            <input type="text" id="street" name="street" placeholder="Street or Area name" autocomplete="address-line2" required>
+                            <div class="error-msg" id="streetError">Please enter street name</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="city">Village/City <span class="required-star">*</span></label>
+                            <input type="text" id="city" name="city" placeholder="Village or City" autocomplete="address-level2" required>
+                            <div class="error-msg" id="cityError">Please enter village/city</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="district">District <span class="required-star">*</span></label>
+                            <input type="text" id="district" name="district" placeholder="District" autocomplete="address-level3" required>
+                            <div class="error-msg" id="districtError">Please enter district</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="state">State <span class="required-star">*</span></label>
+                            <input type="text" id="state" name="state" placeholder="State" autocomplete="address-level1" required>
+                            <div class="error-msg" id="stateError">Please enter state</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="pincode">Pincode <span class="required-star">*</span></label>
+                            <input type="text" id="pincode" name="pincode" placeholder="6-digit pincode" autocomplete="postal-code" pattern="[1-9][0-9]{5}" required>
+                            <div class="error-msg" id="pincodeError">Please enter a valid 6-digit Indian pincode</div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Section: Academic Details -->
+                <fieldset class="form-section">
+                    <legend>Academic Details</legend>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="class">Class <span class="required-star">*</span></label>
+                            <select id="class" name="class" required>
+                                <option value="" disabled selected>Select Class</option>
+                                <option value="Class 5">Class 5</option>
+                                <option value="Class 6">Class 6</option>
+                                <option value="Class 7">Class 7</option>
+                                <option value="Class 8">Class 8</option>
+                                <option value="Class 9">Class 9</option>
+                                <option value="Class 10">Class 10</option>
+                            </select>
+                            <div class="error-msg" id="classError">Please select a class</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Medium <span class="required-star">*</span></label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" id="mediumEnglish" name="medium" value="English" required>
+                                    <span>English</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" id="mediumTelugu" name="medium" value="Telugu" required>
+                                    <span>Telugu</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" id="mediumHindi" name="medium" value="Hindi" required>
+                                    <span>Hindi</span>
+                                </label>
+                            </div>
+                            <div class="error-msg" id="mediumError">Please select a medium</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="examCategory">Exam Category <span class="required-star">*</span></label>
+                            <select id="examCategory" name="examCategory" required>
+                                <option value="" disabled selected>Select Category</option>
+                                <option value="JNVST">JNVST</option>
+                                <option value="Sainik School">Sainik School</option>
+                                <option value="Olympiad">Olympiad</option>
+                                <option value="NTSE">NTSE</option>
+                                <option value="Foundation">Foundation</option>
+                            </select>
+                            <div class="error-msg" id="examCategoryError">Please select an exam category</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="schoolName">School Name <span class="required-star">*</span></label>
+                            <input type="text" id="schoolName" name="schoolName" placeholder="Enter school name" autocomplete="organization" required>
+                            <div class="error-msg" id="schoolNameError">Please enter the school name</div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Section: Parent Information -->
+                <fieldset class="form-section">
+                    <legend>Parent Information</legend>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="parentName">Parent Name <span class="required-star">*</span></label>
+                            <input type="text" id="parentName" name="parentName" placeholder="Parent or guardian name" autocomplete="name" required>
+                            <div class="error-msg" id="parentNameError">Please enter parent name</div>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="parentMobile">Parent Mobile <span class="required-star">*</span></label>
+                            <input type="tel" id="parentMobile" name="parentMobile" placeholder="Parent's mobile number" autocomplete="tel" pattern="[6-9][0-9]{9}" required>
+                            <div class="error-msg" id="parentMobileError">Enter a valid 10-digit mobile number starting with 6-9</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-12">
+                            <label for="parentOccupation">Parent Occupation <span class="required-star">*</span></label>
+                            <input type="text" id="parentOccupation" name="parentOccupation" placeholder="e.g., Farmer, Business, Teacher" autocomplete="organization-title" required>
+                            <div class="error-msg" id="parentOccupationError">Please enter parent's occupation</div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Section: Additional Details -->
+                <fieldset class="form-section">
+                    <legend>Additional Details</legend>
+                    <div class="form-row">
+                        <div class="form-group col-12">
+                            <label for="additionalInfo">Additional Information</label>
+                            <textarea id="additionalInfo" name="additionalInfo" placeholder="Write any additional instructions, remarks or constraints here..." autocomplete="off" rows="3"></textarea>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="submit-container">
+                    <button type="submit" id="btnSubmit" class="btn btn-primary btn-submit">Submit Registration</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Developer Tools Sidebar -->
+        <aside class="card dev-tools-card" id="devToolsContainer">
+            <div class="card-header dev-tools-header">
+                <div class="header-title">
+                    <h2>Developer Tools</h2>
+                    <span id="extensionStatus" class="badge badge-disconnected">🔴 Extension Not Detected</span>
+                </div>
+                <button type="button" id="toggleDevTools" class="btn-icon" aria-expanded="true" aria-controls="devToolsContent" aria-label="Toggle Developer Tools Panel">
+                    <svg class="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="devToolsContent" class="card-body dev-tools-content">
+                <!-- Actions Panel -->
+                <div class="dev-control-section">
+                    <h3>Playground Controls</h3>
+                    <div class="btn-grid">
+                        <button type="button" id="btnLoadSample" class="btn btn-secondary">Load Sample</button>
+                        <button type="button" id="btnRandom" class="btn btn-secondary">Generate Random</button>
+                        <button type="button" id="btnClear" class="btn btn-danger">Clear Form</button>
+                        <button type="button" id="btnCopy" class="btn btn-info">Copy JSON</button>
+                        <button type="button" id="btnDownload" class="btn btn-info">Download JSON</button>
+                    </div>
+                </div>
+
+                <!-- Stats summary -->
+                <div class="dev-control-section stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-title">Submissions</span>
+                        <span id="submissionCount" class="stat-num">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-title">Last Activity</span>
+                        <span id="lastUpdated" class="stat-num text-sm">Never</span>
+                    </div>
+                </div>
+
+                <!-- Accordions for detailed views -->
+                <div class="collapsible-logs-container">
+                    <details class="dev-details" open>
+                        <summary>Current Form JSON</summary>
+                        <div class="details-content">
+                            <pre><code id="jsonViewer">{}</code></pre>
+                        </div>
+                    </details>
+
+                    <details class="dev-details" open>
+                        <summary>localStorage State</summary>
+                        <div class="details-content">
+                            <pre><code id="localStorageViewer">No data stored</code></pre>
+                        </div>
+                    </details>
+
+                    <details class="dev-details" open>
+                        <summary>Custom Event Log</summary>
+                        <div class="details-content">
+                            <div class="console-log" id="eventLogConsole">
+                                <div class="console-line system-msg">[System] Playground ready. Listeners activated for studentFormSubmitted and formFieldChanged.</div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="app-footer">
+        <p>Built for local browser extension testing. Handlers exposed globally on the <code>window</code> object.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

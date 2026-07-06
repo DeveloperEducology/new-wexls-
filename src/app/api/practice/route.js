@@ -440,13 +440,25 @@ export async function GET(request) {
 
   const templateLevels = skillNode?.metadata?.templateLevels;
   if (Array.isArray(templateLevels) && templateLevels.length > 0) {
-    // Determine target level
     const correctStreak = Number(searchParams.get('correctStreak') || 0);
     const smartScore = Number(searchParams.get('smartScore') || 0);
     let targetLevel = 1;
-    if (difficulty === 'hard' || smartScore >= 80 || correctStreak >= 6) targetLevel = 3;
-    else if (difficulty === 'medium' || smartScore >= 50 || correctStreak >= 3) targetLevel = 2;
-    else targetLevel = 1;
+    if (!isNaN(Number(difficulty)) && Number(difficulty) > 0) {
+      targetLevel = Number(difficulty);
+    } else {
+      const isFourLevels = templateLevels.length >= 4 || templateLevels.some(l => l.level === 4);
+      if (difficulty === 'hard' || smartScore >= 80) {
+        targetLevel = isFourLevels ? 4 : 3;
+      } else if (correctStreak >= 9) {
+        targetLevel = isFourLevels ? 4 : 3;
+      } else if (correctStreak >= 6 || smartScore >= 60) {
+        targetLevel = 3;
+      } else if (difficulty === 'medium' || smartScore >= 30 || correctStreak >= 3) {
+        targetLevel = 2;
+      } else {
+        targetLevel = 1;
+      }
+    }
 
     // Find pool for target level (fall back to highest available)
     let levelEntry = templateLevels.find(l => l.level === targetLevel);

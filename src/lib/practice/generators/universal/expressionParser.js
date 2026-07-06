@@ -197,7 +197,7 @@ export function resolveExpression(expr, context) {
       if (Number.isFinite(num)) {
         return num;
       }
-      if (/[,;]/.test(interpolated)) {
+      if (/[,;]/.test(interpolated) && !interpolated.includes('draw') && !interpolated.startsWith('[') && !interpolated.startsWith('{')) {
         return interpolated;
       }
     }
@@ -205,7 +205,7 @@ export function resolveExpression(expr, context) {
 
   let cleanedExpr = String(expr);
   if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
-    cleanedExpr = cleanedExpr.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
+    cleanedExpr = cleanedExpr.replace(/(?<![A-Za-z0-9_\]\)])\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
       const trimmed = name.trim();
       if (context[trimmed] !== undefined) {
         return context[trimmed];

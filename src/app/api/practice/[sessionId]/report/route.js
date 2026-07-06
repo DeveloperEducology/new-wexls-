@@ -23,7 +23,9 @@ export async function GET(req, { params }) {
               questionText: qDetails.questionText,
               options: qDetails.options,
               correctOption: qDetails.correctOption,
-              explanationText: qDetails.explanationText || qDetails.explanation?.sections?.[0]?.content || ''
+              explanationText: qDetails.explanationText || qDetails.explanation?.sections?.[0]?.content || '',
+              drillTemplateId: qDetails.drillTemplateId || null,
+              section: qDetails.section || null
             });
           } else {
             enrichedResponses.push(resp);

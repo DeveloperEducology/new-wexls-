@@ -1819,18 +1819,34 @@ export default function VisualTemplateBuilderPage() {
     return !!expandedSections[key];
   };
 
-  // Group dynamic templates categorically by subject
+  // Group dynamic templates categorically by grade and subject
   const groupedDynamicTemplates = useMemo(() => {
     const groups = {};
     const filtered = dynamicTemplates.filter(matchesSearch);
     filtered.forEach(tpl => {
-      let subject = tpl.subject || tpl.templateInfo?.subject || 'other';
+      let grade = tpl.grade || tpl.templateInfo?.grade || tpl.metadata?.grade || '';
+      grade = grade.toString().trim();
+      let gradeKey = 'Other Grades';
+      if (grade === '1' || grade === 'grade-1') gradeKey = 'Grade 1';
+      else if (grade.toLowerCase() === 'lkg') gradeKey = 'LKG';
+      else if (grade.toLowerCase() === 'ukg') gradeKey = 'UKG';
+      else if (grade === '2' || grade === 'grade-2') gradeKey = 'Grade 2';
+      else if (grade === '3' || grade === 'grade-3') gradeKey = 'Grade 3';
+      else if (grade === '4' || grade === 'grade-4') gradeKey = 'Grade 4';
+      else if (grade === '5' || grade === 'grade-5') gradeKey = 'Grade 5';
+      else if (grade === '6' || grade === 'grade-6') gradeKey = 'Grade 6';
+      
+      let subject = tpl.subject || tpl.templateInfo?.subject || tpl.metadata?.subject || 'other';
       subject = subject.toLowerCase().trim();
       const subjectKey = (subject === 'math' || subject === 'english' || subject === 'science' || subject === 'gk' || subject === 'social_studies' || subject === 'mat' || subject === 'arithmetic' || subject === 'language') ? subject : 'other';
-      if (!groups[subjectKey]) {
-        groups[subjectKey] = [];
+
+      if (!groups[gradeKey]) {
+        groups[gradeKey] = {};
       }
-      groups[subjectKey].push(tpl);
+      if (!groups[gradeKey][subjectKey]) {
+        groups[gradeKey][subjectKey] = [];
+      }
+      groups[gradeKey][subjectKey].push(tpl);
     });
     return groups;
   }, [dynamicTemplates, sidebarSearch]);
@@ -4387,61 +4403,98 @@ export default function VisualTemplateBuilderPage() {
                     
                     {isSectionExpanded("customDb") && (
                       <div style={{ paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {Object.keys(groupedDynamicTemplates).sort().map(subjKey => {
-                          const list = groupedDynamicTemplates[subjKey];
-                          if (list.length === 0) return null;
-                          
-                          const subjectTitle = subjKey === 'gk' ? 'General Knowledge'
-                            : subjKey === 'social_studies' ? 'Social Studies'
-                            : subjKey === 'mat' ? 'Mental Ability (MAT)'
-                            : subjKey === 'arithmetic' ? 'Arithmetic'
-                            : subjKey === 'language' ? 'Language'
-                            : subjKey.charAt(0).toUpperCase() + subjKey.slice(1);
-                            
-                          const subSectionKey = `custom-${subjKey}`;
-                          const isExpanded = isSectionExpanded(subSectionKey);
-                          
+                        {Object.keys(groupedDynamicTemplates).sort().map(gradeKey => {
+                          const subjectsObj = groupedDynamicTemplates[gradeKey];
+                          const gradeTemplatesCount = Object.values(subjectsObj).reduce((acc, list) => acc + list.length, 0);
+                          if (gradeTemplatesCount === 0) return null;
+
+                          const gradeSectionKey = `custom-grade-${gradeKey}`;
+                          const isGradeExpanded = isSectionExpanded(gradeSectionKey);
+
                           return (
-                            <div key={subjKey}>
-                              {renderSubjectHeader(subjectTitle, list.length, subSectionKey)}
-                              
-                              {isExpanded && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '8px' }}>
-                                  {list.map(tpl => (
-                                    <div key={`dynamic-${tpl.id}`} style={{ position: 'relative' }}>
-                                      <button
-                                        className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
-                                        onClick={() => handleSelectTemplate(tpl)}
-                                        style={{ width: '100%', paddingRight: '45px', textAlign: 'left' }}
-                                      >
-                                        <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
-                                        <div className={styles.templateItemMeta}>{tpl.topic} • {tpl.id}</div>
-                                      </button>
-                                      <a
-                                        href={`/practice?skill=${tpl.id}&subject=${tpl.subject || subjKey || 'math'}&topic=${tpl.topic || 'addition'}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title="Test template in practice page"
-                                        style={{
-                                          position: 'absolute',
-                                          right: '8px',
-                                          top: '50%',
-                                          transform: 'translateY(-50%)',
-                                          background: '#f1f5f9',
-                                          border: '1px solid #cbd5e1',
-                                          borderRadius: '4px',
-                                          padding: '2px 6px',
-                                          fontSize: '10px',
-                                          fontWeight: 'bold',
-                                          textDecoration: 'none',
-                                          color: '#475569',
-                                          zIndex: 5
-                                        }}
-                                      >
-                                        Test
-                                      </a>
-                                    </div>
-                                  ))}
+                            <div key={gradeKey} style={{ marginBottom: '8px' }}>
+                              {renderSubjectHeader(gradeKey, gradeTemplatesCount, gradeSectionKey)}
+
+                              {isGradeExpanded && (
+                                <div style={{ paddingLeft: '12px', borderLeft: '1px solid #e2e8f0', marginLeft: '6px', marginTop: '4px' }}>
+                                  {Object.keys(subjectsObj).sort().map(subjKey => {
+                                    const list = subjectsObj[subjKey];
+                                    if (list.length === 0) return null;
+
+                                    const subjectTitle = subjKey === 'gk' ? 'General Knowledge'
+                                      : subjKey === 'social_studies' ? 'Social Studies'
+                                      : subjKey === 'mat' ? 'Mental Ability (MAT)'
+                                      : subjKey === 'arithmetic' ? 'Arithmetic'
+                                      : subjKey === 'language' ? 'Language'
+                                      : subjKey.charAt(0).toUpperCase() + subjKey.slice(1);
+
+                                    const subjSectionKey = `custom-grade-${gradeKey}-subj-${subjKey}`;
+                                    const isSubjExpanded = isSectionExpanded(subjSectionKey);
+
+                                    return (
+                                      <div key={subjKey} style={{ marginTop: '4px' }}>
+                                        <div
+                                          onClick={() => toggleSection(subjSectionKey)}
+                                          style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '4px 6px',
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            background: '#f1f5f9',
+                                            borderRadius: '4px',
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            color: '#475569'
+                                          }}
+                                        >
+                                          <span>📁 {subjectTitle} ({list.length})</span>
+                                          <span style={{ fontSize: '9px' }}>{isSubjExpanded ? '▼' : '▶'}</span>
+                                        </div>
+
+                                        {isSubjExpanded && (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', paddingLeft: '6px' }}>
+                                            {list.map(tpl => (
+                                              <div key={`dynamic-${tpl.id}`} style={{ position: 'relative' }}>
+                                                <button
+                                                  className={`${styles.templateItem} ${selectedId === tpl.id ? styles.templateItemActive : ''}`}
+                                                  onClick={() => handleSelectTemplate(tpl)}
+                                                  style={{ width: '100%', paddingRight: '45px', textAlign: 'left' }}
+                                                >
+                                                  <div className={styles.templateItemTitle}>{tpl.title || tpl.id}</div>
+                                                  <div className={styles.templateItemMeta}>{tpl.topic} • {tpl.id}</div>
+                                                </button>
+                                                <a
+                                                  href={`/practice?skill=${tpl.id}&subject=${tpl.subject || subjKey || 'math'}&topic=${tpl.topic || 'addition'}`}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  title="Test template in practice page"
+                                                  style={{
+                                                    position: 'absolute',
+                                                    right: '8px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    background: '#f1f5f9',
+                                                    border: '1px solid #cbd5e1',
+                                                    borderRadius: '4px',
+                                                    padding: '2px 6px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold',
+                                                    textDecoration: 'none',
+                                                    color: '#475569',
+                                                    zIndex: 5
+                                                  }}
+                                                >
+                                                  Test
+                                                </a>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>

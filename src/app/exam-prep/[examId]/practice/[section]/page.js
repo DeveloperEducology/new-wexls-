@@ -164,7 +164,8 @@ export default function PracticePlayer({ params: paramsPromise }) {
     }
     startSession();
     return () => clearInterval(timerRef.current);
-  }, [examId, sectionId, userId]);
+  }, [examId, sectionId, userId, topic, templateId]);
+
 
   // Timer management
   const resetTimer = () => {
@@ -1034,12 +1035,44 @@ export default function PracticePlayer({ params: paramsPromise }) {
               </div>
             )}
 
+            {question.drillTemplateId && (
+              <button 
+                className="btn-drill-concept"
+                onClick={() => {
+                  router.push(`/exam-prep/${examId}/practice/${question.section || sectionId}?templateId=${question.drillTemplateId}&userId=${userId}`);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 16px',
+                  backgroundColor: '#f59e0b',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  marginBottom: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(245, 158, 11, 0.2)',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+              >
+                🔥 Drill this Concept (Infinite Practice)
+              </button>
+            )}
+
             <button className="btn-next" onClick={handleNext}>
               {questionIndex < sessionLength
                 ? <>Next Question <span>→</span></>
                 : <>View Report <span>🏁</span></>
               }
             </button>
+
             <p className="enter-hint" style={{ marginTop: 8 }}>or press <strong>Enter ↵</strong></p>
           </div>
         )}

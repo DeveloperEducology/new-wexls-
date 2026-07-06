@@ -10,7 +10,11 @@
     "audit:generators": "node --import ./scripts/register-node-aliases.mjs scripts/audit-generators.mjs",
     "audit:generators:strict": "node --import ./scripts/register-node-aliases.mjs scripts/audit-generators.mjs --strict",
     "cap:sync": "cap sync",
-    "cap:android": "cap open android"
+    "cap:android": "cap open android",
+    "batch:fix": "node scripts/batch-fix-templates.mjs",
+    "batch:fix:dry": "node scripts/batch-fix-templates.mjs --dry-run",
+    "batch:fix:jnvst": "node scripts/batch-fix-templates.mjs --examId jnvst",
+    "batch:fix:ssc": "node scripts/batch-fix-templates.mjs --examId ssc"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1051.0",

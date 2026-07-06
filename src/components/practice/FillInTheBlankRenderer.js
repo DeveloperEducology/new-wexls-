@@ -296,13 +296,20 @@ export default function FillInTheBlankRenderer({
     : [{ type: 'text', content: question.questionText }];
 
   const firstPartText = (parts[0]?.content || parts[0]?.text || '').trim();
-  const hasQuestionTextHeader = question.questionText && firstPartText === question.questionText.trim();
-  const displayParts = hasQuestionTextHeader ? parts.slice(1) : parts;
+  const totalPartsText = parts.map(p => p?.content || p?.text || '').join('\n\n').trim();
+  const isDuplicateParts = Boolean(
+    question.questionText && (
+      firstPartText === question.questionText.trim() ||
+      totalPartsText === question.questionText.trim() ||
+      parts.every(p => p && (p.type === 'text' || !p.type))
+    )
+  );
+  const displayParts = isDuplicateParts ? [] : (question.questionText && firstPartText === question.questionText.trim() ? parts.slice(1) : parts);
 
   const hasClickToFill = question.metaConfig?.hasClickToFill === true;
   const hasBlankToken = (text) => String(text || '').includes('[blank') || /\[\[[^\]]+\]\]/.test(String(text || ''));
   const hasInlineInput = hasBlankToken(question.questionText) || displayParts.some(part => {
-    if (part.type === 'input') return true;
+    if (part.type === 'input' || part.type === 'arithmeticLayout') return true;
     return hasBlankToken(part.content || part.text || '');
   });
 

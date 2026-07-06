@@ -290,11 +290,12 @@ export function isAnswerCorrect(question, userAnswer) {
       const placements = userAnswer && typeof userAnswer === 'object' && Array.isArray(userAnswer.placements)
         ? userAnswer.placements
         : [];
-      const targets = Array.isArray(stickersPart.targets) ? stickersPart.targets : [];
-      if (targets.length === 0) return false;
-      return targets.every(target =>
-        placements.some(p => p.type === target.type && p.isSnapped)
-      );
+      const stickers = Array.isArray(stickersPart.stickers) ? stickersPart.stickers : [];
+      if (stickers.length === 0) return false;
+      return stickers.every(sticker => {
+        const p = placements.find(x => x.id === sticker.id);
+        return p && p.isSnapped && p.type === sticker.type;
+      });
     }
     const placedCount = userAnswer && typeof userAnswer === 'object'
       ? Number(userAnswer.count ?? userAnswer.placements?.length)

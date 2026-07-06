@@ -187,7 +187,7 @@ export default function JnvstDashboard({ params }) {
       <style dangerouslySetInnerHTML={{ __html: `
         .jnvst-dashboard {
           min-height: 100vh;
-          background: #f8fafc;
+          background: #f8fafc radial-gradient(circle at top right, rgba(99, 102, 241, 0.05) 0%, transparent 60%);
           font-family: var(--font-outfit), 'Inter', sans-serif;
           color: #0f172a;
         }
@@ -235,7 +235,7 @@ export default function JnvstDashboard({ params }) {
 
         .grid-layout {
           display: grid;
-          grid-template-columns: 2fr 1fr;
+          grid-template-columns: 2.1fr 0.9fr;
           gap: 32px;
         }
 
@@ -255,43 +255,47 @@ export default function JnvstDashboard({ params }) {
         .section-tab {
           background: white;
           border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 16px 20px;
+          border-radius: 20px;
+          padding: 18px 22px;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 16px;
           text-align: left;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.006);
         }
 
         .section-tab:hover {
-          transform: translateY(-2px);
+          transform: translateY(-3px);
           border-color: #cbd5e1;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+          box-shadow: 0 10px 20px rgba(99, 102, 241, 0.05);
         }
 
         .section-tab.active {
-          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
           color: white;
           border-color: transparent;
-          box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+          box-shadow: 0 12px 25px rgba(99, 102, 241, 0.22);
         }
 
         .tab-icon {
           font-size: 28px;
-          background: #f1f5f9;
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
+          background: #f8fafc;
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s;
+          transition: all 0.3s;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
         .section-tab.active .tab-icon {
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          box-shadow: none;
         }
 
         .tab-info {
@@ -323,11 +327,11 @@ export default function JnvstDashboard({ params }) {
 
         .active-section-header {
           background: white;
-          border-radius: 20px;
+          border-radius: 24px;
           border: 1px solid #e2e8f0;
-          padding: 24px;
+          padding: 28px;
           margin-bottom: 24px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -350,7 +354,7 @@ export default function JnvstDashboard({ params }) {
         .skills-list {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 18px;
           margin-bottom: 40px;
         }
 
@@ -359,14 +363,34 @@ export default function JnvstDashboard({ params }) {
           flex-direction: column;
           background: white;
           border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 18px 24px;
-          transition: all 0.2s ease;
+          border-radius: 20px;
+          padding: 20px 28px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+          position: relative;
+          overflow: hidden;
         }
 
         .skill-list-item:hover {
           border-color: #cbd5e1;
-          box-shadow: 0 6px 15px rgba(0, 0, 0, 0.02);
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.03);
+          transform: translateY(-2px);
+        }
+
+        .skill-list-item::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: linear-gradient(to bottom, #4f46e5, #7c3aed);
+          transform: scaleY(0);
+          transition: transform 0.25s ease;
+        }
+
+        .skill-list-item:hover::before {
+          transform: scaleY(1);
         }
 
         .topic-header-row {
@@ -376,52 +400,74 @@ export default function JnvstDashboard({ params }) {
           width: 100%;
         }
 
-        .micro-skills-container {
+        .skill-pills {
           border-top: 1px solid #f1f5f9;
-          margin-top: 14px;
-          padding-top: 12px;
+          margin-top: 16px;
+          padding-top: 16px;
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 12px;
         }
 
-        .micro-skill-row {
+        .skill-pill {
           display: flex;
-          justify-content: space-between;
           align-items: center;
           padding: 10px 14px;
           background: #f8fafc;
+          border: 1px solid #e2e8f0;
           border-radius: 10px;
-          font-size: 14px;
-          border: 1px solid #f1f5f9;
-          transition: background 0.15s, border-color 0.15s;
+          text-decoration: none;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          text-align: left;
         }
 
-        .micro-skill-row:hover {
-          background: #f1f5f9;
-          border-color: #e2e8f0;
-        }
-
-        .micro-skill-name {
-          font-weight: 700;
-          color: #334155;
-        }
-
-        .btn-micro-practice {
-          background: #6366f1;
-          color: white;
-          border: none;
-          font-size: 11.5px;
-          font-weight: 700;
-          padding: 5px 12px;
-          border-radius: 6px;
+        .skill-pill.clickable {
           cursor: pointer;
+        }
+
+        .skill-pill.clickable:hover {
+          background: white;
+          border-color: #6366f1;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+          transform: translateY(-2px);
+        }
+
+        .skill-code {
+          background: #e2e8f0;
+          color: #475569;
+          font-size: 11px;
+          font-weight: 800;
+          padding: 3px 8px;
+          border-radius: 6px;
+          margin-right: 12px;
+          min-width: 48px;
+          text-align: center;
+          flex-shrink: 0;
           transition: all 0.2s;
         }
 
-        .btn-micro-practice:hover {
-          background: #4f46e5;
-          transform: translateY(-1px);
+        .skill-pill.clickable:hover .skill-code {
+          background: #6366f1;
+          color: white;
+        }
+
+        .skill-name {
+          color: #334155;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.3;
+          word-break: break-word;
+          transition: color 0.2s;
+        }
+
+        .skill-pill.clickable:hover .skill-name {
+          color: #4f46e5;
+        }
+
+        .skill-pill.locked {
+          opacity: 0.7;
+          background: #f1f5f9;
+          border-style: dashed;
         }
 
         .skill-left {
@@ -433,7 +479,7 @@ export default function JnvstDashboard({ params }) {
 
         .skill-index {
           font-weight: 800;
-          color: #6366f1;
+          color: #4f46e5;
           font-size: 13px;
           min-width: 36px;
           background: #f1f5f9;
@@ -445,7 +491,7 @@ export default function JnvstDashboard({ params }) {
         }
 
         .skill-name-link {
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 700;
           color: #1e293b;
           cursor: pointer;
@@ -467,25 +513,27 @@ export default function JnvstDashboard({ params }) {
           font-size: 12px;
           background: #e0e7ff;
           color: #3730a3;
-          padding: 4px 8px;
-          border-radius: 6px;
-          font-weight: 700;
+          padding: 5px 10px;
+          border-radius: 8px;
+          font-weight: 800;
         }
 
         .btn-skill-practice {
-          background: #6366f1;
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
           color: white;
           border: none;
           font-size: 12px;
           font-weight: 700;
-          padding: 6px 14px;
-          border-radius: 8px;
+          padding: 7px 16px;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s;
+          box-shadow: 0 4px 10px rgba(99, 102, 241, 0.15);
         }
 
         .btn-skill-practice:hover {
-          background: #4f46e5;
+          background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+          box-shadow: 0 6px 15px rgba(99, 102, 241, 0.25);
           transform: translateY(-1px);
         }
 
@@ -495,8 +543,8 @@ export default function JnvstDashboard({ params }) {
           border: 1px dashed #fde68a;
           font-size: 12px;
           font-weight: 700;
-          padding: 5px 13px;
-          border-radius: 8px;
+          padding: 6px 15px;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s;
         }
@@ -513,21 +561,22 @@ export default function JnvstDashboard({ params }) {
         }
 
         .btn-section-action {
-          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
           color: white;
           border: none;
-          padding: 12px 24px;
+          padding: 12px 28px;
           font-size: 14px;
           font-weight: 700;
-          border-radius: 12px;
+          border-radius: 14px;
           cursor: pointer;
           transition: all 0.2s;
-          box-shadow: 0 4px 10px rgba(99, 102, 241, 0.15);
+          box-shadow: 0 6px 15px rgba(99, 102, 241, 0.2);
         }
 
         .btn-section-action:hover {
           opacity: 0.95;
-          transform: translateY(-1px);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
         }
 
         .btn-locked {
@@ -543,6 +592,7 @@ export default function JnvstDashboard({ params }) {
           border: 1px solid #e2e8f0;
           padding: 32px;
           height: fit-content;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
         }
 
         .score-circle-container {
@@ -554,47 +604,68 @@ export default function JnvstDashboard({ params }) {
         }
 
         .score-circle {
-          width: 140px;
-          height: 140px;
+          width: 144px;
+          height: 144px;
           border-radius: 50%;
-          background: conic-gradient(#6366f1 var(--score-deg), #f1f5f9 0deg);
+          background: conic-gradient(from 0deg, #7c3aed, #4f46e5 var(--score-deg), #f1f5f9 0deg);
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 16px;
-          box-shadow: 0 8px 16px rgba(99, 102, 241, 0.1);
+          margin-bottom: 20px;
+          box-shadow: 0 10px 25px rgba(99, 102, 241, 0.12);
+          position: relative;
+        }
+
+        .score-circle::after {
+          content: '';
+          position: absolute;
+          top: -3px;
+          left: -3px;
+          right: -3px;
+          bottom: -3px;
+          border-radius: 50%;
+          border: 3px solid rgba(99, 102, 241, 0.04);
+          pointer-events: none;
         }
 
         .score-inner {
-          width: 116px;
-          height: 116px;
+          width: 120px;
+          height: 120px;
           border-radius: 50%;
           background: white;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
+          box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.02);
         }
 
         .score-num {
-          font-size: 36px;
+          font-size: 38px;
           font-weight: 900;
-          color: #0f172a;
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
           line-height: 1;
         }
 
         .score-max {
-          font-size: 12px;
+          font-size: 11px;
           color: #94a3b8;
-          font-weight: 700;
+          font-weight: 800;
           margin-top: 2px;
+          letter-spacing: 0.05em;
         }
 
         .score-status {
-          font-size: 15px;
+          font-size: 13px;
           font-weight: 800;
           color: #4f46e5;
-          margin-top: 4px;
+          margin-top: 6px;
+          background: rgba(99, 102, 241, 0.08);
+          padding: 4px 14px;
+          border-radius: 20px;
+          letter-spacing: -0.01em;
         }
 
         .topics-list-container {
@@ -614,21 +685,24 @@ export default function JnvstDashboard({ params }) {
           align-items: center;
           gap: 6px;
           padding: 6px 12px;
-          border-radius: 8px;
+          border-radius: 10px;
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 800;
           margin-right: 8px;
           margin-bottom: 8px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
         }
 
         .pill-strong {
           background: #dcfce7;
-          color: #166534;
+          color: #15803d;
+          border: 1px solid rgba(22, 163, 74, 0.15);
         }
 
         .pill-weak {
           background: #fee2e2;
-          color: #991b1b;
+          color: #b91c1c;
+          border: 1px solid rgba(220, 38, 38, 0.15);
         }
 
         .pill-neutral {
@@ -834,24 +908,25 @@ export default function JnvstDashboard({ params }) {
 
                       {/* Nested micro-skills (templates) - only visible if expanded */}
                       {isExpanded && groupedTemplates.length > 0 && (
-                        <div className="micro-skills-container">
-                          {groupedTemplates.map((group) => (
-                            <div key={group.id} className="micro-skill-row">
-                              <span className="micro-skill-name" style={{ marginRight: '8px', wordBreak: 'break-word' }}>
-                                📝 {group.name}
-                              </span>
-                              {isAllowed ? (
-                                <button
-                                  className="btn-micro-practice"
-                                  onClick={() => handleStartTemplate(activeTab, activeSectionObj.name, topicId, group.ids.join(','))}
-                                >
-                                  Practice Skill
-                                </button>
-                              ) : (
-                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>🔒 Locked</span>
-                              )}
-                            </div>
-                          ))}
+                        <div className="skill-pills">
+                          {groupedTemplates.map((group, index) => {
+                            const canPractice = isAllowed;
+                            const topicPrefix = getTopicPrefix(activeTab, idx);
+                            const skillCode = `${topicPrefix}.${index + 1}`;
+                            return (
+                              <div
+                                key={group.id}
+                                className={`skill-pill ${canPractice ? 'clickable' : 'locked'}`}
+                                onClick={canPractice ? () => handleStartTemplate(activeTab, activeSectionObj.name, topicId, group.ids.join(',')) : undefined}
+                              >
+                                <span className="skill-code">{skillCode}</span>
+                                <span className="skill-name">{group.name}</span>
+                                {!canPractice && (
+                                  <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: 'auto', flexShrink: 0 }}>🔒</span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
