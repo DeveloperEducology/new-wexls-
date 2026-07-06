@@ -1246,6 +1246,7 @@ export function evaluateTemplate(originalTemplate, seed) {
       && typeof resolvedAnswer === 'object'
       && categorizationLayoutMode !== 'word_completion'
       && categorizationLayoutMode !== 'complete_words'
+      && categorizationLayoutMode !== 'grid_fill'
     ) {
       const finalItemIds = new Set((questionPayload.items || []).map(item => item.id));
       resolvedAnswer = Object.fromEntries(

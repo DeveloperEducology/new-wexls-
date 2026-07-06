@@ -505,6 +505,57 @@ function renderInteractiveSolution(question) {
     const items = question.items || [];
     const answer = question.answer || question.correctAnswer || question.answerKey || {};
 
+    const isGridFill = layoutMode === 'grid_fill';
+
+    if (isGridFill) {
+      const targets = question.targets || [];
+      const correctSequence = targets.map(target => {
+        const itemId = answer[target.id];
+        return items.find(it => it.id === itemId);
+      }).filter(Boolean);
+
+      return (
+        <div style={{ marginTop: 14, marginBottom: 14 }}>
+          <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Correct Answer
+          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {correctSequence.map((item, idx) => (
+              <div
+                key={`${item.id}-${idx}`}
+                style={{
+                  width: 72,
+                  height: 72,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#ffffff',
+                  border: '2px solid #22c55e',
+                  borderRadius: 12,
+                  boxShadow: '0 4px 12px rgba(34, 197, 94, 0.08)',
+                  padding: 4
+                }}
+              >
+                {item.svg ? (
+                  <span
+                    aria-hidden="true"
+                    style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    dangerouslySetInnerHTML={{ __html: cleanSvgContent ? cleanSvgContent(item.svg) : item.svg }}
+                  />
+                ) : item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>{item.content || item.label}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (categories.length === 0) return null;
+
     const grouped = {};
     categories.forEach(cat => {
       const catId = typeof cat === 'string' ? cat : cat.id;
@@ -808,6 +859,13 @@ function renderInteractiveSolution(question) {
 
 function renderCorrectAnswer(question) {
   if (!question) return null;
+
+  const type = question.type;
+  const interaction = question.interaction;
+  const layoutMode = question.layoutMode || question.htmlLayout || (question.metadata && question.metadata.layoutMode);
+  const isCategorization = interaction === 'categorization' || interaction === 'categorizationv2' || type === 'categorization' || type === 'categorizationv2' || layoutMode === 'category_sort';
+  
+  if (isCategorization) return null; // already rendered by renderInteractiveSolution
 
   // Try to resolve the expected answer value
   const isMcq = question.type === 'mcq' || question.interaction === 'choice' || question.interaction === 'multi_select';

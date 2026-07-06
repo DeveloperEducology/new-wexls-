@@ -3,6 +3,21 @@ import { resolveExpression } from './expressionParser.js';
 // String interpolator to replace [var_name] placeholders
 export function interpolateString(str, context) {
   if (typeof str !== 'string') return str;
+
+  // If the string is exactly a single placeholder, return the resolved value directly to preserve types (objects, arrays)
+  const exactMatch = str.trim().match(/^\[([A-Za-z0-9_]+)\]$/);
+  if (exactMatch) {
+    const varName = exactMatch[1];
+    if (context[varName] !== undefined) {
+      return context[varName];
+    }
+    try {
+      return resolveExpression(varName, context);
+    } catch (e) {
+      // fallback
+    }
+  }
+
   const blankTokens = [];
   const protectedStr = str.replace(/\[\[[^\]]+\]\]/g, (token) => {
     const key = `__INLINE_BLANK_${blankTokens.length}__`;
@@ -40,6 +55,8 @@ export function resolveLabelOrExpression(label, context) {
   if (label.includes('[') && label.includes(']')) {
     interpolated = interpolateString(label, context);
   }
+
+  if (typeof interpolated !== 'string') return interpolated;
 
   // Parse fraction-like strings so they don't evaluate to decimal floats
   // e.g. "4/7" or "4/(7 * 2)" -> "4/7" or "4/14"
