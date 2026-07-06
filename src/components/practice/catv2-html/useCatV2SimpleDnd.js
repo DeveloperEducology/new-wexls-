@@ -45,6 +45,10 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
     onAnswer?.(answerPayload);
   }, [targets, onAnswer]);
 
+  useEffect(() => {
+    emitAnswer(placements);
+  }, [placements, emitAnswer]);
+
   const placeItem = useCallback((itemId, targetId) => {
     if (isAnswered || !itemId || !targetId) return;
     setPlacements((previous) => {
@@ -60,11 +64,10 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
       }
       
       next[targetId] = itemId;
-      emitAnswer(next);
       return next;
     });
     setSelectedItemId(null);
-  }, [emitAnswer, isAnswered, isCopiable]);
+  }, [isAnswered, isCopiable]);
 
   const returnItem = useCallback((itemId, targetId) => {
     if (isAnswered) return;
@@ -80,11 +83,10 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
           }
         });
       }
-      emitAnswer(next);
       return next;
     });
     setSelectedItemId(null);
-  }, [emitAnswer, isAnswered]);
+  }, [isAnswered]);
 
   const selectItem = useCallback((itemId) => {
     if (isAnswered) return;
