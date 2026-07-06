@@ -351,6 +351,112 @@ export default function GridFillLayout({
     );
   }
 
+  const isInlinePattern = Boolean(question.pattern && targets.length === 1 && patternRows.length > 0);
+
+  if (isInlinePattern) {
+    const row = patternRows[0] || [];
+    return (
+      <div style={{ display: 'grid', gap: 18, paddingTop: 6 }}>
+        <div
+          aria-label="Find the next shape pattern"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: fitToWindow ? 'center' : 'flex-start',
+            gap: fitToWindow ? 8 : 12,
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '4px 0 10px',
+            minWidth: 'max-content',
+          }}
+        >
+          {row.map((itemId, index) => {
+            const item = itemById.get(itemId);
+            if (!item) return null;
+            return (
+              <CatV2Card
+                key={`inline-pattern-${itemId}-${index}`}
+                item={item}
+                compact
+                cardStyle="borderless"
+                hideLabel={hidePatternLabels}
+                disabled
+              />
+            );
+          })}
+
+          {targets.map((target) => {
+            const item = dnd.getTargetItem(target.id);
+            const active = dnd.selectedItemId && !item;
+            return (
+              <CatV2DropZone
+                key={target.id}
+                label=""
+                active={Boolean(active)}
+                filled={Boolean(item)}
+                minHeight={cellMinHeight}
+                style={{
+                  width: 92,
+                  minWidth: 92,
+                  height: 58,
+                  minHeight: 58,
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: item ? '#ffffff' : '#e0f2fe',
+                  border: `2px dashed ${active ? '#2563eb' : '#0284c7'}`,
+                  borderRadius: 8,
+                  boxShadow: active ? '0 0 10px rgba(37,99,235,0.2)' : 'none',
+                }}
+                onClick={() => {
+                  if (item) dnd.returnItem(item.id, target.id);
+                  else dnd.placeItem(dnd.selectedItemId, target.id);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => dnd.handleDrop(event, target.id)}
+              >
+                {item ? (
+                  <CatV2Card
+                    item={item}
+                    compact
+                    cardStyle={cardStyle}
+                    hideLabel={hideItemLabels}
+                    disabled={isAnswered}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      dnd.returnItem(item.id, target.id);
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 13, color: '#0284c7', fontWeight: 700 }}>?</span>
+                )}
+              </CatV2DropZone>
+            );
+          })}
+        </div>
+
+        <CatV2SourceTray label="Available items">
+          {dnd.sourceItems.map((item) => (
+            <CatV2Card
+              key={item.id}
+              item={item}
+              selected={dnd.selectedItemId === item.id}
+              dragging={dnd.draggingItemId === item.id}
+              disabled={isAnswered}
+              compact
+              cardStyle={cardStyle}
+              hideLabel={hideItemLabels}
+              onClick={() => handleSourceClick(item.id)}
+              onDragStart={dnd.handleDragStart}
+              onDragEnd={dnd.handleDragEnd}
+            />
+          ))}
+        </CatV2SourceTray>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'grid', gap: 18, paddingTop: 6 }}>
       {patternRows.length ? (
