@@ -711,6 +711,108 @@ export function evaluateTemplate(originalTemplate, seed) {
       }
 
       if (resolvedPart.type === 'categorizationv2' || resolvedPart.type === 'categorization' || resolvedPart.type === 'drag_drop') {
+        // Resolve dynamic variable strings for items, targets, categories, grid, pattern, and behavior
+        if (typeof resolvedPart.items === 'string') {
+          const varName = resolvedPart.items.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.items = resolvedVariables[varName];
+          }
+        }
+        if (typeof resolvedPart.targets === 'string') {
+          const varName = resolvedPart.targets.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.targets = resolvedVariables[varName];
+          }
+        }
+        if (typeof resolvedPart.categories === 'string') {
+          const varName = resolvedPart.categories.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.categories = resolvedVariables[varName];
+          }
+        }
+        if (typeof resolvedPart.grid === 'string') {
+          const varName = resolvedPart.grid.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.grid = resolvedVariables[varName];
+          }
+        }
+        if (typeof resolvedPart.pattern === 'string') {
+          const varName = resolvedPart.pattern.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.pattern = resolvedVariables[varName];
+          }
+        }
+        if (typeof resolvedPart.behavior === 'string') {
+          const varName = resolvedPart.behavior.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.behavior = resolvedVariables[varName];
+          }
+        }
+
+        // Interpolate inner properties of objects like grid, pattern, and behavior
+        if (resolvedPart.grid && typeof resolvedPart.grid === 'object') {
+          resolvedPart.grid = { ...resolvedPart.grid };
+          for (const key of Object.keys(resolvedPart.grid)) {
+            if (typeof resolvedPart.grid[key] === 'string') {
+              const cleaned = resolvedPart.grid[key].replace(/^\[|\]$/g, '');
+              if (resolvedVariables[cleaned] !== undefined) {
+                resolvedPart.grid[key] = resolvedVariables[cleaned];
+              } else {
+                resolvedPart.grid[key] = resolveExpression(resolvedPart.grid[key], resolvedVariables);
+              }
+            }
+          }
+        }
+        if (resolvedPart.pattern && typeof resolvedPart.pattern === 'object') {
+          resolvedPart.pattern = { ...resolvedPart.pattern };
+          for (const key of Object.keys(resolvedPart.pattern)) {
+            if (typeof resolvedPart.pattern[key] === 'string') {
+              const cleaned = resolvedPart.pattern[key].replace(/^\[|\]$/g, '');
+              if (resolvedVariables[cleaned] !== undefined) {
+                resolvedPart.pattern[key] = resolvedVariables[cleaned];
+              } else {
+                resolvedPart.pattern[key] = resolveExpression(resolvedPart.pattern[key], resolvedVariables);
+              }
+            }
+            if (Array.isArray(resolvedPart.pattern[key])) {
+              resolvedPart.pattern[key] = resolvedPart.pattern[key].map(elem => {
+                if (typeof elem === 'string') {
+                  const cleaned = elem.replace(/^\[|\]$/g, '');
+                  return resolvedVariables[cleaned] !== undefined ? resolvedVariables[cleaned] : elem;
+                }
+                return elem;
+              });
+            }
+          }
+        }
+        if (resolvedPart.behavior && typeof resolvedPart.behavior === 'object') {
+          resolvedPart.behavior = { ...resolvedPart.behavior };
+          for (const key of Object.keys(resolvedPart.behavior)) {
+            if (typeof resolvedPart.behavior[key] === 'string') {
+              const cleaned = resolvedPart.behavior[key].replace(/^\[|\]$/g, '');
+              if (resolvedVariables[cleaned] !== undefined) {
+                resolvedPart.behavior[key] = resolvedVariables[cleaned];
+              } else {
+                resolvedPart.behavior[key] = resolveExpression(resolvedPart.behavior[key], resolvedVariables);
+              }
+            }
+          }
+        }
+
+        // Post-processing mapping/interpolation of items after variable resolution
+        if (Array.isArray(resolvedPart.items)) {
+          resolvedPart.items = resolvedPart.items.map(item => ({
+            ...item,
+            content: item.content ? interpolateString(item.content, resolvedVariables) : undefined,
+            label: item.label ? interpolateString(item.label, resolvedVariables) : undefined,
+            imageUrl: item.imageUrl ? interpolateString(item.imageUrl, resolvedVariables) : undefined,
+            audioUrl: item.audioUrl ? interpolateString(item.audioUrl, resolvedVariables) : undefined,
+            alt: item.alt ? interpolateString(item.alt, resolvedVariables) : undefined,
+            svg: item.svg ? interpolateString(item.svg, resolvedVariables) : undefined,
+            imageWidth: item.imageWidth ? resolveExpression(String(item.imageWidth), resolvedVariables) : undefined
+          }));
+        }
+
         // 1. Dynamic Categories Subsetting
         const rawCatCount = resolvedPart.categoryCount || resolvedPart.categoriesCount || resolvedPart.maxCategories;
         if (rawCatCount !== undefined && Array.isArray(resolvedPart.categories)) {
