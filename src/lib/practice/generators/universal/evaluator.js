@@ -1224,6 +1224,11 @@ export function evaluateTemplate(originalTemplate, seed) {
     if (categorizationPart.words) questionPayload.words = categorizationPart.words;
     if (categorizationPart.targets) questionPayload.targets = categorizationPart.targets;
     if (categorizationPart.grid) questionPayload.grid = categorizationPart.grid;
+    if (categorizationPart.pattern) questionPayload.pattern = categorizationPart.pattern;
+    if (categorizationPart.behavior) questionPayload.behavior = categorizationPart.behavior;
+    if (categorizationPart.isCopiable !== undefined) questionPayload.isCopiable = categorizationPart.isCopiable;
+    if (categorizationPart.hideItemLabels !== undefined) questionPayload.hideItemLabels = categorizationPart.hideItemLabels;
+    if (categorizationPart.isRemoval !== undefined) questionPayload.isRemoval = categorizationPart.isRemoval;
   }
 
   if (resolvedAnswer === null && Array.isArray(questionPayload.validationRules)) {
