@@ -176,7 +176,7 @@ export const grade1MathSkills = [
   { id: 'g1-r-3', title: 'Count notes', chapterId: 'grade1-money', code: 'R.3', templateId: 'count-notes', engine: 'questionBank', gradeId: 'grade-1', unitId: 'money', order: 3, status: 'active' },
 
   // Patterns (S.1 to S.7)
-  { id: 'g1-s-1', title: 'Introduction to patterns', chapterId: 'grade1-patterns', code: 'S.1', templateId: 'intro-patterns', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 1, status: 'active' },
+  { id: 'g1-s-1', title: 'Introduction to patterns', chapterId: 'grade1-patterns', code: 'S.1', templateId: 'math-patterns-copy-level1', engine: 'universal-template', gradeId: 'grade-1', unitId: 'patterns', order: 1, status: 'active' },
   { id: 'g1-s-2', title: 'Find the next shape in a pattern', chapterId: 'grade1-patterns', code: 'S.2', templateId: 'find-next-shape-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 2, status: 'active' },
   { id: 'g1-s-3', title: 'Complete a pattern', chapterId: 'grade1-patterns', code: 'S.3', templateId: 'complete-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 3, status: 'active' },
   { id: 'g1-s-4', title: 'Make a pattern', chapterId: 'grade1-patterns', code: 'S.4', templateId: 'make-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 4, status: 'active' },
