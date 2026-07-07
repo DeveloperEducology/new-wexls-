@@ -234,14 +234,16 @@ export function getStandardizedGrade(title, topicId, gradeVal) {
   
   if (t.includes('remediation')) return 'Remediation';
   if (t.includes('pre-k') || t.includes('prek') || id === 'prek') return 'Pre-K';
-  if (t.includes('first') || t.includes('1st')) return 'Grade 1';
-  if (t.includes('second') || t.includes('2nd')) return 'Grade 2';
-  if (t.includes('third') || t.includes('3rd')) return 'Grade 3';
-  if (t.includes('fourth') || t.includes('4th')) return 'Grade 4';
-  if (t.includes('fifth') || t.includes('5th')) return 'Grade 5';
-  if (t.includes('sixth') || t.includes('6th')) return 'Grade 6';
-  if (t.includes('seventh') || t.includes('7th')) return 'Grade 7';
-  if (t.includes('eighth') || t.includes('8th')) return 'Grade 8';
+  if (t.includes('first')  || t.includes('1st'))  return 'Grade 1';
+  if (t.includes('second') || t.includes('2nd'))  return 'Grade 2';
+  if (t.includes('third')  || t.includes('3rd'))  return 'Grade 3';
+  if (t.includes('fourth') || t.includes('4th'))  return 'Grade 4';
+  if (t.includes('fifth')  || t.includes('5th'))  return 'Grade 5';
+  if (t.includes('sixth')  || t.includes('6th'))  return 'Grade 6';
+  if (t.includes('seventh')|| t.includes('7th'))  return 'Grade 7';
+  if (t.includes('eighth') || t.includes('8th'))  return 'Grade 8';
+  if (t.includes('ninth')  || t.includes('9th'))  return 'Grade 9';
+  if (t.includes('tenth')  || t.includes('10th')) return 'Grade 10';
   return 'General Skills';
 }
 
@@ -296,7 +298,7 @@ export function buildGradeCurriculum(topics, activeSubject) {
   });
 
   // Sort grades logically
-  const gradeOrder = ['Pre-K', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Remediation', 'General Skills'];
+  const gradeOrder = ['Pre-K', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Remediation', 'General Skills'];
   
   const getSortIndex = (gradeName) => {
     const idx = gradeOrder.indexOf(gradeName);

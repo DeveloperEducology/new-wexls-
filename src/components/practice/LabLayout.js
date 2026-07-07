@@ -36,6 +36,19 @@ export default function LabLayout({
     const [isMobile, setIsMobile] = useState(false);
     const [showTeacherPanel, setShowTeacherPanel] = useState(false);
     const [isLearningPathOpen, setIsLearningPathOpen] = useState(true);
+    const [isZenMode, setIsZenMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('zenMode') === 'true';
+        }
+        return false;
+    });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('zenMode', String(isZenMode));
+        }
+    }, [isZenMode]);
+
     const isDirectImageSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
     const shouldAutoSubmit = Boolean(
         autoSubmit ||
@@ -346,9 +359,9 @@ export default function LabLayout({
                         </div>
                     </main>
                 ) : (
-                    <main className={`${styles.mainGrid} ${!isLearningPathOpen ? styles.mainGridLearningPathClosed : ''}`}>
+                    <main className={`${styles.mainGrid} ${!isLearningPathOpen ? styles.mainGridLearningPathClosed : ''} ${isZenMode ? styles.mainGridZenMode : ''}`}>
                         {/* Left Sidebar */}
-                        <aside className={`${styles.mobileHiddenPanel} ${styles.standardLeftRail} ${!isLearningPathOpen ? styles.learningPathClosed : ''}`} style={{ order: isMobile ? 2 : 1 }}>
+                        <aside className={`${styles.mobileHiddenPanel} ${styles.standardLeftRail} ${!isLearningPathOpen ? styles.learningPathClosed : ''} ${isZenMode ? styles.zenLeftHidden : ''}`} style={{ order: isMobile ? 2 : 1 }}>
                             {leftPanel}
                         </aside>
 
@@ -364,11 +377,17 @@ export default function LabLayout({
                                         <p className={styles.practiceTopicBreadcrumb}>{title}</p>
                                     </div>
                                 </div>
-                                <div className={styles.practiceModeTabs} aria-label="Practice mode">
-                                    <span className={styles.practiceModeTabActive}>▣ Guided</span>
-                                    <span className={styles.practiceModeTab}>▣ Practice</span>
-                                    <span className={styles.practiceModeTab}>☆ Challenge</span>
-                                    <span className={styles.practiceModeTab}>☆ Mastery</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    {!isMobile && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsZenMode(!isZenMode)}
+                                            className={`${styles.zenToggleBtn} ${isZenMode ? styles.zenToggleBtnActive : ''}`}
+                                            title={isZenMode ? "Disable focus mode and restore sidebars" : "Enable focus mode, hiding sidebars and bottom row"}
+                                        >
+                                            🧘 {isZenMode ? 'Show Rails' : 'Focus Mode'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -418,7 +437,7 @@ export default function LabLayout({
                                 </div>
                             </div>
 
-                            <div className={styles.practiceSupportRow}>
+                            <div className={`${styles.practiceSupportRow} ${isZenMode ? styles.zenBottomHidden : ''}`}>
                                 <button type="button" className={styles.practiceSupportButton}>
                                     <span>💡</span>
                                     <span><strong>Hint</strong><small>Get a small hint</small></span>
@@ -435,7 +454,7 @@ export default function LabLayout({
                         </div>
 
                         {/* Right Sidebar */}
-                        <aside className={`${styles.mobileHiddenPanel} ${styles.standardRightRail}`} style={{ order: 3 }}>
+                        <aside className={`${styles.mobileHiddenPanel} ${styles.standardRightRail} ${isZenMode ? styles.zenRightHidden : ''}`} style={{ order: 3 }}>
                             {rightPanel}
                         </aside>
                     </main>

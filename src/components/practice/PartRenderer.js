@@ -84,14 +84,48 @@ function cleanText(value) {
 }
 
 function InlineMarkdown({ text }) {
-  const normalizedText = String(text || '')
+  const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+  const normalizedText = sanitizedText
     .replace(/\\n/g, '\n')
     .replace(/\/n/g, '\n');
+
+  const parseMathAndText = (str, keyPrefix) => {
+    const subSegments = str.split(/(\$[^\$]+\$)/g);
+    return subSegments.map((subPiece, subIndex) => {
+      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+      if (mathMatch) {
+        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+      }
+      if (subPiece.includes('<svg')) {
+        const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
+        return (
+          <span key={`${keyPrefix}-${subIndex}`}>
+            {svgParts.map((svgPart, pIdx) => {
+              if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+                return (
+                  <span
+                    key={pIdx}
+                    dangerouslySetInnerHTML={{ __html: svgPart }}
+                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                  />
+                );
+              }
+              return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+            })}
+          </span>
+        );
+      }
+      return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+    });
+  };
+
   return (
     <span style={{ whiteSpace: 'pre-line' }}>
       {normalizedText.split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
         const match = piece.match(/^\*\*([^*]+)\*\*$/);
-        if (match) return <strong key={index}>{match[1]}</strong>;
+        if (match) {
+          return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+        }
         
         const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
         if (imgMatch) {
@@ -112,35 +146,9 @@ function InlineMarkdown({ text }) {
           );
         }
         
-        const subSegments = piece.split(/(\$[^\$]+\$)/g);
         return (
           <span key={index}>
-            {subSegments.map((subPiece, subIndex) => {
-              const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-              if (mathMatch) {
-                return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
-              }
-              if (subPiece.includes('<svg')) {
-                const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
-                return (
-                  <span key={subIndex}>
-                    {svgParts.map((svgPart, pIdx) => {
-                      if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
-                        return (
-                          <span
-                            key={pIdx}
-                            dangerouslySetInnerHTML={{ __html: svgPart }}
-                            style={{ display: 'inline-block', verticalAlign: 'middle' }}
-                          />
-                        );
-                      }
-                      return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
-                    })}
-                  </span>
-                );
-              }
-              return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
-            })}
+            {parseMathAndText(piece, `text-${index}`)}
           </span>
         );
       })}
@@ -1098,6 +1106,17 @@ function PickFromSentencePart({ part, userAnswer, onAnswer, isAnswered }) {
     onAnswer(writeAnswer(userAnswer, answerKey, serializeSelected(nextIds)));
   }
 
+  const hasLongTokens = tokens.some(t => {
+    const txt = t.display || t.text || t.content || '';
+    return txt.length > 25;
+  });
+  const defaultMin = hasLongTokens ? 15 : 27;
+  const defaultMax = hasLongTokens ? 17 : 42;
+  const minSize = part.fontSize ? Math.max(12, Number(String(part.fontSize).replace('px', '')) - 3) : defaultMin;
+  const maxSize = part.fontSize ? Number(String(part.fontSize).replace('px', '')) : defaultMax;
+
+
+
   return (
     <div
       style={{
@@ -1112,23 +1131,19 @@ function PickFromSentencePart({ part, userAnswer, onAnswer, isAnswered }) {
         aria-label={part.ariaLabel || part.prompt || 'Select words in the sentence'}
         style={{
           maxWidth: part.maxWidth || 940,
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'baseline',
-          columnGap: 'clamp(7px, 1.4vw, 13px)',
-          rowGap: 'clamp(8px, 1.8vw, 14px)',
+          display: 'block',
           color: '#0f172a',
           fontFamily: 'Arial, Helvetica, sans-serif',
-          fontSize: responsivePx(part.fontSize || part.style?.fontSize, 27, 42),
+          fontSize: responsivePx(part.fontSize || part.style?.fontSize, minSize, maxSize),
           fontWeight: part.fontWeight || 400,
-          lineHeight: 1.55,
+          lineHeight: 1.8,
           textAlign: 'left',
           ...(part.style || {}),
         }}
       >
         {tokens.map((token) => {
           if (token.isSpace) {
-            return <span key={token.id} style={{ width: 2 }} />;
+            return <span key={token.id} style={{ display: 'inline', margin: '0 4px' }} />;
           }
 
           const selected = selectedIds.includes(token.id);
@@ -1136,42 +1151,46 @@ function PickFromSentencePart({ part, userAnswer, onAnswer, isAnswered }) {
           const canPick = token.selectable && !isAnswered;
 
           return (
-            <button
-              key={token.id}
-              type="button"
-              disabled={!token.selectable || isAnswered}
-              onClick={() => handleSelect(token)}
-              onMouseEnter={() => setHoveredToken(token.id)}
-              onMouseLeave={() => setHoveredToken(null)}
-              style={{
-                appearance: 'none',
-                border: 'none',
-                borderBottom: selected
-                  ? '4px solid #38a5e8'
-                  : hovered && token.selectable
-                    ? '3px dotted #38a5e8'
-                    : '3px solid transparent',
-                borderRadius: 0,
-                background: 'transparent',
-                padding: '0 2px 5px',
-                margin: 0,
-                color: selected ? '#0f172a' : 'inherit',
-                font: 'inherit',
-                fontWeight: selected ? 700 : 'inherit',
-                cursor: canPick ? 'pointer' : 'default',
-                transition: 'border-color 120ms ease, border-style 120ms ease, color 120ms ease',
-              }}
-            >
-              {token.leading || ''}
-              {token.display ?? token.text}
+            <span key={token.id} style={{ display: 'inline' }}>
+              <button
+                type="button"
+                disabled={!token.selectable || isAnswered}
+                onClick={() => handleSelect(token)}
+                onMouseEnter={() => setHoveredToken(token.id)}
+                onMouseLeave={() => setHoveredToken(null)}
+                style={{
+                  appearance: 'none',
+                  border: 'none',
+                  background: 'transparent',
+                  padding: '0 2px',
+                  margin: 0,
+                  color: selected ? '#1d4ed8' : 'inherit',
+                  font: 'inherit',
+                  fontWeight: 'inherit',
+                  cursor: canPick ? 'pointer' : 'default',
+                  textAlign: 'left',
+                  display: 'inline',
+                  textDecoration: selected
+                    ? 'underline 3px solid #2563eb'
+                    : hovered && token.selectable
+                      ? 'underline 2px dotted #2563eb'
+                      : 'none',
+                  textUnderlineOffset: '6px',
+                  transition: 'color 120ms ease, text-decoration 120ms ease',
+                }}
+              >
+                {token.leading || ''}
+                {token.display ?? token.text}
+              </button>
               {token.trailing || ''}
-            </button>
+            </span>
           );
         })}
       </div>
     </div>
   );
 }
+
 
 function NumberLinePart({ part }) {
   const min = Number(part.min ?? 0);

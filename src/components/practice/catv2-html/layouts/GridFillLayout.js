@@ -351,14 +351,20 @@ export default function GridFillLayout({
     );
   }
 
-  const isInlinePattern = Boolean(question.pattern && targets.length === 1 && patternRows.length > 0);
+  const rowForInline = patternRows[0] || [];
+  const rowHasTargets = rowForInline.some(itemId => targets.some(t => t.id === itemId));
+  const isInlinePattern = Boolean(
+    question.pattern && 
+    patternRows.length > 0 && 
+    (targets.length === 1 || question.pattern.isInline || rowHasTargets)
+  );
 
   if (isInlinePattern) {
     const row = patternRows[0] || [];
     return (
       <div style={{ display: 'grid', gap: 18, paddingTop: 6 }}>
         <div
-          aria-label="Find the next shape pattern"
+          aria-label="Pattern layout"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -371,6 +377,59 @@ export default function GridFillLayout({
           }}
         >
           {row.map((itemId, index) => {
+            const target = targets.find(t => t.id === itemId);
+            if (target) {
+              const item = dnd.getTargetItem(target.id);
+              const active = dnd.selectedItemId && !item;
+              return (
+                <CatV2DropZone
+                  key={target.id}
+                  label=""
+                  active={Boolean(active)}
+                  filled={Boolean(item)}
+                  minHeight={cellMinHeight}
+                  style={{
+                    width: 92,
+                    minWidth: 92,
+                    height: 58,
+                    minHeight: 58,
+                    padding: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: item ? '#ffffff' : (active ? '#dbeafe' : '#e0f2fe'),
+                    border: active ? '2px dashed #2563eb' : (item ? 'none' : '2px dashed #0284c7'),
+                    borderRadius: 8,
+                    boxShadow: active ? '0 0 10px rgba(37,99,235,0.35)' : 'none',
+                    transform: active ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 160ms ease',
+                  }}
+                  onClick={() => {
+                    if (item) dnd.returnItem(item.id, target.id);
+                    else dnd.placeItem(dnd.selectedItemId, target.id);
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => dnd.handleDrop(event, target.id)}
+                >
+                  {item ? (
+                    <CatV2Card
+                      item={item}
+                      compact
+                      cardStyle={cardStyle}
+                      hideLabel={hideItemLabels}
+                      disabled={isAnswered}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        dnd.returnItem(item.id, target.id);
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 13, color: '#0284c7', fontWeight: 700 }}>?</span>
+                  )}
+                </CatV2DropZone>
+              );
+            }
+
             const item = itemById.get(itemId);
             if (!item) return null;
             return (
@@ -385,7 +444,7 @@ export default function GridFillLayout({
             );
           })}
 
-          {targets.map((target) => {
+          {!rowHasTargets && targets.map((target) => {
             const item = dnd.getTargetItem(target.id);
             const active = dnd.selectedItemId && !item;
             return (
@@ -404,10 +463,12 @@ export default function GridFillLayout({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: item ? '#ffffff' : '#e0f2fe',
-                  border: `2px dashed ${active ? '#2563eb' : '#0284c7'}`,
+                  background: item ? '#ffffff' : (active ? '#dbeafe' : '#e0f2fe'),
+                  border: active ? '2px dashed #2563eb' : (item ? 'none' : '2px dashed #0284c7'),
                   borderRadius: 8,
-                  boxShadow: active ? '0 0 10px rgba(37,99,235,0.2)' : 'none',
+                  boxShadow: active ? '0 0 10px rgba(37,99,235,0.35)' : 'none',
+                  transform: active ? 'scale(1.02)' : 'scale(1)',
+                  transition: 'all 160ms ease',
                 }}
                 onClick={() => {
                   if (item) dnd.returnItem(item.id, target.id);
@@ -500,55 +561,152 @@ export default function GridFillLayout({
         </div>
       ) : null}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: fitToWindow
-            ? `repeat(${Math.max(columnCount, 1)}, minmax(64px, 88px))`
-            : `repeat(${Math.max(columnCount, 1)}, minmax(92px, 1fr))`,
-          justifyContent: fitToWindow ? 'center' : 'stretch',
-          gap: 10,
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {targets.map((target) => {
-          const item = dnd.getTargetItem(target.id);
-          const active = dnd.selectedItemId && !item;
-          return (
-            <CatV2DropZone
-              key={target.id}
-              label={target.label || `Slot ${target.row || ''}${target.column ? `-${target.column}` : ''}`}
-              active={Boolean(active)}
-              filled={Boolean(item)}
-              minHeight={cellMinHeight}
-              style={fitToWindow ? { padding: 6, background: item ? '#ffffff' : '#dff6ff' } : undefined}
-              onClick={() => {
-                if (item) dnd.returnItem(item.id, target.id);
-                else dnd.placeItem(dnd.selectedItemId, target.id);
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => dnd.handleDrop(event, target.id)}
-            >
-              {item ? (
-                <CatV2Card
-                  item={item}
-                  compact
-                  cardStyle={cardStyle}
-                  hideLabel={hideItemLabels}
-                  disabled={isAnswered}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    dnd.returnItem(item.id, target.id);
+      {columnCount === 1 ? (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16,
+            width: '100%',
+          }}
+        >
+          {targets.map((target) => {
+            const item = dnd.getTargetItem(target.id);
+            const active = dnd.selectedItemId && !item;
+            return (
+              <div
+                key={target.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  width: '100%',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Drop Zone (grey placeholder slot on the left) */}
+                <CatV2DropZone
+                  label=""
+                  active={Boolean(active)}
+                  filled={Boolean(item)}
+                  minHeight={cellMinHeight}
+                  style={{
+                    width: 180,
+                    minWidth: 180,
+                    maxWidth: 180,
+                    height: cellMinHeight,
+                    background: item ? '#ffffff' : '#cbd5e1',
+                    border: item ? '2px solid #2563eb' : 'none',
+                    borderRadius: 8,
+                    boxShadow: active ? '0 0 12px rgba(37,99,235,0.25)' : 'none',
+                    padding: 4,
                   }}
-                />
-              ) : (
-                <span>{target.label || 'Drop here'}</span>
-              )}
-            </CatV2DropZone>
-          );
-        })}
-      </div>
+                  onClick={() => {
+                    if (item) dnd.returnItem(item.id, target.id);
+                    else dnd.placeItem(dnd.selectedItemId, target.id);
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => dnd.handleDrop(event, target.id)}
+                >
+                  {item ? (
+                    <CatV2Card
+                      item={item}
+                      compact
+                      cardStyle={cardStyle}
+                      hideLabel={hideItemLabels}
+                      disabled={isAnswered}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        dnd.returnItem(item.id, target.id);
+                      }}
+                    />
+                  ) : null}
+                </CatV2DropZone>
+
+                {/* Target label on the right */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '12px 16px',
+                    backgroundColor: '#eff6ff',
+                    border: '2px dashed #bfdbfe',
+                    borderRadius: '12px',
+                    height: cellMinHeight,
+                    width: 220,
+                    minWidth: 220,
+                    maxWidth: 220,
+                    fontFamily: 'system-ui, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: '#1e3a8a',
+                    textAlign: 'center',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {target.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: fitToWindow
+              ? `repeat(${Math.max(columnCount, 1)}, minmax(64px, 88px))`
+              : `repeat(${Math.max(columnCount, 1)}, minmax(92px, 1fr))`,
+            justifyContent: fitToWindow ? 'center' : 'stretch',
+            gap: 10,
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {targets.map((target) => {
+            const item = dnd.getTargetItem(target.id);
+            const active = dnd.selectedItemId && !item;
+            return (
+              <CatV2DropZone
+                key={target.id}
+                label={target.label || `Slot ${target.row || ''}${target.column ? `-${target.column}` : ''}`}
+                active={Boolean(active)}
+                filled={Boolean(item)}
+                minHeight={cellMinHeight}
+                style={
+                  active
+                    ? { background: '#dbeafe', border: '2px dashed #2563eb', boxShadow: '0 0 12px rgba(37,99,235,0.35)', transform: 'scale(1.02)', transition: 'all 160ms ease' }
+                    : (fitToWindow ? { padding: 6, background: item ? '#ffffff' : '#dff6ff' } : undefined)
+                }
+                onClick={() => {
+                  if (item) dnd.returnItem(item.id, target.id);
+                  else dnd.placeItem(dnd.selectedItemId, target.id);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => dnd.handleDrop(event, target.id)}
+              >
+                {item ? (
+                  <CatV2Card
+                    item={item}
+                    compact
+                    cardStyle={cardStyle}
+                    hideLabel={hideItemLabels}
+                    disabled={isAnswered}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      dnd.returnItem(item.id, target.id);
+                    }}
+                  />
+                ) : (
+                  <span>{target.label || 'Drop here'}</span>
+                )}
+              </CatV2DropZone>
+            );
+          })}
+        </div>
+      )}
 
       <CatV2SourceTray label="Available items">
         {dnd.sourceItems.map((item) => (

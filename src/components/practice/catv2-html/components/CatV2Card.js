@@ -2,6 +2,34 @@
 
 import React from 'react';
 import { resolveToolSvg } from '@/lib/practice/svgTools';
+import KaTeXRenderer from '../../KaTeXRenderer';
+
+function InlineMarkdown({ text }) {
+  const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+  
+  const parseMathAndText = (str, keyPrefix) => {
+    const subSegments = str.split(/(\$[^\$]+\$)/g);
+    return subSegments.map((subPiece, subIndex) => {
+      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+      if (mathMatch) {
+        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+      }
+      return subPiece;
+    });
+  };
+
+  return sanitizedText.split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
+    const match = piece.match(/^\*\*([^*]+)\*\*$/);
+    if (match) {
+      return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+    }
+    return (
+      <span key={index}>
+        {parseMathAndText(piece, `text-${index}`)}
+      </span>
+    );
+  });
+}
 
 const cleanSvgContent = (svgStr) => {
   if (!svgStr) return '';
@@ -42,7 +70,8 @@ export default function CatV2Card({
   const transparent = cardStyle === 'transparent_png' || cardStyle === 'borderless';
   const hasVisual = Boolean(svgContent || imageUrl);
   const label = item.content || item.label || item.id;
-  const cardWidth = compact ? 92 : Number(item.imageWidth) || (hasVisual ? 132 : 96);
+  const isMath = typeof label === 'string' && (label.includes('$') || label.includes('\\'));
+  const cardWidth = compact ? 92 : Number(item.imageWidth) || (hasVisual ? 132 : (isMath ? 320 : 96));
 
   return (
     <button
@@ -53,8 +82,9 @@ export default function CatV2Card({
       onDragEnd={(event) => onDragEnd?.(event, item)}
       disabled={disabled}
       style={{
-        width: cardWidth,
+        width: 'auto',
         minWidth: cardWidth,
+        maxWidth: isMath ? 400 : 280,
         minHeight: compact ? 58 : 78,
         border: transparent ? '1px solid transparent' : `2px solid ${selected ? '#2563eb' : '#5cc4ed'}`,
         background: transparent ? 'transparent' : '#ffffff',
@@ -111,8 +141,8 @@ export default function CatV2Card({
       ) : null}
 
       {(!hasVisual || !hideLabel) && label ? (
-        <span style={{ fontSize: compact ? 15 : 17, fontWeight: 900, lineHeight: 1.1 }}>
-          {label}
+        <span style={{ fontSize: compact ? 15 : 17, fontWeight: 900, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+          <InlineMarkdown text={label} />
         </span>
       ) : null}
     </button>

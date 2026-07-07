@@ -9,6 +9,34 @@ import OrderingLayout from './layouts/OrderingLayout';
 import GridFillLayout from './layouts/GridFillLayout';
 import DiagramSlotsLayout from './layouts/DiagramSlotsLayout';
 import WordCompletionLayout from './layouts/WordCompletionLayout';
+import KaTeXRenderer from '../KaTeXRenderer';
+
+function InlineMarkdown({ text }) {
+  const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+  
+  const parseMathAndText = (str, keyPrefix) => {
+    const subSegments = str.split(/(\$[^\$]+\$)/g);
+    return subSegments.map((subPiece, subIndex) => {
+      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+      if (mathMatch) {
+        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+      }
+      return subPiece;
+    });
+  };
+
+  return sanitizedText.split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
+    const match = piece.match(/^\*\*([^*]+)\*\*$/);
+    if (match) {
+      return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+    }
+    return (
+      <span key={index}>
+        {parseMathAndText(piece, `text-${index}`)}
+      </span>
+    );
+  });
+}
 
 const isInlineSvg = (url) => {
   if (typeof url !== 'string') return false;
@@ -143,7 +171,12 @@ function CategorySortLayout({
   const textCardMaxWidth = 154;
   const textCardHeight = 54;
   const hasItemVisual = (item) => Boolean(item.imageUrl || item.svg || resolveToolSvg(item) || isInlineSvg(item.content || ''));
+  const isMath = (it) => {
+    const val = it.content || it.label || '';
+    return typeof val === 'string' && (val.includes('$') || val.includes('\\'));
+  };
   const getTextCardWidth = (item) => {
+    if (isMath(item)) return 320;
     const contentLength = String(item.content || '').replace(/\s+/g, '').length;
     return Math.max(textCardMinWidth, Math.min(textCardMaxWidth, contentLength * 15 + 34));
   };
@@ -887,7 +920,7 @@ function CategorySortLayout({
                       <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                     </svg>
                   </button>
-                  <span>{category.label}</span>
+                  <span><InlineMarkdown text={category.label} /></span>
                 </div>
               ) : null}
 
@@ -1327,7 +1360,7 @@ function CategorySortLayout({
                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                   </svg>
                 </button>
-                <span>{category.label}</span>
+                <span><InlineMarkdown text={category.label} /></span>
               </div>
             ) : null}
 
@@ -1633,7 +1666,7 @@ function CategorySortLayout({
           )}
         </>
       ) : (
-        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1, fontWeight: 900, color: '#0f172a' }}>{item.content}</span>
+        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}><InlineMarkdown text={item.content} /></span>
       )}
     </div>
   );
@@ -1662,6 +1695,10 @@ function CategorySortLayout({
   );
 
   const hasGridCategories = categories.some((cat) => cat.isGrid === true || (Number(cat.rows) > 0 && Number(cat.columns) > 0));
+  const shouldStackVertically = isV2 && (gridCardWidth > 180 || items.some(item => {
+    const val = item.content || item.label || '';
+    return typeof val === 'string' && (val.includes('$') || val.includes('\\'));
+  }));
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1738,7 +1775,7 @@ function CategorySortLayout({
                   <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                 </svg>
               </button>
-              <span style={{ flexGrow: 1 }}>{category.label}</span>
+              <span style={{ flexGrow: 1 }}><InlineMarkdown text={category.label} /></span>
               {(category.prefillImageUrl || category.imageUrl) && (
                 <img
                   src={category.prefillImageUrl || category.imageUrl}
@@ -1867,7 +1904,7 @@ function CategorySortLayout({
           display: grid;
           width: 100%;
           max-width: 100%;
-          grid-template-columns: repeat(${Math.max(categories.length, 1)}, minmax(260px, 1fr));
+          grid-template-columns: ${shouldStackVertically ? '1fr' : `repeat(${Math.max(categories.length, 1)}, minmax(260px, 1fr))`};
         }
         @media (max-width: 768px) {
           .categories-grid-container {

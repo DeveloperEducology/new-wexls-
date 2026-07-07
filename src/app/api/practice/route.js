@@ -37,6 +37,7 @@ import {
 } from '../../../lib/practice/generators/math/topics/multiplication';
 import { resolveUnitsMeasurementGenerator } from '../../../lib/practice/generators/science/topics/units-measurement/index.js';
 import { resolveSolarSystemGenerator } from '../../../lib/practice/generators/science/topics/solar-system/index.js';
+import { resolveChemicalReactionsGenerator } from '../../../lib/practice/generators/science/topics/chemical-reactions/registry.js';
 import {
   generateRatioQuestion,
 } from '../../../lib/practice/generators/math/topics/ratio/index.js';
@@ -1014,6 +1015,30 @@ export async function GET(request) {
         { topic: targetTopic, skill: resolvedTemplateId, seed, engine: generator.template.engine, subject }
       );
       
+      return respond(withCompetency({
+        success: true,
+        question,
+        seed,
+        template: generator.template,
+      }, { subject, topic, skill }));
+    }
+
+    if (subject === 'science' && targetTopic === 'chemical-reactions') {
+      const generator = resolveChemicalReactionsGenerator(resolvedSkillId, config);
+      if (!generator) {
+        throw new Error(`Could not resolve chemical-reactions generator for ${resolvedSkillId}`);
+      }
+
+      const questionData = generator.generate({
+        ...config.variables,
+        difficulty: config.difficulty,
+        recentIds: config.recentIds || [],
+      });
+      const question = normalizeGenericTopicQuestion(
+        questionData,
+        { topic: targetTopic, skill: resolvedSkillId, seed, engine: 'chemicalReactions', subject }
+      );
+
       return respond(withCompetency({
         success: true,
         question,

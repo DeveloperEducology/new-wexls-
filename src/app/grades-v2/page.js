@@ -181,6 +181,43 @@ export default async function GradesV2Page({ searchParams }) {
           </div>
           <div className="tab-actions-group" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <GradeFilterDropdownV2 grades={grades} selectedGrade={selectedGradeId} />
+            <div style={{ display: 'flex', gap: '0.5rem', background: '#e2e8f0', borderRadius: '8px', padding: '4px' }}>
+              <Link 
+                href="/grades-v2"
+                style={{
+                  textDecoration: 'none',
+                  background: '#ffffff',
+                  color: '#4f46e5',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                🏫 Grades V2
+              </Link>
+              <Link 
+                href="/admin-v2"
+                style={{
+                  textDecoration: 'none',
+                  background: 'transparent',
+                  color: '#475569',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                🛠️ Admin V2
+              </Link>
+            </div>
           </div>
         </div>
 

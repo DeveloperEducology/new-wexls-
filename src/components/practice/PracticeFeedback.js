@@ -14,45 +14,68 @@ function isSvgString(value) {
   return typeof value === 'string' && value.trim().startsWith('<svg');
 }
 
+function cleanSvgContent(svgStr) {
+  if (!svgStr) return '';
+  let cleaned = svgStr
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\t/g, ' ')
+    .replace(/\\\\/g, '\\');
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  return cleaned;
+}
+
 function InlineMarkdown({ text }) {
-  const normalizedText = String(text || '')
+  const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+  const normalizedText = sanitizedText
     .replace(/\\n/g, '\n')
     .replace(/\/n/g, '\n');
+
+  const parseMathAndText = (str, keyPrefix) => {
+    const subSegments = str.split(/(\$[^\$]+\$)/g);
+    return subSegments.map((subPiece, subIndex) => {
+      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+      if (mathMatch) {
+        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+      }
+      if (subPiece.includes('<svg')) {
+        const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
+        return (
+          <span key={`${keyPrefix}-${subIndex}`}>
+            {svgParts.map((svgPart, pIdx) => {
+              if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+                return (
+                  <span
+                    key={pIdx}
+                    dangerouslySetInnerHTML={{ __html: svgPart }}
+                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                  />
+                );
+              }
+              return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+            })}
+          </span>
+        );
+      }
+      return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+    });
+  };
+
   return (
     <span style={{ whiteSpace: 'pre-line' }}>
       {normalizedText.split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
         const match = piece.match(/^\*\*([^*]+)\*\*$/);
-        if (match) return <strong key={index}>{match[1]}</strong>;
+        if (match) {
+          return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+        }
         
-        const subSegments = piece.split(/(\$[^\$]+\$)/g);
         return (
           <span key={index}>
-            {subSegments.map((subPiece, subIndex) => {
-              const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-              if (mathMatch) {
-                return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
-              }
-              if (subPiece.includes('<svg')) {
-                const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
-                return (
-                  <span key={subIndex}>
-                    {svgParts.map((svgPart, pIdx) => {
-                      if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
-                        return (
-                          <span
-                            key={pIdx}
-                            dangerouslySetInnerHTML={{ __html: svgPart }}
-                            style={{ display: 'inline-block', verticalAlign: 'middle' }}
-                          />
-                        );
-                      }
-                      return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
-                    })}
-                  </span>
-                );
-              }
-              return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
-            })}
+            {parseMathAndText(piece, `text-${index}`)}
           </span>
         );
       })}
@@ -540,7 +563,7 @@ function renderInteractiveSolution(question) {
                   <span
                     aria-hidden="true"
                     style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    dangerouslySetInnerHTML={{ __html: cleanSvgContent ? cleanSvgContent(item.svg) : item.svg }}
+                    dangerouslySetInnerHTML={{ __html: cleanSvgContent(item.svg) }}
                   />
                 ) : item.imageUrl ? (
                   <img src={item.imageUrl} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />

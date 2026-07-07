@@ -901,7 +901,17 @@ export function evaluateTemplate(originalTemplate, seed) {
         }
       }
 
+      if (resolvedPart.type === 'pick_from_sentence' || resolvedPart.type === 'select_from_sentence') {
+        if (typeof resolvedPart.tokens === 'string') {
+          const varName = resolvedPart.tokens.replace(/^\[|\]$/g, '');
+          if (resolvedVariables[varName] !== undefined) {
+            resolvedPart.tokens = resolvedVariables[varName];
+          }
+        }
+      }
+
       if (resolvedPart.type === 'interactive_stickers') {
+
         if (typeof resolvedPart.sceneImageUrl === 'string') {
           resolvedPart.sceneImageUrl = interpolateString(resolvedPart.sceneImageUrl, resolvedVariables);
         }

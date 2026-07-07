@@ -3,6 +3,7 @@ import { subtractionSkillsByGrade } from '../practice/generators/math/topics/sub
 import { multiplicationHomeGroups } from '../practice/clientCatalogs/multiplicationCatalog.js';
 import { divisionSkillsByGrade } from '../practice/generators/math/topics/division/skills/index.js';
 import { unitsMeasurementSkillsByGrade } from '../practice/generators/science/topics/units-measurement/skills/index.js';
+import { grade10ChemReactionSkills } from '../practice/generators/science/topics/chemical-reactions/skills.js';
 import { grammarSkillsByGrade } from '../practice/generators/english/topics/grammar/skills/index.js';
 import { shapesSkillsByGrade } from '../practice/generators/math/topics/shapes/skills/index.js';
 import { measurementHomeGroups } from '../practice/clientCatalogs/measurementCatalog.js';
@@ -33,6 +34,15 @@ const unitsMeasurementHomeGroups = Object.entries(unitsMeasurementSkillsByGrade)
   title: gradeOrdinal(grade),
   skills: skills.map((skill) => [skill.code, skill.title, skill.id]),
 }));
+
+const chemReactionHomeGroups = [
+  {
+    title: '10th-grade Chemical Reactions skills',
+    grade: '10',
+    skills: grade10ChemReactionSkills.map((skill) => [skill.code, skill.title, skill.id]),
+  },
+];
+
 
 const solarSystemHomeGroups = [
   {
@@ -401,6 +411,15 @@ export const TOPICS = [
     topic: 'ukg-science',
     includes: ['Classify shapes', 'circles', 'triangles', 'squares', 'rectangles'],
     groups: ukgScienceHomeGroups,
+  },
+  {
+    id: 'chemical-reactions',
+    title: 'Chemical Reactions & Equations',
+    color: '#f59e0b',
+    subject: 'science',
+    topic: 'chemical-reactions',
+    includes: ['Identify chemical changes', 'Combination & Decomposition', 'Displacement reactions', 'Balancing equations', 'Oxidation & Reduction', 'Corrosion & Rancidity'],
+    groups: chemReactionHomeGroups,
   },
   {
     id: 'ratio',

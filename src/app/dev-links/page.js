@@ -51,6 +51,8 @@ export default function DevLinksPage() {
     { href: '/docs/option-pooling', label: 'Option Pooling Docs' },
     { href: '/docs/dynamic-templates', label: 'Template Builder Docs' },
     { href: '/docs/question-guide', label: 'Question Guide' },
+    { href: '/docs/square-and-cube', label: 'Square and Cube Tutor Guide' },
+    { href: '/docs/writer-guide', label: 'Writer Playbook (Math/Science)' },
   ];
 
   return (

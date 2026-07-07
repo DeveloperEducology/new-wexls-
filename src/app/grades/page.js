@@ -196,6 +196,7 @@ function GradeLevelCurriculumPage({ topics, activeSubject, skillsMastery = {}, s
 
       <div className="curriculum-container">
         <section className="grade-content" style={{ flex: 1, width: '100%', maxWidth: '100%' }}>
+
           {renderedGrades.length === 0 ? (
             <p className="empty-state">No skills available for this subject or grade yet.</p>
           ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered, isCopiable = false }) {
   // placements maps targetId -> itemId
@@ -8,10 +8,18 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [draggingItemId, setDraggingItemId] = useState(null);
 
+  const onAnswerRef = useRef(onAnswer);
+  useEffect(() => {
+    onAnswerRef.current = onAnswer;
+  }, [onAnswer]);
+
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     setPlacements({});
     setSelectedItemId(null);
     setDraggingItemId(null);
+    isFirstRender.current = true;
   }, [items.map((item) => item.id).join('|'), targets.map((target) => target.id).join('|')]);
 
   const sourceItems = useMemo(() => {
@@ -25,7 +33,7 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
     const complete = targets.every((target) => nextPlacements[target.id]);
     
     if (!complete) {
-      onAnswer?.(null);
+      onAnswerRef.current?.(null);
       return;
     }
 
@@ -42,10 +50,14 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
       }
     });
 
-    onAnswer?.(answerPayload);
-  }, [targets, onAnswer]);
+    onAnswerRef.current?.(answerPayload);
+  }, [targets]);
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     emitAnswer(placements);
   }, [placements, emitAnswer]);
 

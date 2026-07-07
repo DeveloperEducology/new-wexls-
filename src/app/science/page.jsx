@@ -27,7 +27,20 @@ const LABS = [
     bg:      'linear-gradient(135deg,rgba(99,102,241,0.1) 0%,rgba(168,85,247,0.07) 100%)',
     border:  'rgba(99,102,241,0.28)',
   },
+  {
+    href:    '/science/chemical-reactions',
+    emoji:   '🧪',
+    title:   'Chemical Reactions & Equations',
+    tagline: 'Reactants → Products',
+    desc:    'Master chemical reactions with adaptive IXL-style questions. Goes easier when you slip, harder when you ace it!',
+    tags:    ['Grade 10', 'Chemistry', 'Adaptive'],
+    color:   '#f59e0b',
+    glow:    'rgba(245,158,11,0.35)',
+    bg:      'linear-gradient(135deg,rgba(245,158,11,0.1) 0%,rgba(234,88,12,0.07) 100%)',
+    border:  'rgba(245,158,11,0.28)',
+  },
 ];
+
 
 function LabCard({ lab }) {
   return (

@@ -94,9 +94,43 @@ function responsivePx(value, minPx, fallbackMaxPx) {
 }
 
 function InlineMarkdown({ text }) {
-  return String(text || '').split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
+  const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+  
+  const parseMathAndText = (str, keyPrefix) => {
+    const subSegments = str.split(/(\$[^\$]+\$)/g);
+    return subSegments.map((subPiece, subIndex) => {
+      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+      if (mathMatch) {
+        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+      }
+      if (subPiece.includes('<svg')) {
+        const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
+        return (
+          <span key={`${keyPrefix}-${subIndex}`}>
+            {svgParts.map((svgPart, pIdx) => {
+              if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+                return (
+                  <span
+                    key={pIdx}
+                    dangerouslySetInnerHTML={{ __html: svgPart }}
+                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                  />
+                );
+              }
+              return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+            })}
+          </span>
+        );
+      }
+      return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+    });
+  };
+
+  return sanitizedText.split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
     const match = piece.match(/^\*\*([^*]+)\*\*$/);
-    if (match) return <strong key={index}>{match[1]}</strong>;
+    if (match) {
+      return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+    }
     
     const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
     if (imgMatch) {
@@ -117,35 +151,9 @@ function InlineMarkdown({ text }) {
       );
     }
     
-    const subSegments = piece.split(/(\$[^\$]+\$)/g);
     return (
       <span key={index}>
-        {subSegments.map((subPiece, subIndex) => {
-          const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-          if (mathMatch) {
-            return <KaTeXRenderer key={subIndex} math={mathMatch[1]} displayMode={false} />;
-          }
-          if (subPiece.includes('<svg')) {
-            const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
-            return (
-              <span key={subIndex}>
-                {svgParts.map((svgPart, pIdx) => {
-                  if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
-                    return (
-                      <span
-                        key={pIdx}
-                        dangerouslySetInnerHTML={{ __html: svgPart }}
-                        style={{ display: 'inline-block', verticalAlign: 'middle' }}
-                      />
-                    );
-                  }
-                  return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
-                })}
-              </span>
-            );
-          }
-          return <span key={subIndex}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
-        })}
+        {parseMathAndText(piece, `text-${index}`)}
       </span>
     );
   });

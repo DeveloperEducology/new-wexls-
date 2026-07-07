@@ -2,7 +2,7 @@ import { getMongoDb } from '@/lib/db/mongo';
 import { lkgEnglishMicroSkillRegistry } from '@/lib/practice/generators/english/topics/lkg/registry';
 import { lkgMicroSkillRegistry, lkgTemplateRegistry } from '@/lib/practice/generators/math/topics/lkg/registry';
 import { ukgNumbersCountingSkills } from '@/lib/practice/generators/math/topics/ukg-numbers-counting/skills';
-import { grade1MathSkills } from './grade1MathRegistry';
+import { grade1MathSkills } from './grade1MathRegistry.js';
 
 const COLLECTION_MAP = {
   grade: 'grades_v2',

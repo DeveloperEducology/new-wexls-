@@ -178,9 +178,9 @@ export const grade1MathSkills = [
   // Patterns (S.1 to S.7)
   { id: 'g1-s-1', title: 'Introduction to patterns', chapterId: 'grade1-patterns', code: 'S.1', templateId: 'math-patterns-copy-level1', engine: 'universal-template', gradeId: 'grade-1', unitId: 'patterns', order: 1, status: 'active' },
   { id: 'g1-s-2', title: 'Find the next shape in a pattern', chapterId: 'grade1-patterns', code: 'S.2', templateId: 'math-patterns-next-level1', engine: 'universal-template', gradeId: 'grade-1', unitId: 'patterns', order: 2, status: 'active' },
-  { id: 'g1-s-3', title: 'Complete a pattern', chapterId: 'grade1-patterns', code: 'S.3', templateId: 'complete-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 3, status: 'active' },
-  { id: 'g1-s-4', title: 'Make a pattern', chapterId: 'grade1-patterns', code: 'S.4', templateId: 'make-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 4, status: 'active' },
-  { id: 'g1-s-5', title: 'Growing patterns', chapterId: 'grade1-patterns', code: 'S.5', templateId: 'growing-patterns', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 5, status: 'active' },
+  { id: 'g1-s-3', title: 'Complete a pattern', chapterId: 'grade1-patterns', code: 'S.3', templateId: 'math-patterns-complete-level1', engine: 'universal-template', gradeId: 'grade-1', unitId: 'patterns', order: 3, status: 'active' },
+  { id: 'g1-s-4', title: 'Make a pattern', chapterId: 'grade1-patterns', code: 'S.4', templateId: 'math-patterns-make-level1', engine: 'universal-template', gradeId: 'grade-1', unitId: 'patterns', order: 4, status: 'active' },
+  { id: 'g1-s-5', title: 'Growing patterns', chapterId: 'grade1-patterns', code: 'S.5', templateId: 'math-patterns-growing-level1', engine: 'universal-template', gradeId: 'grade-1', unitId: 'patterns', order: 5, status: 'active' },
   { id: 'g1-s-6', title: 'Find the next shape in a growing pattern', chapterId: 'grade1-patterns', code: 'S.6', templateId: 'find-next-shape-growing-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 6, status: 'active' },
   { id: 'g1-s-7', title: 'Find the next row in a growing pattern', chapterId: 'grade1-patterns', code: 'S.7', templateId: 'find-next-row-growing-pattern', engine: 'questionBank', gradeId: 'grade-1', unitId: 'patterns', order: 7, status: 'active' },
 
