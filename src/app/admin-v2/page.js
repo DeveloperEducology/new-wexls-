@@ -1167,110 +1167,418 @@ export default function AdminV2Page() {
   };
 
   return (
-    <div style={{
-      maxWidth: '1240px',
-      margin: '0 auto',
+    <div className="admin-page-body" style={{
+      minHeight: '100vh',
+      backgroundColor: '#f8fafc',
       padding: '2rem 1.5rem',
       fontFamily: 'Outfit, Inter, system-ui, sans-serif',
       color: '#1e293b',
     }}>
-      {/* Header */}
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '2px solid #e2e8f0',
-        paddingBottom: '1.5rem',
-        marginBottom: '2rem',
-      }}>
+      {/* Dynamic CSS styles injected locally */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .admin-header {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 20px;
+          padding: 1.5rem 2rem;
+          margin-bottom: 2rem;
+          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1.5rem;
+        }
+        .mode-toggle-bar {
+          display: flex;
+          background: #f1f5f9;
+          border-radius: 12px;
+          padding: 4px;
+          border: 1px solid #e2e8f0;
+        }
+        .mode-toggle-btn {
+          border: none;
+          padding: 10px 20px;
+          border-radius: 9px;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .mode-toggle-btn.active-school {
+          background: #ffffff;
+          color: #4f46e5;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+        }
+        .mode-toggle-btn.active-exam {
+          background: #ffffff;
+          color: #0891b2;
+          box-shadow: 0 4px 12px rgba(8, 145, 178, 0.12);
+        }
+        .btn-seed {
+          background: linear-gradient(135deg, #7a56d6, #6366f1);
+          color: #ffffff;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+          transition: all 0.2s ease-in-out;
+        }
+        .btn-seed:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+        }
+        .btn-seed:active {
+          transform: translateY(0);
+        }
+        .btn-preview {
+          background: #0f172a;
+          color: #ffffff;
+          padding: 10px 20px;
+          border-radius: 12px;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 13px;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+          transition: all 0.2s ease-in-out;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .btn-preview:hover {
+          transform: translateY(-2px);
+          background: #1e293b;
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+        }
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 1.25rem;
+          margin-bottom: 2rem;
+        }
+        .metric-card {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 16px;
+          padding: 1.25rem 1.5rem;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .metric-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.06);
+        }
+        .metric-icon-box {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+        }
+        .tab-track-container {
+          background: #e2e8f0;
+          border-radius: 14px;
+          padding: 6px;
+          margin-bottom: 2rem;
+          display: flex;
+          gap: 4px;
+          width: fit-content;
+        }
+        .tab-item-btn {
+          border: none;
+          background: transparent;
+          padding: 10px 22px;
+          border-radius: 10px;
+          font-weight: 800;
+          font-size: 14.5px;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          text-transform: capitalize;
+        }
+        .tab-item-btn:hover:not(.active) {
+          background: rgba(255, 255, 255, 0.4);
+          color: #1e293b;
+        }
+        .tab-item-btn.active.school {
+          background: #ffffff;
+          color: #4f46e5;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .tab-item-btn.active.exam {
+          background: #ffffff;
+          color: #0891b2;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .filter-glass-deck {
+          display: flex;
+          gap: 1.25rem;
+          align-items: center;
+          flex-wrap: wrap;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          padding: 1rem 1.5rem;
+          border-radius: 16px;
+          margin-bottom: 2rem;
+          box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.03);
+        }
+        .custom-select-control {
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: #334155;
+          cursor: pointer;
+          outline: none;
+          transition: all 0.2s ease-in-out;
+        }
+        .custom-select-control:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+        .custom-select-control:disabled {
+          background: #f1f5f9;
+          cursor: not-allowed;
+        }
+        .control-panel-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.6fr;
+          gap: 2rem;
+        }
+        @media (max-width: 1024px) {
+          .control-panel-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        .panel-card {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 20px;
+          padding: 2rem;
+          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.02);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .panel-card:hover {
+          box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        }
+        .form-label-premium {
+          font-size: 0.75rem;
+          font-weight: 800;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 0.35rem;
+        }
+        .form-input-premium {
+          border: 1px solid #cbd5e1;
+          border-radius: 9px;
+          padding: 0.65rem 0.85rem;
+          font-size: 0.9rem;
+          color: #1e293b;
+          background: #ffffff;
+          outline: none;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .form-input-premium:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+        }
+        .form-input-premium:disabled {
+          background: #f1f5f9;
+          cursor: not-allowed;
+        }
+        .form-submit-btn-premium {
+          border: none;
+          padding: 0.85rem;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 15px;
+          color: #ffffff;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .form-submit-btn-premium:hover {
+          transform: translateY(-2px);
+          filter: brightness(1.05);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        .form-submit-btn-premium:active {
+          transform: translateY(0);
+        }
+        .table-premium-header th {
+          padding: 1rem 0.75rem;
+          font-weight: 800;
+          color: #64748b;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          border-bottom: 2px solid #f1f5f9;
+        }
+        .table-row-premium {
+          transition: background-color 0.15s ease;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .table-row-premium:hover {
+          background-color: #f8fafc;
+        }
+        .badge-pill-premium {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 9999px;
+          font-size: 10px;
+          font-weight: 800;
+        }
+      ` }} />
+
+      {/* 1. Header Row */}
+      <header className="admin-header">
         <div>
-          <h1 style={{ margin: 0, fontSize: '2.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
+          <h1 style={{ margin: 0, fontSize: '2.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🛠️ Curriculum Builder V2
           </h1>
-          <p style={{ margin: '0.25rem 0 0 0', color: '#64748b', fontSize: '15px' }}>
+          <p style={{ margin: '0.25rem 0 0 0', color: '#64748b', fontSize: '15px', fontWeight: 500 }}>
             Manage School K-12 and Competitive Exam prep collections dynamically.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Mode Switcher */}
-          <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
+          <div className="mode-toggle-bar">
             <button
               onClick={() => handleModeToggle('school')}
+              className="mode-toggle-btn"
               style={{
-                border: 'none',
                 background: adminMode === 'school' ? '#ffffff' : 'transparent',
-                color: adminMode === 'school' ? '#4f46e5' : '#475569',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: adminMode === 'school' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                color: adminMode === 'school' ? '#4f46e5' : '#64748b',
               }}
             >
               🏫 School K-12
             </button>
             <button
               onClick={() => handleModeToggle('exam')}
+              className="mode-toggle-btn"
               style={{
-                border: 'none',
                 background: adminMode === 'exam' ? '#ffffff' : 'transparent',
-                color: adminMode === 'exam' ? '#0891b2' : '#475569',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: adminMode === 'exam' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                color: adminMode === 'exam' ? '#0891b2' : '#64748b',
               }}
             >
               🎓 Exam Prep
             </button>
           </div>
+          
           {adminMode === 'school' && (
             <button 
               onClick={handleSeed}
               disabled={loading}
-              style={{
-                background: 'linear-gradient(135deg, #7a56d6, #6366f1)',
-                color: '#fff',
-                border: 'none',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontSize: '13px',
-                boxShadow: '0 4px 6px rgba(99, 102, 241, 0.2)',
-                opacity: loading ? 0.7 : 1,
-              }}
+              className="btn-seed"
             >
               🌱 Seed V2 Data
             </button>
           )}
+          
           <Link 
             href={adminMode === 'school' ? '/grades-v2' : '/exam-prep'}
             target="_blank"
-            style={{
-              background: '#0f172a',
-              color: '#fff',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: 700,
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
+            className="btn-preview"
           >
             👁️ Preview Client
           </Link>
         </div>
       </header>
 
-      {/* Tabs */}
-      <nav style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid #cbd5e1' }}>
+      {/* 2. KPI Metrics Deck */}
+      <section className="metrics-grid">
+        {adminMode === 'school' ? (
+          <>
+            <div className="metric-card" style={{ borderLeft: '5px solid #3b82f6' }}>
+              <div className="metric-icon-box" style={{ background: '#eff6ff', color: '#3b82f6' }}>🏫</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Total Grades</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{grades.length}</div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #10b981' }}>
+              <div className="metric-icon-box" style={{ background: '#ecfdf5', color: '#10b981' }}>📚</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Subjects</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{subjects.length}</div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #f59e0b' }}>
+              <div className="metric-icon-box" style={{ background: '#fffbeb', color: '#f59e0b' }}>📂</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Units / Topics</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{units.length}</div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #8b5cf6' }}>
+              <div className="metric-icon-box" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>📖</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Chapters</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{chapters.length}</div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #ec4899' }}>
+              <div className="metric-icon-box" style={{ background: '#fdf2f8', color: '#ec4899' }}>💡</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Micro-Skills</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{skills.length}</div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="metric-card" style={{ borderLeft: '5px solid #06b6d4' }}>
+              <div className="metric-icon-box" style={{ background: '#ecfeff', color: '#06b6d4' }}>🎓</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Total Exams</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{exams.length}</div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #14b8a6' }}>
+              <div className="metric-icon-box" style={{ background: '#f0fdfa', color: '#14b8a6' }}>🧠</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Sections / Parts</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>
+                  {exams.reduce((sum, e) => sum + (e.sections?.length || 0), 0)}
+                </div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #eab308' }}>
+              <div className="metric-icon-box" style={{ background: '#fefce8', color: '#eab308' }}>🔒</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Mapped Topics</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>
+                  {exams.reduce((sum, e) => sum + (e.sections?.reduce((sSum, sec) => sSum + (sec.topics?.length || 0), 0) || 0), 0)}
+                </div>
+              </div>
+            </div>
+            <div className="metric-card" style={{ borderLeft: '5px solid #f43f5e' }}>
+              <div className="metric-icon-box" style={{ background: '#fff1f2', color: '#f43f5e' }}>❓</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Active MCQs</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>{examQuestions.length}</div>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* 3. Navigation Tab Bar */}
+      <nav className="tab-track-container">
         {(adminMode === 'school' 
           ? ['grade', 'subject', 'unit', 'chapter', 'skill']
           : ['exam', 'section', 'topic', 'skill', 'question']
@@ -1278,50 +1586,29 @@ export default function AdminV2Page() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '0.75rem 1.5rem',
-              border: 'none',
-              background: 'none',
-              fontSize: '15px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              color: activeTab === tab ? (adminMode === 'school' ? '#2563eb' : '#0891b2') : '#64748b',
-              borderBottom: activeTab === tab ? `3px solid ${adminMode === 'school' ? '#2563eb' : '#0891b2'}` : '3px solid transparent',
-              marginBottom: '-1px',
-              textTransform: 'capitalize',
-            }}
+            className={`tab-item-btn ${activeTab === tab ? 'active' : ''} ${activeTab === tab ? (adminMode === 'school' ? 'school' : 'exam') : ''}`}
           >
             {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab + 's'}
           </button>
         ))}
       </nav>
 
-      {/* School Mode Filters */}
+      {/* 4. Glassmorphic Filters */}
       {adminMode === 'school' && (
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          padding: '12px 18px',
-          borderRadius: '12px',
-          marginBottom: '1.5rem',
-        }}>
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            🔍 Filter List:
+        <div className="filter-glass-deck">
+          <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            🔍 Filter:
           </span>
           
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Grade</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Grade</label>
             <select
               value={filterGradeId}
               onChange={e => {
                 setFilterGradeId(e.target.value);
                 setFilterChapterId('');
               }}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
             >
               <option value="">-- All Grades --</option>
               {grades.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
@@ -1329,7 +1616,7 @@ export default function AdminV2Page() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Subject</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Subject</label>
             <select
               value={filterSubjectId}
               onChange={e => {
@@ -1337,7 +1624,7 @@ export default function AdminV2Page() {
                 setFilterUnitId('');
                 setFilterChapterId('');
               }}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
             >
               <option value="">-- All Subjects --</option>
               {subjects.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
@@ -1345,7 +1632,7 @@ export default function AdminV2Page() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Unit</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Unit</label>
             <select
               value={filterUnitId}
               disabled={!filterSubjectId}
@@ -1353,7 +1640,7 @@ export default function AdminV2Page() {
                 setFilterUnitId(e.target.value);
                 setFilterChapterId('');
               }}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
             >
               <option value="">-- All Units --</option>
               {units.filter(u => !filterSubjectId || u.subjectId === filterSubjectId).map(u => (
@@ -1363,12 +1650,13 @@ export default function AdminV2Page() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Chapter</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Chapter</label>
             <select
               value={filterChapterId}
               disabled={!filterUnitId && !filterGradeId}
               onChange={e => setFilterChapterId(e.target.value)}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
+              style={{ maxWidth: '240px' }}
             >
               <option value="">-- All Chapters --</option>
               {chapters.filter(c => {
@@ -1389,19 +1677,12 @@ export default function AdminV2Page() {
                 setFilterUnitId('');
                 setFilterChapterId('');
               }}
+              className="custom-select-control"
               style={{
                 background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
+                borderColor: '#cbd5e1',
                 color: '#475569',
-                transition: 'all 0.15s'
               }}
-              onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
-              onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
             >
               Clear
             </button>
@@ -1409,24 +1690,13 @@ export default function AdminV2Page() {
         </div>
       )}
 
-      {/* Exam Mode Filters (displayed as dropdown select bar above list view) */}
       {adminMode === 'exam' && (
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          padding: '12px 18px',
-          borderRadius: '12px',
-          marginBottom: '1.5rem',
-        }}>
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            🔍 Hierarchy Scope:
+        <div className="filter-glass-deck">
+          <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            🔍 Scope:
           </span>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Exam</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Exam</label>
             <select
               value={selectedExamId}
               onChange={e => {
@@ -1434,7 +1704,7 @@ export default function AdminV2Page() {
                 setSelectedSectionId('');
                 setSelectedTopicId('');
               }}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
             >
               <option value="">-- All Exams --</option>
               {exams.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
@@ -1442,7 +1712,7 @@ export default function AdminV2Page() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Section</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Section</label>
             <select
               value={selectedSectionId}
               disabled={!selectedExamId}
@@ -1450,7 +1720,7 @@ export default function AdminV2Page() {
                 setSelectedSectionId(e.target.value);
                 setSelectedTopicId('');
               }}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
             >
               <option value="">-- All Sections --</option>
               {exams.find(e => e.id === selectedExamId)?.sections?.map(s => (
@@ -1460,12 +1730,12 @@ export default function AdminV2Page() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700 }}>Topic</label>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Topic</label>
             <select
               value={selectedTopicId}
               disabled={!selectedSectionId}
               onChange={e => setSelectedTopicId(e.target.value)}
-              style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              className="custom-select-control"
             >
               <option value="">-- All Topics --</option>
               {exams.find(e => e.id === selectedExamId)?.sections?.find(s => s.id === selectedSectionId)?.topics?.map(topic => (
@@ -1476,48 +1746,57 @@ export default function AdminV2Page() {
         </div>
       )}
 
-      {/* Error block */}
+      {/* 5. Error Box */}
       {error && (
         <div style={{
           background: '#fee2e2',
           border: '1px solid #fca5a5',
           color: '#b91c1c',
-          padding: '1rem',
-          borderRadius: '8px',
+          padding: '1rem 1.5rem',
+          borderRadius: '14px',
           marginBottom: '2rem',
-          fontWeight: 600,
+          fontWeight: 700,
           fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
         }}>
           ⚠️ {error}
         </div>
       )}
 
-      {/* Work Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '2rem' }}>
+      {/* 6. Form & Table Grid layout */}
+      <div className="control-panel-grid">
         
-        {/* Creation Panel */}
-        <section style={{
-          background: '#fff',
-          border: '1px solid #e2e8f0',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
-          alignSelf: 'start',
-        }}>
-          <h2 style={{ marginTop: 0, fontSize: '1.25rem', fontWeight: 900, textTransform: 'capitalize', letterSpacing: '-0.01em' }}>
-            {editingId ? 'Edit' : 'Create New'} {activeTab}
+        {/* Left Side: Creation/Editing Card */}
+        <section className="panel-card" style={{ alignSelf: 'start' }}>
+          <h2 style={{
+            marginTop: 0,
+            fontSize: '1.4rem',
+            fontWeight: 900,
+            textTransform: 'capitalize',
+            letterSpacing: '-0.02em',
+            color: '#0f172a',
+            borderBottom: '2px solid #f1f5f9',
+            paddingBottom: '0.75rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            {editingId ? '✏️ Edit' : '➕ Create'} {activeTab}
           </h2>
           
-          {/* Guide Card */}
+          {/* Instructions Guide */}
           {renderGuide()}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* SCHOOL MODE FORM FIELDS */}
+            {/* SCHOOL MODE INPUT FIELDS */}
             {adminMode === 'school' && (
               <>
-                {/* Common field: ID */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Unique ID (Slug)</label>
+                {/* ID input */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label-premium">Unique ID (Slug)</label>
                   <input 
                     type="text" 
                     name="id" 
@@ -1525,22 +1804,20 @@ export default function AdminV2Page() {
                     value={formData.id} 
                     onChange={handleInputChange}
                     placeholder="e.g. lkg-math-counting"
-                    style={{ 
-                      padding: '0.6rem', 
-                      border: '1px solid #cbd5e1', 
-                      borderRadius: '6px',
-                      background: editingId ? '#f1f5f9' : '#fff',
+                    className="form-input-premium"
+                    style={{
+                      background: editingId ? '#f1f5f9' : '#ffffff',
                       cursor: editingId ? 'not-allowed' : 'text',
                     }}
                   />
-                  <small style={{ color: '#94a3b8' }}>
-                    {editingId ? 'ID cannot be renamed once created.' : 'Leave blank to auto-generate from title'}
+                  <small style={{ color: '#94a3b8', marginTop: '4px', fontWeight: 500 }}>
+                    {editingId ? 'Unique ID cannot be modified once set.' : 'Leave blank to generate slug automatically from Title.'}
                   </small>
                 </div>
 
-                {/* Common field: Title */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Title / Name</label>
+                {/* Title Input */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label-premium">Title / Name</label>
                   <input 
                     type="text" 
                     name="title" 
@@ -1548,35 +1825,35 @@ export default function AdminV2Page() {
                     value={formData.title} 
                     onChange={handleInputChange}
                     placeholder={`e.g. My New ${activeTab}`}
-                    style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                    className="form-input-premium"
                   />
                 </div>
 
-                {/* Subject Specific: Icon */}
+                {/* Subject Specific Icon */}
                 {activeTab === 'subject' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Emoji Icon</label>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label className="form-label-premium">Emoji Icon</label>
                     <input 
                       type="text" 
                       name="icon" 
                       value={formData.icon} 
                       onChange={handleInputChange}
                       placeholder="e.g. 🧮"
-                      style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                      className="form-input-premium"
                     />
                   </div>
                 )}
 
-                {/* Unit Specific: Subject Dropdown */}
+                {/* Unit Specific Subject selector */}
                 {activeTab === 'unit' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Subject</label>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label className="form-label-premium">Subject</label>
                     <select 
                       name="subjectId" 
                       required
                       value={formData.subjectId} 
                       onChange={handleInputChange}
-                      style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                      className="form-input-premium"
                     >
                       <option value="">-- Select Subject --</option>
                       {subjects.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
@@ -1584,30 +1861,30 @@ export default function AdminV2Page() {
                   </div>
                 )}
 
-                {/* Chapter Specific: Unit & Grade Dropdowns */}
+                {/* Chapter Specific Unit & Grade selectors */}
                 {activeTab === 'chapter' && (
                   <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Unit (Topic)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Unit (Topic)</label>
                       <select 
                         name="unitId" 
                         required
                         value={formData.unitId} 
                         onChange={handleInputChange}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       >
                         <option value="">-- Select Unit --</option>
                         {units.map(u => <option key={u.id} value={u.id}>{u.title}</option>)}
                       </select>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Grade</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
+                      <label className="form-label-premium">Grade</label>
                       <select 
                         name="gradeId" 
                         required
                         value={formData.gradeId} 
                         onChange={handleInputChange}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       >
                         <option value="">-- Select Grade --</option>
                         {grades.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
@@ -1616,24 +1893,24 @@ export default function AdminV2Page() {
                   </>
                 )}
 
-                {/* Skill Specific: Chapter, Code, Template, Engine */}
+                {/* Skill Specific Input parameters */}
                 {activeTab === 'skill' && (
                   <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Chapter</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Chapter</label>
                       <select 
                         name="chapterId" 
                         required
                         value={formData.chapterId} 
                         onChange={handleInputChange}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       >
                         <option value="">-- Select Chapter --</option>
                         {chapters.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                       </select>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Skill Code</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
+                      <label className="form-label-premium">Skill Code</label>
                       <input 
                         type="text" 
                         name="code" 
@@ -1641,11 +1918,11 @@ export default function AdminV2Page() {
                         value={formData.code} 
                         onChange={handleInputChange}
                         placeholder="e.g. A.1"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
-                    <div className="suggestion-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', position: 'relative' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Template ID</label>
+                    <div className="suggestion-container" style={{ display: 'flex', flexDirection: 'column', position: 'relative', marginTop: '0.25rem' }}>
+                      <label className="form-label-premium">Template ID</label>
                       <input 
                         type="text" 
                         name="templateId" 
@@ -1657,7 +1934,7 @@ export default function AdminV2Page() {
                         }}
                         onFocus={() => setActiveSuggestionBox('primary')}
                         placeholder="e.g. fractions-g5-add-like-fractions"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                       {renderSuggestions(
                         formData.templateId, 
@@ -1665,8 +1942,8 @@ export default function AdminV2Page() {
                         'primary'
                       )}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Engine</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
+                      <label className="form-label-premium">Engine</label>
                       <input 
                         type="text" 
                         name="engine" 
@@ -1674,12 +1951,12 @@ export default function AdminV2Page() {
                         value={formData.engine} 
                         onChange={handleInputChange}
                         placeholder="e.g. StickersEngine"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
                     {/* Difficulty Scaling */}
-                    <div style={{ marginTop: '4px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#92400e', cursor: 'pointer' }}>
+                    <div style={{ marginTop: '6px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '12px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '13px', color: '#92400e', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={skillDifficultyScaling}
@@ -1709,22 +1986,22 @@ export default function AdminV2Page() {
                           ].map(({ level, label, color, border, badge }) => {
                             const levelData = skillTemplateLevels.find(l => l.level === level) || { level, templateIds: [] };
                             return (
-                              <div key={level} style={{ border: `1px solid ${border}`, borderRadius: '8px', background: '#fff', padding: '8px 12px' }}>
+                              <div key={level} style={{ border: `1px solid ${border}`, borderRadius: '10px', background: '#ffffff', padding: '10px 12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                  <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>{label}</span>
-                                  <span style={{ background: badge, color: '#fff', borderRadius: '999px', padding: '1px 8px', fontSize: '11px' }}>
-                                    {levelData.templateIds.length} tpl
+                                  <span style={{ fontWeight: 800, fontSize: '12px', color: '#334155' }}>{label}</span>
+                                  <span style={{ background: badge, color: '#fff', borderRadius: '999px', padding: '2px 8px', fontSize: '10px', fontWeight: 800 }}>
+                                    {levelData.templateIds.length} templates
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minHeight: '28px', marginBottom: '8px' }}>
                                   {levelData.templateIds.length === 0 && (
-                                    <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No templates</span>
+                                    <span style={{ fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic' }}>No templates mapped</span>
                                   )}
                                   {levelData.templateIds.map((tid, ti) => (
                                     <span key={ti} style={{
                                       display: 'inline-flex', alignItems: 'center', gap: '4px',
                                       background: color, border: `1px solid ${border}`, borderRadius: '6px',
-                                      padding: '2px 8px', fontSize: '11px', fontWeight: 600
+                                      padding: '3px 8px', fontSize: '11px', fontWeight: 700, color: '#1e293b'
                                     }}>
                                       {tid}
                                       <button
@@ -1734,7 +2011,7 @@ export default function AdminV2Page() {
                                             ? { ...l, templateIds: l.templateIds.filter((_, i) => i !== ti) }
                                             : l
                                         ))}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 900 }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 900, padding: 0 }}
                                       >×</button>
                                     </span>
                                   ))}
@@ -1743,8 +2020,9 @@ export default function AdminV2Page() {
                                   <div className="suggestion-container" style={{ flex: 1, position: 'relative' }}>
                                     <input
                                       type="text"
-                                      style={{ width: '100%', fontSize: '12px', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
-                                      placeholder="Template ID"
+                                      className="form-input-premium"
+                                      style={{ width: '100%', fontSize: '12px', padding: '5px 8px', boxSizing: 'border-box' }}
+                                      placeholder="Search Template ID..."
                                       value={levelAddInputs[level] || ''}
                                       onChange={e => {
                                         setLevelAddInputs(prev => ({ ...prev, [level]: e.target.value }));
@@ -1767,7 +2045,7 @@ export default function AdminV2Page() {
                                   </div>
                                   <button
                                     type="button"
-                                    style={{ fontSize: '11px', padding: '4px 10px', background: badge, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                    style={{ fontSize: '12px', padding: '4px 12px', background: badge, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}
                                     onClick={() => {
                                       const val = (levelAddInputs[level] || '').trim();
                                       if (val && !levelData.templateIds.includes(val)) {
@@ -1788,28 +2066,28 @@ export default function AdminV2Page() {
                   </>
                 )}
 
-                {/* Common field: Order */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Order / Sort Rank</label>
+                {/* Common order sort value */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label-premium">Order / Sort Rank</label>
                   <input 
                     type="number" 
                     name="order" 
                     value={formData.order} 
                     onChange={handleInputChange}
-                    style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                    className="form-input-premium"
                   />
                 </div>
               </>
             )}
 
-            {/* EXAM MODE FORM FIELDS */}
+            {/* EXAM PREP INPUT FIELDS */}
             {adminMode === 'exam' && (
               <>
-                {/* 1. Exam Tab */}
+                {/* 1. Exam creation fields */}
                 {activeTab === 'exam' && (
                   <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Exam ID (e.g. jnvst)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Exam ID (e.g. jnvst)</label>
                       <input 
                         type="text" 
                         name="id" 
@@ -1818,11 +2096,12 @@ export default function AdminV2Page() {
                         value={formData.id} 
                         onChange={handleInputChange}
                         placeholder="e.g. jnvst"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: editingId ? '#f1f5f9' : '#fff' }}
+                        className="form-input-premium"
+                        style={{ background: editingId ? '#f1f5f9' : '#fff' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Short Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Short Name</label>
                       <input 
                         type="text" 
                         name="name" 
@@ -1830,11 +2109,11 @@ export default function AdminV2Page() {
                         value={formData.name} 
                         onChange={handleInputChange}
                         placeholder="e.g. JNVST"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Full Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Full Name</label>
                       <input 
                         type="text" 
                         name="fullName" 
@@ -1842,28 +2121,28 @@ export default function AdminV2Page() {
                         value={formData.fullName} 
                         onChange={handleInputChange}
                         placeholder="e.g. Jawahar Navodaya Vidyalaya Selection Test"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Description</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Description</label>
                       <textarea 
                         name="description" 
                         value={formData.description} 
                         onChange={handleInputChange}
-                        placeholder="Description of exam details..."
+                        placeholder="Detail information about the competitive exam..."
                         rows={3}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', resize: 'vertical' }}
+                        className="premium-textarea"
                       />
                     </div>
                   </>
                 )}
 
-                {/* 2. Section Tab */}
+                {/* 2. Section creation fields */}
                 {activeTab === 'section' && (
                   <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Section ID (Slug)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Section ID (Slug)</label>
                       <input 
                         type="text" 
                         name="sectionId" 
@@ -1872,11 +2151,12 @@ export default function AdminV2Page() {
                         value={formData.sectionId} 
                         onChange={handleInputChange}
                         placeholder="e.g. arithmetic"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: editingId ? '#f1f5f9' : '#fff' }}
+                        className="form-input-premium"
+                        style={{ background: editingId ? '#f1f5f9' : '#fff' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Section Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Section Name</label>
                       <input 
                         type="text" 
                         name="sectionName" 
@@ -1884,81 +2164,81 @@ export default function AdminV2Page() {
                         value={formData.sectionName} 
                         onChange={handleInputChange}
                         placeholder="e.g. Arithmetic Test"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Short Display Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Short Display Name</label>
                       <input 
                         type="text" 
                         name="shortName" 
                         value={formData.shortName} 
                         onChange={handleInputChange}
                         placeholder="e.g. Arithmetic"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Emoji Icon</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Emoji Icon</label>
                       <input 
                         type="text" 
                         name="icon" 
                         value={formData.icon} 
                         onChange={handleInputChange}
                         placeholder="e.g. 🔢"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Qn Count</label>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Qn Count</label>
                         <input 
                           type="number" 
                           name="questionCount" 
                           value={formData.questionCount} 
                           onChange={handleInputChange}
-                          style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                          className="form-input-premium"
                         />
                       </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Max Marks</label>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Max Marks</label>
                         <input 
                           type="number" 
                           name="maxMarks" 
                           value={formData.maxMarks} 
                           onChange={handleInputChange}
-                          style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                          className="form-input-premium"
                         />
                       </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Time (Min)</label>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Time (Min)</label>
                         <input 
                           type="number" 
                           name="timeLimitMinutes" 
                           value={formData.timeLimitMinutes} 
                           onChange={handleInputChange}
-                          style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                          className="form-input-premium"
                         />
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Description</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Description</label>
                       <textarea 
                         name="description" 
                         value={formData.description} 
                         onChange={handleInputChange}
                         placeholder="Description of section..."
                         rows={2}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', resize: 'vertical' }}
+                        className="premium-textarea"
                       />
                     </div>
                   </>
                 )}
 
-                {/* 3. Topic Tab */}
+                {/* 3. Topic creation fields */}
                 {activeTab === 'topic' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Topic ID / Name (Slug)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label className="form-label-premium">Topic ID / Name (Slug)</label>
                     <input 
                       type="text" 
                       name="topicId" 
@@ -1966,16 +2246,16 @@ export default function AdminV2Page() {
                       value={formData.topicId} 
                       onChange={handleInputChange}
                       placeholder="e.g. fractions"
-                      style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                      className="form-input-premium"
                     />
                   </div>
                 )}
 
-                {/* 3.5. Skill (Template) Tab */}
+                {/* 3.5. Skill mappings fields */}
                 {activeTab === 'skill' && (
                   <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Template ID / Unique Code</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Template ID / Unique Code</label>
                       <input 
                         type="text" 
                         name="id" 
@@ -1984,11 +2264,12 @@ export default function AdminV2Page() {
                         value={formData.id} 
                         onChange={handleInputChange}
                         placeholder="e.g. fractions-g5-add-unlike"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: editingId ? '#f1f5f9' : '#fff' }}
+                        className="form-input-premium"
+                        style={{ background: editingId ? '#f1f5f9' : '#fff' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Skill Name / Display Title</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Skill Name / Display Title</label>
                       <input 
                         type="text" 
                         name="title" 
@@ -1996,24 +2277,24 @@ export default function AdminV2Page() {
                         value={formData.title} 
                         onChange={handleInputChange}
                         placeholder="e.g. Add Unlike Fractions"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Template Engine / Type</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Template Engine / Type</label>
                       <select 
                         name="engine" 
                         value={formData.engine || 'parameterized'} 
                         onChange={handleInputChange}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="premium-select"
                       >
                         <option value="parameterized">Parameterized Question Generator</option>
                         <option value="svg-figure">SVG/Geometry Figure Generator</option>
                         <option value="visual-transformation">Visual Grid/Fraction Block Transformation</option>
                       </select>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Difficulty (0.0 - 1.0)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Difficulty (0.0 - 1.0)</label>
                       <input 
                         type="number" 
                         step="0.05" 
@@ -2022,16 +2303,16 @@ export default function AdminV2Page() {
                         name="difficulty" 
                         value={formData.difficulty} 
                         onChange={handleInputChange} 
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} 
+                        className="form-input-premium"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Status</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Status</label>
                       <select 
                         name="status" 
                         value={formData.status || 'active'} 
                         onChange={handleInputChange}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="premium-select"
                       >
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
@@ -2040,11 +2321,11 @@ export default function AdminV2Page() {
                   </>
                 )}
 
-                {/* 4. Question Tab */}
+                {/* 4. Question Creation fields */}
                 {activeTab === 'question' && (
                   <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Question Text</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Question Text</label>
                       <textarea 
                         name="questionText" 
                         required
@@ -2052,51 +2333,51 @@ export default function AdminV2Page() {
                         onChange={handleInputChange}
                         placeholder="Enter question content (supports LaTeX & Markdown)"
                         rows={3}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', resize: 'vertical' }}
+                        className="premium-textarea"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Diagram / Image URL</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Diagram / Image URL</label>
                       <input 
                         type="text" 
                         name="questionImageUrl" 
                         value={formData.questionImageUrl} 
                         onChange={handleInputChange}
                         placeholder="e.g. /images/diagram.png"
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        className="form-input-premium"
                       />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Option A</label>
-                        <input type="text" name="optionA" required value={formData.optionA} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Option A</label>
+                        <input type="text" name="optionA" required value={formData.optionA} onChange={handleInputChange} className="form-input-premium" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Option B</label>
-                        <input type="text" name="optionB" required value={formData.optionB} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Option B</label>
+                        <input type="text" name="optionB" required value={formData.optionB} onChange={handleInputChange} className="form-input-premium" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Option C</label>
-                        <input type="text" name="optionC" required value={formData.optionC} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Option C</label>
+                        <input type="text" name="optionC" required value={formData.optionC} onChange={handleInputChange} className="form-input-premium" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Option D</label>
-                        <input type="text" name="optionD" required value={formData.optionD} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Option D</label>
+                        <input type="text" name="optionD" required value={formData.optionD} onChange={handleInputChange} className="form-input-premium" />
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Correct Option</label>
-                        <select name="correctOption" value={formData.correctOption} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Correct Option</label>
+                        <select name="correctOption" value={formData.correctOption} onChange={handleInputChange} className="premium-select">
                           <option value="A">A</option>
                           <option value="B">B</option>
                           <option value="C">C</option>
                           <option value="D">D</option>
                         </select>
                       </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Cognitive Level</label>
-                        <select name="cognitiveLevel" value={formData.cognitiveLevel} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Cognitive Level</label>
+                        <select name="cognitiveLevel" value={formData.cognitiveLevel} onChange={handleInputChange} className="premium-select">
                           <option value="recall">Recall</option>
                           <option value="comprehension">Comprehension</option>
                           <option value="application">Application</option>
@@ -2104,8 +2385,8 @@ export default function AdminV2Page() {
                         </select>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', color: '#334155' }}>
                         <input type="checkbox" name="isPYQ" checked={formData.isPYQ} onChange={handleInputChange} />
                         Is Previous Year Question (PYQ)
                       </label>
@@ -2113,60 +2394,54 @@ export default function AdminV2Page() {
                         <input 
                           type="number" 
                           name="pyqYear" 
-                          placeholder="Year (e.g. 2023)" 
+                          placeholder="Year" 
                           value={formData.pyqYear} 
                           onChange={handleInputChange} 
-                          style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', width: '90px', fontSize: '12px' }}
+                          className="form-input-premium"
+                          style={{ padding: '4px 8px', width: '80px', fontSize: '12px' }}
                         />
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Difficulty (0.0 - 1.0)</label>
-                        <input type="number" step="0.05" min="0" max="1" name="difficulty" value={formData.difficulty} onChange={handleInputChange} style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Difficulty (0.0 - 1.0)</label>
+                        <input type="number" step="0.05" min="0" max="1" name="difficulty" value={formData.difficulty} onChange={handleInputChange} className="form-input-premium" />
                       </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Source tag</label>
-                        <input type="text" name="metadataSource" value={formData.metadataSource} onChange={handleInputChange} placeholder="e.g. PYQ-2023" style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label-premium">Source Tag</label>
+                        <input type="text" name="metadataSource" value={formData.metadataSource} onChange={handleInputChange} placeholder="e.g. PYQ-2023" className="form-input-premium" />
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Explanation Text</label>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Explanation Text</label>
                       <textarea 
                         name="explanationText" 
                         value={formData.explanationText} 
                         onChange={handleInputChange}
                         placeholder="Detail explanation steps..."
                         rows={2}
-                        style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', resize: 'vertical' }}
+                        className="premium-textarea"
                       />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Comma-separated tags</label>
-                      <input type="text" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="e.g. geometry, symmetry" style={{ padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label className="form-label-premium">Comma-separated Tags</label>
+                      <input type="text" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="e.g. geometry, symmetry" className="form-input-premium" />
                     </div>
                   </>
                 )}
               </>
             )}
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {/* Actions for Form */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
               <button 
                 type="submit" 
                 disabled={loading}
+                className="form-submit-btn-premium"
                 style={{
                   flex: 1,
-                  background: editingId ? '#16a34a' : (adminMode === 'school' ? '#2563eb' : '#0891b2'),
-                  color: '#fff',
-                  border: 'none',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  fontWeight: 700,
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  opacity: loading ? 0.7 : 1,
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                  background: editingId ? '#16a34a' : (adminMode === 'school' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'),
+                  boxShadow: editingId ? '0 4px 12px rgba(22, 163, 74, 0.2)' : (adminMode === 'school' ? '0 4px 14px rgba(99, 102, 241, 0.3)' : '0 4px 14px rgba(8, 145, 178, 0.3)'),
                 }}
               >
                 {loading ? 'Processing...' : editingId ? `Update ${activeTab}` : `Create ${activeTab}`}
@@ -2176,15 +2451,11 @@ export default function AdminV2Page() {
                   type="button"
                   onClick={handleCancelEdit}
                   disabled={loading}
+                  className="form-submit-btn-premium"
                   style={{
                     background: '#64748b',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '0.75rem 1.25rem',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    fontSize: '15px',
-                    cursor: 'pointer',
+                    color: '#ffffff',
+                    padding: '0.75rem 1.5rem',
                   }}
                 >
                   Cancel
@@ -2194,72 +2465,89 @@ export default function AdminV2Page() {
           </form>
         </section>
 
-        {/* List Viewer Panel */}
-        <section style={{
-          background: '#fff',
-          border: '1px solid #e2e8f0',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
-        }}>
-          <h2 style={{ marginTop: 0, fontSize: '1.25rem', fontWeight: 900, textTransform: 'capitalize', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', letterSpacing: '-0.01em' }}>
-            Current {activeTab === 'exam' ? 'Exams' : activeTab === 'mat' ? 'MAT' : activeTab + 's'} List ({currentList.length})
+        {/* Right Side: List Viewer Card */}
+        <section className="panel-card">
+          <h2 style={{
+            marginTop: 0,
+            fontSize: '1.4rem',
+            fontWeight: 900,
+            textTransform: 'capitalize',
+            letterSpacing: '-0.02em',
+            color: '#0f172a',
+            borderBottom: '2px solid #f1f5f9',
+            paddingBottom: '0.75rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span>📋 Current {activeTab === 'exam' ? 'Exams' : activeTab === 'mat' ? 'MAT' : activeTab + 's'} List</span>
+            <span style={{ fontSize: '12px', background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px', color: '#475569', fontWeight: 800 }}>
+              {currentList.length} items
+            </span>
           </h2>
           
           {currentList.length === 0 ? (
-            <p style={{ color: '#94a3b8', margin: '2rem 0', textAlign: 'center', fontSize: '14px' }}>
-              No items matching scope filters.
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📭</span>
+              <p style={{ margin: 0, fontSize: '14.5px', fontWeight: 600 }}>No items match your active filters.</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#cbd5e1' }}>Create new entries or clear filters to view data.</p>
+            </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                    <th style={{ padding: '0.75rem 0.5rem', fontWeight: 800, color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ID/Target</th>
-                    <th style={{ padding: '0.75rem 0.5rem', fontWeight: 800, color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Info / Content</th>
+                  <tr className="table-premium-header">
+                    <th style={{ width: '15%' }}>ID / Target</th>
+                    <th style={{ width: '60%' }}>Info / Content</th>
                     {adminMode === 'school' && (
-                      <th style={{ padding: '0.75rem 0.5rem', fontWeight: 800, color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Order</th>
+                      <th style={{ width: '10%' }}>Order</th>
                     )}
-                    <th style={{ padding: '0.75rem 0.5rem', fontWeight: 800, color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Actions</th>
+                    <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentList.map((item, idx) => {
                     const rowId = item.id || item._id || `row-${idx}`;
                     return (
-                      <tr key={rowId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.8rem', fontFamily: 'monospace', color: '#0f172a', fontWeight: 700 }}>
+                      <tr key={rowId} className="table-row-premium">
+                        {/* ID / Target column */}
+                        <td style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontFamily: 'monospace', color: '#0f172a', fontWeight: 700, verticalAlign: 'middle' }}>
                           {adminMode === 'exam' && activeTab === 'skill' ? (
-                            <>
-                              <span style={{ display: 'block', background: '#f0fdf4', color: '#15803d', padding: '2px 6px', borderRadius: '4px', textAlign: 'center', fontSize: '9.5px', fontWeight: 800 }}>
-                                📑 {item.templateIds?.length} {item.templateIds?.length === 1 ? 'Template' : 'Templates'}
-                              </span>
-                            </>
+                            <span className="badge-pill-premium" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                              📑 {item.templateIds?.length} {item.templateIds?.length === 1 ? 'Template' : 'Templates'}
+                            </span>
                           ) : adminMode === 'exam' && activeTab === 'question' ? (
-                            <>
-                              <span style={{ display: 'block', background: '#eef2ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px', textAlign: 'center', fontSize: '9px', fontWeight: 800, marginBottom: '4px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span className="badge-pill-premium" style={{ background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe', width: 'fit-content' }}>
                                 {item.examId?.toUpperCase()}
                               </span>
-                              <span style={{ display: 'block', background: '#ecfeff', color: '#0891b2', padding: '2px 6px', borderRadius: '4px', textAlign: 'center', fontSize: '9px', fontWeight: 800 }}>
+                              <span className="badge-pill-premium" style={{ background: '#ecfeff', color: '#0891b2', border: '1px solid #a5f3fc', width: 'fit-content' }}>
                                 {item.section}
                               </span>
-                            </>
+                            </div>
                           ) : (
-                            rowId
+                            <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                              {rowId}
+                            </span>
                           )}
                         </td>
-                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '13.5px', fontWeight: 600 }}>
+
+                        {/* Title and Detail information column */}
+                        <td style={{ padding: '1rem 0.75rem', fontSize: '13.5px', fontWeight: 600, verticalAlign: 'middle' }}>
                           {adminMode === 'school' && (
                             <>
-                              {activeTab === 'subject' && (item.icon ? `${item.icon} ` : '📚 ')}
-                              {item.title}
-                              {activeTab === 'unit' && <small style={{ display: 'block', color: '#94a3b8', fontWeight: 400 }}>Subject: {item.subjectId}</small>}
-                              {activeTab === 'chapter' && <small style={{ display: 'block', color: '#94a3b8', fontWeight: 400 }}>Unit: {item.unitId} | Grade: {item.gradeId}</small>}
+                              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {activeTab === 'subject' && (item.icon ? `${item.icon} ` : '📚 ')}
+                                {item.title}
+                              </div>
+                              {activeTab === 'unit' && <small style={{ display: 'block', color: '#64748b', fontWeight: 500, marginTop: '4px' }}>Subject: <code>{item.subjectId}</code></small>}
+                              {activeTab === 'chapter' && <small style={{ display: 'block', color: '#64748b', fontWeight: 500, marginTop: '4px' }}>Unit: <code>{item.unitId}</code> | Grade: <code>{item.gradeId}</code></small>}
                               {activeTab === 'skill' && (
-                                <>
-                                  <small style={{ display: 'block', color: '#94a3b8', fontWeight: 400 }}>Chapter: {item.chapterId} | Code: {item.code}</small>
+                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <small style={{ color: '#64748b', fontWeight: 500 }}>Chapter: <code>{item.chapterId}</code> | Code: <code style={{ color: '#ec4899', fontWeight: 800 }}>{item.code}</code></small>
                                   {item.templateLevels && (
-                                    <small style={{ display: 'block', color: '#16a34a', fontWeight: 700 }}>
+                                    <small style={{ color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                       ⚡ Levels: {item.templateLevels.map(l => `L${l.level} (${l.templateIds ? l.templateIds.length : 0})`).join(', ')}
                                     </small>
                                   )}
@@ -2267,11 +2555,11 @@ export default function AdminV2Page() {
                                     href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ color: '#2563eb', textDecoration: 'underline', fontSize: '11px', display: 'inline-block', marginTop: '0.25rem' }}
+                                    style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', fontSize: '11px', display: 'inline-block', marginTop: '0.25rem', width: 'fit-content' }}
                                   >
-                                    🔗 Test URL
+                                    🔗 Practice Test Link
                                   </a>
-                                </>
+                                </div>
                               )}
                             </>
                           )}
@@ -2280,46 +2568,56 @@ export default function AdminV2Page() {
                             <>
                               {activeTab === 'exam' && (
                                 <>
-                                  <div style={{ fontSize: '14.5px', fontWeight: 800 }}>{item.icon || '🏫'} {item.name}</div>
-                                  <div style={{ color: '#64748b', fontWeight: 500, fontSize: '12px' }}>{item.fullName}</div>
-                                  <div style={{ color: '#94a3b8', fontWeight: 400, fontSize: '11px', marginTop: '2px' }}>{item.description}</div>
+                                  <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b' }}>{item.icon || '🏫'} {item.name}</div>
+                                  <div style={{ color: '#64748b', fontWeight: 600, fontSize: '12px', marginTop: '2px' }}>{item.fullName}</div>
+                                  <div style={{ color: '#94a3b8', fontWeight: 500, fontSize: '11px', marginTop: '4px' }}>{item.description}</div>
                                 </>
                               )}
 
                               {activeTab === 'section' && (
                                 <>
-                                  <div style={{ fontSize: '14.5px', fontWeight: 800 }}>{item.icon || '📝'} {item.name}</div>
-                                  <div style={{ color: '#64748b', fontWeight: 500, fontSize: '11px' }}>
-                                    Short: {item.shortName} | Qs: {item.questionCount} | Marks: {item.maxMarks} | Time: {item.timeLimitMinutes} min
+                                  <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b' }}>{item.icon || '📝'} {item.name}</div>
+                                  <div style={{ color: '#64748b', fontWeight: 600, fontSize: '11.5px', marginTop: '4px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span>Short: <code>{item.shortName}</code></span>
+                                    <span>•</span>
+                                    <span>Questions: <code>{item.questionCount}</code></span>
+                                    <span>•</span>
+                                    <span>Marks: <code>{item.maxMarks}</code></span>
+                                    <span>•</span>
+                                    <span>Time: <code>{item.timeLimitMinutes} mins</code></span>
                                   </div>
-                                  <div style={{ color: '#94a3b8', fontWeight: 400, fontSize: '11px', marginTop: '2px' }}>{item.description}</div>
+                                  <div style={{ color: '#94a3b8', fontWeight: 500, fontSize: '11px', marginTop: '4px' }}>{item.description}</div>
                                 </>
                               )}
 
                               {activeTab === 'topic' && (
-                                <div style={{ fontSize: '14px', fontWeight: 800, color: '#334155' }}>
+                                <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
                                   🏷️ {item.name}
                                 </div>
                               )}
 
                               {activeTab === 'skill' && (
                                 <>
-                                  <div style={{ fontSize: '14.5px', fontWeight: 800 }}>⚡ {item.name || item.title}</div>
-                                  <div style={{ margin: '6px 0', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b' }}>⚡ {item.name || item.title}</div>
+                                  <div style={{ margin: '8px 0', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                     {item.templateIds?.map(tid => (
-                                      <span key={tid} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', borderRadius: '4px', padding: '2px 6px', fontSize: '10.5px', fontFamily: 'monospace' }}>
-                                        <code>{tid}</code>
+                                      <span key={tid} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
+                                        {tid}
                                       </span>
                                     ))}
                                   </div>
-                                  <div style={{ color: '#64748b', fontWeight: 500, fontSize: '11.5px' }}>
-                                    Type: <code>{item.type}</code> | Diff: <code>{item.difficulty}</code> | Status: <span style={{ color: item.status === 'active' ? '#16a34a' : '#ef4444', fontWeight: 700 }}>{item.status || 'active'}</span>
+                                  <div style={{ color: '#64748b', fontWeight: 600, fontSize: '11.5px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span>Engine: <code>{item.type}</code></span>
+                                    <span>•</span>
+                                    <span>Difficulty: <code>{item.difficulty}</code></span>
+                                    <span>•</span>
+                                    <span>Status: <span style={{ color: item.status === 'active' ? '#16a34a' : '#ef4444', fontWeight: 800 }}>{item.status || 'active'}</span></span>
                                   </div>
                                   <a 
                                     href={`/exam-prep/${selectedExamId}/practice/${selectedSectionId}?userId=guest_child&topic=${selectedTopicId}&templateId=${item.templateIds?.join(',')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ color: '#0891b2', textDecoration: 'underline', fontSize: '11.5px', fontWeight: 'bold', display: 'inline-block', marginTop: '0.35rem' }}
+                                    style={{ color: '#0891b2', fontWeight: 800, textDecoration: 'underline', fontSize: '11.5px', display: 'inline-block', marginTop: '0.4rem' }}
                                   >
                                     🔗 Practice Combined Skill ({item.templateIds?.length} templates)
                                   </a>
@@ -2328,35 +2626,35 @@ export default function AdminV2Page() {
 
                               {activeTab === 'question' && (
                                 <div style={{ fontWeight: 500 }}>
-                                  <div style={{ color: '#1e293b', fontSize: '13px', whiteSpace: 'pre-wrap', marginBottom: '4px' }}>
+                                  <div style={{ color: '#1e293b', fontSize: '13.5px', whiteSpace: 'pre-wrap', marginBottom: '6px', lineHeight: 1.4 }}>
                                     {item.questionText}
                                   </div>
                                   {item.questionImageUrl && (
-                                    <div style={{ fontSize: '11px', color: '#0891b2', marginBottom: '4px' }}>
-                                      🖼️ Image: <code>{item.questionImageUrl}</code>
+                                    <div style={{ fontSize: '11.5px', color: '#0891b2', marginBottom: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      🖼️ Diagram Attachment: <code>{item.questionImageUrl}</code>
                                     </div>
                                   )}
-                                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
                                     {item.cognitiveLevel && (
-                                      <span style={{ background: '#fef3c7', color: '#d97706', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>
+                                      <span style={{ background: '#fffbeb', color: '#ca8a04', border: '1px solid #fef08a', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>
                                         🧠 {item.cognitiveLevel}
                                       </span>
                                     )}
-                                    <span style={{ background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>
+                                    <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
                                       🎯 Diff: {item.difficulty}
                                     </span>
                                     {item.isPYQ && (
-                                      <span style={{ background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>
+                                      <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
                                         📅 PYQ {item.pyqYear ? `'${String(item.pyqYear).slice(-2)}` : ''}
                                       </span>
                                     )}
                                     {item.metadata?.source && (
-                                      <span style={{ background: '#f3f4f6', color: '#4b5563', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>
+                                      <span style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
                                         🏷️ {item.metadata.source}
                                       </span>
                                     )}
                                     {item.drillTemplateId && (
-                                      <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>
+                                      <span style={{ background: '#ecfdf4', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
                                         🎯 Drill: {item.drillTemplateId}
                                       </span>
                                     )}
@@ -2366,25 +2664,32 @@ export default function AdminV2Page() {
                             </>
                           )}
                         </td>
+
+                        {/* Order Column */}
                         {adminMode === 'school' && (
-                          <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.9rem', color: '#475569' }}>{item.order}</td>
+                          <td style={{ padding: '1rem 0.75rem', fontSize: '14px', color: '#475569', fontWeight: 700, verticalAlign: 'middle' }}>
+                            {item.order}
+                          </td>
                         )}
-                        <td style={{ padding: '0.75rem 0.5rem' }}>
-                          <div style={{ display: 'flex', gap: '0.35rem' }}>
+
+                        {/* Actions column */}
+                        <td style={{ padding: '1rem 0.75rem', verticalAlign: 'middle', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                             {activeTab === 'question' && (
                               <button
                                 onClick={() => handleAiGridGenerate(item)}
                                 disabled={loading || generatingStates[item.id || item._id]}
                                 style={{
-                                  background: '#faf5ff',
-                                  color: '#7c3aed',
+                                  background: '#f3e8ff',
+                                  color: '#6b21a8',
                                   border: 'none',
-                                  padding: '0.35rem 0.65rem',
-                                  borderRadius: '4px',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
                                   fontWeight: 800,
                                   fontSize: '11px',
                                   cursor: 'pointer',
-                                  opacity: generatingStates[item.id || item._id] ? 0.7 : 1
+                                  opacity: generatingStates[item.id || item._id] ? 0.7 : 1,
+                                  transition: 'all 0.2s',
                                 }}
                               >
                                 {generatingStates[item.id || item._id] ? '⏳...' : '🪄 AI Grid'}
@@ -2398,14 +2703,15 @@ export default function AdminV2Page() {
                                   window.open(url, '_blank');
                                 }}
                                 style={{
-                                  background: '#ecfdf5',
-                                  color: '#059669',
+                                  background: '#d1fae5',
+                                  color: '#065f46',
                                   border: 'none',
-                                  padding: '0.35rem 0.65rem',
-                                  borderRadius: '4px',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
                                   fontWeight: 800,
                                   fontSize: '11px',
                                   cursor: 'pointer',
+                                  transition: 'all 0.2s',
                                 }}
                               >
                                 🧪 Test
@@ -2415,14 +2721,15 @@ export default function AdminV2Page() {
                               onClick={() => handleEditClick(item)}
                               disabled={loading}
                               style={{
-                                background: '#eff6ff',
-                                color: '#2563eb',
+                                background: '#dbeafe',
+                                color: '#1e40af',
                                 border: 'none',
-                                padding: '0.35rem 0.65rem',
-                                borderRadius: '4px',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
                                 fontWeight: 800,
                                 fontSize: '11px',
                                 cursor: 'pointer',
+                                transition: 'all 0.2s',
                               }}
                             >
                               Edit
@@ -2432,13 +2739,14 @@ export default function AdminV2Page() {
                               disabled={loading}
                               style={{
                                 background: '#fee2e2',
-                                color: '#ef4444',
+                                color: '#991b1b',
                                 border: 'none',
-                                padding: '0.35rem 0.65rem',
-                                borderRadius: '4px',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
                                 fontWeight: 800,
                                 fontSize: '11px',
                                 cursor: 'pointer',
+                                transition: 'all 0.2s',
                               }}
                             >
                               Delete
