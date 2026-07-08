@@ -141,7 +141,7 @@ export default function CatV2Card({
       ) : null}
 
       {(!hasVisual || !hideLabel) && label ? (
-        <span style={{ fontSize: compact ? 15 : 17, fontWeight: 900, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: compact ? 15 : 17, fontWeight: 900, lineHeight: 1.2, whiteSpace: isMath ? 'nowrap' : 'normal', textAlign: 'center' }}>
           <InlineMarkdown text={label} />
         </span>
       ) : null}

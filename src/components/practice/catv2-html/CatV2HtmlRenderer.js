@@ -1666,7 +1666,7 @@ function CategorySortLayout({
           )}
         </>
       ) : (
-        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}><InlineMarkdown text={item.content} /></span>
+        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1.2, fontWeight: 900, color: '#0f172a', whiteSpace: isMath(item) ? 'nowrap' : 'normal' }}><InlineMarkdown text={item.content} /></span>
       )}
     </div>
   );
