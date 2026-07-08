@@ -1836,17 +1836,19 @@ function CategorySortLayout({
           borderRadius: 0,
           background: 'transparent',
           display: 'flex',
+          flexWrap: 'wrap',
           gap: 12,
-          justifyContent: isV2 ? 'flex-start' : 'center',
+          justifyContent: 'center',
           alignItems: 'center',
           minHeight: responsiveSourceSlotHeight,
-          overflowX: isV2 ? 'auto' : 'visible',
-          overflowY: 'hidden',
+          overflowX: 'visible',
+          overflowY: 'visible',
           WebkitOverflowScrolling: 'touch',
-          scrollSnapType: isV2 ? 'x proximity' : 'none',
+          scrollSnapType: 'none',
           transition: 'border-color 120ms ease',
           width: '100%',
           boxSizing: 'border-box',
+          padding: '8px 0',
         }}
       >
         {sourceSlots.map((itemId, index) => {
