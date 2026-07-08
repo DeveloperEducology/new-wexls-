@@ -98,8 +98,6 @@ export default function VocabularyPoolsPage() {
     }
   };
 
-  useEffect(() => { fetchPools(); }, []);
-
   const selectPool = async (poolId) => {
     setSelectedPoolId(poolId);
     setJsonError('');
@@ -120,6 +118,20 @@ export default function VocabularyPoolsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const load = async () => {
+      await fetchPools();
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const urlPoolId = params.get('poolId') || params.get('id');
+        if (urlPoolId) {
+          selectPool(urlPoolId);
+        }
+      }
+    };
+    load();
+  }, []);
 
   const saveActivePool = async (poolData = activePool) => {
     if (!poolData || !poolData.poolId) return;

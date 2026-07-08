@@ -1941,6 +1941,26 @@ export default function AdminV2Page() {
                         (tid) => setFormData(prev => ({ ...prev, templateId: tid })), 
                         'primary'
                       )}
+                      {formData.templateId && (
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '4px', fontSize: '11.5px' }}>
+                          <a 
+                            href={`/admin/templates?id=${encodeURIComponent(formData.templateId)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                          >
+                            🔗 Open Template Editor
+                          </a>
+                          <a 
+                            href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(formData.templateId)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: '#0891b2', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                          >
+                            📦 Open Option Pool Manager
+                          </a>
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
                       <label className="form-label-premium">Engine</label>
@@ -2267,6 +2287,26 @@ export default function AdminV2Page() {
                         className="form-input-premium"
                         style={{ background: editingId ? '#f1f5f9' : '#fff' }}
                       />
+                      {formData.id && (
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '4px', fontSize: '11.5px' }}>
+                          <a 
+                            href={`/admin/templates?id=${encodeURIComponent(formData.id)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                          >
+                            🔗 Open Template Editor
+                          </a>
+                          <a 
+                            href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(formData.id)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: '#0891b2', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                          >
+                            📦 Open Option Pool Manager
+                          </a>
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <label className="form-label-premium">Skill Name / Display Title</label>
@@ -2551,14 +2591,38 @@ export default function AdminV2Page() {
                                       ⚡ Levels: {item.templateLevels.map(l => `L${l.level} (${l.templateIds ? l.templateIds.length : 0})`).join(', ')}
                                     </small>
                                   )}
-                                  <a 
-                                    href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', fontSize: '11px', display: 'inline-block', marginTop: '0.25rem', width: 'fit-content' }}
-                                  >
-                                    🔗 Practice Test Link
-                                  </a>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginTop: '0.25rem' }}>
+                                    <a 
+                                      href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', fontSize: '11px', display: 'inline-block' }}
+                                    >
+                                      🔗 Practice Test Link
+                                    </a>
+                                    {item.templateId && (
+                                      <>
+                                        <span style={{ fontSize: '10px', color: '#cbd5e1' }}>|</span>
+                                        <a 
+                                          href={`/admin/templates?id=${encodeURIComponent(item.templateId)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#6366f1', fontWeight: 700, textDecoration: 'underline', fontSize: '11px' }}
+                                        >
+                                          📝 Template
+                                        </a>
+                                        <span style={{ fontSize: '10px', color: '#cbd5e1' }}>|</span>
+                                        <a 
+                                          href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(item.templateId)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#0ea5e9', fontWeight: 700, textDecoration: 'underline', fontSize: '11px' }}
+                                        >
+                                          📦 Option Pool
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               )}
                             </>
@@ -2601,9 +2665,27 @@ export default function AdminV2Page() {
                                   <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b' }}>⚡ {item.name || item.title}</div>
                                   <div style={{ margin: '8px 0', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                     {item.templateIds?.map(tid => (
-                                      <span key={tid} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
-                                        {tid}
-                                      </span>
+                                      <div key={tid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
+                                        <span style={{ color: '#475569' }}>{tid}</span>
+                                        <a 
+                                          href={`/admin/templates?id=${encodeURIComponent(tid)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#6366f1', fontWeight: 800, textDecoration: 'none', marginLeft: '2px' }}
+                                          title="Edit Template"
+                                        >
+                                          📝
+                                        </a>
+                                        <a 
+                                          href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(tid)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#0ea5e9', fontWeight: 800, textDecoration: 'none' }}
+                                          title="Option Pool"
+                                        >
+                                          📦
+                                        </a>
+                                      </div>
                                     ))}
                                   </div>
                                   <div style={{ color: '#64748b', fontWeight: 600, fontSize: '11.5px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
