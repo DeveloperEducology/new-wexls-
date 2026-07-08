@@ -262,19 +262,24 @@ export function buildGradeCurriculum(topics, activeSubject) {
       if (group.skills && group.skills.length > 0) {
         const topicsInGrade = gradeMap.get(standardizedGrade);
         
-        if (!topicsInGrade.has(topic.id)) {
-          topicsInGrade.set(topic.id, {
-            id: topic.id,
-            title: topic.title,
+        // For v2 sources, group by the group.id (chapter) instead of the topic.id (unit)
+        const isV2 = topic.source === 'v2' || String(topic.id).endsWith('-v2');
+        const blockId = isV2 ? group.id : topic.id;
+        const blockTitle = isV2 ? group.title.replace(/\s*\([^)]+\)$/, '') : topic.title;
+        
+        if (!topicsInGrade.has(blockId)) {
+          topicsInGrade.set(blockId, {
+            id: blockId,
+            title: blockTitle,
             color: topic.color,
             subject: topic.subject,
-            topic: topic.topic,
+            topic: isV2 ? blockId : topic.topic,
             skills: []
           });
         }
         
         // Merge the skills into this topic block
-        topicsInGrade.get(topic.id).skills.push(...group.skills);
+        topicsInGrade.get(blockId).skills.push(...group.skills);
       }
     });
   });
