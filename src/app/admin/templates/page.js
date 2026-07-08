@@ -2799,6 +2799,19 @@ export default function VisualTemplateBuilderPage() {
               } else {
                 handleSelectTemplate(tpl);
               }
+            } else {
+              // Initialize a blank template with the specified ID
+              const blankTpl = {
+                ...normalizeTemplateForBuilder(DEFAULT_TEMPLATE),
+                id: urlId,
+                title: `Template for ${urlId}`,
+                subject: urlId.includes('math') ? 'math' : 'science',
+              };
+              setTemplate(blankTpl);
+              setJsonText(JSON.stringify(blankTpl, null, 2));
+              setJsonError(null);
+              setSaveStatus(null);
+              setSelectedId(null);
             }
           } else if (params.get('examId') === 'jnvst') {
             const uniqueId = `template-jnvst-${Date.now()}`;

@@ -65,6 +65,7 @@ export default function VocabularyPoolsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notFoundPoolId, setNotFoundPoolId] = useState('');
 
   const [editorTab, setEditorTab] = useState('items');
   const [jsonText, setJsonText] = useState('');
@@ -102,6 +103,7 @@ export default function VocabularyPoolsPage() {
     setSelectedPoolId(poolId);
     setJsonError('');
     setAiSuccessMsg('');
+    setNotFoundPoolId('');
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId)}`);
@@ -111,9 +113,14 @@ export default function VocabularyPoolsPage() {
         setJsonText(JSON.stringify(data.pool, null, 2));
         const cats = Object.keys(data.pool.pools || {});
         setSelectedCategoryTab(cats[0] || '');
+      } else {
+        setNotFoundPoolId(poolId);
+        setActivePool(null);
       }
     } catch (err) {
       console.error('Failed to fetch pool details:', err);
+      setNotFoundPoolId(poolId);
+      setActivePool(null);
     } finally {
       setLoading(false);
     }
@@ -794,6 +801,54 @@ export default function VocabularyPoolsPage() {
                   </button>
                 </div>
               )}
+            </div>
+          ) : notFoundPoolId ? (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '400px', gap: '16px', padding: '2rem', textAlign: 'center' }}>
+              <span style={{ fontSize: '56px', filter: 'drop-shadow(0 0 24px rgba(248,113,113,0.3))' }}>⚠️</span>
+              <h3 style={{ margin: 0, color: T.textMain, fontSize: '18px', fontWeight: '800' }}>Option Pool Not Found</h3>
+              <p style={{ margin: 0, color: T.textSub, fontSize: '13.5px', maxWidth: '420px', lineHeight: 1.5 }}>
+                Option pool <code style={{ color: T.accentLight, background: 'rgba(14,165,233,0.1)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace' }}>{notFoundPoolId}</code> does not exist in the database.
+              </p>
+              <button
+                onClick={async () => {
+                  const id = notFoundPoolId;
+                  const newDoc = { 
+                    poolId: id, 
+                    subject: id.includes('math') ? 'math' : 'science', 
+                    topic: 'general', 
+                    pools: { options: [] } 
+                  };
+                  try {
+                    setSaving(true);
+                    const res = await fetch('/api/admin/vocabulary-pools', { 
+                      method: 'POST', 
+                      headers: { 'Content-Type': 'application/json' }, 
+                      body: JSON.stringify(newDoc) 
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      setNotFoundPoolId('');
+                      await fetchPools();
+                      selectPool(id);
+                    } else {
+                      alert(data.error || 'Failed to create pool');
+                    }
+                  } catch (err) {
+                    alert(err.message);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                disabled={saving}
+                style={{
+                  background: T.accent, color: '#ffffff', border: 'none',
+                  borderRadius: T.radiusSm, padding: '10px 22px', fontWeight: '700',
+                  fontSize: '13px', cursor: 'pointer', boxShadow: `0 4px 14px rgba(14,165,233,0.35)`,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {saving ? 'Creating...' : '➕ Create and Initialize Pool'}
+              </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '400px', gap: '12px' }}>
