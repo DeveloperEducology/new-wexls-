@@ -2603,23 +2603,35 @@ export default function AdminV2Page() {
                                     {item.templateId && (
                                       <>
                                         <span style={{ fontSize: '10px', color: '#cbd5e1' }}>|</span>
-                                        <a 
-                                          href={`/admin/templates?id=${encodeURIComponent(item.templateId)}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          style={{ color: '#6366f1', fontWeight: 700, textDecoration: 'underline', fontSize: '11px' }}
-                                        >
-                                          📝 Template
-                                        </a>
-                                        <span style={{ fontSize: '10px', color: '#cbd5e1' }}>|</span>
-                                        <a 
-                                          href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(item.templateId)}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          style={{ color: '#0ea5e9', fontWeight: 700, textDecoration: 'underline', fontSize: '11px' }}
-                                        >
-                                          📦 Option Pool
-                                        </a>
+                                        <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 600, display: 'inline-flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                          Template ID:
+                                          {(Array.isArray(item.templateId) ? item.templateId : [item.templateId]).map((tid, tIdx) => (
+                                            <span key={tid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                              {tIdx > 0 && <span style={{ color: '#cbd5e1' }}>,</span>}
+                                              <code style={{ color: '#6366f1', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 700 }}>
+                                                {tid}
+                                              </code>
+                                              <a 
+                                                href={`/admin/templates?id=${encodeURIComponent(tid)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: '#6366f1', fontWeight: 800, textDecoration: 'none' }}
+                                                title="Edit Template"
+                                              >
+                                                📝
+                                              </a>
+                                              <a 
+                                                href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(tid)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: '#0ea5e9', fontWeight: 800, textDecoration: 'none' }}
+                                                title="Option Pool"
+                                              >
+                                                📦
+                                              </a>
+                                            </span>
+                                          ))}
+                                        </span>
                                       </>
                                     )}
                                   </div>
