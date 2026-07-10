@@ -1,7 +1,14 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import BaseGeneratorLayout from '../components/BaseGeneratorLayout';
+
+const DEFAULT_ANIMAL_POOL = [
+  { name: 'lion', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970163263-lion.png' },
+  { name: 'elephant', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803349123-Elephant.png' },
+  { name: 'monkey', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803351655-Monkey.png' },
+  { name: 'bear', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970141189-bear.png' }
+];
 
 const COUNTING_PRESETS = [
   {
@@ -10,12 +17,10 @@ const COUNTING_PRESETS = [
     subject: 'math',
     topic: 'counting',
     grade: '1',
-    blueprint: 'How many {{animal}}s do you see in the collection?\n[[blank1]]',
-    solution: 'Step 1: Point to each {{animal}} and count them.\nStep 2: The count goes up to {{count}}.\nStep 3: There are {= count =} {{animal}}s!',
+    blueprint: 'How many {{animalName}}s do you see in the collection?\n[[blank1]]',
+    solution: 'Step 1: Point to each {{animalName}} and count them.\nStep 2: The count goes up to {{count}}.\nStep 3: There are {= count =} {{animalName}}s!',
     placeholders: {
-      count: '1-10',
-      animal: 'lion, elephant, monkey, bear',
-      image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970163263-lion.png, https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803349123-Elephant.png, https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803351655-Monkey.png, https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970141189-bear.png'
+      count: '1-10'
     },
     visualComponent: 'ItemCounter',
     visualProps: {
@@ -45,12 +50,13 @@ const COUNTING_PRESETS = [
 ];
 
 export default function CountingGeneratorPage() {
+  const [imagePool, setImagePool] = useState(DEFAULT_ANIMAL_POOL);
   const [customName, setCustomName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = async (e, placeholderValues, setPlaceholderValues) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -71,20 +77,8 @@ export default function CountingGeneratorPage() {
         const uploadedUrl = data.results[0].url;
         const detectedName = customName.trim() || data.results[0].tags?.singular || 'item';
 
-        // Get current lists
-        const currentAnimals = (placeholderValues.animal || '').split(',').map(s => s.trim()).filter(Boolean);
-        const currentImages = (placeholderValues.image || '').split(',').map(s => s.trim()).filter(Boolean);
-
-        // Append new item
-        const updatedAnimals = [...currentAnimals, detectedName].join(', ');
-        const updatedImages = [...currentImages, uploadedUrl].join(', ');
-
-        setPlaceholderValues({
-          ...placeholderValues,
-          animal: updatedAnimals,
-          image: updatedImages
-        });
-
+        // Add to pool state
+        setImagePool(prev => [...prev, { name: detectedName, url: uploadedUrl }]);
         setCustomName('');
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
@@ -100,19 +94,30 @@ export default function CountingGeneratorPage() {
     }
   };
 
-  const handleRemoveImage = (indexToRemove, placeholderValues, setPlaceholderValues) => {
-    const currentAnimals = (placeholderValues.animal || '').split(',').map(s => s.trim()).filter(Boolean);
-    const currentImages = (placeholderValues.image || '').split(',').map(s => s.trim()).filter(Boolean);
-
-    currentAnimals.splice(indexToRemove, 1);
-    currentImages.splice(indexToRemove, 1);
-
-    setPlaceholderValues({
-      ...placeholderValues,
-      animal: currentAnimals.join(', '),
-      image: currentImages.join(', ')
-    });
+  const handleRemoveImage = (indexToRemove) => {
+    setImagePool(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
+
+  const extraVariables = [];
+  if (imagePool.length > 0) {
+    extraVariables.push(
+      {
+        name: 'animal',
+        type: 'choice',
+        pool: imagePool
+      },
+      {
+        name: 'animalName',
+        type: 'expression',
+        formula: 'animal.name'
+      },
+      {
+        name: 'imageUrl',
+        type: 'expression',
+        formula: 'animal.url'
+      }
+    );
+  }
 
   return (
     <BaseGeneratorLayout
@@ -120,24 +125,13 @@ export default function CountingGeneratorPage() {
       topic="counting"
       visualComponent="ItemCounter"
       presets={COUNTING_PRESETS}
+      extraVariables={extraVariables}
       defaultVisualProps={{
         count: 'count',
         itemType: 'image',
         itemsPerRow: '5'
       }}
-      customControls={({ visualProps, setVisualProps, placeholderValues, setPlaceholderValues }) => {
-        const currentAnimals = (placeholderValues.animal || '').split(',').map(s => s.trim()).filter(Boolean);
-        const currentImages = (placeholderValues.image || '').split(',').map(s => s.trim()).filter(Boolean);
-
-        const itemsPool = [];
-        const maxLen = Math.max(currentAnimals.length, currentImages.length);
-        for (let i = 0; i < maxLen; i++) {
-          itemsPool.push({
-            name: currentAnimals[i] || `item_${i + 1}`,
-            url: currentImages[i] || ''
-          });
-        }
-
+      customControls={({ visualProps, setVisualProps }) => {
         const isImageCollection = visualProps.itemType === 'image';
 
         return (
@@ -147,7 +141,20 @@ export default function CountingGeneratorPage() {
                 <label style={{ display: 'block', fontWeight: 700, fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Item Type</label>
                 <select
                   value={visualProps.itemType || 'image'}
-                  onChange={(e) => setVisualProps({ ...visualProps, itemType: e.target.value })}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    setVisualProps({ 
+                      ...visualProps, 
+                      itemType: type,
+                      // Automatically set count visual prop to imageUrl if using image collection
+                      count: type === 'image' ? '[imageUrl]' : 'count'
+                    });
+                    if (type !== 'image') {
+                      setImagePool([]);
+                    } else {
+                      setImagePool(DEFAULT_ANIMAL_POOL);
+                    }
+                  }}
                   style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}
                 >
                   <option value="image">🖼️ Image Collection Pool</option>
@@ -227,7 +234,7 @@ export default function CountingGeneratorPage() {
                       type="file"
                       accept="image/*"
                       ref={fileInputRef}
-                      onChange={(e) => handleImageUpload(e, placeholderValues, setPlaceholderValues)}
+                      onChange={handleImageUpload}
                       style={{ display: 'none' }}
                     />
                     <button
@@ -262,7 +269,7 @@ export default function CountingGeneratorPage() {
                   overflowY: 'auto',
                   paddingRight: '4px'
                 }}>
-                  {itemsPool.map((item, idx) => (
+                  {imagePool.map((item, idx) => (
                     <div
                       key={idx}
                       style={{
@@ -279,7 +286,7 @@ export default function CountingGeneratorPage() {
                     >
                       {/* Delete icon */}
                       <button
-                        onClick={() => handleRemoveImage(idx, placeholderValues, setPlaceholderValues)}
+                        onClick={() => handleRemoveImage(idx)}
                         style={{
                           position: 'absolute',
                           top: '-4px',

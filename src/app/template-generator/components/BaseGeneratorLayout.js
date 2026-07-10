@@ -11,7 +11,8 @@ export default function BaseGeneratorLayout({
   presets = [],
   customControls = null,
   visualPropsSchema = [],
-  defaultVisualProps = {}
+  defaultVisualProps = {},
+  extraVariables = []
 }) {
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [title, setTitle] = useState(presets[0]?.title || '');
@@ -95,6 +96,25 @@ export default function BaseGeneratorLayout({
     placeholders.forEach(key => {
       newResolved[key] = resolvePlaceholder(placeholderValues[key]);
     });
+
+    // Resolve extra choice variables first
+    extraVariables.forEach(variable => {
+      if (variable.type === 'choice' && Array.isArray(variable.pool) && variable.pool.length > 0) {
+        newResolved[variable.name] = variable.pool[Math.floor(Math.random() * variable.pool.length)];
+      }
+    });
+
+    // Resolve extra expression variables using the resolved context
+    extraVariables.forEach(variable => {
+      if (variable.type === 'expression' && variable.formula) {
+        try {
+          newResolved[variable.name] = new Function('ctx', `with(ctx) { return ${variable.formula}; }`)(newResolved);
+        } catch (e) {
+          newResolved[variable.name] = '';
+        }
+      }
+    });
+
     setResolvedValues(newResolved);
     setTimeout(() => setShuffling(false), 500);
   };
@@ -102,7 +122,7 @@ export default function BaseGeneratorLayout({
   // Trigger initial shuffle
   useEffect(() => {
     shuffleSimulator();
-  }, [placeholderValues, placeholders]);
+  }, [placeholderValues, placeholders, extraVariables]);
 
   // Derive mathematical operations and fill placeholders
   const evaluateText = (tplText) => {
@@ -173,52 +193,6 @@ export default function BaseGeneratorLayout({
       };
     });
 
-    // Group parallel choice variables of the same length to synchronize them
-    const choiceVars = compiledVariables.filter(v => v.type === 'choice' && Array.isArray(v.pool) && v.pool.length > 1);
-    const groupsByLength = {};
-    choiceVars.forEach(v => {
-      const len = v.pool.length;
-      if (!groupsByLength[len]) groupsByLength[len] = [];
-      groupsByLength[len].push(v);
-    });
-
-    Object.keys(groupsByLength).forEach(lenStr => {
-      const vars = groupsByLength[lenStr];
-      if (vars.length < 2) return;
-
-      const len = Number(lenStr);
-      const varNames = vars.map(v => v.name);
-      const syncVarName = `_sync_${varNames.join('_')}`;
-
-      const syncPool = [];
-      for (let i = 0; i < len; i++) {
-        const obj = {};
-        vars.forEach(v => {
-          obj[v.name] = v.pool[i];
-        });
-        syncPool.push(obj);
-      }
-
-      vars.forEach(v => {
-        const idx = compiledVariables.indexOf(v);
-        if (idx > -1) compiledVariables.splice(idx, 1);
-      });
-
-      compiledVariables.unshift({
-        name: syncVarName,
-        type: 'choice',
-        pool: syncPool
-      });
-
-      vars.forEach(v => {
-        compiledVariables.push({
-          name: v.name,
-          type: 'expression',
-          formula: `${syncVarName}.${v.name}`
-        });
-      });
-    });
-
     // Solve for inline evaluations to determine formula variables
     const mathRegex = /\{=\s*(.*?)\s*=\}/g;
     let exprCount = 0;
@@ -269,6 +243,13 @@ export default function BaseGeneratorLayout({
         }
       ];
     }
+
+    // Add extra variables passed from props
+    extraVariables.forEach(v => {
+      if (!compiledVariables.some(existing => existing.name === v.name)) {
+        compiledVariables.push(v);
+      }
+    });
 
     const compiledJson = {
       id: `template-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
