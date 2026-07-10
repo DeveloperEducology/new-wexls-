@@ -5,6 +5,15 @@ import Link from 'next/link';
 
 const BUILDERS = [
   {
+    title: 'Counting & Image Collections',
+    description: 'Design animal counts, cupcake grids, toy collections, and count representation builders.',
+    icon: '🦁',
+    color: '#3b82f6',
+    bg: '#eff6ff',
+    link: '/template-generator/counting',
+    badge: 'Grades LKG-1'
+  },
+  {
     title: 'Base Ten Blocks & Place Value',
     description: 'Create place value chart templates, base-ten models, digit partition, and representation builders.',
     icon: '🧱',
