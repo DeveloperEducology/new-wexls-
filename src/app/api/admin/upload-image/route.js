@@ -28,13 +28,6 @@ const MAX_FILE_SIZE_MB = 10;
 export const runtime = 'nodejs';
 
 export async function POST(request) {
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      { error: 'R2 storage is not configured on this server.' },
-      { status: 503 }
-    );
-  }
-
   try {
     const formData = await request.formData();
     const results = [];
@@ -98,7 +91,21 @@ export async function POST(request) {
         key = `${folder}/${timestamp}-${safeName}.${ext}`;
       }
 
-      const url = await uploadImageToR2(buffer, key, mimeType);
+      let url = '';
+      if (isR2Configured()) {
+        url = await uploadImageToR2(buffer, key, mimeType);
+      } else {
+        const fs = require('fs');
+        const path = require('path');
+        const publicDir = path.join(process.cwd(), 'public', 'uploads');
+        if (!fs.existsSync(publicDir)) {
+          fs.mkdirSync(publicDir, { recursive: true });
+        }
+        const filename = `${Date.now()}-${safeName}.${ext}`;
+        const filePath = path.join(publicDir, filename);
+        fs.writeFileSync(filePath, buffer);
+        url = `/uploads/${filename}`;
+      }
 
       if (!url) {
         errors.push({ file: originalName, error: 'Upload returned no URL.' });
