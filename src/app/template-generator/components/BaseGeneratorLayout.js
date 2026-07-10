@@ -162,23 +162,55 @@ export default function BaseGeneratorLayout({
     });
 
     // Solve for inline evaluations to determine formula variables
-    const solutionLines = solution.split('\n');
-    solutionLines.forEach((line, idx) => {
-      const mathRegex = /\{=\s*(.*?)\s*=\}/g;
-      let match;
-      let count = 1;
-      while ((match = mathRegex.exec(line)) !== null) {
-        const expr = match[1];
-        compiledVariables.push({
-          name: `Result_${idx + 1}_${count}`,
-          type: 'expression',
-          formula: expr
-        });
-        count++;
-      }
-    });
+    const mathRegex = /\{=\s*(.*?)\s*=\}/g;
+    let exprCount = 0;
+    let match;
+    while ((match = mathRegex.exec(solution)) !== null) {
+      exprCount++;
+      const exprName = exprCount === 1 ? 'Result' : `Result_${exprCount}`;
+      compiledVariables.push({
+        name: exprName,
+        type: 'expression',
+        formula: match[1].trim()
+      });
+    }
 
-    const isMcq = !blueprint.includes('[[blank');
+    // Extract blank IDs from blueprint
+    const blankRegex = /\[\[\s*([a-zA-Z0-9_]+)\s*\]\]/g;
+    const foundBlanks = [];
+    let blankMatch;
+    while ((blankMatch = blankRegex.exec(blueprint)) !== null) {
+      foundBlanks.push(blankMatch[1]);
+    }
+
+    const isMcq = foundBlanks.length === 0;
+    let validationRules = [];
+
+    if (!isMcq) {
+      const answerObj = {};
+      foundBlanks.forEach((blankId) => {
+        const matchedVar = compiledVariables.find(v => v.name.toLowerCase() === blankId.toLowerCase());
+        if (matchedVar) {
+          answerObj[blankId] = `[${matchedVar.name}]`;
+        } else {
+          const numMatch = blankId.match(/^blank(\d+)$/i);
+          if (numMatch) {
+            const num = parseInt(numMatch[1], 10);
+            const exprName = num === 1 ? 'Result' : `Result_${num}`;
+            answerObj[blankId] = `[${exprName}]`;
+          } else {
+            answerObj[blankId] = `[${blankId}]`;
+          }
+        }
+      });
+      validationRules = [
+        {
+          type: 'exact_match',
+          target: 'answer',
+          value: answerObj
+        }
+      ];
+    }
 
     const compiledJson = {
       id: `template-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
@@ -195,13 +227,7 @@ export default function BaseGeneratorLayout({
       explanation: {
         sections: [{ type: 'text', content: solution }]
       },
-      validationRules: isMcq ? [] : [
-        {
-          type: 'exact_match',
-          target: 'answer',
-          value: { ans: '{= Result =}' }
-        }
-      ],
+      validationRules,
       variables: compiledVariables
     };
 
