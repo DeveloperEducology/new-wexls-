@@ -130,11 +130,15 @@ function normalizeDataSourceItems(source) {
   if (Array.isArray(source.items)) return source.items;
   if (Array.isArray(source.data)) return source.data;
   if (Array.isArray(source.values)) return source.values;
+  if (Array.isArray(source.pool)) return source.pool;
   if (typeof source.items === 'string') {
     return source.items.split(',').map(item => item.trim()).filter(Boolean);
   }
   if (typeof source.value === 'string') {
     return source.value.split(',').map(item => item.trim()).filter(Boolean);
+  }
+  if (typeof source.pool === 'string') {
+    return source.pool.split(',').map(item => item.trim()).filter(Boolean);
   }
   return [];
 }
@@ -182,9 +186,20 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
     return pickRandomMany(items, variable.count, rng);
   }
 
-  if (type === 'list' || type === 'random_item' || type === 'array') {
+  if (type === 'choice' || type === 'list' || type === 'random_item' || type === 'array') {
     const items = Array.isArray(sourceItems) ? sourceItems : normalizeDataSourceItems(variable);
-    return pickRandom(items, rng);
+    if (items.length > 0) {
+      const name = variable.name || variable.id;
+      if (name === 'animal' || name === 'image') {
+        if (resolvedVariables._sharedChoiceIndex === undefined) {
+          resolvedVariables._sharedChoiceIndex = Math.floor(rng() * items.length);
+        }
+        const idx = resolvedVariables._sharedChoiceIndex % items.length;
+        return items[idx];
+      }
+      return pickRandom(items, rng);
+    }
+    return '';
   }
 
   return variable?.value ?? '';

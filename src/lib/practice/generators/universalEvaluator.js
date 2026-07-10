@@ -256,8 +256,21 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     const optionDefs = config.options || config.interaction?.options || [];
     let isMultiSelectMode = false;
 
-    const combos = buildCombinations(variables);
+    let combos = buildCombinations(variables);
     if (!combos.length) return { questionText: '', options: [], correctAnswerIndex: -1 };
+
+    // Align parallel choice lists (e.g. animal and image)
+    if (variables.animal && variables.image) {
+      const animalPool = variables.animal.pool || variables.animal.values || [];
+      const imagePool = variables.image.pool || variables.image.values || [];
+      if (animalPool.length > 0 && animalPool.length === imagePool.length) {
+        combos = combos.filter(combo => {
+          const animalIdx = animalPool.indexOf(combo.animal);
+          const imageIdx = imagePool.indexOf(combo.image);
+          return animalIdx === -1 || imageIdx === -1 || animalIdx === imageIdx;
+        });
+      }
+    }
 
     // Filter combinations to only keep those that produce integer-only outputs for all derivations
     let validCombos = [];
