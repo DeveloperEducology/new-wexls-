@@ -167,6 +167,29 @@ export default function CountingGeneratorPage() {
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Frame (Border Box)</label>
+                <select
+                  value={visualProps.showBorder || 'false'}
+                  onChange={(e) => setVisualProps({ ...visualProps, showBorder: e.target.value })}
+                  style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}
+                >
+                  <option value="false">❌ No Frame</option>
+                  <option value="true">✅ Show Frame</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Total Count Variable</label>
+                <input
+                  type="text"
+                  value={visualProps.count || 'count'}
+                  onChange={(e) => setVisualProps({ ...visualProps, count: e.target.value })}
+                  style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
             {/* Display image collection manager only if visual type is image */}
             {isImageCollection && (
               <div style={{
