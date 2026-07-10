@@ -11,8 +11,7 @@ export default function BaseGeneratorLayout({
   presets = [],
   customControls = null,
   visualPropsSchema = [],
-  defaultVisualProps = {},
-  extraVariables = []
+  defaultVisualProps = {}
 }) {
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [title, setTitle] = useState(presets[0]?.title || '');
@@ -93,25 +92,24 @@ export default function BaseGeneratorLayout({
   const shuffleSimulator = () => {
     setShuffling(true);
     const newResolved = {};
+
+    const animalVal = String(placeholderValues.animal || '').trim();
+    const imageVal = String(placeholderValues.image || '').trim();
+    const currentAnimals = animalVal.split(',').map(s => s.trim()).filter(Boolean);
+    const currentImages = imageVal.split(',').map(s => s.trim()).filter(Boolean);
+
+    let sharedIndex = null;
+    if (currentAnimals.length > 0 && currentImages.length === currentAnimals.length) {
+      sharedIndex = Math.floor(Math.random() * currentAnimals.length);
+    }
+
     placeholders.forEach(key => {
-      newResolved[key] = resolvePlaceholder(placeholderValues[key]);
-    });
-
-    // Resolve extra choice variables first
-    extraVariables.forEach(variable => {
-      if (variable.type === 'choice' && Array.isArray(variable.pool) && variable.pool.length > 0) {
-        newResolved[variable.name] = variable.pool[Math.floor(Math.random() * variable.pool.length)];
-      }
-    });
-
-    // Resolve extra expression variables using the resolved context
-    extraVariables.forEach(variable => {
-      if (variable.type === 'expression' && variable.formula) {
-        try {
-          newResolved[variable.name] = new Function('ctx', `with(ctx) { return ${variable.formula}; }`)(newResolved);
-        } catch (e) {
-          newResolved[variable.name] = '';
-        }
+      if (key === 'animal' && sharedIndex !== null) {
+        newResolved.animal = currentAnimals[sharedIndex];
+      } else if (key === 'image' && sharedIndex !== null) {
+        newResolved.image = currentImages[sharedIndex];
+      } else {
+        newResolved[key] = resolvePlaceholder(placeholderValues[key]);
       }
     });
 
@@ -122,7 +120,7 @@ export default function BaseGeneratorLayout({
   // Trigger initial shuffle
   useEffect(() => {
     shuffleSimulator();
-  }, [placeholderValues, placeholders, extraVariables]);
+  }, [placeholderValues, placeholders]);
 
   // Derive mathematical operations and fill placeholders
   const evaluateText = (tplText) => {
@@ -165,32 +163,67 @@ export default function BaseGeneratorLayout({
   // Compile full template JSON recipe
   useEffect(() => {
     const activeTopic = topic || 'addition';
-    
-    // Extract variables config from placeholders
-    const compiledVariables = placeholders.map(key => {
+    const compiledVariables = [];
+
+    const animalVal = String(placeholderValues.animal || '').trim();
+    const imageVal = String(placeholderValues.image || '').trim();
+    const currentAnimals = animalVal.split(',').map(s => s.trim()).filter(Boolean);
+    const currentImages = imageVal.split(',').map(s => s.trim()).filter(Boolean);
+
+    const hasParallelAnimalsAndImages = currentAnimals.length > 0 && currentImages.length === currentAnimals.length;
+
+    if (hasParallelAnimalsAndImages) {
+      const pool = currentAnimals.map((name, idx) => ({
+        name,
+        url: currentImages[idx]
+      }));
+      compiledVariables.push({
+        name: 'animalObject',
+        type: 'choice',
+        pool
+      });
+      compiledVariables.push({
+        name: 'animal',
+        type: 'expression',
+        formula: 'animalObject.name'
+      });
+      compiledVariables.push({
+        name: 'image',
+        type: 'expression',
+        formula: 'animalObject.url'
+      });
+    }
+
+    placeholders.forEach(key => {
+      if (hasParallelAnimalsAndImages && (key === 'animal' || key === 'image')) {
+        return; // Handled as synchronized object pool
+      }
+
       const valString = String(placeholderValues[key] || '').trim();
       if (valString.includes(',')) {
-        return {
+        compiledVariables.push({
           name: key,
           type: 'choice',
           pool: valString.split(',').map(s => s.trim()).filter(Boolean)
-        };
+        });
+      } else {
+        const rangeRegex = /^(\d+)-(\d+)$/;
+        const match = valString.match(rangeRegex);
+        if (match) {
+          compiledVariables.push({
+            name: key,
+            type: 'range',
+            min: parseInt(match[1], 10),
+            max: parseInt(match[2], 10)
+          });
+        } else {
+          compiledVariables.push({
+            name: key,
+            type: 'choice',
+            pool: [valString]
+          });
+        }
       }
-      const rangeRegex = /^(\d+)-(\d+)$/;
-      const match = valString.match(rangeRegex);
-      if (match) {
-        return {
-          name: key,
-          type: 'range',
-          min: parseInt(match[1], 10),
-          max: parseInt(match[2], 10)
-        };
-      }
-      return {
-        name: key,
-        type: 'choice',
-        pool: [valString]
-      };
     });
 
     // Solve for inline evaluations to determine formula variables
@@ -243,13 +276,6 @@ export default function BaseGeneratorLayout({
         }
       ];
     }
-
-    // Add extra variables passed from props
-    extraVariables.forEach(v => {
-      if (!compiledVariables.some(existing => existing.name === v.name)) {
-        compiledVariables.push(v);
-      }
-    });
 
     const compiledJson = {
       id: `template-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,

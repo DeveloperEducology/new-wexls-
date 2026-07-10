@@ -1,14 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import BaseGeneratorLayout from '../components/BaseGeneratorLayout';
-
-const DEFAULT_ANIMAL_POOL = [
-  { name: 'lion', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970163263-lion.png' },
-  { name: 'elephant', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803349123-Elephant.png' },
-  { name: 'monkey', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803351655-Monkey.png' },
-  { name: 'bear', url: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970141189-bear.png' }
-];
 
 const COUNTING_PRESETS = [
   {
@@ -17,10 +10,12 @@ const COUNTING_PRESETS = [
     subject: 'math',
     topic: 'counting',
     grade: '1',
-    blueprint: 'How many {{animalName}}s do you see in the collection?\n[[blank1]]',
-    solution: 'Step 1: Point to each {{animalName}} and count them.\nStep 2: The count goes up to {{count}}.\nStep 3: There are {= count =} {{animalName}}s!',
+    blueprint: 'How many {{animal}}s do you see in the collection?\n[[blank1]]',
+    solution: 'Step 1: Point to each {{animal}} and count them.\nStep 2: The count goes up to {{count}}.\nStep 3: There are {= count =} {{animal}}s!',
     placeholders: {
-      count: '1-10'
+      count: '1-10',
+      animal: 'lion, elephant, monkey, bear',
+      image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970163263-lion.png, https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803349123-Elephant.png, https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781803351655-Monkey.png, https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1780970141189-bear.png'
     },
     visualComponent: 'ItemCounter',
     visualProps: {
@@ -50,13 +45,12 @@ const COUNTING_PRESETS = [
 ];
 
 export default function CountingGeneratorPage() {
-  const [imagePool, setImagePool] = useState(DEFAULT_ANIMAL_POOL);
   const [customName, setCustomName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e, placeholderValues, setPlaceholderValues) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -77,8 +71,20 @@ export default function CountingGeneratorPage() {
         const uploadedUrl = data.results[0].url;
         const detectedName = customName.trim() || data.results[0].tags?.singular || 'item';
 
-        // Add to pool state
-        setImagePool(prev => [...prev, { name: detectedName, url: uploadedUrl }]);
+        // Get current lists
+        const currentAnimals = (placeholderValues.animal || '').split(',').map(s => s.trim()).filter(Boolean);
+        const currentImages = (placeholderValues.image || '').split(',').map(s => s.trim()).filter(Boolean);
+
+        // Append new item
+        const updatedAnimals = [...currentAnimals, detectedName].join(', ');
+        const updatedImages = [...currentImages, uploadedUrl].join(', ');
+
+        setPlaceholderValues({
+          ...placeholderValues,
+          animal: updatedAnimals,
+          image: updatedImages
+        });
+
         setCustomName('');
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
@@ -94,30 +100,19 @@ export default function CountingGeneratorPage() {
     }
   };
 
-  const handleRemoveImage = (indexToRemove) => {
-    setImagePool(prev => prev.filter((_, idx) => idx !== indexToRemove));
-  };
+  const handleRemoveImage = (indexToRemove, placeholderValues, setPlaceholderValues) => {
+    const currentAnimals = (placeholderValues.animal || '').split(',').map(s => s.trim()).filter(Boolean);
+    const currentImages = (placeholderValues.image || '').split(',').map(s => s.trim()).filter(Boolean);
 
-  const extraVariables = [];
-  if (imagePool.length > 0) {
-    extraVariables.push(
-      {
-        name: 'animal',
-        type: 'choice',
-        pool: imagePool
-      },
-      {
-        name: 'animalName',
-        type: 'expression',
-        formula: 'animal.name'
-      },
-      {
-        name: 'imageUrl',
-        type: 'expression',
-        formula: 'animal.url'
-      }
-    );
-  }
+    currentAnimals.splice(indexToRemove, 1);
+    currentImages.splice(indexToRemove, 1);
+
+    setPlaceholderValues({
+      ...placeholderValues,
+      animal: currentAnimals.join(', '),
+      image: currentImages.join(', ')
+    });
+  };
 
   return (
     <BaseGeneratorLayout
@@ -125,13 +120,24 @@ export default function CountingGeneratorPage() {
       topic="counting"
       visualComponent="ItemCounter"
       presets={COUNTING_PRESETS}
-      extraVariables={extraVariables}
       defaultVisualProps={{
         count: 'count',
         itemType: 'image',
         itemsPerRow: '5'
       }}
-      customControls={({ visualProps, setVisualProps }) => {
+      customControls={({ visualProps, setVisualProps, placeholderValues, setPlaceholderValues }) => {
+        const currentAnimals = (placeholderValues.animal || '').split(',').map(s => s.trim()).filter(Boolean);
+        const currentImages = (placeholderValues.image || '').split(',').map(s => s.trim()).filter(Boolean);
+
+        const itemsPool = [];
+        const maxLen = Math.max(currentAnimals.length, currentImages.length);
+        for (let i = 0; i < maxLen; i++) {
+          itemsPool.push({
+            name: currentAnimals[i] || `item_${i + 1}`,
+            url: currentImages[i] || ''
+          });
+        }
+
         const isImageCollection = visualProps.itemType === 'image';
 
         return (
@@ -141,20 +147,7 @@ export default function CountingGeneratorPage() {
                 <label style={{ display: 'block', fontWeight: 700, fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Item Type</label>
                 <select
                   value={visualProps.itemType || 'image'}
-                  onChange={(e) => {
-                    const type = e.target.value;
-                    setVisualProps({ 
-                      ...visualProps, 
-                      itemType: type,
-                      // Automatically set count visual prop to imageUrl if using image collection
-                      count: type === 'image' ? '[imageUrl]' : 'count'
-                    });
-                    if (type !== 'image') {
-                      setImagePool([]);
-                    } else {
-                      setImagePool(DEFAULT_ANIMAL_POOL);
-                    }
-                  }}
+                  onChange={(e) => setVisualProps({ ...visualProps, itemType: e.target.value })}
                   style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}
                 >
                   <option value="image">🖼️ Image Collection Pool</option>
@@ -169,29 +162,6 @@ export default function CountingGeneratorPage() {
                   type="text"
                   value={visualProps.itemsPerRow || '5'}
                   onChange={(e) => setVisualProps({ ...visualProps, itemsPerRow: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Frame (Border Box)</label>
-                <select
-                  value={visualProps.showBorder || 'false'}
-                  onChange={(e) => setVisualProps({ ...visualProps, showBorder: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}
-                >
-                  <option value="false">❌ No Frame</option>
-                  <option value="true">✅ Show Frame</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Total Count Variable</label>
-                <input
-                  type="text"
-                  value={visualProps.count || 'count'}
-                  onChange={(e) => setVisualProps({ ...visualProps, count: e.target.value })}
                   style={{ width: '100%', padding: '8px 10px', border: '2px solid #e2e8f0', borderRadius: '8px', boxSizing: 'border-box' }}
                 />
               </div>
@@ -234,7 +204,7 @@ export default function CountingGeneratorPage() {
                       type="file"
                       accept="image/*"
                       ref={fileInputRef}
-                      onChange={handleImageUpload}
+                      onChange={(e) => handleImageUpload(e, placeholderValues, setPlaceholderValues)}
                       style={{ display: 'none' }}
                     />
                     <button
@@ -269,7 +239,7 @@ export default function CountingGeneratorPage() {
                   overflowY: 'auto',
                   paddingRight: '4px'
                 }}>
-                  {imagePool.map((item, idx) => (
+                  {itemsPool.map((item, idx) => (
                     <div
                       key={idx}
                       style={{
@@ -286,7 +256,7 @@ export default function CountingGeneratorPage() {
                     >
                       {/* Delete icon */}
                       <button
-                        onClick={() => handleRemoveImage(idx)}
+                        onClick={() => handleRemoveImage(idx, placeholderValues, setPlaceholderValues)}
                         style={{
                           position: 'absolute',
                           top: '-4px',
