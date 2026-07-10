@@ -173,6 +173,52 @@ export default function BaseGeneratorLayout({
       };
     });
 
+    // Group parallel choice variables of the same length to synchronize them
+    const choiceVars = compiledVariables.filter(v => v.type === 'choice' && Array.isArray(v.pool) && v.pool.length > 1);
+    const groupsByLength = {};
+    choiceVars.forEach(v => {
+      const len = v.pool.length;
+      if (!groupsByLength[len]) groupsByLength[len] = [];
+      groupsByLength[len].push(v);
+    });
+
+    Object.keys(groupsByLength).forEach(lenStr => {
+      const vars = groupsByLength[lenStr];
+      if (vars.length < 2) return;
+
+      const len = Number(lenStr);
+      const varNames = vars.map(v => v.name);
+      const syncVarName = `_sync_${varNames.join('_')}`;
+
+      const syncPool = [];
+      for (let i = 0; i < len; i++) {
+        const obj = {};
+        vars.forEach(v => {
+          obj[v.name] = v.pool[i];
+        });
+        syncPool.push(obj);
+      }
+
+      vars.forEach(v => {
+        const idx = compiledVariables.indexOf(v);
+        if (idx > -1) compiledVariables.splice(idx, 1);
+      });
+
+      compiledVariables.unshift({
+        name: syncVarName,
+        type: 'choice',
+        pool: syncPool
+      });
+
+      vars.forEach(v => {
+        compiledVariables.push({
+          name: v.name,
+          type: 'expression',
+          formula: `${syncVarName}.${v.name}`
+        });
+      });
+    });
+
     // Solve for inline evaluations to determine formula variables
     const mathRegex = /\{=\s*(.*?)\s*=\}/g;
     let exprCount = 0;
