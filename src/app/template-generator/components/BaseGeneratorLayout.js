@@ -552,6 +552,40 @@ export default function BaseGeneratorLayout({
               />
             </div>
 
+            {/* Placeholders / Variables editor */}
+            {placeholders.length > 0 && (
+              <div style={{
+                background: '#f8fafc',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1.5px solid #edf2f7',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#475569' }}>
+                  🔑 Placeholders & Ranges
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {placeholders.map((key) => (
+                    <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#4a5568' }}>{`{{${key}}}`}</span>
+                      <input
+                        type="text"
+                        value={placeholderValues[key] || ''}
+                        onChange={(e) => setPlaceholderValues({
+                          ...placeholderValues,
+                          [key]: e.target.value
+                        })}
+                        placeholder="e.g. 1-10 or lion, bear"
+                        style={{ padding: '6px 10px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box', width: '100%' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Custom Controls Specific to Topic */}
             {customControls && (
               <div style={{

@@ -67,7 +67,7 @@ export default function CountingGeneratorPage() {
       });
       const data = await res.json();
 
-      if (data.success && data.results?.[0]) {
+      if (Array.isArray(data.results) && data.results.length > 0) {
         const uploadedUrl = data.results[0].url;
         const detectedName = customName.trim() || data.results[0].tags?.singular || 'item';
 
@@ -88,7 +88,10 @@ export default function CountingGeneratorPage() {
         setCustomName('');
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
-        setUploadError(data.error || 'Upload failed.');
+        const errorText = Array.isArray(data.errors) && data.errors[0]?.error
+          ? data.errors[0].error
+          : (data.error || 'Upload failed.');
+        setUploadError(errorText);
       }
     } catch (err) {
       setUploadError(err.message || 'Network upload failed.');
