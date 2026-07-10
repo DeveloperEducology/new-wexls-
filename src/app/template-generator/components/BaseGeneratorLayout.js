@@ -61,6 +61,20 @@ export default function BaseGeneratorLayout({
   const resolvePlaceholder = (valStr) => {
     if (!valStr) return '';
     const cleanStr = String(valStr).trim();
+
+    // Check if it's a pool of JSON objects
+    if (cleanStr.includes('{')) {
+      try {
+        const wrapped = cleanStr.startsWith('[') ? cleanStr : `[${cleanStr}]`;
+        const arr = JSON.parse(wrapped);
+        if (Array.isArray(arr) && arr.length > 0) {
+          return arr[Math.floor(Math.random() * arr.length)];
+        }
+      } catch (e) {
+        // Fall back to regular string splitting
+      }
+    }
+
     if (cleanStr.includes(',')) {
       const arr = cleanStr.split(',').map(s => s.trim()).filter(Boolean);
       return arr[Math.floor(Math.random() * arr.length)] || '';
@@ -98,30 +112,28 @@ export default function BaseGeneratorLayout({
     // Substitute {{placeholder}} variables
     Object.keys(resolvedValues).forEach(key => {
       const val = resolvedValues[key];
-      const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      result = result.replace(new RegExp(`\\{\\{\\s*${escapedKey}\\s*\\}\\}`, 'g'), val);
-      result = result.replace(new RegExp(`\\[\\s*${escapedKey}\\s*\\]`, 'g'), val);
+      if (val && typeof val === 'object') {
+        Object.keys(val).forEach(prop => {
+          const escapedKey = `${key}.${prop}`.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          result = result.replace(new RegExp(`\\{\\{\\s*${escapedKey}\\s*\\}\\}`, 'g'), val[prop]);
+          result = result.replace(new RegExp(`\\[\\s*${escapedKey}\\s*\\]`, 'g'), val[prop]);
+        });
+      } else {
+        const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        result = result.replace(new RegExp(`\\{\\{\\s*${escapedKey}\\s*\\}\\}`, 'g'), val);
+        result = result.replace(new RegExp(`\\[\\s*${escapedKey}\\s*\\]`, 'g'), val);
+      }
     });
 
     // Evaluate math expressions: {= expression =}
     const mathRegex = /\{=\s*(.*?)\s*=\}/g;
     result = result.replace(mathRegex, (match, expr) => {
-      let substitutedExpr = expr;
-      Object.keys(resolvedValues).forEach(key => {
-        const val = resolvedValues[key];
-        if (typeof val === 'number' || !isNaN(Number(val))) {
-          const varRegex = new RegExp(`\\b${key}\\b`, 'g');
-          substitutedExpr = substitutedExpr.replace(varRegex, val);
-        }
-      });
-
-      const sanitized = substitutedExpr.replace(/[^0-9+\-*/().\s%]/g, '');
       try {
-        let evaluated = Function('return (' + sanitized + ')')();
+        const evaluated = new Function('ctx', `with(ctx) { return ${expr}; }`)(resolvedValues);
         if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
-          evaluated = Math.round(evaluated * 100) / 100;
+          return Math.round(evaluated * 100) / 100;
         }
-        return evaluated;
+        return evaluated !== undefined && evaluated !== null ? String(evaluated) : '';
       } catch (err) {
         return `[Math Error: ${expr}]`;
       }
@@ -551,7 +563,14 @@ export default function BaseGeneratorLayout({
                 <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 800, color: '#475569' }}>
                   ⚙️ Topic Parameters
                 </h4>
-                {customControls({ visualProps, setVisualProps })}
+                {customControls({
+                  visualProps,
+                  setVisualProps,
+                  placeholderValues,
+                  setPlaceholderValues,
+                  placeholders,
+                  setPlaceholders
+                })}
               </div>
             )}
 
