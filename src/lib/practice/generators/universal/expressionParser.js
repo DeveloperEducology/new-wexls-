@@ -197,7 +197,8 @@ export function resolveExpression(expr, context) {
       if (Number.isFinite(num)) {
         return num;
       }
-      if (/[,;]/.test(interpolated) && !interpolated.includes('draw') && !interpolated.startsWith('[') && !interpolated.startsWith('{')) {
+      const isJSExpr = /[=\!<>\?:]/.test(interpolated) || interpolated.includes("'") || interpolated.includes('"');
+      if (/[,;]/.test(interpolated) && !interpolated.includes('draw') && !interpolated.startsWith('[') && !interpolated.startsWith('{') && !isJSExpr) {
         return interpolated;
       }
     }

@@ -1309,6 +1309,278 @@ export const competencyGraphs = {
       'division-g5-c1-divide-by-2digit': 'division_2digit_divisor'
     }
   },
+  physics: {
+    mechanics: {
+      competencies: [
+        {
+          id: 'iit_kinematics_vs_dynamics',
+          title: 'Mechanics — Kinematics vs. Dynamics Concepts',
+          prerequisites: [],
+        },
+        {
+          id: 'iit_relativity_rest_motion',
+          title: 'State of Rest and Motion as Relative Concepts',
+          prerequisites: ['iit_kinematics_vs_dynamics'],
+        },
+        {
+          id: 'iit_rectilinear_vs_curvilinear',
+          title: 'Translatory Motion: Rectilinear vs. Curvilinear',
+          prerequisites: ['iit_relativity_rest_motion'],
+        },
+        {
+          id: 'iit_rotational_vs_circular',
+          title: 'Spins & Paths: Rotational vs. Circular Motion',
+          prerequisites: ['iit_rectilinear_vs_curvilinear'],
+        },
+        {
+          id: 'iit_oscillatory_vs_vibratory',
+          title: 'To-and-Fro Motions: Oscillatory vs. Vibratory',
+          prerequisites: ['iit_rotational_vs_circular'],
+        },
+        {
+          id: 'iit_periodic_vs_random',
+          title: 'Intervals & Paths: Periodic vs. Random Motion',
+          prerequisites: ['iit_oscillatory_vs_vibratory'],
+        },
+        {
+          id: 'iit_multiple_motion',
+          title: 'Simultaneous Motions: Decomposing Multiple Motion',
+          prerequisites: ['iit_periodic_vs_random'],
+        },
+        {
+          id: 'iit_scalars_vs_vectors',
+          title: 'Classifying Physics Quantities: Scalars vs. Vectors',
+          prerequisites: ['iit_multiple_motion'],
+        },
+        {
+          id: 'iit_vector_representation',
+          title: 'Graphical Representation and Notation of Vectors',
+          prerequisites: ['iit_scalars_vs_vectors'],
+        },
+        {
+          id: 'iit_distance_displacement_1d',
+          title: 'Calculating 1D Distance and Displacement',
+          prerequisites: ['iit_vector_representation'],
+        },
+        {
+          id: 'iit_distance_displacement_circular',
+          title: 'Distance and Displacement on Semicircular & Circular Paths',
+          prerequisites: ['iit_distance_displacement_1d'],
+        },
+        {
+          id: 'iit_distance_displacement_2d',
+          title: 'Distance and Displacement on 2D Grid Paths',
+          prerequisites: ['iit_distance_displacement_circular'],
+        },
+        {
+          id: 'iit_speed_distance_time',
+          title: 'Basic Speed, Distance, and Time Calculations',
+          prerequisites: ['iit_distance_displacement_2d'],
+        },
+        {
+          id: 'iit-speed-unit-conversion',
+          title: 'Speed Unit Conversions (km/h <-> m/s)',
+          prerequisites: ['iit_speed_distance_time'],
+        },
+        {
+          id: 'iit_odometer_average_speed',
+          title: 'Odometer Logs and Average Speed Analysis',
+          prerequisites: ['iit-speed-unit-conversion'],
+        },
+        {
+          id: 'iit_distance_time_graph_qualitative',
+          title: 'Interpreting Distance-Time Graphs (Qualitative)',
+          prerequisites: ['iit_odometer_average_speed'],
+        },
+        {
+          id: 'iit_speed_graph_slope',
+          title: 'Calculating Speed from Graph Slopes (Quantitative)',
+          prerequisites: ['iit_distance_time_graph_qualitative'],
+        },
+        {
+          id: 'iit_p6_compare_without_measuring',
+          title: 'Compare quantities visually without measuring',
+          prerequisites: [],
+        },
+        {
+          id: 'iit_p6_need_standard_units',
+          title: 'Understand the need for standard units',
+          prerequisites: ['iit_p6_compare_without_measuring'],
+        },
+        {
+          id: 'iit_p6_identify_length',
+          title: 'Identify length as distance between points',
+          prerequisites: ['iit_p6_need_standard_units'],
+        },
+        {
+          id: 'iit_p6_units_of_length',
+          title: 'Units of length (multiples & sub-multiples)',
+          prerequisites: ['iit_p6_identify_length'],
+        },
+        {
+          id: 'iit_p6_convert_units_length',
+          title: 'Convert length units (mm, cm, m, km)',
+          prerequisites: ['iit_p6_units_of_length'],
+        },
+        {
+          id: 'iit_p6_read_scale',
+          title: 'Read a scale correctly & apply end corrections',
+          prerequisites: ['iit_p6_convert_units_length'],
+        },
+        {
+          id: 'iit_p6_least_count',
+          title: 'Determine the least count of an instrument',
+          prerequisites: ['iit_p6_read_scale'],
+        },
+        {
+          id: 'iit_p6_measure_curved_lines',
+          title: 'Measure lengths of curved lines using thread',
+          prerequisites: ['iit_p6_least_count'],
+        },
+        {
+          id: 'iit_p6_measure_tiny_objects',
+          title: 'Measure dimensions of tiny/indirect objects',
+          prerequisites: ['iit_p6_measure_curved_lines'],
+        },
+        {
+          id: 'iit_p6_what_is_area',
+          title: 'Understand area as surface space covered',
+          prerequisites: ['iit_p6_measure_tiny_objects'],
+        },
+        {
+          id: 'iit_p6_area_of_rectangle',
+          title: 'Calculate area of a rectangle/square',
+          prerequisites: ['iit_p6_what_is_area'],
+        },
+        {
+          id: 'iit_p6_area_units',
+          title: 'Convert units of area (cm², m², hectares)',
+          prerequisites: ['iit_p6_area_of_rectangle'],
+        },
+        {
+          id: 'iit_p6_irregular_area',
+          title: 'Measure irregular area using graph paper',
+          prerequisites: ['iit_p6_area_units'],
+        },
+        {
+          id: 'iit_p6_what_is_volume',
+          title: 'Understand volume as space occupied by objects',
+          prerequisites: ['iit_p6_irregular_area'],
+        },
+        {
+          id: 'iit_p6_cuboid_volume',
+          title: 'Calculate volume of regular solids (cuboids)',
+          prerequisites: ['iit_p6_what_is_volume'],
+        },
+        {
+          id: 'iit_p6_liquid_volume',
+          title: 'Measure liquid volume & read meniscus',
+          prerequisites: ['iit_p6_cuboid_volume'],
+        },
+        {
+          id: 'iit_p6_irregular_volume',
+          title: 'Measure irregular volume (water displacement)',
+          prerequisites: ['iit_p6_liquid_volume'],
+        },
+        {
+          id: 'iit_p6_mass_concept',
+          title: 'Understand mass as the amount of matter',
+          prerequisites: ['iit_p6_irregular_volume'],
+        },
+        {
+          id: 'iit_p6_mass_units',
+          title: 'Units of mass (mg, g, kg, quintal, tonne)',
+          prerequisites: ['iit_p6_mass_concept'],
+        },
+        {
+          id: 'iit_p6_convert_mass',
+          title: 'Convert units of mass',
+          prerequisites: ['iit_p6_mass_units'],
+        },
+        {
+          id: 'iit_p6_time_concept',
+          title: 'Understand time as interval between events',
+          prerequisites: ['iit_p6_convert_mass'],
+        },
+        {
+          id: 'iit_p6_time_units',
+          title: 'Units of time (seconds to millennia)',
+          prerequisites: ['iit_p6_time_concept'],
+        },
+        {
+          id: 'iit_p6_clock_reading',
+          title: 'Read clocks & convert 12h/24h formats',
+          prerequisites: ['iit_p6_time_units'],
+        },
+        {
+          id: 'iit_p6_choose_instrument',
+          title: 'Choose the correct measuring instrument',
+          prerequisites: ['iit_p6_clock_reading'],
+        },
+        {
+          id: 'iit_p6_unit_conversion_algorithm',
+          title: 'Apply the universal unit conversion algorithm',
+          prerequisites: ['iit_p6_choose_instrument'],
+        },
+        {
+          id: 'iit_p6_estimation_real_world',
+          title: 'Estimate physical quantities in real-world',
+          prerequisites: ['iit_p6_unit_conversion_algorithm'],
+        },
+        {
+          id: 'iit_p6_mixed_measurement',
+          title: 'Solve mixed and integrated measurement problems',
+          prerequisites: ['iit_p6_estimation_real_world'],
+        }
+      ],
+      skillMap: {
+        'iit-kinematics-vs-dynamics': 'iit_kinematics_vs_dynamics',
+        'iit-relativity-rest-motion': 'iit_relativity_rest_motion',
+        'iit-rectilinear-vs-curvilinear': 'iit_rectilinear_vs_curvilinear',
+        'iit-rotational-vs-circular': 'iit_rotational_vs_circular',
+        'iit-oscillatory-vs-vibratory': 'iit_oscillatory_vs_vibratory',
+        'iit-periodic-vs-random': 'iit_periodic_vs_random',
+        'iit-multiple-motion': 'iit_multiple_motion',
+        'iit-scalars-vs-vectors': 'iit_scalars_vs_vectors',
+        'iit-vector-representation': 'iit_vector_representation',
+        'iit-distance-displacement-1d': 'iit_distance_displacement_1d',
+        'iit-distance-displacement-circular': 'iit_distance_displacement_circular',
+        'iit-distance-displacement-2d': 'iit_distance_displacement_2d',
+        'iit-speed-distance-time': 'iit_speed_distance_time',
+        'iit-speed-unit-conversion': 'iit-speed-unit-conversion',
+        'iit-odometer-average-speed': 'iit_odometer_average_speed',
+        'iit-distance-time-graph-qualitative': 'iit_distance_time_graph_qualitative',
+        'iit-speed-graph-slope': 'iit_speed_graph_slope',
+        'iit-p6-compare-without-measuring': 'iit_p6_compare_without_measuring',
+        'iit-p6-need-standard-units': 'iit_p6_need_standard_units',
+        'iit-p6-identify-length': 'iit_p6_identify_length',
+        'iit-p6-units-of-length': 'iit_p6_units_of_length',
+        'iit-p6-convert-units-length': 'iit_p6_convert_units_length',
+        'iit-p6-read-scale': 'iit_p6_read_scale',
+        'iit-p6-least-count': 'iit_p6_least_count',
+        'iit-p6-measure-curved-lines': 'iit_p6_measure_curved-lines',
+        'iit-p6-measure-tiny-objects': 'iit_p6_measure_tiny_objects',
+        'iit-p6-what-is-area': 'iit_p6_what_is_area',
+        'iit-p6-area-of-rectangle': 'iit_p6_area_of_rectangle',
+        'iit-p6-area-units': 'iit_p6_area_units',
+        'iit-p6-irregular-area': 'iit_p6_irregular_area',
+        'iit-p6-what-is-volume': 'iit_p6_what_is_volume',
+        'iit-p6-cuboid-volume': 'iit_p6_cuboid_volume',
+        'iit-p6-liquid-volume': 'iit_p6_liquid_volume',
+        'iit-p6-irregular-volume': 'iit_p6_irregular_volume',
+        'iit-p6-mass-concept': 'iit_p6_mass_concept',
+        'iit-p6-mass-units': 'iit_p6_mass_units',
+        'iit-p6-convert-mass': 'iit_p6_convert_mass',
+        'iit-p6-time-concept': 'iit_p6_time_concept',
+        'iit-p6-time-units': 'iit_p6_time_units',
+        'iit-p6-clock-reading': 'iit_p6_clock_reading',
+        'iit-p6-choose-instrument': 'iit_p6_choose_instrument',
+        'iit-p6-unit-conversion-algorithm': 'iit_p6_unit_conversion_algorithm',
+        'iit-p6-estimation-real-world': 'iit_p6_estimation_real_world',
+        'iit-p6-mixed-measurement': 'iit_p6_mixed_measurement'
+      }
+    }
+  },
   english: {
     grammar: {
       competencies: [

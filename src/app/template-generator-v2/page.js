@@ -1274,6 +1274,99 @@ export default function TemplateMasterclass() {
     }
   };
 
+  const getSolutionNumberLineProps = () => {
+    const min = Number(visualProps.min) !== undefined && !isNaN(Number(visualProps.min)) ? Number(visualProps.min) : 0;
+    const max = Number(visualProps.max) !== undefined && !isNaN(Number(visualProps.max)) ? Number(visualProps.max) : 10;
+    const step = Number(visualProps.step) || 1;
+    const color = visualProps.color || 'blue';
+
+    let start = min;
+    if (resolvedValues.A !== undefined && !isNaN(Number(resolvedValues.A))) start = Number(resolvedValues.A);
+    else if (resolvedValues.count1 !== undefined && !isNaN(Number(resolvedValues.count1))) start = Number(resolvedValues.count1);
+    else if (resolvedValues.a !== undefined && !isNaN(Number(resolvedValues.a))) start = Number(resolvedValues.a);
+    else {
+      const nums = Object.values(resolvedValues).map(Number).filter(n => !isNaN(n));
+      if (nums.length > 0) start = nums[0];
+    }
+
+    let jumpsCount = 0;
+    if (resolvedValues.B !== undefined && !isNaN(Number(resolvedValues.B))) jumpsCount = Number(resolvedValues.B);
+    else if (resolvedValues.count2 !== undefined && !isNaN(Number(resolvedValues.count2))) jumpsCount = Number(resolvedValues.count2);
+    else if (resolvedValues.b !== undefined && !isNaN(Number(resolvedValues.b))) jumpsCount = Number(resolvedValues.b);
+    else {
+      const nums = Object.values(resolvedValues).map(Number).filter(n => !isNaN(n));
+      if (nums.length > 1) jumpsCount = nums[1];
+    }
+
+    if (isNaN(start) || start < min || start > max) start = min;
+    if (isNaN(jumpsCount) || jumpsCount < 0) jumpsCount = 0;
+    if (start + jumpsCount > max) jumpsCount = max - start;
+
+    const end = start + jumpsCount;
+
+    const jumpList = [];
+    for (let val = start; val <= end; val += step) {
+      jumpList.push(val);
+    }
+    const jumpsStr = jumpList.join('->');
+    const highlightBoxesStr = [start, end].join(',');
+
+    return {
+      min,
+      max,
+      step,
+      pointValue: null,
+      color,
+      jumps: jumpsStr,
+      highlightBoxes: highlightBoxesStr,
+      interactive: false
+    };
+  };
+
+  const renderSolutionVisual = () => {
+    if (visualComponent !== 'NumberLine') return null;
+    const builder = COMPONENT_REGISTRY[visualComponent];
+    if (!builder) return null;
+
+    try {
+      const resolvedProps = getSolutionNumberLineProps();
+      const result = builder(resolvedProps, () => Math.random());
+      let svgContent = null;
+      if (typeof result === 'string') {
+        svgContent = result;
+      } else if (result && result.content) {
+        svgContent = result.content;
+      }
+      if (!svgContent) return null;
+      return (
+        <div style={{
+          marginTop: 16,
+          borderRadius: 16,
+          border: '1.5px dashed rgba(16, 185, 129, 0.3)',
+          background: '#1e293b',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 10,
+          width: '100%'
+        }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            💡 Number Line Solution Steps
+          </div>
+          <div
+            style={{ width: '100%', overflow: 'hidden', borderRadius: 12 }}
+            dangerouslySetInnerHTML={{ __html: svgContent }}
+          />
+        </div>
+      );
+    } catch (err) {
+      console.warn('Failed to render solution visual:', err);
+      return null;
+    }
+  };
+
+
   useEffect(() => {
     const cleanBlueprint = blueprint.replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
     const cleanSolution = solution.replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
@@ -2660,6 +2753,7 @@ export default function TemplateMasterclass() {
                   <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>🎒 Step-by-Step Solution</div>
                   <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
                     {renderMathText(evaluateText(solution))}
+                    {renderSolutionVisual()}
                   </div>
                 </div>
               )}

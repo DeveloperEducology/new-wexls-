@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createV2Node, listV2Nodes, seedV2Initial } from '@/lib/curriculum/storeV2';
+import { createIitNode, listIitNodes, seedIitInitial, deleteIitNode } from '@/lib/curriculum/storeIit';
+import { getMongoDb } from '@/lib/db/mongo';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
+    const iit = searchParams.get('iit') === 'true';
     if (!type) {
       return NextResponse.json({ success: false, error: 'Type query parameter is required (grade, subject, unit, chapter, skill)' }, { status: 400 });
     }
@@ -15,7 +18,43 @@ export async function GET(request) {
       if (val) query[key] = val;
     });
 
-    const nodes = await listV2Nodes(type, query);
+    const nodes = iit 
+      ? await listIitNodes(type, query)
+      : await listV2Nodes(type, query);
+
+    if (type === 'skill') {
+      try {
+        const db = await getMongoDb();
+        if (db) {
+          const skillIds = nodes.map(n => n.id).filter(Boolean);
+          if (skillIds.length > 0) {
+            const questions = await db.collection('questions')
+              .find({ skillId: { $in: skillIds } })
+              .project({ id: 1, skillId: 1, questionText: 1, type: 1 })
+              .toArray();
+
+            const skillQuestionsMap = {};
+            questions.forEach(q => {
+              if (!skillQuestionsMap[q.skillId]) {
+                skillQuestionsMap[q.skillId] = [];
+              }
+              skillQuestionsMap[q.skillId].push({
+                id: q.id,
+                questionText: q.questionText,
+                type: q.type
+              });
+            });
+
+            nodes.forEach(node => {
+              node.questions = skillQuestionsMap[node.id] || [];
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch questions for skills:', err.message);
+      }
+    }
+
     return NextResponse.json({ success: true, nodes });
   } catch (error) {
     console.error('API GET V2 curriculum error:', error);
@@ -25,11 +64,17 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const { searchParams } = new URL(request.url);
     const body = await request.json();
     const { type, data } = body;
+    const iit = searchParams.get('iit') === 'true' || body.iit === true;
 
     if (type === 'seed') {
-      await seedV2Initial();
+      if (iit) {
+        await seedIitInitial();
+      } else {
+        await seedV2Initial();
+      }
       return NextResponse.json({ success: true, message: 'Seeded initial grades successfully' });
     }
 
@@ -37,7 +82,9 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Both type and data fields are required' }, { status: 400 });
     }
 
-    const node = await createV2Node(type, data);
+    const node = iit
+      ? await createIitNode(type, data)
+      : await createV2Node(type, data);
     return NextResponse.json({ success: true, node }, { status: 201 });
   } catch (error) {
     console.error('API POST V2 curriculum error:', error);
@@ -50,13 +97,18 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const id = searchParams.get('id');
+    const iit = searchParams.get('iit') === 'true';
 
     if (!type || !id) {
       return NextResponse.json({ success: false, error: 'Both type and id query parameters are required' }, { status: 400 });
     }
 
-    const { deleteV2Node } = await import('@/lib/curriculum/storeV2');
-    const result = await deleteV2Node(type, id);
+    const result = iit
+      ? await deleteIitNode(type, id)
+      : await (async () => {
+          const { deleteV2Node } = await import('@/lib/curriculum/storeV2');
+          return deleteV2Node(type, id);
+        })();
     return NextResponse.json({ success: result.deletedCount > 0, ...result });
   } catch (error) {
     console.error('API DELETE V2 curriculum error:', error);

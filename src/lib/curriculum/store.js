@@ -74,6 +74,7 @@ function normalizeNode(input = {}, existing = {}) {
     templateId: input.templateId || existing.templateId,
     engine: input.engine || existing.engine,
     questionType: input.questionType || input.typeOfQuestion || existing.questionType,
+    progressionConfig: input.progressionConfig ?? existing.progressionConfig,
     source: input.source || existing.source || (type === 'skill' ? 'db' : 'curriculum'),
     status: input.status || existing.status || 'active',
     description: input.description ?? existing.description,

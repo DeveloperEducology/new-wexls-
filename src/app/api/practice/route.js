@@ -208,6 +208,40 @@ async function evaluateUniversalOrPoolTemplate({
     resolvedTemplateDoc._seenItemIds = seenItems;
   }
 
+  if (resolvedTemplateDoc.templateId === 'ordinal_picture_identification') {
+    const { generateOrdinalQuestion } = await import('../../../lib/practice/generators/math/topics/ordinal-numbers/ordinalGenerator.js');
+    return generateOrdinalQuestion(resolvedTemplateDoc, seed);
+  }
+
+  if (resolvedTemplateDoc.templateId === 'template-writing-numbers-in-words' || resolvedTemplateDoc.templateId === 'write_number_words_to_digits_single_select') {
+    const { generateNumberWordsQuestion } = await import('../../../lib/practice/generators/math/topics/ordinal-numbers/numberWordsGenerator.js');
+    return generateNumberWordsQuestion(resolvedTemplateDoc, seed);
+  }
+
+  if (resolvedTemplateDoc.templateId === 'g1-sequences-100') {
+    const { generateSequencesQuestion } = await import('../../../lib/practice/generators/math/topics/ordinal-numbers/sequencesGenerator.js');
+    return generateSequencesQuestion(resolvedTemplateDoc, seed);
+  }
+
+  if (resolvedTemplateDoc.templateId && resolvedTemplateDoc.templateId.startsWith('adding-')) {
+    const { generateAdditionBuilderQuestion } = await import('../../../lib/practice/generators/math/topics/ordinal-numbers/additionBuildersGenerator.js');
+    return generateAdditionBuilderQuestion(resolvedTemplateDoc, seed);
+  }
+
+  const additionFactTemplates = new Set([
+    'addition-facts-10', 'ways-make-number-addition', 'make-number-addition-10',
+    'complete-addition-sentence-10', 'addition-word-problems-10', 'addition-sentences-word-problems-10',
+    'addition-facts-18', 'addition-sentences-numlines-18', 'addition-word-problems-18',
+    'addition-sentences-word-problems-18', 'addition-facts-20', 'make-number-addition-20',
+    'addition-sentences-word-problems-20', 'related-addition-facts', 'addition-sentences-true-false',
+    'add-1digit-2digit-noregroup', 'add-1digit-2digit-regroup'
+  ]);
+
+  if (resolvedTemplateDoc.templateId && additionFactTemplates.has(resolvedTemplateDoc.templateId)) {
+    const { generateAdditionFactQuestion } = await import('../../../lib/practice/generators/math/topics/ordinal-numbers/additionFactsGenerator.js');
+    return generateAdditionFactQuestion(resolvedTemplateDoc, seed);
+  }
+
   if (resolvedTemplateDoc.type === 'dynamic_pool') {
     const { findVocabularyPool } = await import('../../../lib/practice/questionBank/questionRepository.js');
     const { generateFromDynamicPool } = await import('../../../lib/practice/engine/DynamicPoolGenerator.js');
@@ -239,7 +273,15 @@ async function evaluateUniversalOrPoolTemplate({
   }
   
   const { evaluateTemplate } = await import('../../../lib/practice/generators/universalEvaluator.js');
-  return evaluateTemplate(resolvedTemplateDoc, seed);
+  const historyContext = {
+    correctStreak: Number(searchParams.get('correctStreak') || 0),
+    practiceLevel: Number(searchParams.get('practiceLevel') || 1),
+    levelStreak: Number(searchParams.get('levelStreak') || 0),
+    lastResult: searchParams.get('lastResult') || 'none',
+    remediationActive: searchParams.get('remediationActive') === 'true',
+    remediationStep: Number(searchParams.get('remediationStep') || 0),
+  };
+  return evaluateTemplate(resolvedTemplateDoc, seed, { difficulty, historyContext, searchParams });
 }
 
 export async function GET(request) {
@@ -272,15 +314,128 @@ export async function GET(request) {
     });
   };
 
+  // Pre-resolve the skill node in the DB if available to determine the correct subject/topic
+  let skillNode = null;
+  let matchingNodes = null;
+  let nodeBySkill = null;
+  let nodeByCombined = null;
+  try {
+    const results = await Promise.all([
+      listCurriculumNodes({ skillId: skill }),
+      getCurriculumNode(skill),
+      getCurriculumNode(`${subject}-${topic}-${skill}`)
+    ]);
+    matchingNodes = results[0];
+    nodeBySkill = results[1];
+    nodeByCombined = results[2];
+    if (matchingNodes && matchingNodes.length > 0) {
+      skillNode = matchingNodes[0];
+    } else if (nodeBySkill) {
+      skillNode = nodeBySkill;
+    } else if (nodeByCombined) {
+      skillNode = nodeByCombined;
+    }
+  } catch (error) {
+    console.error('Practice DB skill node lookup error:', error);
+  }
+
+  if (!skillNode) {
+    try {
+      const isIit = searchParams.get('iit') === 'true';
+      if (isIit) {
+        const { listIitNodes } = await import('../../../lib/curriculum/storeIit.js');
+        const iitSkills = await listIitNodes('skill', { id: skill });
+        if (iitSkills && iitSkills.length > 0) {
+          const iitSkill = iitSkills[0];
+          
+          let gradeId = '6';
+          let topicId = topic;
+          if (iitSkill.chapterId) {
+            const iitChapters = await listIitNodes('chapter', { id: iitSkill.chapterId });
+            if (iitChapters && iitChapters.length > 0) {
+              gradeId = iitChapters[0].gradeId || '6';
+              topicId = iitChapters[0].unitId || topic;
+            }
+          }
+
+          skillNode = {
+            ...iitSkill,
+            topicId,
+            grade: gradeId,
+            metadata: {
+              ...iitSkill,
+              templateId: iitSkill.templateId,
+              engine: iitSkill.engine,
+              grade: gradeId,
+              subject,
+              topic: topicId,
+              iit: true,
+            }
+          };
+        }
+      } else {
+        const { listV2Nodes } = await import('../../../lib/curriculum/storeV2.js');
+        const v2Skills = await listV2Nodes('skill', { id: skill });
+        if (v2Skills && v2Skills.length > 0) {
+          const v2Skill = v2Skills[0];
+          
+          // Resolve parent chapter to get grade and topic (unit)
+          let gradeId = '1';
+          let topicId = topic;
+          if (v2Skill.chapterId) {
+            const v2Chapters = await listV2Nodes('chapter', { id: v2Skill.chapterId });
+            if (v2Chapters && v2Chapters.length > 0) {
+              gradeId = v2Chapters[0].gradeId || '1';
+              topicId = v2Chapters[0].unitId || topic;
+            }
+          }
+
+          skillNode = {
+            ...v2Skill,
+            topicId,
+            grade: gradeId,
+            metadata: {
+              ...v2Skill,
+              templateId: v2Skill.templateId,
+              engine: v2Skill.engine,
+              grade: gradeId,
+              subject,
+              topic: topicId,
+            }
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching skill fallback:', err);
+    }
+  }
+
+  const resolvedSubject = skillNode?.subjectId || subject;
+  const resolvedTopic = skillNode?.topicId || topic;
+
   // ── Single Question Lookup by ID ──────────────────────────────────────────
   const qnId = searchParams.get('qn') || searchParams.get('questionId') || searchParams.get('id');
   if (qnId) {
     try {
-      const { findStoredQuestionById, normalizeStoredQuestion } = await import('../../../lib/practice/questionBank/questionRepository.js');
-      const questionDoc = await findStoredQuestionById(qnId);
+      const { findStoredQuestionById, findStoredPracticeQuestion, normalizeStoredQuestion } = await import('../../../lib/practice/questionBank/questionRepository.js');
+      
+      let questionDoc = null;
+      if (resolvedSubject && resolvedTopic && skill) {
+        questionDoc = await findStoredPracticeQuestion({
+          subject: resolvedSubject,
+          topic: resolvedTopic,
+          skill,
+          qn: qnId,
+          isStatic: true
+        });
+      }
+      if (!questionDoc) {
+        questionDoc = await findStoredQuestionById(qnId);
+      }
+
       if (questionDoc) {
-        const qSubject = questionDoc.subject || questionDoc.metadata?.subject || subject;
-        const qTopic = questionDoc.topic || questionDoc.metadata?.topic || topic;
+        const qSubject = questionDoc.subject || questionDoc.metadata?.subject || resolvedSubject;
+        const qTopic = questionDoc.topic || questionDoc.metadata?.topic || resolvedTopic;
         const qSkill = questionDoc.skillId || questionDoc.metadata?.skillId || skill;
 
         let qSkillNode = null;
@@ -321,69 +476,6 @@ export async function GET(request) {
       }
     } catch (error) {
       console.error('Error loading question by ID:', error);
-    }
-  }
-
-  // Look up the skill node in the DB if available to resolve centralized templates
-
-  let skillNode = null;
-  let matchingNodes = null;
-  let nodeBySkill = null;
-  let nodeByCombined = null;
-  try {
-    const results = await Promise.all([
-      listCurriculumNodes({ skillId: skill }),
-      getCurriculumNode(skill),
-      getCurriculumNode(`${subject}-${topic}-${skill}`)
-    ]);
-    matchingNodes = results[0];
-    nodeBySkill = results[1];
-    nodeByCombined = results[2];
-    if (matchingNodes && matchingNodes.length > 0) {
-      skillNode = matchingNodes[0];
-    } else if (nodeBySkill) {
-      skillNode = nodeBySkill;
-    } else if (nodeByCombined) {
-      skillNode = nodeByCombined;
-    }
-  } catch (error) {
-    console.error('Practice DB skill node lookup error:', error);
-  }
-
-  if (!skillNode) {
-    try {
-      const { listV2Nodes } = await import('../../../lib/curriculum/storeV2.js');
-      const v2Skills = await listV2Nodes('skill', { id: skill });
-      if (v2Skills && v2Skills.length > 0) {
-        const v2Skill = v2Skills[0];
-        
-        // Resolve parent chapter to get grade and topic (unit)
-        let gradeId = '1';
-        let topicId = topic;
-        if (v2Skill.chapterId) {
-          const v2Chapters = await listV2Nodes('chapter', { id: v2Skill.chapterId });
-          if (v2Chapters && v2Chapters.length > 0) {
-            gradeId = v2Chapters[0].gradeId || '1';
-            topicId = v2Chapters[0].unitId || topic;
-          }
-        }
-
-        skillNode = {
-          ...v2Skill,
-          topicId,
-          grade: gradeId,
-          metadata: {
-            ...v2Skill,
-            templateId: v2Skill.templateId,
-            engine: v2Skill.engine,
-            grade: gradeId,
-            subject,
-            topic: topicId,
-          }
-        };
-      }
-    } catch (err) {
-      console.warn('Error fetching v2 skill fallback:', err);
     }
   }
 
@@ -478,7 +570,6 @@ export async function GET(request) {
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const resolvedTopic = skillNode?.topicId || topic;
   const targetTopic = (skillNode?.engine && skillNode.engine !== 'questionBank' && skillNode.engine !== 'universal-template') ? skillNode.engine : resolvedTopic;
   let resolvedSkillId = skillNode?.skillId || skill;
 
@@ -496,11 +587,14 @@ export async function GET(request) {
     5
   );
 
+  const isStaticSkill = skillNode?.isStatic === true || skillNode?.metadata?.isStatic === true || skillNode?.static === true;
+
   const withCompetency = (payload, ctx) => normalizeWithCompetency(payload, {
     ...ctx,
     topic: resolvedTopic,
     skill: resolvedSkillId,
-    streakThreshold
+    streakThreshold,
+    isStatic: isStaticSkill,
   });
 
   // Check stored/DB questions first to support dynamic curriculum/topics
@@ -529,8 +623,10 @@ export async function GET(request) {
         skillQueryList.push(skill);
       }
 
+      const isStaticSkill = skillNode?.isStatic === true || skillNode?.metadata?.isStatic === true || skillNode?.static === true;
+
       const storedPayload = await resolveStoredPracticePayload({
-        subject,
+        subject: resolvedSubject,
         topic: resolvedTopic,
         skill: skillQueryList,
         difficulty,
@@ -545,10 +641,12 @@ export async function GET(request) {
           remediationStep: Number(searchParams.get('remediationStep') || 0),
         },
         grade: skillNode?.grade || skillNode?.metadata?.grade || '1',
+        qn: searchParams.get('qn'),
+        isStatic: isStaticSkill,
       });
 
       if (storedPayload) {
-        return respond(withCompetency(storedPayload, { subject, topic, skill: resolvedSkillId }));
+        return respond(withCompetency(storedPayload, { subject: resolvedSubject, topic: resolvedTopic, skill: resolvedSkillId, isStatic: isStaticSkill }));
       }
     }
   } catch (error) {
@@ -561,7 +659,7 @@ export async function GET(request) {
         success: false,
         error: `No stored questions found for manual-only skill: ${resolvedSkillId}`,
         needsQuestion: true,
-        subject,
+        subject: resolvedSubject,
         topic: resolvedTopic,
         skill: resolvedSkillId,
       },
@@ -596,7 +694,7 @@ export async function GET(request) {
         ...rawQuestion,
         id: `universal-template-${resolvedSkillId}-${seed}`,
         metadata: {
-          subject,
+          subject: resolvedSubject,
           topic: resolvedTopic,
           skillId: resolvedSkillId,
           templateId: resolvedTemplateId,
@@ -621,7 +719,7 @@ export async function GET(request) {
         responsePayload.pickedItemIds = question.pickedItemIds;
       }
 
-      return respond(withCompetency(responsePayload, { subject, topic: resolvedTopic, skill: resolvedSkillId }));
+      return respond(withCompetency(responsePayload, { subject: resolvedSubject, topic: resolvedTopic, skill: resolvedSkillId }));
     } catch (err) {
       console.error('Error generating question via universal-template:', err);
       return NextResponse.json(
@@ -650,7 +748,7 @@ export async function GET(request) {
         ...rawQuestion,
         id: `universal-template-${resolvedTemplateId}-${seed}`,
         metadata: {
-          subject: templateDoc.subject || templateDoc.templateInfo?.subject || subject,
+          subject: templateDoc.subject || templateDoc.templateInfo?.subject || resolvedSubject,
           topic: templateDoc.topic || templateDoc.templateInfo?.topic || resolvedTopic,
           skillId: templateDoc.skillId || templateDoc.templateInfo?.skillId || resolvedSkillId,
           templateId: resolvedTemplateId,
@@ -694,7 +792,7 @@ export async function GET(request) {
         // Convert to universal-template format expected by evaluateUniversalOrPoolTemplate
         const universalDoc = {
           id: resolvedTemplateId,
-          subject: tmplDoc.section || subject,
+          subject: tmplDoc.section || resolvedSubject,
           topic: tmplDoc.topic || resolvedTopic,
           questionText: cfg.questionTemplate || cfg.questionText || '',
           answer: cfg.answer || null,
@@ -707,7 +805,7 @@ export async function GET(request) {
           constraints: cfg.constraints || {},
           visuals: cfg.visuals || [],
           templateInfo: {
-            subject: tmplDoc.section || subject,
+            subject: tmplDoc.section || resolvedSubject,
             topic: tmplDoc.topic || resolvedTopic,
             grade: cfg.grade || '6',
           }
@@ -1239,7 +1337,7 @@ export async function GET(request) {
   }
 }
 
-function normalizeWithCompetency(payload, { subject, topic, skill, streakThreshold }) {
+function normalizeWithCompetency(payload, { subject, topic, skill, streakThreshold, isStatic }) {
   const payloadWithSource = {
     source: 'generator',
     ...payload,
@@ -1266,6 +1364,7 @@ function normalizeWithCompetency(payload, { subject, topic, skill, streakThresho
   const questionMetadata = {
     ...(payloadWithSource.question.metadata || {}),
     streakThreshold: finalStreakThreshold,
+    isStatic: isStatic || payloadWithSource.question.metadata?.isStatic || undefined,
   };
 
   if (competency) {

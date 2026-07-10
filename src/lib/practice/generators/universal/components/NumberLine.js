@@ -9,6 +9,7 @@ export function renderNumberLine(props, rng) {
   const markedPoints = props.markedPoints ? String(props.markedPoints).split(',').map(Number).filter(n => !isNaN(n)) : [];
   const jumps = props.jumps ? String(props.jumps).split('->').map(s => s.trim()).map(Number).filter(n => !isNaN(n)) : [];
   const interactive = props.interactive === true || props.interactive === 'true' || props.interactive === 1;
+  const highlightBoxes = props.highlightBoxes ? String(props.highlightBoxes).split(',').map(s => s.trim()).map(Number).filter(n => !isNaN(n)) : [];
   const color = props.color || 'blue';
 
   const selectedColor = resolveColor(color, COLORS, rng);
@@ -38,6 +39,11 @@ export function renderNumberLine(props, rng) {
     const idx = (val - min) / step;
     const x = paddingX + idx * stepWidth;
     
+    const boxWidth = String(val).length * 8 + 12;
+    const boxX = x - boxWidth / 2;
+    const boxY = lineY + 14;
+    const boxHeight = 20;
+
     if (interactive) {
       // Interactive tap zone for clicks (covers the whole tick area)
       const clickAttr = `onclick="
@@ -64,6 +70,9 @@ export function renderNumberLine(props, rng) {
           <!-- Expanded click capture box (covers tick line, dot, and label area) -->
           <rect x="${x - 18}" y="${lineY - 20}" width="36" height="65" fill="transparent" />
           <line x1="${x}" y1="${lineY - 8}" x2="${x}" y2="${lineY + 8}" stroke="#475569" stroke-width="2.5" />
+          ${highlightBoxes.includes(val) ? `
+            <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" fill="none" stroke="${selectedColor.stroke}" stroke-width="2" rx="3" />
+          ` : ''}
           <text x="${x}" y="${lineY + 28}" font-family="system-ui, sans-serif" font-size="14px" font-weight="700" fill="#334155" text-anchor="middle" style="user-select: none;">${val}</text>
           <circle class="interactive-dot" cx="${x}" cy="${lineY}" r="7" fill="${selectedColor.fill}" stroke="${selectedColor.stroke}" stroke-width="2" visibility="${isInitiallySelected ? 'visible' : 'hidden'}" />
         </g>
@@ -72,6 +81,9 @@ export function renderNumberLine(props, rng) {
       // Static ticks
       ticksMarkup += `
         <line x1="${x}" y1="${lineY - 8}" x2="${x}" y2="${lineY + 8}" stroke="#475569" stroke-width="2.5" />
+        ${highlightBoxes.includes(val) ? `
+          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" fill="none" stroke="${selectedColor.stroke}" stroke-width="2" rx="3" />
+        ` : ''}
         <text x="${x}" y="${lineY + 28}" font-family="system-ui, sans-serif" font-size="14px" font-weight="700" fill="#334155" text-anchor="middle" style="user-select: none;">${val}</text>
       `;
     }

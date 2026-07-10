@@ -223,9 +223,51 @@ export function resolveValidationRules(rules, resolvedVariables) {
 }
 
 // Main Template Evaluator Engine
-export function evaluateTemplate(originalTemplate, seed) {
+export function evaluateTemplate(originalTemplate, seed, difficultyContext = null) {
   if (!originalTemplate || typeof originalTemplate !== 'object') {
     throw new Error('Template document is invalid.');
+  }
+
+  let currentLevel = 3; // default fallback
+  if (difficultyContext) {
+    const historyContext = difficultyContext.historyContext || {};
+    const searchParams = difficultyContext.searchParams;
+    const difficulty = difficultyContext.difficulty || 'adaptive';
+
+    if (historyContext.practiceLevel) {
+      currentLevel = Number(historyContext.practiceLevel) || 3;
+    } else if (searchParams) {
+      const levelParam = searchParams.get('practiceLevel') || searchParams.get('level');
+      if (levelParam) {
+        currentLevel = Number(levelParam) || 3;
+      } else {
+        const diffVal = searchParams.get('difficulty');
+        if (diffVal && !isNaN(Number(diffVal))) {
+          currentLevel = Number(diffVal);
+        } else if (diffVal === 'easy') {
+          currentLevel = 1;
+        } else if (diffVal === 'medium') {
+          currentLevel = 2;
+        } else if (diffVal === 'hard') {
+          currentLevel = 3;
+        } else {
+          const correctStreak = Number(searchParams.get('correctStreak') || 0);
+          const smartScore = Number(searchParams.get('smartScore') || 0);
+          if (correctStreak >= 9 || smartScore >= 80) currentLevel = 4;
+          else if (correctStreak >= 6 || smartScore >= 60) currentLevel = 3;
+          else if (correctStreak >= 3 || smartScore >= 30) currentLevel = 2;
+          else currentLevel = 1;
+        }
+      }
+    } else if (!isNaN(Number(difficulty))) {
+      currentLevel = Number(difficulty);
+    } else if (difficulty === 'easy') {
+      currentLevel = 1;
+    } else if (difficulty === 'medium') {
+      currentLevel = 2;
+    } else if (difficulty === 'hard') {
+      currentLevel = 3;
+    }
   }
 
   // Normalize universal template format to legacy flat structure for evaluator compatibility
@@ -647,10 +689,66 @@ export function evaluateTemplate(originalTemplate, seed) {
       }
     }
 
-    const shouldShuffle = template.optionsType !== 'hotspot_select' && 
-                          template.optionsType !== 'mcq_hotspot' && 
-                          template.shuffleOptions !== false;
-    optionsList = shouldShuffle ? shuffle(uniqueOptions, rng) : uniqueOptions;
+    const isMcqLike = !['hotspot_select', 'mcq_hotspot', 'sorting', 'matching', 'fill_blank', 'number_input'].includes(String(interactionEngine).toLowerCase());
+
+    if (isMcqLike && uniqueOptions.length > 0) {
+      const correctOptions = uniqueOptions.filter(o => o.isCorrect);
+      const incorrectOptions = uniqueOptions.filter(o => !o.isCorrect);
+
+      let targetOptionCount = 4;
+      let isMultiSelectMode = false;
+
+      if (currentLevel === 1) {
+        targetOptionCount = 2;
+      } else if (currentLevel === 2) {
+        targetOptionCount = 3;
+      } else if (currentLevel === 3) {
+        targetOptionCount = 4;
+      } else if (currentLevel === 4) {
+        targetOptionCount = 4;
+        isMultiSelectMode = true;
+      }
+
+      let pickedCorrect = [];
+      let pickedIncorrect = [];
+
+      const pickRandomMany = (items, count) => {
+        const shuffled = shuffle(items, rng);
+        return shuffled.slice(0, count);
+      };
+
+      if (isMultiSelectMode) {
+        // Level 4: Show multiple correct options if available, up to 2, or at least 1
+        const targetCorrectCount = Math.min(correctOptions.length, 2);
+        pickedCorrect = pickRandomMany(correctOptions, targetCorrectCount > 0 ? targetCorrectCount : 1);
+        pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
+        
+        template.optionsType = 'multi_select';
+        if (template.interaction) {
+          template.interaction.engine = 'multi_select';
+          template.interaction.type = 'multi_select';
+        }
+      } else {
+        // Levels 1-3: Show exactly 1 correct option
+        pickedCorrect = pickRandomMany(correctOptions, 1);
+        pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
+        
+        template.optionsType = 'mcq';
+        if (template.interaction) {
+          template.interaction.engine = 'mcq';
+          template.interaction.type = 'mcq';
+        }
+      }
+
+      const combined = [...pickedCorrect, ...pickedIncorrect];
+      const shouldShuffle = template.shuffleOptions !== false;
+      optionsList = shouldShuffle ? shuffle(combined, rng) : combined;
+    } else {
+      const shouldShuffle = template.optionsType !== 'hotspot_select' && 
+                            template.optionsType !== 'mcq_hotspot' && 
+                            template.shuffleOptions !== false;
+      optionsList = shouldShuffle ? shuffle(uniqueOptions, rng) : uniqueOptions;
+    }
     }
   }
 
@@ -1192,7 +1290,8 @@ export function evaluateTemplate(originalTemplate, seed) {
     metaConfig: {
       readable: true,
       readOptions: !isVisualChoice,
-      hasClickToFill
+      hasClickToFill,
+      visuals: template.visuals
     },
     layoutConfig: template.layoutConfig || template.layout || undefined,
     validationRules: resolveValidationRules(template.validationRules || template.validation?.rules, resolvedVariables),

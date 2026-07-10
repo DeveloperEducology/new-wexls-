@@ -5,6 +5,7 @@ import KaTeXRenderer from './KaTeXRenderer';
 import { speakText } from '../../lib/ttsClient';
 import styles from './FactoryLayout.module.css';
 import { parseHTMLToJSX } from '@/lib/practice/htmlParser';
+import { COMPONENT_REGISTRY } from '../../lib/practice/generators/universal/components/index.js';
 
 function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
@@ -191,6 +192,101 @@ function ArithmeticLayoutSolution({ layout }) {
       })}
     </div>
   );
+}
+
+function renderSolutionVisual(question) {
+  const visuals = question?.metaConfig?.visuals;
+  if (!Array.isArray(visuals)) return null;
+  const visualConfig = visuals.find(v => v.component === 'NumberLine');
+  if (!visualConfig) return null;
+
+  const builder = COMPONENT_REGISTRY['NumberLine'];
+  if (!builder) return null;
+
+  try {
+    const resolvedVariables = question.schema?.variables || {};
+    const rawProps = visualConfig.props || {};
+    const min = Number(rawProps.min) !== undefined && !isNaN(Number(rawProps.min)) ? Number(rawProps.min) : 0;
+    const max = Number(rawProps.max) !== undefined && !isNaN(Number(rawProps.max)) ? Number(rawProps.max) : 10;
+    const step = Number(rawProps.step) || 1;
+    const color = rawProps.color || 'blue';
+
+    let start = min;
+    if (resolvedVariables.A !== undefined && !isNaN(Number(resolvedVariables.A))) start = Number(resolvedVariables.A);
+    else if (resolvedVariables.count1 !== undefined && !isNaN(Number(resolvedVariables.count1))) start = Number(resolvedVariables.count1);
+    else if (resolvedVariables.a !== undefined && !isNaN(Number(resolvedVariables.a))) start = Number(resolvedVariables.a);
+    else {
+      const nums = Object.values(resolvedVariables).map(Number).filter(n => !isNaN(n));
+      if (nums.length > 0) start = nums[0];
+    }
+
+    let jumpsCount = 0;
+    if (resolvedVariables.B !== undefined && !isNaN(Number(resolvedVariables.B))) jumpsCount = Number(resolvedVariables.B);
+    else if (resolvedVariables.count2 !== undefined && !isNaN(Number(resolvedVariables.count2))) jumpsCount = Number(resolvedVariables.count2);
+    else if (resolvedVariables.b !== undefined && !isNaN(Number(resolvedVariables.b))) jumpsCount = Number(resolvedVariables.b);
+    else {
+      const nums = Object.values(resolvedVariables).map(Number).filter(n => !isNaN(n));
+      if (nums.length > 1) jumpsCount = nums[1];
+    }
+
+    if (isNaN(start) || start < min || start > max) start = min;
+    if (isNaN(jumpsCount) || jumpsCount < 0) jumpsCount = 0;
+    if (start + jumpsCount > max) jumpsCount = max - start;
+
+    const end = start + jumpsCount;
+
+    const jumpList = [];
+    for (let val = start; val <= end; val += step) {
+      jumpList.push(val);
+    }
+    const jumpsStr = jumpList.join('->');
+    const highlightBoxesStr = [start, end].join(',');
+
+    const resultProps = {
+      min,
+      max,
+      step,
+      pointValue: null,
+      color,
+      jumps: jumpsStr,
+      highlightBoxes: highlightBoxesStr,
+      interactive: false
+    };
+
+    const result = builder(resultProps, () => Math.random());
+    let svgContent = null;
+    if (typeof result === 'string') {
+      svgContent = result;
+    } else if (result && result.content) {
+      svgContent = result.content;
+    }
+    if (!svgContent) return null;
+    return (
+      <div style={{
+        marginTop: 14,
+        borderRadius: 18,
+        border: '1.5px dashed rgba(251, 146, 60, 0.3)',
+        background: '#fffbf7',
+        padding: '14px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 10,
+        width: '100%'
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 900, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          💡 Solution Number Line
+        </div>
+        <div
+          style={{ width: '100%', overflow: 'hidden', borderRadius: 12 }}
+          dangerouslySetInnerHTML={{ __html: svgContent }}
+        />
+      </div>
+    );
+  } catch (err) {
+    console.warn('Failed to render solution visual in feedback:', err);
+    return null;
+  }
 }
 
 function renderSolutionPart(part, index, context = {}) {
@@ -1201,6 +1297,7 @@ export default function PracticeFeedback({
             overflow: 'hidden',
           }}>
             {solutionSections.map((section, index) => renderSolutionPart(section, index))}
+            {renderSolutionVisual(question)}
           </div>
         )}
 
@@ -1288,6 +1385,7 @@ export default function PracticeFeedback({
           }}
         >
           {solutionSections.map((section, index) => renderSolutionPart(section, index))}
+          {renderSolutionVisual(question)}
         </div>
       ) : null}
 

@@ -197,6 +197,30 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
+
+    // Check if it's an array of questions (bulk upload)
+    if (Array.isArray(body)) {
+      const results = [];
+      for (const q of body) {
+        if (!q.subject || !q.topic || !q.skillId || !q.type) {
+          return NextResponse.json({ success: false, error: 'All questions in array must have subject, topic, skillId, and type.' }, { status: 400 });
+        }
+        if (!q.parts || !Array.isArray(q.parts) || q.parts.length === 0) {
+          q.parts = [
+            { type: 'text', content: q.questionText }
+          ];
+        }
+        q.metaConfig = {
+          readable: true,
+          readOptions: q.type === 'mcq' || q.type === 'multiplechoice' || q.type === 'multipleChoice',
+          ...q.metaConfig
+        };
+        const res = await saveStoredPracticeQuestion(q, { mode: 'upsert' });
+        results.push(res);
+      }
+      return NextResponse.json({ success: true, count: results.length, results });
+    }
+
     const payload = body?.question || body;
 
     // Check if it's a competitive exam question (like JNVST)

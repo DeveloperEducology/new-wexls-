@@ -630,7 +630,9 @@ function buildPracticeOptionsFromDbTopic(topicNode) {
       options.push({
         group: currentGroup || 'Skills',
         label,
-        value: node.skillId || node.id
+        value: node.skillId || node.id,
+        progressionConfig: node.progressionConfig || null,
+        isStatic: Boolean(node.isStatic)
       });
     } else if (node.type === 'chapter') {
       const chapterTitle = node.title || node.name || 'Chapter';
@@ -694,6 +696,140 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'english' && normTopic === 'grammar') return 'english-grammar';
   if (subject === 'english' && (normTopic === 'lkg' || normTopic === 'english-lkg')) return 'english-lkg';
   return topic; // return the topic ID for db fetched topics
+}
+
+function ProgressionHeader({ easyCount, mediumCount, hardCount, easyCurrent, mediumCurrent, hardCurrent }) {
+  const easyTarget = Number(easyCount || 0);
+  const mediumTarget = Number(mediumCount || 0);
+  const hardTarget = Number(hardCount || 0);
+
+  const easyDone = Math.min(easyCurrent, easyTarget);
+  const mediumDone = Math.min(mediumCurrent, mediumTarget);
+  const hardDone = Math.min(hardCurrent, hardTarget);
+
+  const totalTarget = easyTarget + mediumTarget + hardTarget;
+  const totalCompleted = easyDone + mediumDone + hardDone;
+  const percent = totalTarget > 0 ? Math.round((totalCompleted / totalTarget) * 100) : 0;
+
+  const getStageStatus = (current, target, prevDone, prevTarget) => {
+    if (prevTarget > 0 && prevDone < prevTarget) return 'locked';
+    if (current >= target && target > 0) return 'completed';
+    return 'active';
+  };
+
+  const easyStatus = getStageStatus(easyDone, easyTarget, 1, 1);
+  const mediumStatus = getStageStatus(mediumDone, mediumTarget, easyDone, easyTarget);
+  const hardStatus = getStageStatus(hardDone, hardTarget, mediumDone, mediumTarget);
+
+  return (
+    <div style={{
+      background: '#ffffff',
+      border: '1px solid #e2e8f0',
+      borderRadius: '16px',
+      padding: '16px',
+      marginBottom: '16px',
+      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)',
+      fontFamily: 'Outfit, sans-serif'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            IIT Foundation Progression
+          </span>
+          <h4 style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>
+            Questions Completed: {totalCompleted} / {totalTarget}
+          </h4>
+        </div>
+        <div style={{
+          background: '#f0fdf4',
+          color: '#166534',
+          padding: '4px 10px',
+          borderRadius: '99px',
+          fontSize: '14px',
+          fontWeight: 800
+        }}>
+          {percent}% Complete
+        </div>
+      </div>
+
+      {/* Progress Bar Container */}
+      <div style={{ background: '#f1f5f9', height: '8px', borderRadius: '99px', overflow: 'hidden', marginBottom: '16px', position: 'relative' }}>
+        <div style={{
+          background: 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)',
+          height: '100%',
+          width: `${percent}%`,
+          borderRadius: '99px',
+          transition: 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
+        }} />
+      </div>
+
+      {/* Stage Indicators */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+        {/* Easy Stage */}
+        {easyTarget > 0 && (
+          <div style={{
+            background: easyStatus === 'completed' ? '#ecfdf5' : easyStatus === 'active' ? '#f0fdf4' : '#f8fafc',
+            border: `1px solid ${easyStatus === 'completed' ? '#a7f3d0' : easyStatus === 'active' ? '#bbf7d0' : '#e2e8f0'}`,
+            borderRadius: '12px',
+            padding: '8px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            opacity: easyStatus === 'locked' ? 0.5 : 1,
+            transition: 'all 0.3s ease'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: easyStatus === 'completed' ? '#047857' : '#15803d', textTransform: 'uppercase' }}>
+              🟢 Stage 1: Easy
+            </span>
+            <span style={{ fontSize: '14px', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>
+              {easyDone} / {easyTarget} Correct
+            </span>
+          </div>
+        )}
+
+        {/* Medium Stage */}
+        {mediumTarget > 0 && (
+          <div style={{
+            background: mediumStatus === 'completed' ? '#ecfdf5' : mediumStatus === 'active' ? '#eff6ff' : '#f8fafc',
+            border: `1px solid ${mediumStatus === 'completed' ? '#a7f3d0' : mediumStatus === 'active' ? '#bfdbfe' : '#e2e8f0'}`,
+            borderRadius: '12px',
+            padding: '8px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            opacity: mediumStatus === 'locked' ? 0.5 : 1,
+            transition: 'all 0.3s ease'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: mediumStatus === 'completed' ? '#047857' : mediumStatus === 'active' ? '#1d4ed8' : '#64748b', textTransform: 'uppercase' }}>
+              🔵 Stage 2: Medium
+            </span>
+            <span style={{ fontSize: '14px', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>
+              {mediumStatus === 'locked' ? 'Locked' : `${mediumDone} / ${mediumTarget} Correct`}
+            </span>
+          </div>
+        )}
+
+        {/* Hard Stage */}
+        {hardTarget > 0 && (
+          <div style={{
+            background: hardStatus === 'completed' ? '#ecfdf5' : hardStatus === 'active' ? '#fdf2f8' : '#f8fafc',
+            border: `1px solid ${hardStatus === 'completed' ? '#a7f3d0' : hardStatus === 'active' ? '#fbcfe8' : '#e2e8f0'}`,
+            borderRadius: '12px',
+            padding: '8px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            opacity: hardStatus === 'locked' ? 0.5 : 1,
+            transition: 'all 0.3s ease'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: hardStatus === 'completed' ? '#047857' : hardStatus === 'active' ? '#be185d' : '#64748b', textTransform: 'uppercase' }}>
+              🔥 Stage 3: Hard
+            </span>
+            <span style={{ fontSize: '14px', fontWeight: 900, color: '#1e293b', marginTop: '2px' }}>
+              {hardStatus === 'locked' ? 'Locked' : `${hardDone} / ${hardTarget} Correct`}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function CorrectPraiseCard({ praiseMessage, isPreK }) {
@@ -1009,6 +1145,9 @@ function PracticePageContent() {
   const urlQn = resolveSearchValue(searchParams, 'qn')
     || resolveSearchValue(searchParams, 'questionId')
     || resolveSearchValue(searchParams, 'id');
+  const urlIit = resolveSearchValue(searchParams, 'iit') === 'true';
+  // practiceMode lives in the URL as ?mode=adaptive|static — tied to the skill ID
+  const practiceMode = resolveSearchValue(searchParams, 'mode') === 'static' ? 'static' : 'adaptive';
   const initialSource = resolveSearchValue(searchParams, 'source', 'addition-topic');
   const resolvedInitialSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
   const initialLogicType = urlSkill
@@ -1090,7 +1229,15 @@ function PracticePageContent() {
   const [levelModal, setLevelModal] = useState(null);
   const [lastResult, setLastResult] = useState('none');
   const [difficulty, setDifficulty] = useState('adaptive');
+  // ── practiceMode & staticSkillIndex are derived from URL (not React state) ─
+  // practiceMode = 'adaptive' | 'static'  → read from searchParams above
+  // staticSkillIndex is computed live so no useState needed
   const [history, setHistory] = useState([]);
+  const [nextStaticQn, setNextStaticQn] = useState(null); // stores incorrect branch target during feedback
+  const [progressionEasyCount, setProgressionEasyCount] = useState(0);
+  const [progressionMediumCount, setProgressionMediumCount] = useState(0);
+  const [progressionHardCount, setProgressionHardCount] = useState(0);
+  const [progressionStageModal, setProgressionStageModal] = useState(null);
   const [streakThreshold, setStreakThreshold] = useState(5);
   const [userAnswer, setUserAnswer] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -1307,6 +1454,25 @@ function PracticePageContent() {
     return mergedConfigs[sourceKey] || mergedConfigs['addition-topic'];
   }, [mergedConfigs, sourceKey]);
 
+  const activeSkillOption = useMemo(() => {
+    if (!sourceConfig?.options) return null;
+    return sourceConfig.options.find(o => o.value === logicType);
+  }, [sourceConfig, logicType]);
+
+  const progressionConfig = activeSkillOption?.progressionConfig;
+
+  const activeProgressionDifficulty = useMemo(() => {
+    if (!progressionConfig?.enabled) return null;
+    const easyTarget = Number(progressionConfig.easyCount || 0);
+    const mediumTarget = Number(progressionConfig.mediumCount || 0);
+    const hardTarget = Number(progressionConfig.hardCount || 0);
+
+    if (progressionEasyCount < easyTarget) return 'easy';
+    if (progressionMediumCount < mediumTarget) return 'medium';
+    if (progressionHardCount < hardTarget) return 'hard';
+    return 'end';
+  }, [progressionConfig, progressionEasyCount, progressionMediumCount, progressionHardCount]);
+
   const questionJson = useMemo(() => (
     JSON.stringify({ question, template: templateJson }, null, 2)
   ), [question, templateJson]);
@@ -1317,15 +1483,22 @@ function PracticePageContent() {
     url.searchParams.set('topic', urlTopic || sourceConfig.topic);
     url.searchParams.set('skill', logicType);
     url.searchParams.set('forcedTask', logicType);
-    url.searchParams.set('difficulty', difficulty);
+
+    const activeDifficulty = activeProgressionDifficulty && activeProgressionDifficulty !== 'end'
+      ? activeProgressionDifficulty
+      : difficulty;
+    url.searchParams.set('difficulty', activeDifficulty);
     url.searchParams.set('correctStreak', String(sessionOverride.correctStreak ?? correctStreak));
     url.searchParams.set('practiceLevel', String(sessionOverride.practiceLevel ?? practiceLevel));
     url.searchParams.set('levelStreak', String(sessionOverride.levelStreak ?? levelStreak));
     url.searchParams.set('lastResult', sessionOverride.lastResult ?? lastResult);
     url.searchParams.set('smartScore', String(sessionOverride.smartScore ?? smartScore));
 
-    if (urlQn) {
+    if (urlQn && !progressionConfig?.enabled) {
       url.searchParams.set('qn', urlQn);
+    }
+    if (urlIit) {
+      url.searchParams.set('iit', 'true');
     }
 
     const competency = resolveCompetency({
@@ -1362,8 +1535,11 @@ function PracticePageContent() {
     sourceConfig,
     urlSubject,
     urlTopic,
+    urlIit,
     urlQn,
     seenItemIds,
+    activeProgressionDifficulty,
+    progressionConfig
   ]);
 
   const applyQuestionPayload = useCallback((data, sessionOverride = {}) => {
@@ -1454,8 +1630,42 @@ function PracticePageContent() {
       params.set('dev', 'true');
     }
 
+    // Preserve the current mode param so it stays tied to skill ID in the URL
+    if (practiceMode === 'static') {
+      params.set('mode', 'static');
+    }
+
+    // Preserve qn and iit parameters from current URL location if they exist
+    if (typeof window !== 'undefined') {
+      const currentParams = new URLSearchParams(window.location.search);
+      if (currentParams.has('qn')) {
+        params.set('qn', currentParams.get('qn'));
+      }
+      if (currentParams.has('iit')) {
+        params.set('iit', currentParams.get('iit'));
+      }
+    }
+
     router.replace(`/practice?${params.toString()}`, { scroll: false });
-  }, [router, urlSkill, urlSubject, urlTopic, mergedConfigs, isDeveloperUnlockEnabled]);
+  }, [router, urlSkill, urlSubject, urlTopic, mergedConfigs, isDeveloperUnlockEnabled, practiceMode]);
+
+  // ── setMode: update only the ?mode= param in URL without resetting skill ─
+  const setMode = useCallback((mode) => {
+    const params = new URLSearchParams(window.location.search);
+    if (mode === 'static') {
+      params.set('mode', 'static');
+    } else {
+      params.delete('mode');
+    }
+    router.replace(`/practice?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  // Force static mode if the active skill specifies isStatic: true
+  useEffect(() => {
+    if (question?.metadata?.isStatic && practiceMode !== 'static') {
+      setMode('static');
+    }
+  }, [question, practiceMode, setMode]);
 
   const fetchQuestion = useCallback(async (resetSession = false, sessionOverride = {}) => {
     const requestId = fetchRequestIdRef.current + 1;
@@ -1483,6 +1693,20 @@ function PracticePageContent() {
       setLevelStreak(0);
       setLevelModal(null);
       setHistory([]);
+      setProgressionEasyCount(0);
+      setProgressionMediumCount(0);
+      setProgressionHardCount(0);
+      setProgressionStageModal(null);
+    }
+
+    if (activeProgressionDifficulty === 'end') {
+      setMasteredOverlay({
+        skillLabel: activeSkillOption?.label || logicType,
+        nextSkills: [],
+      });
+      setLoading(false);
+      loadingRef.current = false;
+      return;
     }
 
     if (logicType === 'meas-k-build-shapes-sticks') {
@@ -1540,7 +1764,24 @@ function PracticePageContent() {
         loadingRef.current = false;
       }
     }
-  }, [applyQuestionPayload, buildQuestionUrl, searchParams]);
+  }, [applyQuestionPayload, buildQuestionUrl, searchParams, activeProgressionDifficulty, activeSkillOption, logicType]);
+
+  // ── Static Mode: advance to the next skill in order ──────────────────────
+  const advanceStaticSkill = useCallback((direction = 'next') => {
+    const options = sourceConfig.options || [];
+    if (options.length === 0) return;
+    // Derive current index live from logicType — no separate state needed
+    const currentIdx = options.findIndex(o => o.value === logicType);
+    const base = currentIdx >= 0 ? currentIdx : 0;
+    const next = direction === 'next'
+      ? (base + 1) % options.length
+      : Math.max(0, base - 1);
+    const nextSkill = options[next];
+    if (nextSkill) {
+      setLogicType(nextSkill.value);
+      syncRoute(sourceKey, nextSkill.value);
+    }
+  }, [sourceConfig.options, sourceKey, logicType, syncRoute]);
 
   useEffect(() => {
     async function loadCurriculum() {
@@ -1629,6 +1870,10 @@ function PracticePageContent() {
   useEffect(() => {
     seedUsedRef.current = false;
     setSeenItemIds([]);
+    setProgressionEasyCount(0);
+    setProgressionMediumCount(0);
+    setProgressionHardCount(0);
+    setProgressionStageModal(null);
   }, [logicType]);
 
   useEffect(() => {
@@ -1722,6 +1967,47 @@ function PracticePageContent() {
     setIsAnswered(true);
     setLastResult(correct ? 'correct' : 'incorrect');
 
+    if (correct && progressionConfig?.enabled) {
+      const qDiffVal = Number(question.difficulty ?? question.metadata?.difficulty ?? 0.2);
+      const easyTarget = Number(progressionConfig.easyCount || 0);
+      const mediumTarget = Number(progressionConfig.mediumCount || 0);
+      const hardTarget = Number(progressionConfig.hardCount || 0);
+
+      if (qDiffVal >= 0.7) {
+        setProgressionHardCount(prev => prev + 1);
+      } else if (qDiffVal >= 0.4) {
+        setProgressionMediumCount(prev => {
+          const nextVal = prev + 1;
+          if (prev < mediumTarget && nextVal === mediumTarget && hardTarget > 0) {
+            setProgressionStageModal({
+              icon: '🔥',
+              title: 'Stage 3: Hard Unlocked',
+              subtitle: "Brilliant work! You are now in the Challenge Zone. Get ready for the Hard questions!"
+            });
+            try {
+              speakText('Stage 3 unlocked. Prepare for the hard questions.', question?.voice || 'Puck');
+            } catch (e) {}
+          }
+          return nextVal;
+        });
+      } else {
+        setProgressionEasyCount(prev => {
+          const nextVal = prev + 1;
+          if (prev < easyTarget && nextVal === easyTarget && mediumTarget > 0) {
+            setProgressionStageModal({
+              icon: '🔵',
+              title: 'Stage 2: Medium Unlocked',
+              subtitle: "Fantastic work completing the Easy stage! Let's step up to the Medium questions."
+            });
+            try {
+              speakText('Stage 2 unlocked. Now heading to medium questions.', question?.voice || 'Puck');
+            } catch (e) {}
+          }
+          return nextVal;
+        });
+      }
+    }
+
     let praiseMsgObj = null;
     if (correct) {
       const provisionalNextMastery = updateMasteryState(loadMasteryState(attempt), attempt);
@@ -1806,7 +2092,7 @@ function PracticePageContent() {
     setCorrectStreak(nextCorrectStreak);
     setStreakThreshold(currentThreshold);
 
-    if (didLevelUp) {
+    if (didLevelUp && !progressionConfig?.enabled) {
       setPracticeLevel(nextPracticeLevel);
       setLevelStreak(finalLevelStreak);
       setLevelModal({
@@ -1833,6 +2119,78 @@ function PracticePageContent() {
       smartScoreAfter: canonicalMastery.smartScore,
       timestamp: new Date().toLocaleTimeString(),
     }, ...prev].slice(0, 5));
+
+    // ── Static Mode Override: skip adaptive routing, just move to next skill ──
+    const isStaticSkill = question?.metadata?.isStatic === true;
+    if (isStaticSkill) {
+      const branching = question?.metadata?.branching;
+      let nextQn = branching ? (canonicalCorrect ? branching.correct : branching.incorrect) : null;
+      if (!nextQn) {
+        nextQn = question?.metadata?.nextQuestionId || null;
+      }
+
+      if (canonicalCorrect) {
+        if (nextQn === 'end') {
+          setMasteredOverlay({
+            skillLabel: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
+            nextSkills: [],
+          });
+          setIsSubmitting(false);
+          submittingRef.current = false;
+          return;
+        }
+
+        setAdaptiveBanner(null);
+        window.setTimeout(() => {
+          const params = new URLSearchParams(window.location.search);
+          if (nextQn) {
+            params.set('qn', String(nextQn));
+          } else {
+            // Fallback: increment sequentially
+            const currentQn = parseInt(params.get('qn') || '0', 10);
+            if (!isNaN(currentQn)) {
+              params.set('qn', String(currentQn + 1));
+            } else {
+              params.set('qn', 'end');
+            }
+          }
+          router.replace(`/practice?${params.toString()}`, { scroll: false });
+
+          setIsSubmitting(false);
+          submittingRef.current = false;
+          window.setTimeout(() => fetchQuestion(false, {
+            correctStreak: (correctStreak + 1),
+            practiceLevel,
+            levelStreak,
+            lastResult: 'correct',
+            slideIn: true,
+          }), 400);
+        }, 800);
+      } else {
+        // Incorrect: show explanation feedback first, save routing target in state
+        setNextStaticQn(nextQn);
+        setIsSubmitting(false);
+        submittingRef.current = false;
+      }
+      return;
+    }
+
+    if (practiceMode === 'static') {
+      setAdaptiveBanner(null);
+      window.setTimeout(() => {
+        advanceStaticSkill('next');
+        setIsSubmitting(false);
+        submittingRef.current = false;
+        window.setTimeout(() => fetchQuestion(false, {
+          correctStreak: canonicalCorrect ? (correctStreak + 1) : 0,
+          practiceLevel,
+          levelStreak,
+          lastResult: canonicalCorrect ? 'correct' : 'incorrect',
+          slideIn: true,
+        }), 400);
+      }, 800);
+      return;
+    }
 
     // ── Adaptive Action Routing ─────────────────────────────────────────────
     if (adaptiveAction === 'promote') {
@@ -2008,6 +2366,9 @@ function PracticePageContent() {
       url.searchParams.set('forcedTask', skillId);
       url.searchParams.set('difficulty', 'adaptive');
       url.searchParams.set('seed', String(Date.now()));
+      if (urlIit) {
+        url.searchParams.set('iit', 'true');
+      }
       const res = await fetch(url.toString());
       const data = await res.json();
       if (data?.success && data?.question) {
@@ -2021,7 +2382,7 @@ function PracticePageContent() {
     } finally {
       setDiagLoading(false);
     }
-  }, [sourceConfig, urlSubject, urlTopic]);
+  }, [sourceConfig, urlSubject, urlTopic, urlIit]);
 
   // Start diagnostic session
   const startDiagnostic = useCallback(() => {
@@ -2124,6 +2485,38 @@ function PracticePageContent() {
   }, [questionJson]);
 
   const handleNextQuestion = useCallback(() => {
+    const isStaticSkill = question?.metadata?.isStatic === true;
+    if (isStaticSkill) {
+      if (nextStaticQn === 'end') {
+        setMasteredOverlay({
+          skillLabel: sourceConfig.options.find((o) => o.value === logicType)?.label || logicType,
+          nextSkills: [],
+        });
+        setNextStaticQn(null);
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      if (nextStaticQn) {
+        params.set('qn', nextStaticQn);
+      } else {
+        // Fallback: increment sequentially
+        const currentQn = parseInt(params.get('qn') || '0', 10);
+        if (!isNaN(currentQn)) {
+          params.set('qn', String(currentQn + 1));
+        } else {
+          params.set('qn', 'end');
+        }
+      }
+      router.replace(`/practice?${params.toString()}`, { scroll: false });
+      setNextStaticQn(null);
+
+      window.setTimeout(() => {
+        fetchQuestion(false, { slideIn: true });
+      }, 50);
+      return;
+    }
+
     if (urlQn) {
       const params = new URLSearchParams(window.location.search);
       params.delete('qn');
@@ -2132,7 +2525,7 @@ function PracticePageContent() {
       router.replace(`/practice?${params.toString()}`, { scroll: false });
     }
     fetchQuestion();
-  }, [urlQn, fetchQuestion, router]);
+  }, [question, nextStaticQn, urlQn, fetchQuestion, router, logicType, sourceConfig.options]);
 
   const inlineFeedback = isAnswered && !isCorrect ? (
     <PracticeFeedback
@@ -3448,6 +3841,16 @@ function PracticePageContent() {
         />
       ) : (
         <>
+          {progressionConfig?.enabled && (
+            <ProgressionHeader
+              easyCount={progressionConfig.easyCount || 0}
+              mediumCount={progressionConfig.mediumCount || 0}
+              hardCount={progressionConfig.hardCount || 0}
+              easyCurrent={progressionEasyCount}
+              mediumCurrent={progressionMediumCount}
+              hardCurrent={progressionHardCount}
+            />
+          )}
           <QuestionRenderer
             key={`${sourceKey}:${logicType}:${question.id}`}
             question={question}
@@ -3475,6 +3878,62 @@ function PracticePageContent() {
       No question could be loaded.
     </div>
   );
+
+  const progressionStageModalEl = progressionStageModal ? (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      background: 'rgba(15, 23, 42, 0.4)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'Outfit, sans-serif'
+    }}>
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '24px',
+        padding: '32px',
+        maxWidth: '400px',
+        textAlign: 'center',
+        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        animation: 'zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+      }}>
+        <style dangerouslySetInnerHTML={{ __html: '@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }' }} />
+        <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>{progressionStageModal.icon || '🎉'}</span>
+        <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 8px 0' }}>
+          {progressionStageModal.title}
+        </h3>
+        <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.5, margin: '0 0 24px 0', fontWeight: 500 }}>
+          {progressionStageModal.subtitle}
+        </p>
+        <button
+          type="button"
+          onClick={() => setProgressionStageModal(null)}
+          style={{
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '10px 24px',
+            fontSize: '15px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+            transition: 'all 0.2s ease',
+            width: '100%'
+          }}
+        >
+          Keep Going!
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -3541,6 +4000,73 @@ function PracticePageContent() {
       {masteredOverlayEl}
       {adaptiveBannerEl}
 
+      {/* ── Practice Mode Indicator Badge ── */}
+      {!isMontessoriMode && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 14,
+            right: 18,
+            zIndex: 60,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              background: practiceMode === 'adaptive'
+                ? 'rgba(56,189,248,0.12)'
+                : 'rgba(251,146,60,0.12)',
+              border: practiceMode === 'adaptive'
+                ? '1px solid rgba(56,189,248,0.3)'
+                : '1px solid rgba(251,146,60,0.4)',
+              color: practiceMode === 'adaptive' ? '#38bdf8' : '#fb923c',
+              boxShadow: practiceMode === 'adaptive'
+                ? '0 2px 12px rgba(56,189,248,0.15)'
+                : '0 2px 12px rgba(251,146,60,0.15)',
+            }}
+          >
+            {question?.metadata?.isStatic ? (
+              <>
+                <span style={{ fontSize: 11 }}>📋</span>
+                {(() => {
+                  const qnVal = searchParams.get('qn') || '0';
+                  const parsed = parseInt(qnVal, 10);
+                  if (!isNaN(parsed) && parsed < 100) return `Static Qn ${parsed + 1}`;
+                  const match = qnVal.match(/-q(\d+)/i);
+                  if (match) return `Static Qn ${match[1]}`;
+                  return `Static Qn ${qnVal.split('-').pop() || '1'}`;
+                })()}
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: 11 }}>{practiceMode === 'adaptive' ? '⚡' : '📋'}</span>
+                {practiceMode === 'adaptive' ? 'Adaptive' : 'Sequential'}
+                {practiceMode === 'static' && (() => {
+                  const opts = sourceConfig.options || [];
+                  const idx = opts.findIndex(o => o.value === logicType);
+                  return opts.length > 0 ? (
+                    <span style={{ opacity: 0.7, fontWeight: 700 }}>
+                      &nbsp;{(idx >= 0 ? idx : 0) + 1}/{opts.length}
+                    </span>
+                  ) : null;
+                })()}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Teacher / Admin Override Panel ── */}
       {!isMontessoriMode && (
         <div
@@ -3570,6 +4096,130 @@ function PracticePageContent() {
                   style={{ background: 'transparent', border: 0, color: '#94a3b8', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}
                 >×</button>
               </div>
+
+              {/* ── Practice Mode Toggle ── */}
+              {question?.metadata?.isStatic ? (
+                <div style={{ marginBottom: 14, padding: '10px 12px', background: '#1e293b', borderRadius: 12, border: '1px solid #854d0e' }}>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: '#fb923c', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Static Skill Practice</div>
+                  <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 700, marginBottom: 8 }}>
+                    This skill uses a fixed set of static questions played sequentially.
+                  </div>
+                  {(() => {
+                    const currentQn = parseInt(searchParams.get('qn') || '0', 10);
+                    return (
+                      <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const prevQn = Math.max(0, currentQn - 1);
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('qn', String(prevQn));
+                            router.replace(`/practice?${params.toString()}`, { scroll: false });
+                            window.setTimeout(() => fetchQuestion(false), 50);
+                          }}
+                          style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          ← Prev Question
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextQn = currentQn + 1;
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('qn', String(nextQn));
+                            router.replace(`/practice?${params.toString()}`, { scroll: false });
+                            window.setTimeout(() => fetchQuestion(false), 50);
+                          }}
+                          style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Next Question →
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div style={{ marginBottom: 14, padding: '10px 12px', background: '#1e293b', borderRadius: 12, border: '1px solid #334155' }}>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Practice Mode</div>
+                  <div style={{ display: 'flex', background: '#0f172a', borderRadius: 10, padding: 3, gap: 3 }}>
+                    <button
+                      type="button"
+                      id="mode-adaptive-btn"
+                      onClick={() => {
+                        setMode('adaptive');
+                        setAdaptiveBanner(null);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '7px 0',
+                        borderRadius: 8,
+                        border: 0,
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        transition: 'all 0.18s',
+                        background: practiceMode === 'adaptive' ? 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)' : 'transparent',
+                        color: practiceMode === 'adaptive' ? '#ffffff' : '#64748b',
+                        boxShadow: practiceMode === 'adaptive' ? '0 2px 8px rgba(56,189,248,0.35)' : 'none',
+                      }}
+                    >
+                      ⚡ Adaptive
+                    </button>
+                    <button
+                      type="button"
+                      id="mode-static-btn"
+                      onClick={() => {
+                        setMode('static');
+                        setAdaptiveBanner(null);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '7px 0',
+                        borderRadius: 8,
+                        border: 0,
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        transition: 'all 0.18s',
+                        background: practiceMode === 'static' ? 'linear-gradient(135deg, #fb923c 0%, #f43f5e 100%)' : 'transparent',
+                        color: practiceMode === 'static' ? '#ffffff' : '#64748b',
+                        boxShadow: practiceMode === 'static' ? '0 2px 8px rgba(251,146,60,0.35)' : 'none',
+                      }}
+                    >
+                      📋 Sequential
+                    </button>
+                  </div>
+                  {practiceMode === 'static' && (() => {
+                    const opts = sourceConfig.options || [];
+                    const idx = opts.findIndex(o => o.value === logicType);
+                    const currentIdx = idx >= 0 ? idx : 0;
+                    return (
+                      <>
+                        <div style={{ marginTop: 8, fontSize: 10, color: '#fb923c', fontWeight: 700 }}>
+                          Skill {currentIdx + 1}/{opts.length} — following order, no adaptive routing
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => { advanceStaticSkill('prev'); fetchQuestion(false); }}
+                            style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            ← Prev Skill
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { advanceStaticSkill('next'); fetchQuestion(false); }}
+                            style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            Next Skill →
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <button
                   type="button"
@@ -3918,6 +4568,7 @@ function PracticePageContent() {
           onClose={() => handleToggleOverlay(toolId)}
         />
       ))}
+      {progressionStageModalEl}
     </>
   );
 }

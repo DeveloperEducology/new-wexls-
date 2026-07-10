@@ -215,7 +215,7 @@ export function normalizeStoredQuestion(document, { subject, topic, skill }) {
   };
 }
 
-export async function findStoredPracticeQuestion({ subject, topic, skill, difficulty, seed }) {
+export async function findStoredPracticeQuestion({ subject, topic, skill, difficulty, seed, qn, isStatic }) {
   if (!hasMongoConfig()) return null;
 
   try {
@@ -231,7 +231,11 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
       ],
     };
 
-    if (Object.keys(difficultyFilter).length > 0) {
+    // Filter by difficulty if it is not static, OR if it is static and we have a specific difficulty set and no direct QN is requested
+    const hasQn = qn !== undefined && qn !== null && qn !== '';
+    const shouldFilterDifficulty = (!isStatic || (difficulty && difficulty !== 'adaptive' && !hasQn)) && Object.keys(difficultyFilter).length > 0;
+
+    if (shouldFilterDifficulty) {
       query.$and.push({
         $or: [
           { type: 'dynamic_pool' },
@@ -246,7 +250,33 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
       .sort(sortForQuestionPool())
       .limit(50)
       .toArray();
-    const document = candidates[seedToIndex(seed, candidates.length)];
+
+    if (candidates.length === 0) return null;
+
+    let index = 0;
+    if (isStatic) {
+      if (qn !== undefined && qn !== null && qn !== '') {
+        const foundIndex = candidates.findIndex(c => c.id === qn || String(c._id) === qn);
+        if (foundIndex !== -1) {
+          index = foundIndex;
+        } else {
+          index = parseInt(qn, 10);
+          if (isNaN(index)) index = 0;
+        }
+      } else {
+        index = 0;
+      }
+      index = index % candidates.length;
+    } else {
+      index = seedToIndex(seed, candidates.length);
+    }
+
+    const document = candidates[index];
+    if (document && isStatic) {
+      const nextQuestionId = candidates[index + 1] ? (candidates[index + 1].id || String(candidates[index + 1]._id)) : 'end';
+      if (!document.metadata) document.metadata = {};
+      document.metadata.nextQuestionId = nextQuestionId;
+    }
 
     return normalizeStoredQuestion(document, { subject, topic, skill });
   } catch (error) {

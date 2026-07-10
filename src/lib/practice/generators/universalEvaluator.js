@@ -176,14 +176,56 @@ function seededShuffle(arr, rng) {
   return a;
 }
 
-export function evaluateTemplate(template, seed) {
+export function evaluateTemplate(template, seed, difficultyContext = null) {
   let config = template?.config || template || {};
   if (config.config && (!config.variables || Array.isArray(config.variables))) {
     config = { ...config, ...config.config };
   }
 
+  let currentLevel = 3; // default fallback
+  if (difficultyContext) {
+    const historyContext = difficultyContext.historyContext || {};
+    const searchParams = difficultyContext.searchParams;
+    const difficulty = difficultyContext.difficulty || 'adaptive';
+
+    if (historyContext.practiceLevel) {
+      currentLevel = Number(historyContext.practiceLevel) || 3;
+    } else if (searchParams) {
+      const levelParam = searchParams.get('practiceLevel') || searchParams.get('level');
+      if (levelParam) {
+        currentLevel = Number(levelParam) || 3;
+      } else {
+        const diffVal = searchParams.get('difficulty');
+        if (diffVal && !isNaN(Number(diffVal))) {
+          currentLevel = Number(diffVal);
+        } else if (diffVal === 'easy') {
+          currentLevel = 1;
+        } else if (diffVal === 'medium') {
+          currentLevel = 2;
+        } else if (diffVal === 'hard') {
+          currentLevel = 3;
+        } else {
+          const correctStreak = Number(searchParams.get('correctStreak') || 0);
+          const smartScore = Number(searchParams.get('smartScore') || 0);
+          if (correctStreak >= 9 || smartScore >= 80) currentLevel = 4;
+          else if (correctStreak >= 6 || smartScore >= 60) currentLevel = 3;
+          else if (correctStreak >= 3 || smartScore >= 30) currentLevel = 2;
+          else currentLevel = 1;
+        }
+      }
+    } else if (!isNaN(Number(difficulty))) {
+      currentLevel = Number(difficulty);
+    } else if (difficulty === 'easy') {
+      currentLevel = 1;
+    } else if (difficulty === 'medium') {
+      currentLevel = 2;
+    } else if (difficulty === 'hard') {
+      currentLevel = 3;
+    }
+  }
+
   if (template?.type === 'universal' || config.type === 'universal') {
-    return baseEvaluateTemplate(config, seed);
+    return baseEvaluateTemplate(config, seed, difficultyContext);
   }
 
   const isParameterized = template?.type === 'parameterized' ||
@@ -212,6 +254,7 @@ export function evaluateTemplate(template, seed) {
     const questionTemplate = config.questionTemplate || config.questionText || '';
     const explanationTemplate = config.explanationTemplate || config.explanation?.sections?.[0]?.content || '';
     const optionDefs = config.options || config.interaction?.options || [];
+    let isMultiSelectMode = false;
 
     const combos = buildCombinations(variables);
     if (!combos.length) return { questionText: '', options: [], correctAnswerIndex: -1 };
@@ -482,6 +525,48 @@ export function evaluateTemplate(template, seed) {
       }
     }
 
+    const resolvedInteractionEngine =
+      (typeof config.interaction === 'object' ? config.interaction.engine : null) ||
+      config.optionsType || 'mcq';
+    const isMcqLike = !['hotspot_select', 'mcq_hotspot', 'sorting', 'matching', 'fill_blank', 'number_input'].includes(String(resolvedInteractionEngine).toLowerCase());
+
+    if (isMcqLike && options.length > 0) {
+      const correctOptions = options.filter(o => o.isCorrect);
+      const incorrectOptions = options.filter(o => !o.isCorrect);
+
+      let targetOptionCount = 4;
+
+      if (currentLevel === 1) {
+        targetOptionCount = 2;
+      } else if (currentLevel === 2) {
+        targetOptionCount = 3;
+      } else if (currentLevel === 3) {
+        targetOptionCount = 4;
+      } else if (currentLevel === 4) {
+        targetOptionCount = 4;
+        isMultiSelectMode = true;
+      }
+
+      let pickedCorrect = [];
+      let pickedIncorrect = [];
+
+      const pickRandomMany = (items, count) => {
+        const shuffled = seededShuffle(items, rng);
+        return shuffled.slice(0, count);
+      };
+
+      if (isMultiSelectMode) {
+        const targetCorrectCount = Math.min(correctOptions.length, 2);
+        pickedCorrect = pickRandomMany(correctOptions, targetCorrectCount > 0 ? targetCorrectCount : 1);
+        pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
+      } else {
+        pickedCorrect = pickRandomMany(correctOptions, 1);
+        pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
+      }
+
+      options = [...pickedCorrect, ...pickedIncorrect];
+    }
+
     const shuffledOptions = seededShuffle(options, rng);
     const correctAnswerIndex = shuffledOptions.findIndex(o => o.isCorrect);
 
@@ -541,6 +626,17 @@ export function evaluateTemplate(template, seed) {
       correctAnswerIndex,
       explanation: explanationText ? { sections: [{ type: 'text', content: explanationText }] } : null,
       parts,
+      metaConfig: {
+        readable: true,
+        readOptions: interactionEngine !== 'fill_blank' && interactionEngine !== 'fillInTheBlank',
+        hasClickToFill: Boolean(config.metaConfig?.hasClickToFill || config.clickToFill),
+        visuals: config.visuals
+      },
+      schema: {
+        variables: Object.fromEntries(
+          Object.entries(ctx).filter(([key, value]) => typeof value !== 'function' && !key.startsWith('_'))
+        )
+      }
     };
 
     // Attach fill-in-the-blank fields so QuestionRenderer picks the right renderer
@@ -565,6 +661,9 @@ export function evaluateTemplate(template, seed) {
           result.answer = answer;
         }
       }
+    } else if (isMultiSelectMode) {
+      result.type = 'multi_select';
+      result.interaction = 'multi_select';
     } else {
       result.type = 'mcq';
       result.interaction = 'mcq';

@@ -82,6 +82,11 @@ export default function SiteHeader() {
                 🏆 Competitive Prep
               </Link>
 
+              {/* IIT Foundation Link */}
+              <Link href="/iit-foundation" className="header-comp-link">
+                🎓 IIT Foundation
+              </Link>
+
               {/* Logged in User Badge */}
               <Link href={getDashboardHref(session.role)} style={{ textDecoration: 'none' }}>
                 <div className="user-badge" style={{
@@ -151,6 +156,10 @@ export default function SiteHeader() {
             <>
               <Link href="/exam-prep" className="header-comp-link">
                 🏆 Competitive Prep
+              </Link>
+
+              <Link href="/iit-foundation" className="header-comp-link">
+                🎓 IIT Foundation
               </Link>
 
               {!loading && (

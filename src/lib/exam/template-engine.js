@@ -38,6 +38,27 @@ function safeDistractor(value, correct) {
   return Math.round(value);
 }
 
+function evalIsCorrect(isCorrect, ctx) {
+  if (typeof isCorrect === 'boolean') return isCorrect;
+  if (typeof isCorrect === 'string') {
+    try {
+      let resolved = isCorrect;
+      for (const [key, val] of Object.entries(ctx)) {
+        if (typeof val === 'string') {
+          const escapedVal = val.replace(/'/g, "\\'");
+          resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), `'${escapedVal}'`);
+        } else {
+          resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), String(val));
+        }
+      }
+      return !!(new Function(`return (${resolved})`)());
+    } catch {
+      return false;
+    }
+  }
+  return !!isCorrect;
+}
+
 function evalOptionLabel(label, ctx) {
   if (typeof label !== 'string') return label;
 
@@ -245,7 +266,7 @@ export function instantiateParameterized(template, count) {
         }
       }
     } else if (Array.isArray(configOptions) && configOptions.length > 0) {
-      const correctOpt = configOptions.find(o => o.isCorrect);
+      const correctOpt = configOptions.find(o => evalIsCorrect(o.isCorrect, ctx));
       if (!correctOpt) continue;
 
       // Keep the full evaluated label string (preserves units like "meters")
@@ -253,7 +274,7 @@ export function instantiateParameterized(template, count) {
       correct = correctRaw; // keep as string to preserve suffix like " meters"
 
       const seenD = new Set([String(correct)]);
-      const distOpts = configOptions.filter(o => !o.isCorrect);
+      const distOpts = configOptions.filter(o => !evalIsCorrect(o.isCorrect, ctx));
       for (const opt of distOpts) {
         const valRaw = evalOptionLabel(opt.label, ctx);
         const valStr = String(valRaw);

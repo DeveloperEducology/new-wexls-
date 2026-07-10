@@ -30,6 +30,13 @@ export default function AdminV2Page() {
   const [selectedExamId, setSelectedExamId] = useState('');
   const [selectedSectionId, setSelectedSectionId] = useState('');
   const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [filterSkillId, setFilterSkillId] = useState('');
+  const [inputMode, setInputMode] = useState('manual'); // 'manual' | 'json'
+  const [jsonInputText, setJsonInputText] = useState('');
+  const [jsonGradeId, setJsonGradeId] = useState('');
+  const [jsonSubjectId, setJsonSubjectId] = useState('');
+  const [jsonChapterId, setJsonChapterId] = useState('');
+  const [jsonSkillId, setJsonSkillId] = useState('');
 
   // Form states (reused for both modes)
   const [formData, setFormData] = useState({
@@ -47,6 +54,11 @@ export default function AdminV2Page() {
     engine: '',
     templateLevels: '',
     remediation: '',
+    isStatic: false,
+    progressionEnabled: false,
+    progressionEasy: 3,
+    progressionMedium: 7,
+    progressionHard: 10,
     
     // Exam metadata
     name: '',
@@ -80,6 +92,12 @@ export default function AdminV2Page() {
     cognitiveLevel: 'recall',
     tags: '',
     metadataSource: '',
+    // K-12/IIT Specific Question fields
+    questionId: '',
+    branchingCorrect: '',
+    branchingIncorrect: '',
+    isStaticQuestion: true,
+    skillId: '',
   });
 
   // Difficulty scaling states for skills
@@ -100,7 +118,8 @@ export default function AdminV2Page() {
     setError(null);
     try {
       const fetchCollection = async (type) => {
-        const res = await fetch(`/api/v2/curriculum?type=${type}`);
+        const isIit = adminMode === 'iit';
+        const res = await fetch(`/api/v2/curriculum?type=${type}${isIit ? '&iit=true' : ''}`);
         const data = await res.json();
         return data.success ? data.nodes : [];
       };
@@ -146,11 +165,30 @@ export default function AdminV2Page() {
   };
 
   const fetchQuestions = async () => {
-    if (!selectedExamId) return;
     try {
-      let url = `/api/admin/questions?examId=${selectedExamId}`;
-      if (selectedSectionId) url += `&section=${selectedSectionId}`;
-      if (selectedTopicId) url += `&topic=${selectedTopicId}`;
+      let url = '/api/admin/questions?';
+      if (adminMode === 'exam') {
+        if (!selectedExamId) return;
+        url += `examId=${selectedExamId}`;
+        if (selectedSectionId) url += `&section=${selectedSectionId}`;
+        if (selectedTopicId) url += `&topic=${selectedTopicId}`;
+      } else {
+        const params = [];
+        if (filterSkillId) {
+          params.push(`skillId=${filterSkillId}`);
+        } else if (filterChapterId) {
+          const chapterSkills = skills.filter(s => s.chapterId === filterChapterId);
+          if (chapterSkills.length > 0) {
+            params.push(`skillId=${chapterSkills.map(s => s.id).join(',')}`);
+          } else {
+            params.push('skillId=dummy-no-skills');
+          }
+        }
+        if (filterSubjectId) {
+          params.push(`subject=${filterSubjectId}`);
+        }
+        url += params.join('&');
+      }
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -163,13 +201,13 @@ export default function AdminV2Page() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [adminMode]);
 
   useEffect(() => {
-    if (adminMode === 'exam' && activeTab === 'question') {
+    if (activeTab === 'question') {
       fetchQuestions();
     }
-  }, [adminMode, activeTab, selectedExamId, selectedSectionId, selectedTopicId]);
+  }, [adminMode, activeTab, selectedExamId, selectedSectionId, selectedTopicId, filterSubjectId, filterChapterId, filterSkillId]);
 
   // Listen for clicks outside of autocomplete lists to close them
   useEffect(() => {
@@ -303,13 +341,17 @@ export default function AdminV2Page() {
   };
 
   const handleSeed = async () => {
-    if (!confirm('Are you sure you want to seed default v2 curriculum data? This will overwrite or append default LKG/UKG structures.')) return;
+    const isIit = adminMode === 'iit';
+    const msg = isIit 
+      ? 'Are you sure you want to seed default IIT foundation curriculum data? This will overwrite or append default Grade 6-12 IIT structures.'
+      : 'Are you sure you want to seed default v2 curriculum data? This will overwrite or append default LKG/UKG structures.';
+    if (!confirm(msg)) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/v2/curriculum', {
+      const res = await fetch(`/api/v2/curriculum?${isIit ? 'iit=true' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'seed' }),
+        body: JSON.stringify({ type: 'seed', iit: isIit }),
       });
       const data = await res.json();
       if (data.success) {
@@ -327,8 +369,53 @@ export default function AdminV2Page() {
 
   const handleEditClick = (item) => {
     setEditingId(item.id || item._id);
-    
-    if (adminMode === 'school') {
+
+    if (activeTab === 'question') {
+      const isIitOrSchool = adminMode === 'school' || adminMode === 'iit';
+      const optionsList = Array.isArray(item.options) ? item.options : [];
+      const optionA = isIitOrSchool ? (optionsList[0]?.label || '') : (item.options?.A || '');
+      const optionB = isIitOrSchool ? (optionsList[1]?.label || '') : (item.options?.B || '');
+      const optionC = isIitOrSchool ? (optionsList[2]?.label || '') : (item.options?.C || '');
+      const optionD = isIitOrSchool ? (optionsList[3]?.label || '') : (item.options?.D || '');
+      
+      let correctOption = item.correctOption || 'A';
+      if (isIitOrSchool && Array.isArray(item.options)) {
+        const correctIdx = item.options.findIndex(o => o.isCorrect);
+        correctOption = correctIdx === 0 ? 'A' : (correctIdx === 1 ? 'B' : (correctIdx === 2 ? 'C' : (correctIdx === 3 ? 'D' : 'A')));
+      }
+
+      const skillObj = skills.find(s => s.id === item.skillId);
+
+      setFormData({
+        id: item._id || item.id || '',
+        questionId: item.id || item._id || '',
+        questionText: item.questionText || '',
+        questionImageUrl: item.questionImageUrl || '',
+        optionA,
+        optionB,
+        optionC,
+        optionD,
+        correctOption,
+        explanationText: item.explanationText || '',
+        difficulty: item.difficulty || 0.5,
+        cognitiveLevel: item.cognitiveLevel || 'recall',
+        tags: Array.isArray(item.tags) ? item.tags.join(', ') : '',
+        metadataSource: item.metadata?.source || '',
+        isPYQ: Boolean(item.isPYQ),
+        pyqYear: item.pyqYear || '',
+        
+        subjectId: item.subject || item.metadata?.subject || filterSubjectId || '',
+        chapterId: skillObj?.chapterId || filterChapterId || '',
+        skillId: item.skillId || filterSkillId || '',
+        branchingCorrect: item.metadata?.branching?.correct || '',
+        branchingIncorrect: item.metadata?.branching?.incorrect || '',
+        isStaticQuestion: item.metadata?.isStatic !== false,
+      });
+      setLevelAddInputs({ 1: '', 2: '', 3: '' });
+      return;
+    }
+
+    if (adminMode === 'school' || adminMode === 'iit') {
       setFormData({
         id: item.id || '',
         title: item.title || '',
@@ -343,6 +430,11 @@ export default function AdminV2Page() {
         engine: item.engine || '',
         templateLevels: item.templateLevels ? JSON.stringify(item.templateLevels, null, 2) : '',
         remediation: item.remediation ? (Array.isArray(item.remediation) ? item.remediation.join(', ') : item.remediation) : '',
+        isStatic: Boolean(item.isStatic),
+        progressionEnabled: Boolean(item.progressionConfig?.enabled),
+        progressionEasy: Number(item.progressionConfig?.easyCount ?? 3),
+        progressionMedium: Number(item.progressionConfig?.mediumCount ?? 7),
+        progressionHard: Number(item.progressionConfig?.hardCount ?? 10),
       });
 
       if (item.templateLevels && Array.isArray(item.templateLevels) && item.templateLevels.length > 0) {
@@ -399,24 +491,6 @@ export default function AdminV2Page() {
           difficulty: item.difficulty || 0.5,
           status: item.status || 'active',
         });
-      } else if (activeTab === 'question') {
-        setFormData({
-          id: item._id || item.id || '',
-          questionText: item.questionText || '',
-          questionImageUrl: item.questionImageUrl || '',
-          optionA: item.options?.A || '',
-          optionB: item.options?.B || '',
-          optionC: item.options?.C || '',
-          optionD: item.options?.D || '',
-          correctOption: item.correctOption || 'A',
-          explanationText: item.explanationText || '',
-          isPYQ: Boolean(item.isPYQ),
-          pyqYear: item.pyqYear || '',
-          difficulty: item.difficulty || 0.5,
-          cognitiveLevel: item.cognitiveLevel || 'recall',
-          tags: Array.isArray(item.tags) ? item.tags.join(', ') : '',
-          metadataSource: item.metadata?.source || '',
-        });
       }
     }
     setLevelAddInputs({ 1: '', 2: '', 3: '' });
@@ -438,6 +512,11 @@ export default function AdminV2Page() {
       engine: '',
       templateLevels: '',
       remediation: '',
+      isStatic: false,
+      progressionEnabled: false,
+      progressionEasy: 3,
+      progressionMedium: 7,
+      progressionHard: 10,
       
       name: '',
       fullName: '',
@@ -482,7 +561,106 @@ export default function AdminV2Page() {
     setLoading(true);
     setError(null);
 
-    if (adminMode === 'school') {
+    try {
+      if (activeTab === 'question') {
+        let payload;
+        if (adminMode === 'school' || adminMode === 'iit') {
+          if (!formData.subjectId || !formData.chapterId || !formData.skillId) {
+            setError('Please select Subject, Chapter, and Skill ID for the question first.');
+            setLoading(false);
+            return;
+          }
+
+          const optionsArray = [
+            { label: formData.optionA, isCorrect: formData.correctOption === 'A' },
+            { label: formData.optionB, isCorrect: formData.correctOption === 'B' },
+            { label: formData.optionC, isCorrect: formData.correctOption === 'C' },
+            { label: formData.optionD, isCorrect: formData.correctOption === 'D' },
+          ].filter(o => o.label !== '');
+
+          const chap = chapters.find(c => c.id === formData.chapterId);
+          const topicSlug = chap?.unitId || 'mechanics';
+
+          payload = {
+            id: formData.questionId || editingId || `${formData.skillId}-q${Date.now()}`,
+            subject: formData.subjectId,
+            topic: topicSlug,
+            skillId: formData.skillId,
+            type: 'mcq',
+            questionText: formData.questionText,
+            questionImageUrl: formData.questionImageUrl || '',
+            options: optionsArray,
+            explanationText: formData.explanationText || '',
+            difficulty: Number(formData.difficulty) || 0.5,
+            status: formData.status || 'active',
+            metadata: {
+              subject: formData.subjectId,
+              topic: topicSlug,
+              skillId: formData.skillId,
+              isStatic: Boolean(formData.isStaticQuestion),
+              grade: '6',
+              branching: (formData.branchingCorrect || formData.branchingIncorrect) ? {
+                correct: formData.branchingCorrect || 'end',
+                incorrect: formData.branchingIncorrect || 'end'
+              } : undefined
+            }
+          };
+        } else {
+          if (!selectedExamId || !selectedSectionId || !selectedTopicId) {
+            setError('Please select Exam, Section, and Topic for the question first.');
+            setLoading(false);
+            return;
+          }
+
+          payload = {
+            id: editingId || undefined,
+            examId: selectedExamId,
+            section: selectedSectionId,
+            topic: selectedTopicId,
+            questionText: formData.questionText,
+            questionImageUrl: formData.questionImageUrl || '',
+            options: {
+              A: formData.optionA,
+              B: formData.optionB,
+              C: formData.optionC,
+              D: formData.optionD,
+            },
+            correctOption: formData.correctOption,
+            explanationText: formData.explanationText || '',
+            isPYQ: Boolean(formData.isPYQ),
+            pyqYear: formData.pyqYear ? Number(formData.pyqYear) : null,
+            difficulty: Number(formData.difficulty) || 0.5,
+            cognitiveLevel: formData.cognitiveLevel,
+            tags: formData.tags ? formData.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+            metadata: {
+              source: formData.metadataSource || 'admin',
+              exam: [selectedExamId.toUpperCase()],
+            }
+          };
+        }
+
+        const res = await fetch('/api/admin/questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+          handleCancelEdit();
+          fetchQuestions();
+        } else {
+          setError(data.error || 'Failed to save question.');
+        }
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      setError(err.message || 'API connection error.');
+      setLoading(false);
+      return;
+    }
+
+    if (adminMode === 'school' || adminMode === 'iit') {
       // School Curriculum CRUD
       const payloadData = {
         id: editingId || formData.id || undefined,
@@ -502,6 +680,13 @@ export default function AdminV2Page() {
         payloadData.code = formData.code;
         payloadData.templateId = formData.templateId;
         payloadData.engine = formData.engine;
+        payloadData.isStatic = Boolean(formData.isStatic);
+        payloadData.progressionConfig = {
+          enabled: Boolean(formData.progressionEnabled),
+          easyCount: Number(formData.progressionEasy) || 0,
+          mediumCount: Number(formData.progressionMedium) || 0,
+          hardCount: Number(formData.progressionHard) || 0,
+        };
         payloadData.remediation = formData.remediation
           ? formData.remediation.split(',').map(s => s.trim()).filter(Boolean)
           : [];
@@ -541,12 +726,14 @@ export default function AdminV2Page() {
       }
 
       try {
-        const res = await fetch('/api/v2/curriculum', {
+        const isIit = adminMode === 'iit';
+        const res = await fetch(`/api/v2/curriculum${isIit ? '?iit=true' : ''}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: activeTab,
             data: payloadData,
+            iit: isIit,
           }),
         });
         const data = await res.json();
@@ -750,51 +937,6 @@ export default function AdminV2Page() {
 
           handleCancelEdit();
           fetchData();
-        } else if (activeTab === 'question') {
-          if (!selectedExamId || !selectedSectionId || !selectedTopicId) {
-            setError('Please select Exam, Section, and Topic for the question first.');
-            setLoading(false);
-            return;
-          }
-
-          const payload = {
-            id: editingId || undefined,
-            examId: selectedExamId,
-            section: selectedSectionId,
-            topic: selectedTopicId,
-            questionText: formData.questionText,
-            questionImageUrl: formData.questionImageUrl || '',
-            options: {
-              A: formData.optionA,
-              B: formData.optionB,
-              C: formData.optionC,
-              D: formData.optionD,
-            },
-            correctOption: formData.correctOption,
-            explanationText: formData.explanationText,
-            isPYQ: Boolean(formData.isPYQ),
-            pyqYear: formData.pyqYear ? Number(formData.pyqYear) : null,
-            difficulty: Number(formData.difficulty) || 0.5,
-            cognitiveLevel: formData.cognitiveLevel,
-            tags: formData.tags ? formData.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
-            metadata: {
-              source: formData.metadataSource || 'admin',
-              exam: [selectedExamId.toUpperCase()],
-            }
-          };
-
-          const res = await fetch('/api/admin/questions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          const data = await res.json();
-          if (data.success) {
-            handleCancelEdit();
-            fetchQuestions();
-          } else {
-            setError(data.error || 'Failed to save question.');
-          }
         }
       } catch (err) {
         setError(err.message || 'API connection error.');
@@ -854,8 +996,9 @@ export default function AdminV2Page() {
     if (!confirm(`Are you sure you want to delete this ${activeTab}?`)) return;
     setLoading(true);
     try {
-      if (adminMode === 'school') {
-        const res = await fetch(`/api/v2/curriculum?type=${activeTab}&id=${id}`, {
+      if (adminMode === 'school' || adminMode === 'iit') {
+        const isIit = adminMode === 'iit';
+        const res = await fetch(`/api/v2/curriculum?type=${activeTab}&id=${id}${isIit ? '&iit=true' : ''}`, {
           method: 'DELETE',
         });
         const data = await res.json();
@@ -939,12 +1082,12 @@ export default function AdminV2Page() {
   // Switch modes and set default tabs
   const handleModeToggle = (mode) => {
     setAdminMode(mode);
-    setActiveTab(mode === 'school' ? 'grade' : 'exam');
+    setActiveTab((mode === 'school' || mode === 'iit') ? 'grade' : 'exam');
   };
 
   // Resolve collections displays
   const getActiveList = () => {
-    if (adminMode === 'school') {
+    if (adminMode === 'school' || adminMode === 'iit') {
       switch (activeTab) {
         case 'grade': return grades;
         case 'subject': return subjects;
@@ -1003,6 +1146,7 @@ export default function AdminV2Page() {
           }
           return list;
         }
+        case 'question': return examQuestions;
         default: return [];
       }
     } else {
@@ -1061,7 +1205,7 @@ export default function AdminV2Page() {
 
   // Render guides
   const renderGuide = () => {
-    if (adminMode === 'school') {
+    if (adminMode === 'school' || adminMode === 'iit') {
       switch (activeTab) {
         case 'grade':
           return (
@@ -1313,6 +1457,11 @@ export default function AdminV2Page() {
           color: #4f46e5;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
+        .tab-item-btn.active.iit {
+          background: #ffffff;
+          color: #10b981;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
         .tab-item-btn.active.exam {
           background: #ffffff;
           color: #0891b2;
@@ -1468,6 +1617,16 @@ export default function AdminV2Page() {
               🏫 School K-12
             </button>
             <button
+              onClick={() => handleModeToggle('iit')}
+              className="mode-toggle-btn"
+              style={{
+                background: adminMode === 'iit' ? '#ffffff' : 'transparent',
+                color: adminMode === 'iit' ? '#10b981' : '#64748b',
+              }}
+            >
+              🚀 IIT Prep
+            </button>
+            <button
               onClick={() => handleModeToggle('exam')}
               className="mode-toggle-btn"
               style={{
@@ -1479,18 +1638,22 @@ export default function AdminV2Page() {
             </button>
           </div>
           
-          {adminMode === 'school' && (
+          {(adminMode === 'school' || adminMode === 'iit') && (
             <button 
               onClick={handleSeed}
               disabled={loading}
               className="btn-seed"
+              style={{
+                background: adminMode === 'iit' ? 'linear-gradient(135deg, #10b981, #059669)' : undefined,
+                boxShadow: adminMode === 'iit' ? '0 4px 14px rgba(16, 185, 129, 0.35)' : undefined,
+              }}
             >
-              🌱 Seed V2 Data
+              {adminMode === 'iit' ? '⚡ Seed IIT Data' : '🌱 Seed V2 Data'}
             </button>
           )}
           
           <Link 
-            href={adminMode === 'school' ? '/grades-v2' : '/exam-prep'}
+            href={adminMode === 'school' ? '/grades-v2' : (adminMode === 'iit' ? '/iit-foundation' : '/exam-prep')}
             target="_blank"
             className="btn-preview"
           >
@@ -1501,7 +1664,7 @@ export default function AdminV2Page() {
 
       {/* 2. KPI Metrics Deck */}
       <section className="metrics-grid">
-        {adminMode === 'school' ? (
+        {adminMode === 'school' || adminMode === 'iit' ? (
           <>
             <div className="metric-card" style={{ borderLeft: '5px solid #3b82f6' }}>
               <div className="metric-icon-box" style={{ background: '#eff6ff', color: '#3b82f6' }}>🏫</div>
@@ -1579,14 +1742,14 @@ export default function AdminV2Page() {
 
       {/* 3. Navigation Tab Bar */}
       <nav className="tab-track-container">
-        {(adminMode === 'school' 
-          ? ['grade', 'subject', 'unit', 'chapter', 'skill']
+        {((adminMode === 'school' || adminMode === 'iit') 
+          ? ['grade', 'subject', 'unit', 'chapter', 'skill', 'question']
           : ['exam', 'section', 'topic', 'skill', 'question']
         ).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`tab-item-btn ${activeTab === tab ? 'active' : ''} ${activeTab === tab ? (adminMode === 'school' ? 'school' : 'exam') : ''}`}
+            className={`tab-item-btn ${activeTab === tab ? 'active' : ''} ${activeTab === tab ? ((adminMode === 'school' || adminMode === 'iit') ? (adminMode === 'iit' ? 'iit' : 'school') : 'exam') : ''}`}
           >
             {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab + 's'}
           </button>
@@ -1594,7 +1757,7 @@ export default function AdminV2Page() {
       </nav>
 
       {/* 4. Glassmorphic Filters */}
-      {adminMode === 'school' && (
+      {(adminMode === 'school' || adminMode === 'iit') && (
         <div className="filter-glass-deck">
           <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             🔍 Filter:
@@ -1669,13 +1832,30 @@ export default function AdminV2Page() {
             </select>
           </div>
 
-          {(filterGradeId || filterSubjectId || filterUnitId || filterChapterId) && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>Skill</label>
+            <select
+              value={filterSkillId}
+              disabled={!filterChapterId}
+              onChange={e => setFilterSkillId(e.target.value)}
+              className="custom-select-control"
+              style={{ maxWidth: '240px' }}
+            >
+              <option value="">-- All Skills --</option>
+              {skills.filter(s => s.chapterId === filterChapterId).map(s => (
+                <option key={s.id} value={s.id}>{s.name || s.title || s.id}</option>
+              ))}
+            </select>
+          </div>
+
+          {(filterGradeId || filterSubjectId || filterUnitId || filterChapterId || filterSkillId) && (
             <button
               onClick={() => {
                 setFilterGradeId('');
                 setFilterSubjectId('');
                 setFilterUnitId('');
                 setFilterChapterId('');
+                setFilterSkillId('');
               }}
               className="custom-select-control"
               style={{
@@ -1792,9 +1972,11 @@ export default function AdminV2Page() {
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* SCHOOL MODE INPUT FIELDS */}
-            {adminMode === 'school' && (
+            {(adminMode === 'school' || adminMode === 'iit') && (
               <>
-                {/* ID input */}
+                {activeTab !== 'question' && (
+                  <>
+                    {/* ID input */}
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label className="form-label-premium">Unique ID (Slug)</label>
                   <input 
@@ -1921,27 +2103,51 @@ export default function AdminV2Page() {
                         className="form-input-premium"
                       />
                     </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
+                      <label className="form-label-premium">Routing / Practice Mode</label>
+                      <select 
+                        name="isStatic" 
+                        value={formData.isStatic ? 'static' : 'adaptive'} 
+                        onChange={(e) => {
+                          const val = e.target.value === 'static';
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            isStatic: val,
+                            templateId: val ? '' : prev.templateId,
+                            engine: val ? 'questionBank' : (prev.engine === 'questionBank' ? '' : prev.engine)
+                          }));
+                        }}
+                        className="premium-select"
+                      >
+                        <option value="adaptive">⚡ Adaptive (Dynamic Template Generation)</option>
+                        <option value="static">📋 Static (Fixed Database Questions / Branching)</option>
+                      </select>
+                    </div>
                     <div className="suggestion-container" style={{ display: 'flex', flexDirection: 'column', position: 'relative', marginTop: '0.25rem' }}>
-                      <label className="form-label-premium">Template ID</label>
+                      <label className="form-label-premium" style={{ color: formData.isStatic ? '#94a3b8' : undefined }}>Template ID</label>
                       <input 
                         type="text" 
                         name="templateId" 
-                        required
-                        value={formData.templateId} 
+                        required={!formData.isStatic}
+                        disabled={formData.isStatic}
+                        value={formData.isStatic ? '' : formData.templateId} 
                         onChange={(e) => {
                           handleInputChange(e);
                           setActiveSuggestionBox('primary');
                         }}
-                        onFocus={() => setActiveSuggestionBox('primary')}
-                        placeholder="e.g. fractions-g5-add-like-fractions"
+                        onFocus={() => {
+                          if (!formData.isStatic) setActiveSuggestionBox('primary');
+                        }}
+                        placeholder={formData.isStatic ? 'Disabled for Static routing mode' : 'e.g. fractions-g5-add-like-fractions'}
                         className="form-input-premium"
+                        style={{ background: (editingId || formData.isStatic) ? '#f1f5f9' : '#fff' }}
                       />
-                      {renderSuggestions(
+                      {!formData.isStatic && renderSuggestions(
                         formData.templateId, 
                         (tid) => setFormData(prev => ({ ...prev, templateId: tid })), 
                         'primary'
                       )}
-                      {formData.templateId && (
+                      {!formData.isStatic && formData.templateId && (
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '4px', fontSize: '11.5px' }}>
                           <a 
                             href={`/admin/templates?id=${encodeURIComponent(formData.templateId)}`} 
@@ -1963,123 +2169,177 @@ export default function AdminV2Page() {
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
-                      <label className="form-label-premium">Engine</label>
+                      <label className="form-label-premium" style={{ color: formData.isStatic ? '#94a3b8' : undefined }}>Engine</label>
                       <input 
                         type="text" 
                         name="engine" 
-                        required
-                        value={formData.engine} 
+                        required={!formData.isStatic}
+                        disabled={formData.isStatic}
+                        value={formData.isStatic ? 'questionBank' : formData.engine} 
                         onChange={handleInputChange}
-                        placeholder="e.g. StickersEngine"
+                        placeholder={formData.isStatic ? 'Disabled for Static routing mode' : 'e.g. StickersEngine'}
                         className="form-input-premium"
+                        style={{ background: formData.isStatic ? '#f1f5f9' : '#fff' }}
                       />
                     </div>
                     {/* Difficulty Scaling */}
-                    <div style={{ marginTop: '6px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '13px', color: '#92400e', cursor: 'pointer' }}>
+                    {!formData.isStatic && (
+                      <div style={{ marginTop: '6px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '13px', color: '#92400e', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={skillDifficultyScaling}
+                            onChange={e => {
+                              setSkillDifficultyScaling(e.target.checked);
+                              if (e.target.checked && formData.templateId) {
+                                const primaryId = formData.templateId.trim();
+                                if (primaryId) {
+                                  setSkillTemplateLevels(prev => prev.map(l =>
+                                    l.level === 1 && l.templateIds.length === 0
+                                      ? { ...l, templateIds: [primaryId] }
+                                      : l
+                                  ));
+                                }
+                              }
+                            }}
+                          />
+                          ⚡ Enable Difficulty Scaling
+                        </label>
+
+                        {skillDifficultyScaling && (
+                          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {[
+                              { level: 1, label: 'Level 1 — Easy', color: '#dcfce7', border: '#86efac', badge: '#16a34a' },
+                              { level: 2, label: 'Level 2 — Medium', color: '#fef9c3', border: '#fde047', badge: '#ca8a04' },
+                              { level: 3, label: 'Level 3 — Hard', color: '#fee2e2', border: '#fca5a5', badge: '#dc2626' },
+                            ].map(({ level, label, color, border, badge }) => {
+                              const levelData = skillTemplateLevels.find(l => l.level === level) || { level, templateIds: [] };
+                              return (
+                                <div key={level} style={{ border: `1px solid ${border}`, borderRadius: '10px', background: '#ffffff', padding: '10px 12px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '12px', color: '#334155' }}>{label}</span>
+                                    <span style={{ background: badge, color: '#fff', borderRadius: '999px', padding: '2px 8px', fontSize: '10px', fontWeight: 800 }}>
+                                      {levelData.templateIds.length} templates
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minHeight: '28px', marginBottom: '8px' }}>
+                                    {levelData.templateIds.length === 0 && (
+                                      <span style={{ fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic' }}>No templates mapped</span>
+                                    )}
+                                    {levelData.templateIds.map((tid, ti) => (
+                                      <span key={ti} style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                        background: color, border: `1px solid ${border}`, borderRadius: '6px',
+                                        padding: '3px 8px', fontSize: '11px', fontWeight: 700, color: '#1e293b'
+                                      }}>
+                                        {tid}
+                                        <button
+                                          type="button"
+                                          onClick={() => setSkillTemplateLevels(prev => prev.map(l =>
+                                            l.level === level
+                                              ? { ...l, templateIds: l.templateIds.filter((_, i) => i !== ti) }
+                                              : l
+                                          ))}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 900, padding: 0 }}
+                                        >×</button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'stretch' }}>
+                                    <div className="suggestion-container" style={{ flex: 1, position: 'relative' }}>
+                                      <input
+                                        type="text"
+                                        className="form-input-premium"
+                                        style={{ width: '100%', fontSize: '12px', padding: '5px 8px', boxSizing: 'border-box' }}
+                                        placeholder="Search Template ID..."
+                                        value={levelAddInputs[level] || ''}
+                                        onChange={e => {
+                                          setLevelAddInputs(prev => ({ ...prev, [level]: e.target.value }));
+                                          setActiveSuggestionBox(String(level));
+                                        }}
+                                        onFocus={() => setActiveSuggestionBox(String(level))}
+                                      />
+                                      {renderSuggestions(
+                                        levelAddInputs[level], 
+                                        (tid) => {
+                                          if (!levelData.templateIds.includes(tid)) {
+                                            setSkillTemplateLevels(prev => prev.map(l =>
+                                              l.level === level ? { ...l, templateIds: [...l.templateIds, tid] } : l
+                                            ));
+                                          }
+                                          setLevelAddInputs(prev => ({ ...prev, [level]: '' }));
+                                        }, 
+                                        String(level)
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      style={{ fontSize: '12px', padding: '4px 12px', background: badge, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}
+                                      onClick={() => {
+                                        const val = (levelAddInputs[level] || '').trim();
+                                        if (val && !levelData.templateIds.includes(val)) {
+                                          setSkillTemplateLevels(prev => prev.map(l =>
+                                            l.level === level ? { ...l, templateIds: [...l.templateIds, val] } : l
+                                          ));
+                                          setLevelAddInputs(prev => ({ ...prev, [level]: '' }));
+                                        }
+                                      }}
+                                    >+ Add</button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Progression Config */}
+                    <div style={{ marginTop: '12px', padding: '14px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '13px', color: '#166534', cursor: 'pointer', marginBottom: '8px' }}>
                         <input
                           type="checkbox"
-                          checked={skillDifficultyScaling}
-                          onChange={e => {
-                            setSkillDifficultyScaling(e.target.checked);
-                            if (e.target.checked && formData.templateId) {
-                              const primaryId = formData.templateId.trim();
-                              if (primaryId) {
-                                setSkillTemplateLevels(prev => prev.map(l =>
-                                  l.level === 1 && l.templateIds.length === 0
-                                    ? { ...l, templateIds: [primaryId] }
-                                    : l
-                                ));
-                              }
-                            }
-                          }}
+                          checked={formData.progressionEnabled || false}
+                          onChange={e => setFormData(prev => ({ ...prev, progressionEnabled: e.target.checked }))}
                         />
-                        ⚡ Enable Difficulty Scaling
+                        🎯 Enable Custom Progression Scaling (IIT Foundation style)
                       </label>
 
-                      {skillDifficultyScaling && (
-                        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {[
-                            { level: 1, label: 'Level 1 — Easy', color: '#dcfce7', border: '#86efac', badge: '#16a34a' },
-                            { level: 2, label: 'Level 2 — Medium', color: '#fef9c3', border: '#fde047', badge: '#ca8a04' },
-                            { level: 3, label: 'Level 3 — Hard', color: '#fee2e2', border: '#fca5a5', badge: '#dc2626' },
-                          ].map(({ level, label, color, border, badge }) => {
-                            const levelData = skillTemplateLevels.find(l => l.level === level) || { level, templateIds: [] };
-                            return (
-                              <div key={level} style={{ border: `1px solid ${border}`, borderRadius: '10px', background: '#ffffff', padding: '10px 12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                  <span style={{ fontWeight: 800, fontSize: '12px', color: '#334155' }}>{label}</span>
-                                  <span style={{ background: badge, color: '#fff', borderRadius: '999px', padding: '2px 8px', fontSize: '10px', fontWeight: 800 }}>
-                                    {levelData.templateIds.length} templates
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minHeight: '28px', marginBottom: '8px' }}>
-                                  {levelData.templateIds.length === 0 && (
-                                    <span style={{ fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic' }}>No templates mapped</span>
-                                  )}
-                                  {levelData.templateIds.map((tid, ti) => (
-                                    <span key={ti} style={{
-                                      display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                      background: color, border: `1px solid ${border}`, borderRadius: '6px',
-                                      padding: '3px 8px', fontSize: '11px', fontWeight: 700, color: '#1e293b'
-                                    }}>
-                                      {tid}
-                                      <button
-                                        type="button"
-                                        onClick={() => setSkillTemplateLevels(prev => prev.map(l =>
-                                          l.level === level
-                                            ? { ...l, templateIds: l.templateIds.filter((_, i) => i !== ti) }
-                                            : l
-                                        ))}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 900, padding: 0 }}
-                                      >×</button>
-                                    </span>
-                                  ))}
-                                </div>
-                                <div style={{ display: 'flex', gap: '6px', alignItems: 'stretch' }}>
-                                  <div className="suggestion-container" style={{ flex: 1, position: 'relative' }}>
-                                    <input
-                                      type="text"
-                                      className="form-input-premium"
-                                      style={{ width: '100%', fontSize: '12px', padding: '5px 8px', boxSizing: 'border-box' }}
-                                      placeholder="Search Template ID..."
-                                      value={levelAddInputs[level] || ''}
-                                      onChange={e => {
-                                        setLevelAddInputs(prev => ({ ...prev, [level]: e.target.value }));
-                                        setActiveSuggestionBox(String(level));
-                                      }}
-                                      onFocus={() => setActiveSuggestionBox(String(level))}
-                                    />
-                                    {renderSuggestions(
-                                      levelAddInputs[level], 
-                                      (tid) => {
-                                        if (!levelData.templateIds.includes(tid)) {
-                                          setSkillTemplateLevels(prev => prev.map(l =>
-                                            l.level === level ? { ...l, templateIds: [...l.templateIds, tid] } : l
-                                          ));
-                                        }
-                                        setLevelAddInputs(prev => ({ ...prev, [level]: '' }));
-                                      }, 
-                                      String(level)
-                                    )}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    style={{ fontSize: '12px', padding: '4px 12px', background: badge, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}
-                                    onClick={() => {
-                                      const val = (levelAddInputs[level] || '').trim();
-                                      if (val && !levelData.templateIds.includes(val)) {
-                                        setSkillTemplateLevels(prev => prev.map(l =>
-                                          l.level === level ? { ...l, templateIds: [...l.templateIds, val] } : l
-                                        ));
-                                        setLevelAddInputs(prev => ({ ...prev, [level]: '' }));
-                                      }
-                                    }}
-                                  >+ Add</button>
-                                </div>
-                              </div>
-                            );
-                          })}
+                      {formData.progressionEnabled && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', color: '#166534' }}>Easy Questions</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.progressionEasy || 0}
+                              onChange={e => setFormData(prev => ({ ...prev, progressionEasy: Number(e.target.value) }))}
+                              className="form-input-premium"
+                              style={{ padding: '6px' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', color: '#166534' }}>Medium Questions</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.progressionMedium || 0}
+                              onChange={e => setFormData(prev => ({ ...prev, progressionMedium: Number(e.target.value) }))}
+                              className="form-input-premium"
+                              style={{ padding: '6px' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', color: '#166534' }}>Hard Questions</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.progressionHard || 0}
+                              onChange={e => setFormData(prev => ({ ...prev, progressionHard: Number(e.target.value) }))}
+                              className="form-input-premium"
+                              style={{ padding: '6px' }}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2099,6 +2359,8 @@ export default function AdminV2Page() {
                 </div>
               </>
             )}
+          </>
+        )}
 
             {/* EXAM PREP INPUT FIELDS */}
             {adminMode === 'exam' && (
@@ -2360,117 +2622,371 @@ export default function AdminV2Page() {
                     </div>
                   </>
                 )}
-
-                {/* 4. Question Creation fields */}
-                {activeTab === 'question' && (
-                  <>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <label className="form-label-premium">Question Text</label>
-                      <textarea 
-                        name="questionText" 
-                        required
-                        value={formData.questionText} 
-                        onChange={handleInputChange}
-                        placeholder="Enter question content (supports LaTeX & Markdown)"
-                        rows={3}
-                        className="premium-textarea"
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <label className="form-label-premium">Diagram / Image URL</label>
-                      <input 
-                        type="text" 
-                        name="questionImageUrl" 
-                        value={formData.questionImageUrl} 
-                        onChange={handleInputChange}
-                        placeholder="e.g. /images/diagram.png"
-                        className="form-input-premium"
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Option A</label>
-                        <input type="text" name="optionA" required value={formData.optionA} onChange={handleInputChange} className="form-input-premium" />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Option B</label>
-                        <input type="text" name="optionB" required value={formData.optionB} onChange={handleInputChange} className="form-input-premium" />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Option C</label>
-                        <input type="text" name="optionC" required value={formData.optionC} onChange={handleInputChange} className="form-input-premium" />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Option D</label>
-                        <input type="text" name="optionD" required value={formData.optionD} onChange={handleInputChange} className="form-input-premium" />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Correct Option</label>
-                        <select name="correctOption" value={formData.correctOption} onChange={handleInputChange} className="premium-select">
-                          <option value="A">A</option>
-                          <option value="B">B</option>
-                          <option value="C">C</option>
-                          <option value="D">D</option>
-                        </select>
-                      </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Cognitive Level</label>
-                        <select name="cognitiveLevel" value={formData.cognitiveLevel} onChange={handleInputChange} className="premium-select">
-                          <option value="recall">Recall</option>
-                          <option value="comprehension">Comprehension</option>
-                          <option value="application">Application</option>
-                          <option value="analytical">Analytical</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', color: '#334155' }}>
-                        <input type="checkbox" name="isPYQ" checked={formData.isPYQ} onChange={handleInputChange} />
-                        Is Previous Year Question (PYQ)
-                      </label>
-                      {formData.isPYQ && (
-                        <input 
-                          type="number" 
-                          name="pyqYear" 
-                          placeholder="Year" 
-                          value={formData.pyqYear} 
-                          onChange={handleInputChange} 
-                          className="form-input-premium"
-                          style={{ padding: '4px 8px', width: '80px', fontSize: '12px' }}
-                        />
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Difficulty (0.0 - 1.0)</label>
-                        <input type="number" step="0.05" min="0" max="1" name="difficulty" value={formData.difficulty} onChange={handleInputChange} className="form-input-premium" />
-                      </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <label className="form-label-premium">Source Tag</label>
-                        <input type="text" name="metadataSource" value={formData.metadataSource} onChange={handleInputChange} placeholder="e.g. PYQ-2023" className="form-input-premium" />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <label className="form-label-premium">Explanation Text</label>
-                      <textarea 
-                        name="explanationText" 
-                        value={formData.explanationText} 
-                        onChange={handleInputChange}
-                        placeholder="Detail explanation steps..."
-                        rows={2}
-                        className="premium-textarea"
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <label className="form-label-premium">Comma-separated Tags</label>
-                      <input type="text" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="e.g. geometry, symmetry" className="form-input-premium" />
-                    </div>
-                  </>
-                )}
               </>
             )}
+
+            {/* 4. Question Creation fields */}
+            {activeTab === 'question' && (
+              <>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setInputMode('manual')}
+                        style={{
+                          flex: 1,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid ' + (inputMode === 'manual' ? '#10b981' : '#cbd5e1'),
+                          background: inputMode === 'manual' ? '#ecfdf5' : '#f8fafc',
+                          color: inputMode === 'manual' ? '#047857' : '#475569',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✍️ Manual Form
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInputMode('json')}
+                        style={{
+                          flex: 1,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid ' + (inputMode === 'json' ? '#10b981' : '#cbd5e1'),
+                          background: inputMode === 'json' ? '#ecfdf5' : '#f8fafc',
+                          color: inputMode === 'json' ? '#047857' : '#475569',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {"{ }"} Parse JSON
+                      </button>
+                    </div>
+
+                    {inputMode === 'json' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Dynamic Category Overrides Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', marginBottom: '2px', fontWeight: 800 }}>Category Grade (Override)</label>
+                            <select
+                              value={jsonGradeId}
+                              onChange={(e) => setJsonGradeId(e.target.value)}
+                              className="premium-select"
+                              style={{ fontSize: '11.5px', padding: '6px' }}
+                            >
+                              <option value="">-- Keep JSON Value --</option>
+                              {grades.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+                            </select>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', marginBottom: '2px', fontWeight: 800 }}>Category Subject (Override)</label>
+                            <select
+                              value={jsonSubjectId}
+                              onChange={(e) => {
+                                setJsonSubjectId(e.target.value);
+                                setJsonChapterId('');
+                                setJsonSkillId('');
+                              }}
+                              className="premium-select"
+                              style={{ fontSize: '11.5px', padding: '6px' }}
+                            >
+                              <option value="">-- Keep JSON Value --</option>
+                              {subjects.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                            </select>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', marginBottom: '2px', fontWeight: 800 }}>Category Chapter (Override)</label>
+                            <select
+                              value={jsonChapterId}
+                              onChange={(e) => {
+                                setJsonChapterId(e.target.value);
+                                setJsonSkillId('');
+                              }}
+                              className="premium-select"
+                              style={{ fontSize: '11.5px', padding: '6px' }}
+                            >
+                              <option value="">-- Keep JSON Value --</option>
+                              {chapters
+                                .filter(c => {
+                                  if (!jsonSubjectId) return true;
+                                  const un = units.find(u => u.id === c.unitId);
+                                  return un && un.subjectId === jsonSubjectId;
+                                })
+                                .filter(c => !jsonGradeId || c.gradeId === jsonGradeId)
+                                .map(c => <option key={c.id} value={c.id}>{c.title}</option>)
+                              }
+                            </select>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium" style={{ fontSize: '11px', marginBottom: '2px', fontWeight: 800 }}>Category Skill (Override)</label>
+                            <select
+                              value={jsonSkillId}
+                              onChange={(e) => setJsonSkillId(e.target.value)}
+                              className="premium-select"
+                              style={{ fontSize: '11.5px', padding: '6px' }}
+                            >
+                              <option value="">-- Keep JSON Value --</option>
+                              {skills
+                                .filter(s => !jsonChapterId || s.chapterId === jsonChapterId)
+                                .map(s => <option key={s.id} value={s.id}>{s.title || s.name || s.code}</option>)
+                              }
+                            </select>
+                          </div>
+                        </div>
+
+                        <label className="form-label-premium">JSON Question Content (Single or Array)</label>
+                        <textarea
+                          value={jsonInputText}
+                          onChange={(e) => setJsonInputText(e.target.value)}
+                          placeholder={`Paste your question JSON here.\n\nExample Single:\n{\n  "id": "demo-q1",\n  "subject": "physics",\n  "topic": "mechanics",\n  "skillId": "iit-p6-electricity-branching-demo",\n  "type": "mcq",\n  "questionText": "Question?",\n  "options": [\n    { "label": "A", "isCorrect": true },\n    { "label": "B", "isCorrect": false }\n  ]\n}\n\nExample Array:\n[\n  { ... },\n  { ... }\n]`}
+                          rows={12}
+                          className="premium-textarea"
+                          style={{ fontFamily: 'monospace', fontSize: '11px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!jsonInputText.trim()) {
+                              setError('Please paste JSON content first.');
+                              return;
+                            }
+                            setLoading(true);
+                            setError(null);
+                            try {
+                              let parsed;
+                              try {
+                                parsed = JSON.parse(jsonInputText);
+                              } catch (e) {
+                                throw new Error('Invalid JSON: ' + e.message);
+                              }
+
+                              const questionsArray = Array.isArray(parsed) ? parsed : [parsed];
+                              const chapObj = chapters.find(c => c.id === jsonChapterId);
+                              const topicSlug = chapObj?.unitId;
+
+                              const processedArray = questionsArray.map(q => {
+                                const finalSubject = jsonSubjectId || q.subject || q.metadata?.subject;
+                                const finalSkillId = jsonSkillId || q.skillId || q.metadata?.skillId;
+                                const finalTopic = topicSlug || q.topic || q.metadata?.topic;
+                                const finalGrade = jsonGradeId || q.metadata?.grade || '6';
+
+                                return {
+                                  ...q,
+                                  subject: finalSubject,
+                                  skillId: finalSkillId,
+                                  topic: finalTopic,
+                                  metadata: {
+                                    ...q.metadata,
+                                    subject: finalSubject,
+                                    skillId: finalSkillId,
+                                    topic: finalTopic,
+                                    grade: finalGrade,
+                                    isStatic: q.metadata?.isStatic !== false
+                                  }
+                                };
+                              });
+
+                              const payload = Array.isArray(parsed) ? processedArray : processedArray[0];
+
+                              const res = await fetch('/api/admin/questions', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                setJsonInputText('');
+                                setJsonGradeId('');
+                                setJsonSubjectId('');
+                                setJsonChapterId('');
+                                setJsonSkillId('');
+                                handleCancelEdit();
+                                fetchQuestions();
+                                alert(data.count ? `Successfully imported ${data.count} questions!` : 'Question successfully imported!');
+                              } else {
+                                setError(data.error || 'Failed to save parsed JSON.');
+                              }
+                            } catch (err) {
+                              setError(err.message);
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '10px 16px',
+                            borderRadius: '8px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            marginTop: '4px'
+                          }}
+                        >
+                          🪄 Parse & Save JSON
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {(adminMode === 'school' || adminMode === 'iit') && (
+                          <>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Subject</label>
+                              <select name="subjectId" value={formData.subjectId} onChange={handleInputChange} className="premium-select" required>
+                                <option value="">-- Select Subject --</option>
+                                {subjects.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                              </select>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Chapter</label>
+                              <select name="chapterId" value={formData.chapterId} onChange={handleInputChange} className="premium-select" required disabled={!formData.subjectId}>
+                                <option value="">-- Select Chapter --</option>
+                                {chapters.filter(c => {
+                                  const un = units.find(u => u.id === c.unitId);
+                                  return un && un.subjectId === formData.subjectId;
+                                }).map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                              </select>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Skill ID</label>
+                              <select name="skillId" value={formData.skillId} onChange={handleInputChange} className="premium-select" required disabled={!formData.chapterId}>
+                                <option value="">-- Select Skill --</option>
+                                {skills.filter(s => s.chapterId === formData.chapterId).map(s => <option key={s.id} value={s.id}>{s.name || s.title || s.id}</option>)}
+                              </select>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Question ID (slug override)</label>
+                              <input 
+                                type="text" 
+                                name="questionId" 
+                                value={formData.questionId} 
+                                onChange={handleInputChange} 
+                                placeholder="e.g. iit-p6-electricity-branching-demo-q1" 
+                                className="form-input-premium" 
+                              />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium">Branching Target - If Correct</label>
+                                <input type="text" name="branchingCorrect" value={formData.branchingCorrect} onChange={handleInputChange} placeholder="e.g. q2, or 'end'" className="form-input-premium" />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium">Branching Target - If Incorrect</label>
+                                <input type="text" name="branchingIncorrect" value={formData.branchingIncorrect} onChange={handleInputChange} placeholder="e.g. q1-hint, or 'end'" className="form-input-premium" />
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', margin: '4px 0' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', color: '#334155' }}>
+                                <input 
+                                  type="checkbox" 
+                                  name="isStaticQuestion" 
+                                  checked={formData.isStaticQuestion} 
+                                  onChange={(e) => setFormData(prev => ({ ...prev, isStaticQuestion: e.target.checked }))} 
+                                />
+                                Is Static Question (sequential / branching)
+                              </label>
+                            </div>
+                          </>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <label className="form-label-premium">Question Text</label>
+                          <textarea 
+                            name="questionText" 
+                            required
+                            value={formData.questionText} 
+                            onChange={handleInputChange}
+                            placeholder="Enter question content (supports LaTeX & Markdown)"
+                            rows={3}
+                            className="premium-textarea"
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <label className="form-label-premium">Diagram / Image URL</label>
+                          <input 
+                            type="text" 
+                            name="questionImageUrl" 
+                            value={formData.questionImageUrl} 
+                            onChange={handleInputChange}
+                            placeholder="e.g. /images/diagram.png"
+                            className="form-input-premium"
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Option A</label>
+                            <input type="text" name="optionA" required value={formData.optionA} onChange={handleInputChange} className="form-input-premium" />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Option B</label>
+                            <input type="text" name="optionB" required value={formData.optionB} onChange={handleInputChange} className="form-input-premium" />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Option C</label>
+                            <input type="text" name="optionC" value={formData.optionC} onChange={handleInputChange} className="form-input-premium" />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Option D</label>
+                            <input type="text" name="optionD" value={formData.optionD} onChange={handleInputChange} className="form-input-premium" />
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Correct Option</label>
+                            <select name="correctOption" value={formData.correctOption} onChange={handleInputChange} className="premium-select">
+                              <option value="A">A</option>
+                              <option value="B">B</option>
+                              <option value="C">C</option>
+                              <option value="D">D</option>
+                            </select>
+                          </div>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Cognitive Level</label>
+                            <select name="cognitiveLevel" value={formData.cognitiveLevel} onChange={handleInputChange} className="premium-select">
+                              <option value="recall">Recall</option>
+                              <option value="comprehension">Comprehension</option>
+                              <option value="application">Application</option>
+                              <option value="analytical">Analytical</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', color: '#334155' }}>
+                            <input type="checkbox" name="isPYQ" checked={formData.isPYQ} onChange={handleInputChange} />
+                            Is Previous Year Question (PYQ)
+                          </label>
+                          {formData.isPYQ && (
+                            <input 
+                              type="number" 
+                              name="pyqYear" 
+                              placeholder="Year" 
+                              value={formData.pyqYear} 
+                              onChange={handleInputChange} 
+                              className="form-input-premium"
+                              style={{ padding: '4px 8px', width: '80px', fontSize: '12px' }}
+                            />
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Difficulty (0.0 - 1.0)</label>
+                            <input type="number" step="0.05" min="0" max="1" name="difficulty" value={formData.difficulty} onChange={handleInputChange} className="form-input-premium" />
+                          </div>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <label className="form-label-premium">Source Tag</label>
+                            <input type="text" name="metadataSource" value={formData.metadataSource} onChange={handleInputChange} placeholder="e.g. PYQ-2023" className="form-input-premium" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
 
             {/* Actions for Form */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
@@ -2480,8 +2996,8 @@ export default function AdminV2Page() {
                 className="form-submit-btn-premium"
                 style={{
                   flex: 1,
-                  background: editingId ? '#16a34a' : (adminMode === 'school' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'),
-                  boxShadow: editingId ? '0 4px 12px rgba(22, 163, 74, 0.2)' : (adminMode === 'school' ? '0 4px 14px rgba(99, 102, 241, 0.3)' : '0 4px 14px rgba(8, 145, 178, 0.3)'),
+                  background: editingId ? '#16a34a' : ((adminMode === 'school' || adminMode === 'iit') ? (adminMode === 'iit' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)') : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'),
+                  boxShadow: editingId ? '0 4px 12px rgba(22, 163, 74, 0.2)' : ((adminMode === 'school' || adminMode === 'iit') ? (adminMode === 'iit' ? '0 4px 14px rgba(16, 185, 129, 0.3)' : '0 4px 14px rgba(99, 102, 241, 0.3)') : '0 4px 14px rgba(8, 145, 178, 0.3)'),
                 }}
               >
                 {loading ? 'Processing...' : editingId ? `Update ${activeTab}` : `Create ${activeTab}`}
@@ -2535,12 +3051,12 @@ export default function AdminV2Page() {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+<table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr className="table-premium-header">
                     <th style={{ width: '15%' }}>ID / Target</th>
                     <th style={{ width: '60%' }}>Info / Content</th>
-                    {adminMode === 'school' && (
+                    {(adminMode === 'school' || adminMode === 'iit') && (
                       <th style={{ width: '10%' }}>Order</th>
                     )}
                     <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>
@@ -2566,6 +3082,15 @@ export default function AdminV2Page() {
                                 {item.section}
                               </span>
                             </div>
+                          ) : (adminMode === 'school' || adminMode === 'iit') && activeTab === 'question' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span className="badge-pill-premium" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', width: 'max-content', fontSize: '10px', fontFamily: 'monospace' }}>
+                                {item.skillId}
+                              </span>
+                              <span className="badge-pill-premium" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', width: 'fit-content', fontSize: '10px' }}>
+                                {item.subject?.toUpperCase()}
+                              </span>
+                            </div>
                           ) : (
                             <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                               {rowId}
@@ -2575,7 +3100,7 @@ export default function AdminV2Page() {
 
                         {/* Title and Detail information column */}
                         <td style={{ padding: '1rem 0.75rem', fontSize: '13.5px', fontWeight: 600, verticalAlign: 'middle' }}>
-                          {adminMode === 'school' && (
+                          {(adminMode === 'school' || adminMode === 'iit') && (
                             <>
                               <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 {activeTab === 'subject' && (item.icon ? `${item.icon} ` : '📚 ')}
@@ -2584,8 +3109,34 @@ export default function AdminV2Page() {
                               {activeTab === 'unit' && <small style={{ display: 'block', color: '#64748b', fontWeight: 500, marginTop: '4px' }}>Subject: <code>{item.subjectId}</code></small>}
                               {activeTab === 'chapter' && <small style={{ display: 'block', color: '#64748b', fontWeight: 500, marginTop: '4px' }}>Unit: <code>{item.unitId}</code> | Grade: <code>{item.gradeId}</code></small>}
                               {activeTab === 'skill' && (
-                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  <small style={{ color: '#64748b', fontWeight: 500 }}>Chapter: <code>{item.chapterId}</code> | Code: <code style={{ color: '#ec4899', fontWeight: 800 }}>{item.code}</code></small>
+                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <small style={{ color: '#64748b', fontWeight: 500 }}>Chapter: <code>{item.chapterId}</code> | Code: <code style={{ color: '#ec4899', fontWeight: 800 }}>{item.code}</code></small>
+                                    <span style={{
+                                      background: item.isStatic ? '#e0f2fe' : '#ecfdf5',
+                                      color: item.isStatic ? '#0369a1' : '#047857',
+                                      border: '1px solid ' + (item.isStatic ? '#bae6fd' : '#a7f3d0'),
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '9.5px',
+                                      fontWeight: 800
+                                    }}>
+                                      {item.isStatic ? '📋 Static Flow' : '⚡ Adaptive Routing'}
+                                    </span>
+                                    {item.progressionConfig?.enabled && (
+                                      <span style={{
+                                        background: '#f0fdf4',
+                                        color: '#166534',
+                                        border: '1px solid #bbf7d0',
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '9.5px',
+                                        fontWeight: 800
+                                      }}>
+                                        🎯 {item.progressionConfig.easyCount || 0}E / {item.progressionConfig.mediumCount || 0}M / {item.progressionConfig.hardCount || 0}H
+                                      </span>
+                                    )}
+                                  </div>
                                   {item.templateLevels && (
                                     <small style={{ color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                       ⚡ Levels: {item.templateLevels.map(l => `L${l.level} (${l.templateIds ? l.templateIds.length : 0})`).join(', ')}
@@ -2593,7 +3144,7 @@ export default function AdminV2Page() {
                                   )}
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginTop: '0.25rem' }}>
                                     <a 
-                                      href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}`}
+                                      href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}${adminMode === 'iit' ? '&iit=true' : ''}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', fontSize: '11px', display: 'inline-block' }}
@@ -2633,6 +3184,68 @@ export default function AdminV2Page() {
                                           ))}
                                         </span>
                                       </>
+                                    )}
+                                  </div>
+
+                                  {/* Static / DB Questions Dropdown */}
+                                  {item.questions && item.questions.length > 0 && (
+                                    <div style={{ marginTop: '8px', borderTop: '1px dashed #e2e8f0', paddingTop: '8px' }}>
+                                      <details style={{ cursor: 'pointer' }}>
+                                        <summary style={{ fontSize: '11.5px', fontWeight: 800, color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px', listStyle: 'none' }}>
+                                          <span>📋 {item.questions.length} Question{item.questions.length === 1 ? '' : 's'} in DB</span>
+                                          <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 500 }}>(Click to expand)</span>
+                                        </summary>
+                                        <ul style={{ margin: '8px 0 0 0', paddingLeft: '16px', fontSize: '11.5px', color: '#334155', listStyleType: 'disc', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+                                          {item.questions.map((q) => (
+                                            <li key={q.id} style={{ marginBottom: '6px', lineHeight: 1.4 }}>
+                                              <span style={{ fontWeight: 800, color: '#1e293b', fontFamily: 'monospace', background: '#f1f5f9', padding: '1px 4px', borderRadius: '4px', marginRight: '6px' }}>
+                                                {q.id.split('-').pop()}
+                                              </span>
+                                              <span>{q.questionText}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </details>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {activeTab === 'question' && (
+                                <div style={{ fontWeight: 500 }}>
+                                  <div style={{ color: '#1e293b', fontSize: '13.5px', whiteSpace: 'pre-wrap', marginBottom: '6px', lineHeight: 1.4 }}>
+                                    {item.questionText}
+                                  </div>
+                                  {item.questionImageUrl && (
+                                    <div style={{ fontSize: '11.5px', color: '#0891b2', marginBottom: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      🖼️ Diagram Attachment: <code>{item.questionImageUrl}</code>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Render options for K-12/IIT questions */}
+                                  {Array.isArray(item.options) && (
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px', marginBottom: '8px' }}>
+                                      {item.options.map((opt, oIdx) => (
+                                        <span key={oIdx} style={{ background: opt.isCorrect ? '#ecfdf5' : '#f8fafc', color: opt.isCorrect ? '#16a34a' : '#64748b', border: '1px solid ' + (opt.isCorrect ? '#a7f3d0' : '#e2e8f0'), padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: opt.isCorrect ? 800 : 500 }}>
+                                          {String.fromCharCode(65 + oIdx)}. {opt.label}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                                    <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
+                                      🎯 Diff: {item.difficulty}
+                                    </span>
+                                    {item.metadata?.isStatic !== false && (
+                                      <span style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
+                                        📋 Static Flow
+                                      </span>
+                                    )}
+                                    {item.metadata?.branching && (
+                                      <span style={{ background: '#f3e8ff', color: '#6b21a8', border: '1px solid #e9d5ff', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>
+                                        🌿 Branching: {item.metadata.branching.correct} / {item.metadata.branching.incorrect}
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -2760,7 +3373,7 @@ export default function AdminV2Page() {
                         </td>
 
                         {/* Order Column */}
-                        {adminMode === 'school' && (
+                        {(adminMode === 'school' || adminMode === 'iit') && (
                           <td style={{ padding: '1rem 0.75rem', fontSize: '14px', color: '#475569', fontWeight: 700, verticalAlign: 'middle' }}>
                             {item.order}
                           </td>

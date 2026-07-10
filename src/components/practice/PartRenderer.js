@@ -2328,6 +2328,7 @@ function GroupPart({ part, question, userAnswer, onAnswer, isAnswered }) {
   const direction = part.direction === 'row' || part.type === 'row' ? 'row' : 'column';
   const defaultJustifyContent = direction === 'row' ? 'flex-start' : 'stretch';
   const defaultAlignItems = direction === 'row' ? 'center' : 'stretch';
+  const partIndexOffset = typeof part.partIndexOffset === 'number' ? part.partIndexOffset : undefined;
   
   return (
     <div
@@ -2351,6 +2352,7 @@ function GroupPart({ part, question, userAnswer, onAnswer, isAnswered }) {
           onAnswer={onAnswer}
           isAnswered={isAnswered}
           inGroup
+          partIndex={partIndexOffset !== undefined ? partIndexOffset + index : undefined}
         />
       ))}
     </div>

@@ -306,9 +306,16 @@ export function isAnswerCorrect(question, userAnswer) {
   if (interaction === 'direct_image_select' || question.directImageSelect) {
     const selectedIndex = Number(userAnswer);
     const parts = Array.isArray(question.parts) ? question.parts : [];
-    if (!Number.isFinite(selectedIndex) || selectedIndex < 0 || selectedIndex >= parts.length) {
+    if (!Number.isFinite(selectedIndex) || selectedIndex < 0) {
       return false;
     }
+    // If parts is a single row/group container, look inside its children
+    if (parts.length === 1 && (parts[0]?.type === 'row' || parts[0]?.type === 'group') && Array.isArray(parts[0]?.parts)) {
+      const children = parts[0].parts;
+      if (selectedIndex >= children.length) return false;
+      return !!children[selectedIndex]?.isCorrect;
+    }
+    if (selectedIndex >= parts.length) return false;
     const selectedPart = parts[selectedIndex];
     return !!selectedPart?.isCorrect;
   }

@@ -2408,6 +2408,8 @@ export default function AdminConsolePage() {
   // Edit Metadata Modal State
   const [editingMetadataImg, setEditingMetadataImg] = useState(null);
   const [editForm, setEditForm] = useState({ singular: '', plural: '', article: '', category: '', tags: '' });
+  const [autoLabeling, setAutoLabeling] = useState(false);
+  const [batchLabeling, setBatchLabeling] = useState(false);
 
   // Cropper State for Gallery
   const [galleryCroppingImg, setGalleryCroppingImg] = useState(null);
@@ -2425,6 +2427,86 @@ export default function AdminConsolePage() {
       category: img.classification?.category || '',
       tags: Array.isArray(img.classification?.tags) ? img.classification.tags.join(', ') : '',
     });
+  };
+
+  const handleAutoLabelImage = async (img) => {
+    if (!img) return;
+    setAutoLabeling(true);
+    try {
+      const res = await fetch('/api/admin/auto-label-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: img.url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to auto-label');
+      
+      const meta = data.metadata || {};
+      setEditForm({
+        singular: meta.singular || '',
+        plural: meta.plural || '',
+        article: meta.article || 'a',
+        category: meta.category || '',
+        tags: Array.isArray(meta.tags) ? meta.tags.join(', ') : '',
+      });
+    } catch (err) {
+      window.alert(`Gemini labeling error: ${err.message}`);
+    } finally {
+      setAutoLabeling(false);
+    }
+  };
+
+  const handleBatchAutoLabelSelected = async () => {
+    if (selectedGalleryKeys.length === 0) return;
+    const confirmMsg = `Are you sure you want to run Gemini auto-labeling on the ${selectedGalleryKeys.length} selected images? This will overwrite their existing metadata in MongoDB.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setBatchLabeling(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const key of selectedGalleryKeys) {
+      const img = galleryImages.find(i => i.key === key);
+      if (!img) continue;
+
+      try {
+        const res = await fetch('/api/admin/auto-label-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, url: img.url, saveToDb: true }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to auto-label');
+        
+        successCount++;
+        // Update local gallery state
+        const meta = data.metadata || {};
+        setGalleryImages(prev => prev.map(item => {
+          if (item.key === key) {
+            return {
+              ...item,
+              linguistics: {
+                singular: meta.singular,
+                plural: meta.plural,
+                article: meta.article
+              },
+              classification: {
+                category: meta.category,
+                tags: meta.tags
+              }
+            };
+          }
+          return item;
+        }));
+      } catch (err) {
+        console.error(`Error auto-labeling key ${key}:`, err);
+        failCount++;
+      }
+    }
+
+    setBatchLabeling(false);
+    setSelectedGalleryKeys([]);
+    window.alert(`Gemini Batch auto-label complete!\nSuccess: ${successCount}\nFailed: ${failCount}`);
   };
 
   const fetchGalleryImages = useCallback(async () => {
@@ -16082,19 +16164,35 @@ Explanation: A question must end with a question mark.`}</pre>
                         </>
                       )}
                       {selectedGalleryKeys.length > 0 && (
-                        <button
-                          className={styles.btnSolid}
-                          style={{
-                            background: 'var(--color-danger)',
-                            borderColor: 'var(--color-danger)',
-                            color: 'white',
-                            fontWeight: 'bold',
-                          }}
-                          onClick={deleteSelectedImages}
-                          disabled={galleryDeleting}
-                        >
-                          {galleryDeleting ? '⏳ Deleting…' : `🗑 Delete Selected (${selectedGalleryKeys.length})`}
-                        </button>
+                        <>
+                          <button
+                            className={styles.btnSolid}
+                            style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              borderColor: '#10b981',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              marginRight: 6
+                            }}
+                            onClick={handleBatchAutoLabelSelected}
+                            disabled={batchLabeling}
+                          >
+                            {batchLabeling ? '⏳ AI Labeling…' : `✨ Auto-Label Selected (${selectedGalleryKeys.length})`}
+                          </button>
+                          <button
+                            className={styles.btnSolid}
+                            style={{
+                              background: 'var(--color-danger)',
+                              borderColor: 'var(--color-danger)',
+                              color: 'white',
+                              fontWeight: 'bold',
+                            }}
+                            onClick={deleteSelectedImages}
+                            disabled={galleryDeleting}
+                          >
+                            {galleryDeleting ? '⏳ Deleting…' : `🗑 Delete Selected (${selectedGalleryKeys.length})`}
+                          </button>
+                        </>
                       )}
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)' }}>
                         Found: <strong>{galleryImages.length}</strong>
@@ -16469,6 +16567,39 @@ Explanation: A question must end with a question mark.`}</pre>
 
                         {/* Body */}
                         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAutoLabelImage(editingMetadataImg)}
+                            disabled={autoLabeling}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.2), 0 2px 4px -2px rgba(99, 102, 241, 0.2)',
+                              transition: 'all 0.2s',
+                              opacity: autoLabeling ? 0.7 : 1,
+                            }}
+                          >
+                            {autoLabeling ? (
+                              <>
+                                <span className={styles.spinner} style={{ width: 14, height: 14, borderWidth: '2px', borderTopColor: '#ffffff', marginRight: 4, display: 'inline-block' }} />
+                                Analyzing image with Gemini...
+                              </>
+                            ) : (
+                              <>✨ Auto-Label with Gemini AI</>
+                            )}
+                          </button>
+
                           <div style={{ display: 'flex', gap: 12 }}>
                             <div style={{ flex: 1 }}>
                               <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4, color: 'var(--color-text-muted)' }}>Article</label>

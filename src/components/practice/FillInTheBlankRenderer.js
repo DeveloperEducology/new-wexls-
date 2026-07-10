@@ -299,19 +299,26 @@ export default function FillInTheBlankRenderer({
   const totalPartsText = parts.map(p => p?.content || p?.text || '').join('\n\n').trim();
   const isDuplicateParts = Boolean(
     question.questionText && (
-      firstPartText === question.questionText.trim() ||
       totalPartsText === question.questionText.trim() ||
-      parts.every(p => p && (p.type === 'text' || !p.type))
+      (parts.length === 1 && firstPartText === question.questionText.trim())
     )
   );
   const displayParts = isDuplicateParts ? [] : (question.questionText && firstPartText === question.questionText.trim() ? parts.slice(1) : parts);
 
   const hasClickToFill = question.metaConfig?.hasClickToFill === true;
   const hasBlankToken = (text) => String(text || '').includes('[blank') || /\[\[[^\]]+\]\]/.test(String(text || ''));
-  const hasInlineInput = hasBlankToken(question.questionText) || displayParts.some(part => {
+  
+  const partHasBlank = (part) => {
+    if (!part) return false;
     if (part.type === 'input' || part.type === 'arithmeticLayout') return true;
-    return hasBlankToken(part.content || part.text || '');
-  });
+    if (hasBlankToken(part.content || part.text || '')) return true;
+    if (Array.isArray(part.parts)) {
+      return part.parts.some(partHasBlank);
+    }
+    return false;
+  };
+  
+  const hasInlineInput = hasBlankToken(question.questionText) || displayParts.some(partHasBlank);
 
   const visualParts = displayParts.filter(p => p && (p.type === 'svg' || p.type === 'image' || p.component || p.type === 'visual_panel'));
   const nonVisualParts = displayParts.filter(p => !p || !(p.type === 'svg' || p.type === 'image' || p.component || p.type === 'visual_panel'));
