@@ -342,6 +342,7 @@ export async function GET(request) {
   if (!skillNode) {
     try {
       const isIit = searchParams.get('iit') === 'true';
+      const isImo = searchParams.get('imo') === 'true';
       if (isIit) {
         const { listIitNodes } = await import('../../../lib/curriculum/storeIit.js');
         const iitSkills = await listIitNodes('skill', { id: skill });
@@ -370,6 +371,37 @@ export async function GET(request) {
               subject,
               topic: topicId,
               iit: true,
+            }
+          };
+        }
+      } else if (isImo) {
+        const { listImoNodes } = await import('../../../lib/curriculum/storeImo.js');
+        const imoSkills = await listImoNodes('skill', { id: skill });
+        if (imoSkills && imoSkills.length > 0) {
+          const imoSkill = imoSkills[0];
+          
+          let gradeId = '3';
+          let topicId = topic;
+          if (imoSkill.chapterId) {
+            const imoChapters = await listImoNodes('chapter', { id: imoSkill.chapterId });
+            if (imoChapters && imoChapters.length > 0) {
+              gradeId = imoChapters[0].gradeId || '3';
+              topicId = imoChapters[0].unitId || topic;
+            }
+          }
+
+          skillNode = {
+            ...imoSkill,
+            topicId,
+            grade: gradeId,
+            metadata: {
+              ...imoSkill,
+              templateId: imoSkill.templateId,
+              engine: imoSkill.engine,
+              grade: gradeId,
+              subject,
+              topic: topicId,
+              imo: true,
             }
           };
         }

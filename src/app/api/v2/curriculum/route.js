@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createV2Node, listV2Nodes, seedV2Initial } from '@/lib/curriculum/storeV2';
 import { createIitNode, listIitNodes, seedIitInitial, deleteIitNode } from '@/lib/curriculum/storeIit';
+import { createImoNode, listImoNodes, seedImoInitial, deleteImoNode } from '@/lib/curriculum/storeImo';
 import { getMongoDb } from '@/lib/db/mongo';
 
 export async function GET(request) {
@@ -8,6 +9,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const iit = searchParams.get('iit') === 'true';
+    const imo = searchParams.get('imo') === 'true';
     if (!type) {
       return NextResponse.json({ success: false, error: 'Type query parameter is required (grade, subject, unit, chapter, skill)' }, { status: 400 });
     }
@@ -20,7 +22,7 @@ export async function GET(request) {
 
     const nodes = iit 
       ? await listIitNodes(type, query)
-      : await listV2Nodes(type, query);
+      : (imo ? await listImoNodes(type, query) : await listV2Nodes(type, query));
 
     if (type === 'skill') {
       try {
@@ -68,10 +70,13 @@ export async function POST(request) {
     const body = await request.json();
     const { type, data } = body;
     const iit = searchParams.get('iit') === 'true' || body.iit === true;
+    const imo = searchParams.get('imo') === 'true' || body.imo === true;
 
     if (type === 'seed') {
       if (iit) {
         await seedIitInitial();
+      } else if (imo) {
+        await seedImoInitial();
       } else {
         await seedV2Initial();
       }
@@ -84,7 +89,7 @@ export async function POST(request) {
 
     const node = iit
       ? await createIitNode(type, data)
-      : await createV2Node(type, data);
+      : (imo ? await createImoNode(type, data) : await createV2Node(type, data));
     return NextResponse.json({ success: true, node }, { status: 201 });
   } catch (error) {
     console.error('API POST V2 curriculum error:', error);
@@ -98,6 +103,7 @@ export async function DELETE(request) {
     const type = searchParams.get('type');
     const id = searchParams.get('id');
     const iit = searchParams.get('iit') === 'true';
+    const imo = searchParams.get('imo') === 'true';
 
     if (!type || !id) {
       return NextResponse.json({ success: false, error: 'Both type and id query parameters are required' }, { status: 400 });
@@ -105,10 +111,13 @@ export async function DELETE(request) {
 
     const result = iit
       ? await deleteIitNode(type, id)
-      : await (async () => {
-          const { deleteV2Node } = await import('@/lib/curriculum/storeV2');
-          return deleteV2Node(type, id);
-        })();
+      : (imo 
+          ? await deleteImoNode(type, id) 
+          : await (async () => {
+              const { deleteV2Node } = await import('@/lib/curriculum/storeV2');
+              return deleteV2Node(type, id);
+            })()
+        );
     return NextResponse.json({ success: result.deletedCount > 0, ...result });
   } catch (error) {
     console.error('API DELETE V2 curriculum error:', error);
