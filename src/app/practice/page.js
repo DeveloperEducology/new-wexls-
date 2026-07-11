@@ -1146,6 +1146,7 @@ function PracticePageContent() {
     || resolveSearchValue(searchParams, 'questionId')
     || resolveSearchValue(searchParams, 'id');
   const urlIit = resolveSearchValue(searchParams, 'iit') === 'true';
+  const urlImo = resolveSearchValue(searchParams, 'imo') === 'true';
   // practiceMode lives in the URL as ?mode=adaptive|static — tied to the skill ID
   const practiceMode = resolveSearchValue(searchParams, 'mode') === 'static' ? 'static' : 'adaptive';
   const initialSource = resolveSearchValue(searchParams, 'source', 'addition-topic');
@@ -1500,6 +1501,9 @@ function PracticePageContent() {
     if (urlIit) {
       url.searchParams.set('iit', 'true');
     }
+    if (urlImo) {
+      url.searchParams.set('imo', 'true');
+    }
 
     const competency = resolveCompetency({
       subject: urlSubject || sourceConfig.subject,
@@ -1536,6 +1540,7 @@ function PracticePageContent() {
     urlSubject,
     urlTopic,
     urlIit,
+    urlImo,
     urlQn,
     seenItemIds,
     activeProgressionDifficulty,
@@ -2369,6 +2374,9 @@ function PracticePageContent() {
       if (urlIit) {
         url.searchParams.set('iit', 'true');
       }
+      if (urlImo) {
+        url.searchParams.set('imo', 'true');
+      }
       const res = await fetch(url.toString());
       const data = await res.json();
       if (data?.success && data?.question) {
@@ -2382,7 +2390,7 @@ function PracticePageContent() {
     } finally {
       setDiagLoading(false);
     }
-  }, [sourceConfig, urlSubject, urlTopic, urlIit]);
+  }, [sourceConfig, urlSubject, urlTopic, urlIit, urlImo]);
 
   // Start diagnostic session
   const startDiagnostic = useCallback(() => {
