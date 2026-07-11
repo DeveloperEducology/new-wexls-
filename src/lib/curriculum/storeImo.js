@@ -113,15 +113,15 @@ export async function seedImoInitial() {
 
     // 5. Seed Skills
     const skills = [
-      { id: 'imo-g3-place-face', title: 'Place Value vs. Face Value', chapterId: 'number-sense-ch', code: 'N.3.1.1', templateId: 'template-imo-g3-place-face-value', engine: 'universal', order: 1 },
-      { id: 'imo-g3-write-read', title: 'Reading & Writing 4-Digit Numbers', chapterId: 'number-sense-ch', code: 'N.3.1.2', templateId: 'template-imo-g3-write-read-numbers', engine: 'universal', order: 2 },
-      { id: 'imo-g3-expanded-std', title: 'Expanded and Standard Form', chapterId: 'number-sense-ch', code: 'N.3.1.3', templateId: 'template-imo-g3-expanded-standard', engine: 'universal', order: 3 },
-      { id: 'imo-g3-succ-pred', title: 'Successor, Predecessor & Comparing', chapterId: 'number-sense-ch', code: 'N.3.1.4', templateId: 'template-imo-g3-successor-predecessor', engine: 'universal', order: 4 },
-      { id: 'imo-g3-build-numbers', title: 'Building Greatest & Smallest Numbers', chapterId: 'number-sense-ch', code: 'N.3.1.5', templateId: 'template-imo-g3-building-numbers', engine: 'universal', order: 5 },
-      { id: 'imo-g3-rounding', title: 'Rounding Off to Tens & Hundreds', chapterId: 'number-sense-ch', code: 'N.3.1.6', templateId: 'template-imo-g3-rounding-off', engine: 'universal', order: 6 },
-      { id: 'imo-g3-roman', title: 'Roman Numerals up to 100', chapterId: 'number-sense-ch', code: 'N.3.1.7', templateId: 'template-imo-g3-roman-numerals', engine: 'universal', order: 7 },
-      { id: 'imo-g3-even-odd', title: 'Even and Odd Number Rules', chapterId: 'number-sense-ch', code: 'N.3.1.8', templateId: 'template-imo-g3-even-odd', engine: 'universal', order: 8 },
-      { id: 'imo-g3-patterns', title: 'Number Patterns & Skip Counting', chapterId: 'number-sense-ch', code: 'N.3.1.9', templateId: 'template-imo-g3-patterns-skip', engine: 'universal', order: 9 },
+      { id: 'imo-g3-place-face', title: 'Place Value vs. Face Value', chapterId: 'number-sense-ch', code: 'N.3.1.1', templateId: 'template-imo-g3-place-face-value', engine: 'universal-template', order: 1 },
+      { id: 'imo-g3-write-read', title: 'Reading & Writing 4-Digit Numbers', chapterId: 'number-sense-ch', code: 'N.3.1.2', templateId: 'template-imo-g3-write-read-numbers', engine: 'universal-template', order: 2 },
+      { id: 'imo-g3-expanded-std', title: 'Expanded and Standard Form', chapterId: 'number-sense-ch', code: 'N.3.1.3', templateId: 'template-imo-g3-expanded-standard', engine: 'universal-template', order: 3 },
+      { id: 'imo-g3-succ-pred', title: 'Successor, Predecessor & Comparing', chapterId: 'number-sense-ch', code: 'N.3.1.4', templateId: 'template-imo-g3-successor-predecessor', engine: 'universal-template', order: 4 },
+      { id: 'imo-g3-build-numbers', title: 'Building Greatest & Smallest Numbers', chapterId: 'number-sense-ch', code: 'N.3.1.5', templateId: 'template-imo-g3-building-numbers', engine: 'universal-template', order: 5 },
+      { id: 'imo-g3-rounding', title: 'Rounding Off to Tens & Hundreds', chapterId: 'number-sense-ch', code: 'N.3.1.6', templateId: 'template-imo-g3-rounding-off', engine: 'universal-template', order: 6 },
+      { id: 'imo-g3-roman', title: 'Roman Numerals up to 100', chapterId: 'number-sense-ch', code: 'N.3.1.7', templateId: 'template-imo-g3-roman-numerals', engine: 'universal-template', order: 7 },
+      { id: 'imo-g3-even-odd', title: 'Even and Odd Number Rules', chapterId: 'number-sense-ch', code: 'N.3.1.8', templateId: 'template-imo-g3-even-odd', engine: 'universal-template', order: 8 },
+      { id: 'imo-g3-patterns', title: 'Number Patterns & Skip Counting', chapterId: 'number-sense-ch', code: 'N.3.1.9', templateId: 'template-imo-g3-patterns-skip', engine: 'universal-template', order: 9 },
     ];
 
     for (const s of skills) {

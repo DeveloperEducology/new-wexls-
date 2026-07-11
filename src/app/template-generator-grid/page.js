@@ -193,6 +193,206 @@ const GRID_PRESETS = [
       { column: 'Distractor2', isCorrect: false },
       { column: 'Distractor3', isCorrect: false }
     ]
+  },
+  {
+    id: 'imo-g3-place-face-value',
+    name: '🏆 IMO G3: Place Value vs. Face Value',
+    title: 'Place Value vs. Face Value (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['number', 'digit1', 'digit2', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { number: '8754', digit1: '7', digit2: '4', Result: '696', Distractor1: '704', Distractor2: '600', Distractor3: '740' },
+      { number: '6982', digit1: '9', digit2: '2', Result: '898', Distractor1: '902', Distractor2: '800', Distractor3: '920' },
+      { number: '7523', digit1: '5', digit2: '3', Result: '497', Distractor1: '503', Distractor2: '400', Distractor3: '530' }
+    ],
+    blueprint: 'Find the difference between the place value of {{digit1}} and the face value of {{digit2}} in the number **{{number}}**.',
+    solution: 'Step 1: The place value of {{digit1}} is {{digit1}}00.\nStep 2: The face value of {{digit2}} is {{digit2}}.\nStep 3: Subtract: {{digit1}}00 - {{digit2}} = {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-write-read-numbers',
+    name: '🏆 IMO G3: Read and Write 4-Digit Numbers',
+    title: 'Read and Write 4-Digit Numbers (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['words', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { words: 'Seven thousand two hundred five', Result: '7205', Distractor1: '7250', Distractor2: '7025', Distractor3: '7200' },
+      { words: 'Six thousand fifty-two', Result: '6052', Distractor1: '6520', Distractor2: '6025', Distractor3: '6502' },
+      { words: 'Eight thousand nine hundred one', Result: '8901', Distractor1: '8910', Distractor2: '8091', Distractor3: '8900' }
+    ],
+    blueprint: 'Choose the numeric representation of the number: **"{{words}}"**.',
+    solution: 'Step 1: Break down the word name:\n- "{{words}}" corresponds to {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-expanded-standard',
+    name: '🏆 IMO G3: Expanded and Standard Form',
+    title: 'Expanded and Standard Form (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['expanded', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { expanded: '5000 + 40 + 8', Result: '5048', Distractor1: '5408', Distractor2: '5480', Distractor3: '5084' },
+      { expanded: '7000 + 300 + 2', Result: '7302', Distractor1: '7032', Distractor2: '7320', Distractor3: '7203' },
+      { expanded: '9000 + 80', Result: '9080', Distractor1: '9800', Distractor2: '9008', Distractor3: '9808' }
+    ],
+    blueprint: 'Which number is represented by the expanded form: **{{expanded}}**?',
+    solution: 'Step 1: Sum each place value: {{expanded}} = {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-successor-predecessor',
+    name: '🏆 IMO G3: Successor, Predecessor & Comparing',
+    title: 'Successor, Predecessor & Comparing (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['number', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { number: '1000', Result: '1000', Distractor1: '999', Distractor2: '1001', Distractor3: '1002' },
+      { number: '4500', Result: '4500', Distractor1: '4499', Distractor2: '4501', Distractor3: '4502' }
+    ],
+    blueprint: 'Find the predecessor of the successor of **{{number}}**.',
+    solution: 'Step 1: The successor of {{number}} is {{number}} + 1.\nStep 2: The predecessor of that is {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-building-numbers',
+    name: '🏆 IMO G3: Building Greatest & Smallest Numbers',
+    title: 'Building Greatest & Smallest Numbers (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['d1', 'd2', 'd3', 'd4', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { d1: '4', d2: '0', d3: '8', d4: '3', Result: '3048', Distractor1: '0348', Distractor2: '3480', Distractor3: '3840' },
+      { d1: '6', d2: '1', d3: '0', d4: '9', Result: '1069', Distractor1: '0169', Distractor2: '1690', Distractor3: '1960' }
+    ],
+    blueprint: 'Form the smallest 4-digit number using the digits **{{d1}}, {{d2}}, {{d3}}, {{d4}}** without repetition (remember a 4-digit number cannot start with 0).',
+    solution: 'Step 1: Sort digits in ascending order.\nStep 2: If 0 is present, place the next smallest digit first, then 0.\nStep 3: Smallest number is {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-rounding-off',
+    name: '🏆 IMO G3: Rounding Off to Tens & Hundreds',
+    title: 'Rounding Off to Tens & Hundreds (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['num1', 'num2', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { num1: '342', num2: '567', Result: '940', Distractor1: '900', Distractor2: '910', Distractor3: '950' },
+      { num1: '581', num2: '234', Result: '780', Distractor1: '810', Distractor2: '700', Distractor3: '800' }
+    ],
+    blueprint: 'What is the sum of **{{num1}}** rounded to the nearest ten and **{{num2}}** rounded to the nearest hundred?',
+    solution: 'Step 1: Round {{num1}} to the nearest ten.\nStep 2: Round {{num2}} to the nearest hundred.\nStep 3: Add them together to get {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-roman-numerals',
+    name: '🏆 IMO G3: Roman Numerals up to 100',
+    title: 'Roman Numerals up to 100 (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['expr', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { expr: 'XLIV + XXVI', Result: 'LXX', Distractor1: 'LXVI', Distractor2: 'LXXVI', Distractor3: 'LX' },
+      { expr: 'LXII - XIV', Result: 'XLVIII', Distractor1: 'XLVII', Distractor2: 'LIII', Distractor3: 'LIV' }
+    ],
+    blueprint: 'Solve the expression and choose the correct Roman Numeral: **{{expr}}**',
+    solution: 'Step 1: Convert to digits: XLIV + XXVI = 44 + 26 = 70.\nStep 2: Convert 70 back to Roman: {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-even-odd',
+    name: '🏆 IMO G3: Even and Odd Number Rules',
+    title: 'Even and Odd Number Rules (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { Result: 'Always Odd', Distractor1: 'Always Even', Distractor2: 'Can be either', Distractor3: 'Always Zero' }
+    ],
+    blueprint: 'If **A** is an odd number and **B** is an even number, what type of number is **(A * B) + A**?',
+    solution: 'Step 1: Odd (A) * Even (B) = Even.\nStep 2: Even (A*B) + Odd (A) = Odd.\nStep 3: Result is {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
+  },
+  {
+    id: 'imo-g3-patterns-skip',
+    name: '🏆 IMO G3: Number Patterns & Skip Counting',
+    title: 'Number Patterns & Skip Counting (IMO G3)',
+    targetCollection: 'dynamic_templates',
+    subject: 'math',
+    topic: 'number-sense',
+    grade: '3',
+    columns: ['seq1', 'seq2', 'seq3', 'seq5', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'],
+    rows: [
+      { seq1: '1245', seq2: '1270', seq3: '1295', seq5: '1345', Result: '1320', Distractor1: '1310', Distractor2: '1300', Distractor3: '1330' },
+      { seq1: '500', seq2: '525', seq3: '550', seq5: '600', Result: '575', Distractor1: '560', Distractor2: '565', Distractor3: '580' }
+    ],
+    blueprint: 'Find the missing number in the sequence: **{{seq1}}, {{seq2}}, {{seq3}}, ____, {{seq5}}**.',
+    solution: 'Step 1: Find difference: {{seq2}} - {{seq1}} = {{Result}}.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'Distractor1', isCorrect: false },
+      { column: 'Distractor2', isCorrect: false },
+      { column: 'Distractor3', isCorrect: false }
+    ]
   }
 ];
 
