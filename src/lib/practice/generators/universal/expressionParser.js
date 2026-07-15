@@ -92,8 +92,8 @@ const drawingHelpers = {
   drawSpinner: (colorA, sectorsA, colorB, sectorsB) => {
     return COMPONENT_REGISTRY.Spinner({ colorA, sectorsA, colorB, sectorsB });
   },
-  drawItemCounter: (itemCount, itemType = 'cupcake') => {
-    return COMPONENT_REGISTRY.ItemCounter({ count: itemCount, itemType });
+  drawItemCounter: (itemCount, itemType = 'cupcake', crossedOutCount = 0, itemsPerRow = 5) => {
+    return COMPONENT_REGISTRY.ItemCounter({ count: itemCount, itemType, crossedOutCount, itemsPerRow });
   },
   drawNumberLine: (min, max, step, pointValue, pointLabel = '', markedPoints = '', jumps = '', interactive = false, color = 'blue') => {
     return COMPONENT_REGISTRY.NumberLine({ min, max, step, pointValue, pointLabel, markedPoints, jumps, interactive, color });

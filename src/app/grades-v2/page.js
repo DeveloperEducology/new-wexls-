@@ -17,9 +17,9 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
   const subjectUnits = units.filter(u => u.subjectId === activeSubjectId);
   const unitsMap = new Map(subjectUnits.map(u => [u.id, u]));
 
-  const gradeMap = new Map(); // gradeId -> Map(unitId -> { unitNode, skills: [] })
+  const gradeMap = new Map(); // gradeId -> Map(chapterId -> { id, title, color, skills: [], order, unitId })
 
-  // 1. Group via Chapters (Legacy flow)
+  // 1. Group via Chapters
   chapters.forEach(chapter => {
     const unit = unitsMap.get(chapter.unitId);
     if (!unit) return; // Unit belongs to another subject
@@ -29,13 +29,15 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
       gradeMap.set(gradeId, new Map());
     }
 
-    const unitsInGrade = gradeMap.get(gradeId);
-    if (!unitsInGrade.has(chapter.unitId)) {
-      unitsInGrade.set(chapter.unitId, {
-        id: chapter.unitId,
-        title: unit.title,
+    const chaptersInGrade = gradeMap.get(gradeId);
+    if (!chaptersInGrade.has(chapter.id)) {
+      chaptersInGrade.set(chapter.id, {
+        id: chapter.id,
+        title: chapter.title,
         color: unit.color || '#ff951f',
-        skills: []
+        skills: [],
+        order: chapter.order || 0,
+        unitId: chapter.unitId
       });
     }
 
@@ -49,7 +51,7 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
       s.engine
     ]);
 
-    unitsInGrade.get(chapter.unitId).skills.push(...mappedSkills);
+    chaptersInGrade.get(chapter.id).skills.push(...mappedSkills);
   });
 
   // 2. Group via Direct unitId and gradeId on Skill
@@ -65,19 +67,53 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
       gradeMap.set(gradeId, new Map());
     }
 
-    const unitsInGrade = gradeMap.get(gradeId);
-    if (!unitsInGrade.has(unitId)) {
-      unitsInGrade.set(unitId, {
-        id: unitId,
-        title: unit.title,
-        color: unit.color || '#ff951f',
-        skills: []
-      });
-    }
+    const chaptersInGrade = gradeMap.get(gradeId);
 
-    const alreadyAdded = unitsInGrade.get(unitId).skills.some(item => item[2] === s.id);
-    if (!alreadyAdded) {
-      unitsInGrade.get(unitId).skills.push([
+    // Check if skill is already in any chapter
+    let alreadyAdded = false;
+    for (const ch of chaptersInGrade.values()) {
+      if (ch.skills.some(item => item[2] === s.id)) {
+        alreadyAdded = true;
+        break;
+      }
+    }
+    if (alreadyAdded) return;
+
+    const chapterId = s.chapterId;
+    if (chapterId && chapters.some(c => c.id === chapterId)) {
+      const chapter = chapters.find(c => c.id === chapterId);
+      if (chapter) {
+        if (!chaptersInGrade.has(chapterId)) {
+          chaptersInGrade.set(chapterId, {
+            id: chapterId,
+            title: chapter.title,
+            color: unit.color || '#ff951f',
+            skills: [],
+            order: chapter.order || 0,
+            unitId: chapter.unitId
+          });
+        }
+        chaptersInGrade.get(chapterId).skills.push([
+          s.code || 'S.1',
+          s.title,
+          s.id,
+          s.templateId,
+          s.engine
+        ]);
+      }
+    } else {
+      const fallbackChapterId = `fallback-${unitId}`;
+      if (!chaptersInGrade.has(fallbackChapterId)) {
+        chaptersInGrade.set(fallbackChapterId, {
+          id: fallbackChapterId,
+          title: unit.title,
+          color: unit.color || '#ff951f',
+          skills: [],
+          order: 999,
+          unitId: unitId
+        });
+      }
+      chaptersInGrade.get(fallbackChapterId).skills.push([
         s.code || 'S.1',
         s.title,
         s.id,
@@ -87,10 +123,10 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
     }
   });
 
-  // Sort skills in each unit naturally by their code (e.g. A.1, A.2, A.10)
-  gradeMap.forEach(unitsInGrade => {
-    unitsInGrade.forEach(unit => {
-      unit.skills.sort((a, b) => {
+  // Sort skills in each chapter naturally by their code (e.g. A.1, A.2, A.10)
+  gradeMap.forEach(chaptersInGrade => {
+    chaptersInGrade.forEach(chapter => {
+      chapter.skills.sort((a, b) => {
         return a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' });
       });
     });
@@ -98,8 +134,10 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
 
   // Assemble the grade levels structure
   const formatted = grades.map(grade => {
-    const unitsInGrade = gradeMap.get(grade.id) || new Map();
-    const topicsList = Array.from(unitsInGrade.values()).filter(t => t.skills.length > 0);
+    const chaptersInGrade = gradeMap.get(grade.id) || new Map();
+    const topicsList = Array.from(chaptersInGrade.values())
+      .filter(t => t.skills.length > 0)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
     return [
       grade.title,
       topicsList,
@@ -241,7 +279,7 @@ export default async function GradesV2Page({ searchParams }) {
                             {topic.skills.map(([code, name, skillId]) => (
                               <Link 
                                 key={skillId} 
-                                href={practiceHrefV2(activeSubjectNode.id, topic.id, skillId)} 
+                                href={practiceHrefV2(activeSubjectNode.id, topic.unitId || topic.id, skillId)} 
                                 className="skill-pill"
                               >
                                 <span className="skill-code">{code}</span>

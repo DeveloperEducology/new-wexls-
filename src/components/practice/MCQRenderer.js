@@ -52,7 +52,7 @@ function getOptionLabel(option, index) {
 }
 
 function isSvgString(value) {
-  return typeof value === 'string' && value.trim().startsWith('<svg');
+  return typeof value === 'string' && value.includes('<svg');
 }
 
 function isImageUrl(value) {
@@ -108,7 +108,7 @@ function InlineMarkdown({ text }) {
         return (
           <span key={`${keyPrefix}-${subIndex}`}>
             {svgParts.map((svgPart, pIdx) => {
-              if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+              if (svgPart.trim().startsWith('<svg') && svgPart.trim().endsWith('</svg>')) {
                 return (
                   <span
                     key={pIdx}
@@ -211,14 +211,14 @@ function getOptionLayout(question) {
       mode: 'media',
       columns: question?.layoutConfig?.columns || (options.length <= 2 ? 2 : 3),
       justify: 'stretch',
-      buttonMinHeight: mediaConfig.cardMinHeight || 150,
-      buttonPadding: mediaConfig.cardPadding || 16,
+      buttonMinHeight: mediaConfig.cardMinHeight || 110,
+      buttonPadding: mediaConfig.cardPadding || 12,
       buttonWidth: 'auto',
       fontSize: 15,
       mediaWidth: mediaConfig.width || '100%',
-      mediaMaxWidth: mediaConfig.maxWidth || 360,
+      mediaMaxWidth: mediaConfig.maxWidth || 210,
       mediaMinHeight: mediaConfig.minHeight || 0,
-      mediaMarginBottom: mediaConfig.marginBottom ?? 10,
+      mediaMarginBottom: mediaConfig.marginBottom ?? 6,
     };
   }
 
@@ -471,7 +471,11 @@ export default function MCQRenderer({
     return checkPreK(topic) || checkPreK(grade) || checkPreK(skillId) || checkPreK(routeSearch);
   }, [question]);
 
-  const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+  const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true ||
+    question.optionsType === 'msq' ||
+    (typeof question.interaction === 'object'
+      ? (question.interaction?.engine === 'msq' || question.interaction?.inputMode === 'multi-choice')
+      : (question.interaction === 'msq' || question.interaction === 'multi-choice'));
   const shouldAutoSubmit = Boolean(
     question?.metadata?.clickToSubmit ||
     question?.layoutConfig?.clickToSubmit ||
@@ -943,7 +947,7 @@ export default function MCQRenderer({
             );
           })}
         </div>
-      ) : ['interactive_svg', 'interactive_stickers', 'hotspot_select', 'hotspot_multi_select', 'balloon_tap', 'direct_image_select'].includes(question.interaction) || question.directImageSelect ? null : useNumberButtons ? (
+      ) : ['interactive_svg', 'interactive_stickers', 'hotspot_select', 'hotspot_multi_select', 'balloon_tap', 'direct_image_select', 'side_by_side_display'].includes(question.interaction) || question.directImageSelect ? null : useNumberButtons ? (
         <div
           aria-label="Number choices"
           style={{
@@ -1357,7 +1361,7 @@ export default function MCQRenderer({
                             width: option.width || '100%',
                             maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 260),
                             height: option.height || 'auto',
-                            maxHeight: option.height ? undefined : (isPreK ? 'clamp(96px, 15vh, 150px)' : 220),
+                            maxHeight: option.height ? undefined : (isPreK ? 'clamp(64px, 10vh, 90px)' : 140),
                             objectFit: 'contain',
                             borderRadius: 14,
                           }}
@@ -1396,7 +1400,7 @@ export default function MCQRenderer({
                       )}
                     </div>
                   ) : null}
-                  {(isImageOption || isSvgOption || (option && option.emoji)) && getOptionLabel(option, index) && !isImageUrl(getOptionLabel(option, index)) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
+                  {(isImageOption || isSvgOption || (option && option.emoji)) && getOptionLabel(option, index) && !isImageUrl(getOptionLabel(option, index)) && !isSvgString(getOptionLabel(option, index)) && !option.hideLabel && !question.layoutConfig?.hideOptionLabel ? (
                     <div
                       className={isPreK ? styles.preKOptionLabel : undefined}
                       style={{ fontSize: isPreK ? 'clamp(14px, 2vw, 17px)' : 'clamp(12px, 3.4vw, 14px)', fontWeight: isPreK ? 900 : 500, lineHeight: 1.25, color: '#334155' }}

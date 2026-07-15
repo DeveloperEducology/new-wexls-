@@ -73,12 +73,32 @@ function getSelectedOptionValue(question, userAnswer) {
   return getOptionValue(options[selectedIndex]);
 }
 
+function getNormalizedTypeAndInteraction(question) {
+  if (!question) return { type: '', interaction: '' };
+  let type = String(question.type || '').toLowerCase();
+  let interaction = '';
+  if (typeof question.interaction === 'object' && question.interaction !== null) {
+    interaction = String(question.interaction.engine || question.interaction.inputMode || '').toLowerCase();
+  } else {
+    interaction = String(question.interaction || '').toLowerCase();
+  }
+
+  if ((type === '' || type === 'parameterized') && Array.isArray(question.options)) {
+    if (interaction === 'msq' || question.optionsType === 'msq') {
+      type = 'multi_select';
+    } else {
+      type = 'mcq';
+    }
+  }
+  return { type, interaction };
+}
+
 function getRuleActualValue(rule, question, userAnswer) {
   const target = String(rule?.target || rule?.field || '').toLowerCase();
-  const type = String(question?.type || '').toLowerCase();
-  const interaction = String(question?.interaction || '').toLowerCase();
-  const isMcq = ['mcq', 'imagechoice', 'multiplechoice', 'visual_choice', 'picture_mcq', 'picture_choice', 'audio_mcq', 'multi_select', 'hotspot_select', 'hotspot'].includes(type) || 
-                ['mcq', 'imagechoice', 'multiplechoice', 'visual_choice', 'picture_mcq', 'picture_choice', 'audio_mcq', 'multi_select', 'hotspot_select', 'hotspot'].includes(interaction);
+  const { type, interaction } = getNormalizedTypeAndInteraction(question);
+  const isMcq = ['mcq', 'imagechoice', 'multiplechoice', 'visual_choice', 'picture_mcq', 'picture_choice', 'audio_mcq', 'multi_select', 'msq', 'hotspot_select', 'hotspot'].includes(type) || 
+                ['mcq', 'imagechoice', 'multiplechoice', 'visual_choice', 'picture_mcq', 'picture_choice', 'audio_mcq', 'multi_select', 'msq', 'hotspot_select', 'hotspot'].includes(interaction) ||
+                interaction === 'choice' || interaction === 'multi-choice';
 
   if (
     target === 'selectedoption' || 
@@ -159,6 +179,45 @@ function validateRule(rule, question, userAnswer) {
   if (type === 'custom_formula') {
     const formulaResult = rule.resolvedValue ?? rule.result ?? expectedRaw;
     return normalizeLooseText(answerValue) === normalizeLooseText(formulaResult);
+  }
+
+  // all_correct: user must select exactly all correct options (MSQ)
+  if (type === 'all_correct') {
+    const expectedValues = Array.isArray(rule.values)
+      ? rule.values
+      : [rule.value].filter(Boolean);
+    if (expectedValues.length === 0) return true;
+    if (hasUnresolvedPlaceholder(expectedValues)) return true;
+
+    const options = Array.isArray(question.options) ? question.options : [];
+    // Resolve expected labels to option indices
+    const correctIndices = options
+      .map((opt, idx) => {
+        const label = getOptionValue(opt);
+        return expectedValues.some(ev => normalizeLooseText(label) === normalizeLooseText(ev)) ? idx : null;
+      })
+      .filter(idx => idx !== null);
+
+    // Also include any options already flagged isCorrect
+    options.forEach((opt, idx) => {
+      if (opt?.isCorrect && !correctIndices.includes(idx)) correctIndices.push(idx);
+    });
+
+    let selectedIndices = [];
+    if (Array.isArray(userAnswer)) {
+      selectedIndices = userAnswer.map(Number);
+    } else if (userAnswer && typeof userAnswer === 'object') {
+      selectedIndices = Object.entries(userAnswer)
+        .filter(([_, val]) => Boolean(val))
+        .map(([key]) => Number(key));
+    } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
+      selectedIndices = [Number(userAnswer)];
+    }
+
+    if (correctIndices.length !== selectedIndices.length) return false;
+    const sortedCorrect = [...correctIndices].sort((a, b) => a - b);
+    const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
+    return sortedCorrect.every((val, idx) => val === sortedSelected[idx]);
   }
 
   return normalizeLooseText(answerValue) === normalizeLooseText(expectedRaw);
@@ -249,8 +308,7 @@ function getExpectedOrderingAnswer(question) {
 
 export function isAnswerCorrect(question, userAnswer) {
   if (!question) return false;
-  const type = String(question.type || '').toLowerCase();
-  const interaction = String(question.interaction || '').toLowerCase();
+  const { type, interaction } = getNormalizedTypeAndInteraction(question);
 
   const ruleResult = validateRules(question, userAnswer);
   if (ruleResult !== null) {
@@ -397,9 +455,12 @@ export function isAnswerCorrect(question, userAnswer) {
     return validateInteractiveToolAnswer(question, userAnswer);
   }
 
-  if (type === 'mcq' || type === 'imagechoice' || type === 'multiplechoice' || type === 'visual_choice' || type === 'picture_mcq' || type === 'picture_choice' || type === 'audio_mcq' || type === 'multi_select' || type === 'hotspot_select' || type === 'hotspot') {
+  if (type === 'mcq' || type === 'imagechoice' || type === 'multiplechoice' || type === 'visual_choice' || type === 'picture_mcq' || type === 'picture_choice' || type === 'audio_mcq' || type === 'multi_select' || type === 'msq' || type === 'hotspot_select' || type === 'hotspot') {
     const options = Array.isArray(question.options) ? question.options : [];
-    const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true;
+    const isMultiSelect = question.interaction === 'multi_select' || question.interaction === 'multi-choice' ||
+      question.interaction?.engine === 'msq' || question.multiSelect === true ||
+      (typeof question.interaction === 'object' && question.interaction?.inputMode === 'multi-choice') ||
+      type === 'msq';
 
     if (isMultiSelect) {
       let correctIndices = options

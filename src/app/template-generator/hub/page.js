@@ -14,6 +14,24 @@ const BUILDERS = [
     badge: 'Grades LKG-1'
   },
   {
+    title: 'Addition & Subtraction Models',
+    description: 'Create interactive addition/subtraction sentences using ten frames, balance scales, and jump lines.',
+    icon: '⚡',
+    color: '#ea580c',
+    bg: '#fff5ed',
+    link: '/template-generator/addition-subtraction',
+    badge: 'Grades LKG-2'
+  },
+  {
+    title: '➗ Division & Equal Sharing',
+    description: 'Design division visual representations using equal sharing rows and group distribution models.',
+    icon: '📦',
+    color: '#9333ea',
+    bg: '#faf5ff',
+    link: '/template-generator/division',
+    badge: 'Grades 2-4'
+  },
+  {
     title: 'Base Ten Blocks & Place Value',
     description: 'Create place value chart templates, base-ten models, digit partition, and representation builders.',
     icon: '🧱',
@@ -39,6 +57,24 @@ const BUILDERS = [
     bg: '#f0fdf4',
     link: '/template-generator/time',
     badge: 'Grades 1-3'
+  },
+  {
+    title: '🎲 Probability & Spinners',
+    description: 'Design spinner sections, jar of marbles drawings, likelihood metrics, and fractional outcomes.',
+    icon: '🎲',
+    color: '#e11d48',
+    bg: '#fff1f2',
+    link: '/template-generator/probability',
+    badge: 'Grades 3-5'
+  },
+  {
+    title: 'Spreadsheet Grid Generator',
+    description: 'Define custom rows of variables and direct values using a structured spreadsheet grid.',
+    icon: '📊',
+    color: '#ec4899',
+    bg: '#fdf2f8',
+    link: '/template-generator-grid',
+    badge: 'JNVST & Grade 1-5'
   },
   {
     title: 'Universal Template Builder',

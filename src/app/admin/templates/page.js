@@ -2974,7 +2974,20 @@ export default function VisualTemplateBuilderPage() {
         next[`static-${subjectKey}`] = true;
       } else {
         next.customDb = true;
-        next[`custom-${subjectKey}`] = true;
+        let grade = tpl.grade || tpl.templateInfo?.grade || tpl.metadata?.grade || '';
+        grade = grade.toString().trim();
+        let gradeKey = 'Other Grades';
+        if (grade === '1' || grade === 'grade-1') gradeKey = 'Grade 1';
+        else if (grade.toLowerCase() === 'lkg') gradeKey = 'LKG';
+        else if (grade.toLowerCase() === 'ukg') gradeKey = 'UKG';
+        else if (grade === '2' || grade === 'grade-2') gradeKey = 'Grade 2';
+        else if (grade === '3' || grade === 'grade-3') gradeKey = 'Grade 3';
+        else if (grade === '4' || grade === 'grade-4') gradeKey = 'Grade 4';
+        else if (grade === '5' || grade === 'grade-5') gradeKey = 'Grade 5';
+        else if (grade === '6' || grade === 'grade-6') gradeKey = 'Grade 6';
+
+        next[`custom-grade-${gradeKey}`] = true;
+        next[`custom-grade-${gradeKey}-subj-${subjectKey}`] = true;
       }
       return next;
     });

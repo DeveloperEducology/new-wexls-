@@ -83,6 +83,12 @@ export const lkgMicroSkillRegistry = {
   'lkg-size-wide-narrow': { templateId: 'lkg.size', code: 'I.3', title: 'Wide and narrow', grade: 'LKG', params: { subType: 'wide_narrow' } },
   'lkg-size-light-heavy': { templateId: 'lkg.size', code: 'I.4', title: 'Light and heavy', grade: 'LKG', params: { subType: 'light_heavy' } },
 
+  // User-created short skill ID aliases
+  'long-and-short': { templateId: 'lkg.size', code: 'I.1', title: 'Long and short', grade: 'LKG', params: { subType: 'long_short' } },
+  'tall-and-short': { templateId: 'lkg.size', code: 'I.2', title: 'Tall and short', grade: 'LKG', params: { subType: 'tall_short' } },
+  'wide-and-narrow': { templateId: 'lkg.size', code: 'I.3', title: 'Wide and narrow', grade: 'LKG', params: { subType: 'wide_narrow' } },
+  'light-and-heavy': { templateId: 'lkg.size', code: 'I.4', title: 'Light and heavy', grade: 'LKG', params: { subType: 'light_heavy' } },
+
   // Category J: Money (J.1 - J.2)
   'lkg-money-coin-values': { templateId: 'lkg.money', code: 'J.1', title: 'Coin values', grade: 'LKG', params: { subType: 'coin_values' } },
   'lkg-money-count-coins': { templateId: 'lkg.money', code: 'J.2', title: 'Count 1-rupee coins', grade: 'LKG', params: { subType: 'count_coins' } },

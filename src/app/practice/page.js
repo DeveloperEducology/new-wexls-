@@ -612,6 +612,34 @@ const SOURCE_CONFIGS = {
       { label: 'Addition modeling', text: 'Prefilled locked blocks act as the starting addend.' },
     ],
   },
+  division: {
+    label: 'Division Practice',
+    api: '/api/practice',
+    badge: 'DIV',
+    description: 'Interactive sharing, equal grouping, and array modeling division templates.',
+    defaultLogicType: '',
+    subject: 'math',
+    topic: 'division',
+    options: [],
+    tips: [
+      { label: 'Equal Sharing', text: 'Distribute cookies or cupcakes equally into groups.' },
+      { label: 'Array Sharing', text: 'Model division by grid rows and columns.' },
+    ],
+  },
+  probability: {
+    label: 'Probability Practice',
+    api: '/api/practice',
+    badge: 'PROB',
+    description: 'Interactive spinners, marble jars, and fractional likelihood models.',
+    defaultLogicType: '',
+    subject: 'math',
+    topic: 'probability',
+    options: [],
+    tips: [
+      { label: 'Visual Jars', text: 'Calculate the probability of picking a specific marble.' },
+      { label: 'Interactive Spinners', text: 'Find the odds of landing on a color sector.' },
+    ],
+  },
 };
 
 function resolveSearchValue(searchParams, key, fallback = null) {
@@ -689,6 +717,8 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'math' && normTopic === 'addition') return 'addition-topic';
   if (subject === 'math' && normTopic === 'cube-tools') return 'cube-tools';
   if (subject === 'math' && normTopic === 'subtraction') return 'subtraction';
+  if (subject === 'math' && normTopic === 'division') return 'division';
+  if (subject === 'math' && normTopic === 'probability') return 'probability';
   if (subject === 'math' && normTopic === 'testing') return 'testing';
   if (subject === 'social' && normTopic === 'gk') return 'social-gk';
   if (subject === 'science' && normTopic === 'units-measurement') return 'units-measurement';
@@ -1174,7 +1204,17 @@ function PracticePageContent() {
           ...dbConfig,
           label: dbConfig.label || result[matchingKey].label,
           description: dbConfig.description || result[matchingKey].description,
-          options: dbConfig.options?.length ? dbConfig.options : result[matchingKey].options || [],
+          options: (() => {
+            const staticOpts = result[matchingKey].options || [];
+            const dbOpts = dbConfig.options || [];
+            const combined = [...staticOpts];
+            dbOpts.forEach(opt => {
+              if (!combined.some(o => o.value === opt.value)) {
+                combined.push(opt);
+              }
+            });
+            return combined;
+          })(),
         };
       } else {
         result[dbKey] = dbConfig;
@@ -1504,6 +1544,9 @@ function PracticePageContent() {
     if (urlImo) {
       url.searchParams.set('imo', 'true');
     }
+    if (practiceMode === 'static') {
+      url.searchParams.set('mode', 'static');
+    }
 
     const competency = resolveCompetency({
       subject: urlSubject || sourceConfig.subject,
@@ -1544,7 +1587,8 @@ function PracticePageContent() {
     urlQn,
     seenItemIds,
     activeProgressionDifficulty,
-    progressionConfig
+    progressionConfig,
+    practiceMode
   ]);
 
   const applyQuestionPayload = useCallback((data, sessionOverride = {}) => {
@@ -1819,6 +1863,42 @@ function PracticePageContent() {
         }
 
         if (templatesData && templatesData.success && Array.isArray(templatesData.dynamicTemplates)) {
+          templatesData.dynamicTemplates.forEach(t => {
+            const tTopic = String(t.topic || '').toLowerCase().trim();
+            const groupName = t.grade ? (t.grade === 'remediation' ? 'Remediation' : `Grade ${t.grade}`) : 'Dynamic Templates';
+            const optionObj = {
+              group: groupName,
+              label: t.title || t.name || t.id,
+              value: t.id
+            };
+            
+            let targetKey = null;
+            if (tTopic === 'addition') targetKey = 'addition-topic';
+            else if (tTopic === 'subtraction') targetKey = 'subtraction';
+            else if (tTopic === 'division') targetKey = 'division';
+            else if (tTopic === 'probability') targetKey = 'probability';
+            
+            if (targetKey) {
+              if (!loadedConfigs[targetKey]) {
+                loadedConfigs[targetKey] = {
+                  api: '/api/practice',
+                  subject: t.subject || 'math',
+                  topic: tTopic,
+                  options: []
+                };
+              }
+              if (!loadedConfigs[targetKey].options) {
+                loadedConfigs[targetKey].options = [];
+              }
+              if (!loadedConfigs[targetKey].options.some(opt => opt.value === t.id)) {
+                loadedConfigs[targetKey].options.push(optionObj);
+              }
+              if (!loadedConfigs[targetKey].defaultLogicType) {
+                loadedConfigs[targetKey].defaultLogicType = t.id;
+              }
+            }
+          });
+
           const templateOptions = templatesData.dynamicTemplates.map(t => {
             const groupName = t.subject ? String(t.subject).toUpperCase() : 'OTHER';
             return {
@@ -2032,7 +2112,7 @@ function PracticePageContent() {
         title: praisePool[nextCorrectStreak % praisePool.length],
         subtitle: didLevelUp
           ? `${currentThreshold} in a row. Now Level ${nextPracticeLevel}.`
-          : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
+          : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 4 ? nextPracticeLevel + 1 : 4}.`,
       };
       setPraiseMessage(praiseMsgObj);
       setTransitionState('praise');
@@ -2102,7 +2182,7 @@ function PracticePageContent() {
       setLevelStreak(finalLevelStreak);
       setLevelModal({
         level: nextPracticeLevel,
-        isMaxLevel: nextPracticeLevel === 5,
+        isMaxLevel: nextPracticeLevel === 4,
       });
       if (isPreK) {
         speakText(`Awesome! Level ${nextPracticeLevel}! Keep going!`, question?.voice || 'Kore');
@@ -2309,7 +2389,7 @@ function PracticePageContent() {
         title: praisePool[nextCorrectStreak % praisePool.length],
         subtitle: didLevelUp
           ? `${currentThreshold} in a row. Now Level ${nextPracticeLevel}.`
-          : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 5 ? nextPracticeLevel + 1 : 5}.`,
+          : `${finalLevelStreak}/${currentThreshold} correct toward Level ${nextPracticeLevel < 4 ? nextPracticeLevel + 1 : 4}.`,
       });
 
       window.setTimeout(() => {
@@ -4228,6 +4308,56 @@ function PracticePageContent() {
                 </div>
               )}
 
+
+              {/* ── Override Level ── */}
+              <div style={{ marginBottom: 14, padding: '10px 12px', background: '#1e293b', borderRadius: 12, border: '1px solid #334155' }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Override Level</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {[1, 2, 3, 4].map(lvl => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => {
+                        setPracticeLevel(lvl);
+                        setLevelStreak(0);
+                        if (typeof window !== 'undefined') {
+                          const competency = resolveCompetency({
+                            subject: urlSubject || sourceConfig.subject,
+                            topic: urlTopic || sourceConfig.topic,
+                            skillId: logicType,
+                          });
+                          const key = getMasteryKey({
+                            subject: urlSubject || sourceConfig.subject,
+                            topic: urlTopic || sourceConfig.topic,
+                            skillId: logicType,
+                            competencyId: competency?.id,
+                            userId: activeStudent,
+                          });
+                          const all = loadAllMastery();
+                          const current = all[key] || {};
+                          all[key] = { ...current, practiceLevel: lvl, levelStreak: 0 };
+                          saveAllMastery(all);
+                        }
+                        window.setTimeout(() => fetchQuestion(false), 50);
+                      }}
+                      style={{
+                        flex: '1 0 21%',
+                        padding: '6px 0',
+                        borderRadius: 6,
+                        border: '1px solid #334155',
+                        cursor: 'pointer',
+                        fontSize: 10,
+                        fontWeight: 900,
+                        background: practiceLevel === lvl ? '#38bdf8' : '#0f172a',
+                        color: practiceLevel === lvl ? '#0f172a' : '#94a3b8',
+                      }}
+                    >
+                      L{lvl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <button
                   type="button"
@@ -4413,7 +4543,7 @@ function PracticePageContent() {
                   <div><span style={{ color: '#38bdf8' }}>state</span>: <span style={{ color: skillState === 'mastered' ? '#4ade80' : skillState === 'remediation' ? '#f87171' : skillState === 'prerequisite_review' ? '#fbbf24' : '#e2e8f0' }}>{skillState}</span></div>
                   <div><span style={{ color: '#38bdf8' }}>smartScore</span>: <span style={{ color: '#e2e8f0' }}>{smartScore}</span></div>
                   <div><span style={{ color: '#38bdf8' }}>correctStreak</span>: <span style={{ color: '#e2e8f0' }}>{correctStreak}</span></div>
-                  <div><span style={{ color: '#38bdf8' }}>level</span>: <span style={{ color: '#e2e8f0' }}>{practiceLevel}/5</span></div>
+                  <div><span style={{ color: '#38bdf8' }}>level</span>: <span style={{ color: '#e2e8f0' }}>{practiceLevel}/4</span></div>
                   <div><span style={{ color: '#38bdf8' }}>skill</span>: <span style={{ color: '#a5b4fc', wordBreak: 'break-all' }}>{logicType}</span></div>
                   <div><span style={{ color: '#38bdf8' }}>template</span>: <span style={{ color: '#f43f5e', wordBreak: 'break-all' }}>{question?.metadata?.templateId || 'default'}</span></div>
                   <div><span style={{ color: '#38bdf8' }}>banner</span>: <span style={{ color: adaptiveBanner ? '#fbbf24' : '#475569' }}>{adaptiveBanner?.type || 'none'}</span></div>

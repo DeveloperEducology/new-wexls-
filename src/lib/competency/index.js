@@ -788,6 +788,89 @@ export const competencyGraphs = {
         'data-graphs-g3-line-plot': 'data_graphs_line_plot',
       },
     },
+
+    // ── IMO / Olympiad Grade 3: Number Sense ────────────────────────────────
+    // Remediation chain: when a student fails an IMO number-sense skill,
+    // getPrerequisiteFallback() returns 'g1-b-1' which routes them to the
+    // basic "identify place value of a digit" question.
+    'number-sense': {
+      competencies: [
+        {
+          id: 'imo_place_value_identify',
+          title: 'Identify place value of a digit in a number',
+          prerequisites: [],
+          remediation: [],
+        },
+        {
+          id: 'imo_place_value_face_value',
+          title: 'Distinguish place value vs face value and compute their difference',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_read_write_numbers',
+          title: 'Read and write 4-digit numbers in words and numerals',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_expanded_standard',
+          title: 'Convert between expanded and standard form',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_successor_predecessor',
+          title: 'Find successor and predecessor of 4-digit numbers',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_building_numbers',
+          title: 'Form greatest and smallest 4-digit numbers from given digits',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_rounding',
+          title: 'Round numbers to nearest ten and hundred',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_roman_numerals',
+          title: 'Compute and convert Roman Numerals up to 100',
+          prerequisites: [],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_even_odd',
+          title: 'Apply even/odd rules to expressions',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+        {
+          id: 'imo_patterns_skip',
+          title: 'Identify missing term in skip-counting sequences',
+          prerequisites: ['imo_place_value_identify'],
+          remediation: ['imo_place_value_identify'],
+        },
+      ],
+      skillMap: {
+        // Foundational remediation skill — routes to existing g1-b-1 place-values skill
+        'g1-b-1': 'imo_place_value_identify',
+        // IMO Grade 3 micro-skills
+        'imo-g3-place-face':    'imo_place_value_face_value',
+        'imo-g3-write-read':    'imo_read_write_numbers',
+        'imo-g3-expanded-std':  'imo_expanded_standard',
+        'imo-g3-succ-pred':     'imo_successor_predecessor',
+        'imo-g3-build-numbers': 'imo_building_numbers',
+        'imo-g3-rounding':      'imo_rounding',
+        'imo-g3-roman':         'imo_roman_numerals',
+        'imo-g3-even-odd':      'imo_even_odd',
+        'imo-g3-patterns':      'imo_patterns_skip',
+      },
+    },
   },
   social: {
     gk: {
@@ -1700,9 +1783,11 @@ export const competencyGraphs = {
         'lkg-english-vocab-use-number-words-1to10': 'lkg_english_basics',
         'lkg-english-nouns-singular-plural': 'lkg_english_basics',
       }
-    }
+    },
   }
 };
+
+
 
 function normalizeId(value) {
   return String(value || '').trim();

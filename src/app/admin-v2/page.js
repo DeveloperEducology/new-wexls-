@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import AdminConsolePage from '../admin/page';
 
 export default function AdminV2Page() {
   const [adminMode, setAdminMode] = useState('school'); // school, exam
@@ -98,6 +99,29 @@ export default function AdminV2Page() {
     branchingIncorrect: '',
     isStaticQuestion: true,
     skillId: '',
+    
+    // Dynamic question formats support
+    type: 'mcq',
+    blank1Answer: '',
+    blank2Answer: '',
+    blank3Answer: '',
+    blank4Answer: '',
+    
+    cat1Id: 'even', cat1Label: 'Even Numbers',
+    cat2Id: 'odd', cat2Label: 'Odd Numbers',
+    cat3Id: '', cat3Label: '',
+    cat4Id: '', cat4Label: '',
+    
+    item1Label: '', item1Cat: '',
+    item2Label: '', item2Cat: '',
+    item3Label: '', item3Cat: '',
+    item4Label: '', item4Cat: '',
+    item5Label: '', item5Cat: '',
+    item6Label: '', item6Cat: '',
+    
+    appletComponent: '',
+    appletPropsJson: '',
+    appletAnswer: '',
   });
 
   // Difficulty scaling states for skills
@@ -203,8 +227,8 @@ export default function AdminV2Page() {
     fetchData();
   }, [adminMode]);
 
-  useEffect(() => {
-    if (activeTab === 'question') {
+   useEffect(() => {
+    if (activeTab === 'question' || activeTab === 'questions_list') {
       fetchQuestions();
     }
   }, [adminMode, activeTab, selectedExamId, selectedSectionId, selectedTopicId, filterSubjectId, filterChapterId, filterSkillId]);
@@ -276,6 +300,62 @@ export default function AdminV2Page() {
     );
   };
 
+  // Filter skills list based on search term
+  const renderSkillSuggestions = (query, onSelect, boxId) => {
+    if (activeSuggestionBox !== boxId) return null;
+    const q = (query || '').toLowerCase().trim();
+    if (!q) return null;
+
+    const matches = skills.filter(s => 
+      s.id.toLowerCase().includes(q) || 
+      (s.title && s.title.toLowerCase().includes(q))
+    ).slice(0, 10);
+
+    if (matches.length === 0) return null;
+
+    return (
+      <div 
+        style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          background: '#ffffff',
+          border: '1px solid #cbd5e1',
+          borderRadius: '6px',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+          zIndex: 9999,
+          maxHeight: '200px',
+          overflowY: 'auto',
+          marginTop: '2px',
+        }}
+      >
+        {matches.map(s => (
+          <div
+            key={s.id}
+            onClick={() => {
+              onSelect(s.id);
+              setActiveSuggestionBox(null);
+            }}
+            style={{
+              padding: '6px 10px',
+              cursor: 'pointer',
+              borderBottom: '1px solid #f1f5f9',
+              fontSize: '12px',
+              textAlign: 'left',
+            }}
+            className="suggestion-item"
+            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+          >
+            <div style={{ fontWeight: 700, color: '#1e293b' }}>{s.title}</div>
+            <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{s.id}</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Reset edit state when tab switches
   useEffect(() => {
     setEditingId(null);
@@ -322,6 +402,28 @@ export default function AdminV2Page() {
       cognitiveLevel: 'recall',
       tags: '',
       metadataSource: '',
+      
+      type: 'mcq',
+      blank1Answer: '',
+      blank2Answer: '',
+      blank3Answer: '',
+      blank4Answer: '',
+      
+      cat1Id: 'even', cat1Label: 'Even Numbers',
+      cat2Id: 'odd', cat2Label: 'Odd Numbers',
+      cat3Id: '', cat3Label: '',
+      cat4Id: '', cat4Label: '',
+      
+      item1Label: '', item1Cat: '',
+      item2Label: '', item2Cat: '',
+      item3Label: '', item3Cat: '',
+      item4Label: '', item4Cat: '',
+      item5Label: '', item5Cat: '',
+      item6Label: '', item6Cat: '',
+      
+      appletComponent: '',
+      appletPropsJson: '',
+      appletAnswer: '',
     });
     setSkillDifficultyScaling(false);
     setSkillTemplateLevels([
@@ -370,7 +472,8 @@ export default function AdminV2Page() {
   const handleEditClick = (item) => {
     setEditingId(item.id || item._id);
 
-    if (activeTab === 'question') {
+    if (activeTab === 'question' || activeTab === 'questions_list') {
+      setActiveTab('question');
       const isIitOrSchool = adminMode === 'school' || adminMode === 'iit';
       const optionsList = Array.isArray(item.options) ? item.options : [];
       const optionA = isIitOrSchool ? (optionsList[0]?.label || '') : (item.options?.A || '');
@@ -385,6 +488,26 @@ export default function AdminV2Page() {
       }
 
       const skillObj = skills.find(s => s.id === item.skillId);
+
+      const qType = item.type || 'mcq';
+      
+      // Blank answers extraction
+      const blankMatchRule = Array.isArray(item.validationRules) 
+        ? item.validationRules.find(r => r.type === 'exact_match' && r.target === 'answer') 
+        : null;
+      const blankVals = blankMatchRule?.value || {};
+      
+      // Categorization extraction
+      const cats = item.categories || [];
+      const its = item.items || [];
+      
+      // Applet extraction
+      const appletVisual = Array.isArray(item.visuals) ? item.visuals[0] : null;
+      const appletComponent = appletVisual?.component || '';
+      const appletPropsJson = appletVisual?.props ? JSON.stringify(appletVisual.props, null, 2) : '';
+      const appletAnswer = typeof blankMatchRule?.value === 'object' 
+        ? JSON.stringify(blankMatchRule.value) 
+        : String(blankMatchRule?.value || '');
 
       setFormData({
         id: item._id || item.id || '',
@@ -410,6 +533,29 @@ export default function AdminV2Page() {
         branchingCorrect: item.metadata?.branching?.correct || '',
         branchingIncorrect: item.metadata?.branching?.incorrect || '',
         isStaticQuestion: item.metadata?.isStatic !== false,
+
+        // Extracted format properties
+        type: qType,
+        blank1Answer: blankVals.blank1 || '',
+        blank2Answer: blankVals.blank2 || '',
+        blank3Answer: blankVals.blank3 || '',
+        blank4Answer: blankVals.blank4 || '',
+        
+        cat1Id: cats[0]?.id || 'even', cat1Label: cats[0]?.label || 'Even Numbers',
+        cat2Id: cats[1]?.id || 'odd', cat2Label: cats[1]?.label || 'Odd Numbers',
+        cat3Id: cats[2]?.id || '', cat3Label: cats[2]?.label || '',
+        cat4Id: cats[3]?.id || '', cat4Label: cats[3]?.label || '',
+        
+        item1Label: its[0]?.label || '', item1Cat: its[0]?.categoryId || '',
+        item2Label: its[1]?.label || '', item2Cat: its[1]?.categoryId || '',
+        item3Label: its[2]?.label || '', item3Cat: its[2]?.categoryId || '',
+        item4Label: its[3]?.label || '', item4Cat: its[3]?.categoryId || '',
+        item5Label: its[4]?.label || '', item5Cat: its[4]?.categoryId || '',
+        item6Label: its[5]?.label || '', item6Cat: its[5]?.categoryId || '',
+        
+        appletComponent,
+        appletPropsJson,
+        appletAnswer,
       });
       setLevelAddInputs({ 1: '', 2: '', 3: '' });
       return;
@@ -571,25 +717,18 @@ export default function AdminV2Page() {
             return;
           }
 
-          const optionsArray = [
-            { label: formData.optionA, isCorrect: formData.correctOption === 'A' },
-            { label: formData.optionB, isCorrect: formData.correctOption === 'B' },
-            { label: formData.optionC, isCorrect: formData.correctOption === 'C' },
-            { label: formData.optionD, isCorrect: formData.correctOption === 'D' },
-          ].filter(o => o.label !== '');
-
           const chap = chapters.find(c => c.id === formData.chapterId);
           const topicSlug = chap?.unitId || 'mechanics';
+          const qType = formData.type || 'mcq';
 
           payload = {
             id: formData.questionId || editingId || `${formData.skillId}-q${Date.now()}`,
             subject: formData.subjectId,
             topic: topicSlug,
             skillId: formData.skillId,
-            type: 'mcq',
+            type: qType,
             questionText: formData.questionText,
             questionImageUrl: formData.questionImageUrl || '',
-            options: optionsArray,
             explanationText: formData.explanationText || '',
             difficulty: Number(formData.difficulty) || 0.5,
             status: formData.status || 'active',
@@ -605,6 +744,113 @@ export default function AdminV2Page() {
               } : undefined
             }
           };
+
+          // 1. MCQ & Visual Choice structures
+          if (qType === 'mcq' || qType === 'visual_choice') {
+            payload.options = [
+              { label: formData.optionA, isCorrect: formData.correctOption === 'A' },
+              { label: formData.optionB, isCorrect: formData.correctOption === 'B' },
+              { label: formData.optionC, isCorrect: formData.correctOption === 'C' },
+              { label: formData.optionD, isCorrect: formData.correctOption === 'D' },
+            ].filter(o => o.label !== '');
+          }
+
+          // 2. Fill in the Blank structure
+          if (qType === 'fill_in_the_blank') {
+            const blankAnswers = {};
+            if (formData.blank1Answer) blankAnswers.blank1 = formData.blank1Answer;
+            if (formData.blank2Answer) blankAnswers.blank2 = formData.blank2Answer;
+            if (formData.blank3Answer) blankAnswers.blank3 = formData.blank3Answer;
+            if (formData.blank4Answer) blankAnswers.blank4 = formData.blank4Answer;
+            
+            payload.validationRules = [
+              {
+                type: 'exact_match',
+                target: 'answer',
+                value: blankAnswers
+              }
+            ];
+          }
+
+          // 3. Categorization/Sorting structure
+          if (qType === 'categorization') {
+            const categoriesArray = [];
+            if (formData.cat1Id) categoriesArray.push({ id: formData.cat1Id, label: formData.cat1Label || formData.cat1Id });
+            if (formData.cat2Id) categoriesArray.push({ id: formData.cat2Id, label: formData.cat2Label || formData.cat2Id });
+            if (formData.cat3Id) categoriesArray.push({ id: formData.cat3Id, label: formData.cat3Label || formData.cat3Id });
+            if (formData.cat4Id) categoriesArray.push({ id: formData.cat4Id, label: formData.cat4Label || formData.cat4Id });
+            
+            const itemsArray = [];
+            const itemData = [
+              { label: formData.item1Label, cat: formData.item1Cat, id: 'item1' },
+              { label: formData.item2Label, cat: formData.item2Cat, id: 'item2' },
+              { label: formData.item3Label, cat: formData.item3Cat, id: 'item3' },
+              { label: formData.item4Label, cat: formData.item4Cat, id: 'item4' },
+              { label: formData.item5Label, cat: formData.item5Cat, id: 'item5' },
+              { label: formData.item6Label, cat: formData.item6Cat, id: 'item6' },
+            ];
+            itemData.forEach(it => {
+              if (it.label && it.cat) {
+                itemsArray.push({
+                  id: it.id,
+                  label: it.label,
+                  categoryId: it.cat
+                });
+              }
+            });
+
+            payload.categories = categoriesArray;
+            payload.items = itemsArray;
+
+            const correctDndMap = {};
+            itemsArray.forEach(it => {
+              correctDndMap[it.id] = it.categoryId;
+            });
+            
+            payload.validationRules = [
+              {
+                type: 'exact_match',
+                target: 'answer',
+                value: correctDndMap
+              }
+            ];
+          }
+
+          // 4. Interactive Applet structure
+          if (qType === 'interactiveApplet') {
+            let appletProps = {};
+            if (formData.appletPropsJson) {
+              try {
+                appletProps = JSON.parse(formData.appletPropsJson);
+              } catch (jsonErr) {
+                setError('Applet Props Config must be valid JSON.');
+                setLoading(false);
+                return;
+              }
+            }
+
+            payload.visuals = [
+              {
+                component: formData.appletComponent,
+                props: appletProps
+              }
+            ];
+
+            let finalAnswerVal = formData.appletAnswer;
+            if (formData.appletAnswer.startsWith('{') || formData.appletAnswer.startsWith('[')) {
+              try {
+                finalAnswerVal = JSON.parse(formData.appletAnswer);
+              } catch {}
+            }
+
+            payload.validationRules = [
+              {
+                type: 'exact_match',
+                target: 'answer',
+                value: finalAnswerVal
+              }
+            ];
+          }
         } else {
           if (!selectedExamId || !selectedSectionId || !selectedTopicId) {
             setError('Please select Exam, Section, and Topic for the question first.');
@@ -1146,7 +1392,8 @@ export default function AdminV2Page() {
           }
           return list;
         }
-        case 'question': return examQuestions;
+        case 'question':
+        case 'questions_list': return examQuestions;
         default: return [];
       }
     } else {
@@ -1195,7 +1442,8 @@ export default function AdminV2Page() {
           });
           return grouped;
         }
-        case 'question': return examQuestions;
+        case 'question':
+        case 'questions_list': return examQuestions;
         default: return [];
       }
     }
@@ -1254,6 +1502,15 @@ export default function AdminV2Page() {
               </ul>
             </div>
           );
+        case 'questions_list':
+          return (
+            <div style={guideStyle}>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800 }}>📋 Questions Library Guide</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.4 }}>
+                Browse, edit, or delete existing curriculum questions. Use the filters on top to find questions matching specific subjects/chapters/skills.
+              </p>
+            </div>
+          );
         default:
           return null;
       }
@@ -1301,6 +1558,15 @@ export default function AdminV2Page() {
               <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800 }}>❓ Question Creation Guide</h4>
               <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.4 }}>
                 Create or edit practice questions. Make sure to specify options, key descriptors, and explanations.
+              </p>
+            </div>
+          );
+        case 'questions_list':
+          return (
+            <div style={examGuideStyle}>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800 }}>📋 Questions Library Guide</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.4 }}>
+                Browse, edit, or delete existing exam-prep questions. Use the scope filters above to filter questions.
               </p>
             </div>
           );
@@ -1743,15 +2009,15 @@ export default function AdminV2Page() {
       {/* 3. Navigation Tab Bar */}
       <nav className="tab-track-container">
         {((adminMode === 'school' || adminMode === 'iit') 
-          ? ['grade', 'subject', 'unit', 'chapter', 'skill', 'question']
-          : ['exam', 'section', 'topic', 'skill', 'question']
+          ? ['grade', 'subject', 'unit', 'chapter', 'skill', 'question', 'questions_list']
+          : ['exam', 'section', 'topic', 'skill', 'question', 'questions_list']
         ).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`tab-item-btn ${activeTab === tab ? 'active' : ''} ${activeTab === tab ? ((adminMode === 'school' || adminMode === 'iit') ? (adminMode === 'iit' ? 'iit' : 'school') : 'exam') : ''}`}
           >
-            {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab + 's'}
+            {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab === 'question' ? 'Authoring Center' : tab === 'questions_list' ? 'Questions Library' : tab + 's'}
           </button>
         ))}
       </nav>
@@ -1946,10 +2212,35 @@ export default function AdminV2Page() {
       )}
 
       {/* 6. Form & Table Grid layout */}
-      <div className="control-panel-grid">
+      {['question', 'questions_list'].includes(activeTab) ? (
+        <AdminConsolePage 
+          forceTab={activeTab === 'question' ? 'authoring' : 'library'} 
+          hideHeader={true} 
+          hideSidebar={true} 
+          adminMode={adminMode}
+          activeFilters={{
+            gradeId: filterGradeId,
+            subjectId: filterSubjectId,
+            chapterId: filterChapterId,
+            skillId: filterSkillId,
+            examId: selectedExamId,
+            section: selectedSectionId,
+            topic: selectedTopicId
+          }}
+          onTabChange={(tab) => {
+            if (tab === 'authoring') {
+              setActiveTab('question');
+            } else if (tab === 'library') {
+              setActiveTab('questions_list');
+            }
+          }}
+        />
+      ) : (
+        <div className="control-panel-grid">
         
         {/* Left Side: Creation/Editing Card */}
-        <section className="panel-card" style={{ alignSelf: 'start' }}>
+        {activeTab !== 'questions_list' && (
+          <section className="panel-card" style={{ alignSelf: 'start', maxWidth: activeTab === 'question' ? '800px' : undefined, margin: activeTab === 'question' ? '0 auto 2rem auto' : undefined }}>
           <h2 style={{
             marginTop: 0,
             fontSize: '1.4rem',
@@ -1964,7 +2255,7 @@ export default function AdminV2Page() {
             alignItems: 'center',
             gap: '6px'
           }}>
-            {editingId ? '✏️ Edit' : '➕ Create'} {activeTab}
+            {editingId ? '✏️ Edit' : '➕ Create'} {activeTab === 'question' ? 'Question' : activeTab}
           </h2>
           
           {/* Instructions Guide */}
@@ -2289,6 +2580,34 @@ export default function AdminV2Page() {
                                 </div>
                               );
                             })}
+
+                            {/* Remediation Skill ID */}
+                            <div style={{ marginTop: '4px', borderTop: '1px dashed #fcd34d', paddingTop: '10px' }}>
+                              <label className="form-label-premium" style={{ display: 'block', fontSize: '11.5px', color: '#92400e', fontWeight: 800, marginBottom: '4px' }}>
+                                🔄 Remediation Skill ID
+                              </label>
+                              <div className="suggestion-container" style={{ position: 'relative' }}>
+                                <input
+                                  type="text"
+                                  className="form-input-premium"
+                                  style={{ width: '100%', fontSize: '12px', padding: '6px 10px', boxSizing: 'border-box' }}
+                                  placeholder="Search or enter fallback skill ID (e.g. lkg-shapes)"
+                                  value={formData.remediation || ''}
+                                  onChange={e => {
+                                    setFormData(prev => ({ ...prev, remediation: e.target.value }));
+                                    setActiveSuggestionBox('remediation');
+                                  }}
+                                  onFocus={() => setActiveSuggestionBox('remediation')}
+                                />
+                                {renderSkillSuggestions(
+                                  formData.remediation,
+                                  (sid) => {
+                                    setFormData(prev => ({ ...prev, remediation: sid }));
+                                  },
+                                  'remediation'
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2917,43 +3236,208 @@ export default function AdminV2Page() {
                             className="form-input-premium"
                           />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+
+                        {(adminMode === 'school' || adminMode === 'iit') && (
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <label className="form-label-premium">Option A</label>
-                            <input type="text" name="optionA" required value={formData.optionA} onChange={handleInputChange} className="form-input-premium" />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <label className="form-label-premium">Option B</label>
-                            <input type="text" name="optionB" required value={formData.optionB} onChange={handleInputChange} className="form-input-premium" />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <label className="form-label-premium">Option C</label>
-                            <input type="text" name="optionC" value={formData.optionC} onChange={handleInputChange} className="form-input-premium" />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <label className="form-label-premium">Option D</label>
-                            <input type="text" name="optionD" value={formData.optionD} onChange={handleInputChange} className="form-input-premium" />
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <label className="form-label-premium">Correct Option</label>
-                            <select name="correctOption" value={formData.correctOption} onChange={handleInputChange} className="premium-select">
-                              <option value="A">A</option>
-                              <option value="B">B</option>
-                              <option value="C">C</option>
-                              <option value="D">D</option>
+                            <label className="form-label-premium">Question Format / Type</label>
+                            <select 
+                              name="type" 
+                              value={formData.type || 'mcq'} 
+                              onChange={handleInputChange} 
+                              className="premium-select"
+                            >
+                              <option value="mcq">Multiple Choice (MCQ)</option>
+                              <option value="fill_in_the_blank">Fill in the Blank</option>
+                              <option value="categorization">Categorization / Sorting</option>
+                              <option value="visual_choice">Visual Choice (MCQ with drawings/SVGs)</option>
+                              <option value="interactiveApplet">Interactive Applet / Tool</option>
                             </select>
                           </div>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <label className="form-label-premium">Cognitive Level</label>
-                            <select name="cognitiveLevel" value={formData.cognitiveLevel} onChange={handleInputChange} className="premium-select">
-                              <option value="recall">Recall</option>
-                              <option value="comprehension">Comprehension</option>
-                              <option value="application">Application</option>
-                              <option value="analytical">Analytical</option>
-                            </select>
+                        )}
+
+                        {/* 1. MCQ & Visual Choice option cards inputs */}
+                        {(adminMode === 'exam' || formData.type === 'mcq' || formData.type === 'visual_choice') && (
+                          <>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium">Option A</label>
+                                <input 
+                                  type="text" 
+                                  name="optionA" 
+                                  required={adminMode === 'exam' || formData.type === 'mcq' || formData.type === 'visual_choice'} 
+                                  value={formData.optionA} 
+                                  onChange={handleInputChange} 
+                                  className="form-input-premium" 
+                                />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium">Option B</label>
+                                <input 
+                                  type="text" 
+                                  name="optionB" 
+                                  required={adminMode === 'exam' || formData.type === 'mcq' || formData.type === 'visual_choice'} 
+                                  value={formData.optionB} 
+                                  onChange={handleInputChange} 
+                                  className="form-input-premium" 
+                                />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium">Option C</label>
+                                <input 
+                                  type="text" 
+                                  name="optionC" 
+                                  value={formData.optionC} 
+                                  onChange={handleInputChange} 
+                                  className="form-input-premium" 
+                                />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium">Option D</label>
+                                <input 
+                                  type="text" 
+                                  name="optionD" 
+                                  value={formData.optionD} 
+                                  onChange={handleInputChange} 
+                                  className="form-input-premium" 
+                                />
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Correct Option</label>
+                              <select 
+                                name="correctOption" 
+                                value={formData.correctOption} 
+                                onChange={handleInputChange} 
+                                className="premium-select"
+                              >
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        {/* 2. Fill in the Blank inputs */}
+                        {(adminMode === 'school' || adminMode === 'iit') && formData.type === 'fill_in_the_blank' && (
+                          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                              ✏️ Fill in the Blank Answers (maps to [[blank1]], [[blank2]] etc.)
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium" style={{ fontSize: '11px', fontWeight: 700 }}>blank1 Correct Answer</label>
+                                <input type="text" name="blank1Answer" value={formData.blank1Answer || ''} onChange={handleInputChange} placeholder="e.g. 7" className="form-input-premium" />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium" style={{ fontSize: '11px', fontWeight: 700 }}>blank2 Correct Answer</label>
+                                <input type="text" name="blank2Answer" value={formData.blank2Answer || ''} onChange={handleInputChange} placeholder="e.g. 8" className="form-input-premium" />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium" style={{ fontSize: '11px', fontWeight: 700 }}>blank3 Correct Answer</label>
+                                <input type="text" name="blank3Answer" value={formData.blank3Answer || ''} onChange={handleInputChange} placeholder="e.g. 15" className="form-input-premium" />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label className="form-label-premium" style={{ fontSize: '11px', fontWeight: 700 }}>blank4 Correct Answer</label>
+                                <input type="text" name="blank4Answer" value={formData.blank4Answer || ''} onChange={handleInputChange} placeholder="e.g. 20" className="form-input-premium" />
+                              </div>
+                            </div>
                           </div>
+                        )}
+
+                        {/* 3. Categorization inputs */}
+                        {(adminMode === 'school' || adminMode === 'iit') && formData.type === 'categorization' && (
+                          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569' }}>
+                              📁 Categorization Buckets & Draggable Items
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b' }}>1. Setup Category Columns (at least 2)</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '8px', alignItems: 'center' }}>
+                                <input type="text" name="cat1Id" value={formData.cat1Id || ''} onChange={handleInputChange} placeholder="Col 1 ID (e.g. even)" className="form-input-premium" style={{ fontSize: '11.5px', padding: '6px' }} />
+                                <input type="text" name="cat1Label" value={formData.cat1Label || ''} onChange={handleInputChange} placeholder="Col 1 Display (e.g. Even Numbers)" className="form-input-premium" style={{ fontSize: '11.5px', padding: '6px' }} />
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '8px', alignItems: 'center' }}>
+                                <input type="text" name="cat2Id" value={formData.cat2Id || ''} onChange={handleInputChange} placeholder="Col 2 ID (e.g. odd)" className="form-input-premium" style={{ fontSize: '11.5px', padding: '6px' }} />
+                                <input type="text" name="cat2Label" value={formData.cat2Label || ''} onChange={handleInputChange} placeholder="Col 2 Display (e.g. Odd Numbers)" className="form-input-premium" style={{ fontSize: '11.5px', padding: '6px' }} />
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '8px', alignItems: 'center' }}>
+                                <input type="text" name="cat3Id" value={formData.cat3Id || ''} onChange={handleInputChange} placeholder="Col 3 ID (Optional)" className="form-input-premium" style={{ fontSize: '11.5px', padding: '6px' }} />
+                                <input type="text" name="cat3Label" value={formData.cat3Label || ''} onChange={handleInputChange} placeholder="Col 3 Display (Optional)" className="form-input-premium" style={{ fontSize: '11.5px', padding: '6px' }} />
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b' }}>2. Setup Cards & Target Column Mapping</div>
+                              {[1, 2, 3, 4, 5, 6].map(num => (
+                                <div key={num} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                  <input 
+                                    type="text" 
+                                    name={`item${num}Label`} 
+                                    value={formData[`item${num}Label`] || ''} 
+                                    onChange={handleInputChange} 
+                                    placeholder={`Card ${num} text (e.g. ${num * 2})`} 
+                                    className="form-input-premium" 
+                                    style={{ fontSize: '11.5px', padding: '6px' }} 
+                                  />
+                                  <select 
+                                    name={`item${num}Cat`} 
+                                    value={formData[`item${num}Cat`] || ''} 
+                                    onChange={handleInputChange} 
+                                    className="premium-select" 
+                                    style={{ fontSize: '11.5px', padding: '6px' }}
+                                  >
+                                    <option value="">-- Target --</option>
+                                    {formData.cat1Id && <option value={formData.cat1Id}>{formData.cat1Label || formData.cat1Id}</option>}
+                                    {formData.cat2Id && <option value={formData.cat2Id}>{formData.cat2Label || formData.cat2Id}</option>}
+                                    {formData.cat3Id && <option value={formData.cat3Id}>{formData.cat3Label || formData.cat3Id}</option>}
+                                    {formData.cat4Id && <option value={formData.cat4Id}>{formData.cat4Label || formData.cat4Id}</option>}
+                                  </select>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 4. Interactive Applet inputs */}
+                        {(adminMode === 'school' || adminMode === 'iit') && formData.type === 'interactiveApplet' && (
+                          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                              🧩 Interactive Applet / Tool Configuration
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Applet Component Name</label>
+                              <input type="text" name="appletComponent" value={formData.appletComponent || ''} onChange={handleInputChange} placeholder="e.g. TenFrame, Clock" className="form-input-premium" />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Applet Properties Config (JSON)</label>
+                              <textarea 
+                                name="appletPropsJson" 
+                                value={formData.appletPropsJson || ''} 
+                                onChange={handleInputChange} 
+                                placeholder='e.g. { "filledCount": 7, "crossedOutCount": 0 }' 
+                                rows={3} 
+                                className="premium-textarea" 
+                                style={{ fontFamily: 'monospace', fontSize: '11.5px' }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label className="form-label-premium">Expected Correct Answer</label>
+                              <input type="text" name="appletAnswer" value={formData.appletAnswer || ''} onChange={handleInputChange} placeholder="e.g. 7" className="form-input-premium" />
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                          <label className="form-label-premium">Cognitive Level</label>
+                          <select name="cognitiveLevel" value={formData.cognitiveLevel} onChange={handleInputChange} className="premium-select">
+                            <option value="recall">Recall</option>
+                            <option value="comprehension">Comprehension</option>
+                            <option value="application">Application</option>
+                            <option value="analytical">Analytical</option>
+                          </select>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', color: '#334155' }}>
@@ -3019,10 +3503,12 @@ export default function AdminV2Page() {
               )}
             </div>
           </form>
-        </section>
+          </section>
+        )}
 
         {/* Right Side: List Viewer Card */}
-        <section className="panel-card">
+        {activeTab !== 'question' && (
+          <section className="panel-card">
           <h2 style={{
             marginTop: 0,
             fontSize: '1.4rem',
@@ -3037,7 +3523,7 @@ export default function AdminV2Page() {
             alignItems: 'center',
             justifyContent: 'space-between'
           }}>
-            <span>📋 Current {activeTab === 'exam' ? 'Exams' : activeTab === 'mat' ? 'MAT' : activeTab + 's'} List</span>
+            <span>📋 Current {activeTab === 'exam' ? 'Exams' : activeTab === 'mat' ? 'MAT' : ['question', 'questions_list'].includes(activeTab) ? 'Questions' : activeTab + 's'} List</span>
             <span style={{ fontSize: '12px', background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px', color: '#475569', fontWeight: 800 }}>
               {currentList.length} items
             </span>
@@ -3467,9 +3953,10 @@ export default function AdminV2Page() {
               </table>
             </div>
           )}
-        </section>
-
+          </section>
+        )}
       </div>
+      )}
     </div>
   );
 }

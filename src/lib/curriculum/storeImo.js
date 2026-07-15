@@ -23,7 +23,7 @@ export async function getImoCollection(type) {
   const collectionName = COLLECTION_MAP[type];
   if (!collectionName) throw new Error(`Unknown IMO curriculum type: ${type}`);
   const collection = db.collection(collectionName);
-  
+
   // Ensure indexes
   await collection.createIndex({ id: 1 }, { unique: true });
   if (type === 'unit') {
@@ -33,7 +33,7 @@ export async function getImoCollection(type) {
   } else if (type === 'skill') {
     await collection.createIndex({ chapterId: 1 });
   }
-  
+
   return collection;
 }
 
@@ -41,7 +41,7 @@ export async function createImoNode(type, data) {
   const collection = await getImoCollection(type);
   const id = slugify(data.id || data.title || data.name);
   if (!id) throw new Error('ID or Title is required to create a node.');
-  
+
   const now = new Date();
   const normalized = {
     ...data,
@@ -76,7 +76,7 @@ export async function createImoNode(type, data) {
 export async function listImoNodes(type, query = {}) {
   const collection = await getImoCollection(type);
   const filter = { ...query };
-  
+
   if (filter.subjectId) filter.subjectId = slugify(filter.subjectId);
   if (filter.unitId) filter.unitId = slugify(filter.unitId);
   if (filter.gradeId) filter.gradeId = slugify(filter.gradeId);
@@ -128,240 +128,302 @@ export async function seedImoInitial() {
       await createImoNode('skill', s);
     }
 
-    // 6. Seed Dynamic Templates
+    // 6. Seed Dynamic Templates — ALL MCQ type.
+    // - questionText must NOT contain [[blank1]] or [[mcq]] tokens (those cause double-print).
+    // - Provide exactly 3 distractors (distractor_1, distractor_2, distractor_3) so the
+    //   difficulty engine can slice: easy→2 opts, medium→3 opts, hard→4 opts.
+    // - correct_answer maps to the Result variable.
     const templates = [
+      // ── Skill 1: Place Value vs Face Value ──────────────────────────────────
       {
         id: 'template-imo-g3-place-face-value',
         title: 'Place Value vs Face Value (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
-        optionsType: 'fill_blank',
-        questionText: 'Find the difference between the place value of [digit1] and the face value of [digit2] in the number **[number]**.\n[[blank1]]',
-        solution: 'Step 1: The place value of [digit1] at hundreds place is [digit1 * 100].\nStep 2: The face value of [digit2] is simply [digit2] itself.\nStep 3: Subtract: [digit1 * 100] - [digit2] = [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { blank1: '[Result]' } }
-        ],
-        variables: [
-          {
-            name: 'numObj',
+        type: 'parameterized',
+        optionsType: 'mcq',
+        questionTemplate: 'Find the difference between the place value of [digit1] and the face value of [digit2] in the number [number].',
+        explanationTemplate: 'Place value of [digit1] at hundreds place = [digit1] × 100 = [pv].\nFace value of [digit2] = [digit2].\nDifference = [pv] − [digit2] = [Result].',
+        variables: {
+          numObj: {
             type: 'choice',
             pool: [
               { val: 8754, d3: 8, d2: 7, d1: 5, d0: 4 },
               { val: 6982, d3: 6, d2: 9, d1: 8, d0: 2 },
               { val: 7523, d3: 7, d2: 5, d1: 2, d0: 3 },
-              { val: 9861, d3: 9, d2: 8, d1: 6, d0: 1 }
+              { val: 9861, d3: 9, d2: 8, d1: 6, d0: 1 },
+              { val: 4317, d3: 4, d2: 3, d1: 1, d0: 7 },
+              { val: 5240, d3: 5, d2: 2, d1: 4, d0: 0 },
             ]
-          },
-          { name: 'digit1', type: 'expression', formula: 'numObj.d2' },
-          { name: 'digit2', type: 'expression', formula: 'numObj.d0' },
-          { name: 'number', type: 'expression', formula: 'numObj.val' },
-          { name: 'Result', type: 'expression', formula: 'digit1 * 100 - digit2' }
-        ]
+          }
+        },
+        derivations: {
+          digit1: 'numObj.d2',
+          digit2: 'numObj.d0',
+          number: 'numObj.val',
+          pv: 'digit1 * 100',
+          Result: 'pv - digit2',
+          correct_answer: 'Result',
+          distractor_1: 'Result + 10',
+          distractor_2: 'Result - digit2',
+          distractor_3: 'pv + digit2',
+        }
       },
+
+      // ── Skill 2: Reading & Writing 4-Digit Numbers ──────────────────────────
       {
         id: 'template-imo-g3-write-read-numbers',
         title: 'Read and Write 4-Digit Numbers (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
+        type: 'parameterized',
         optionsType: 'mcq',
-        questionText: 'Choose the numeric representation of the number: **"[numObj.words]"**.\n[[mcq]]',
-        solution: 'Step 1: Break down the word name:\n- [numObj.words] corresponds to [numObj.val].\nStep 2: Correct standard form value is [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { mcq: '[Result]' } }
-        ],
-        variables: [
-          {
-            name: 'numObj',
+        questionTemplate: 'Choose the numeric representation of: "[numObj.words]".',
+        explanationTemplate: '"[numObj.words]" is written as [Result] in standard form.',
+        variables: {
+          numObj: {
             type: 'choice',
             pool: [
               { val: 7205, words: 'Seven thousand two hundred five' },
               { val: 6052, words: 'Six thousand fifty-two' },
               { val: 8901, words: 'Eight thousand nine hundred one' },
-              { val: 5004, words: 'Five thousand four' }
+              { val: 5004, words: 'Five thousand four' },
+              { val: 3410, words: 'Three thousand four hundred ten' },
+              { val: 9070, words: 'Nine thousand seventy' },
             ]
-          },
-          { name: 'Result', type: 'expression', formula: 'numObj.val' },
-          { name: 'distractor_1', type: 'expression', formula: 'numObj.val + 9' },
-          { name: 'distractor_2', type: 'expression', formula: 'numObj.val - 9' },
-          { name: 'distractor_3', type: 'expression', formula: 'numObj.val + 90' }
-        ]
+          }
+        },
+        derivations: {
+          Result: 'numObj.val',
+          correct_answer: 'numObj.val',
+          distractor_1: 'numObj.val + 9',
+          distractor_2: 'numObj.val - 9',
+          distractor_3: 'numObj.val + 90',
+        }
       },
+
+      // ── Skill 3: Expanded vs Standard Form ──────────────────────────────────
       {
         id: 'template-imo-g3-expanded-standard',
         title: 'Expanded vs Standard Form (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
+        type: 'parameterized',
         optionsType: 'mcq',
-        questionText: 'Which number is represented by the expanded form: **[numObj.expanded]**?\n[[mcq]]',
-        solution: 'Step 1: Sum each place value: [numObj.expanded] = [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { mcq: '[Result]' } }
-        ],
-        variables: [
-          {
-            name: 'numObj',
+        questionTemplate: 'Which number is represented by the expanded form: [numObj.expanded]?',
+        explanationTemplate: '[numObj.expanded] = [Result] in standard form.',
+        variables: {
+          numObj: {
             type: 'choice',
             pool: [
               { val: 5048, expanded: '5000 + 40 + 8' },
               { val: 7302, expanded: '7000 + 300 + 2' },
               { val: 9080, expanded: '9000 + 80' },
-              { val: 4610, expanded: '4000 + 600 + 10' }
+              { val: 4610, expanded: '4000 + 600 + 10' },
+              { val: 2007, expanded: '2000 + 7' },
+              { val: 6415, expanded: '6000 + 400 + 10 + 5' },
             ]
-          },
-          { name: 'Result', type: 'expression', formula: 'numObj.val' },
-          { name: 'distractor_1', type: 'expression', formula: 'numObj.val + 9' },
-          { name: 'distractor_2', type: 'expression', formula: 'numObj.val - 9' },
-          { name: 'distractor_3', type: 'expression', formula: 'numObj.val + 90' }
-        ]
+          }
+        },
+        derivations: {
+          Result: 'numObj.val',
+          correct_answer: 'numObj.val',
+          distractor_1: 'numObj.val + 9',
+          distractor_2: 'numObj.val - 9',
+          distractor_3: 'numObj.val + 100',
+        }
       },
+
+      // ── Skill 4: Successor & Predecessor ────────────────────────────────────
       {
         id: 'template-imo-g3-successor-predecessor',
         title: 'Successor and Predecessor (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
-        optionsType: 'fill_blank',
-        questionText: 'Find the predecessor of the successor of **[number]**.\n[[blank1]]',
-        solution: 'Step 1: The successor of [number] is [number + 1].\nStep 2: The predecessor of [number + 1] is predecessor([number + 1]) = [number].\nStep 3: Predecessor of a successor of any number is the number itself!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { blank1: '[Result]' } }
-        ],
-        variables: [
-          { name: 'number', type: 'range', min: 100, max: 9999 },
-          { name: 'Result', type: 'expression', formula: 'number' }
-        ]
+        type: 'parameterized',
+        optionsType: 'mcq',
+        questionTemplate: 'The predecessor of the successor of [number] is:',
+        explanationTemplate: 'Successor of [number] = [number] + 1 = [succ].\nPredecessor of [succ] = [succ] − 1 = [Result].\nThe predecessor of the successor of any number equals that number itself.',
+        variables: {
+          number: {
+            type: 'choice',
+            pool: [1250, 3780, 5499, 6001, 2999, 7800, 4321, 8050]
+          }
+        },
+        derivations: {
+          succ: 'number + 1',
+          Result: 'number',
+          correct_answer: 'number',
+          distractor_1: 'number + 1',
+          distractor_2: 'number - 1',
+          distractor_3: 'number + 2',
+        }
       },
+
+      // ── Skill 5: Building Greatest & Smallest Numbers ────────────────────────
       {
         id: 'template-imo-g3-building-numbers',
         title: 'Forming Smallest 4-Digit Number (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
-        optionsType: 'fill_blank',
-        questionText: 'Form the smallest 4-digit number using the digits **[numObj.d1], [numObj.d2], [numObj.d3], [numObj.d4]** without repetition (remember a 4-digit number cannot start with 0).\n[[blank1]]',
-        solution: 'Step 1: Sort digits in ascending order.\nStep 2: If 0 is present, place the next smallest digit first, then 0.\nStep 3: Smallest number is [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { blank1: '[Result]' } }
-        ],
-        variables: [
-          {
-            name: 'numObj',
+        type: 'parameterized',
+        optionsType: 'mcq',
+        questionTemplate: 'Form the SMALLEST 4-digit number using the digits [numObj.d1], [numObj.d2], [numObj.d3], [numObj.d4] (without repetition).',
+        explanationTemplate: 'Digits: [numObj.d1], [numObj.d2], [numObj.d3], [numObj.d4].\nSort ascending; if 0 appears, place next-smallest digit first.\nSmallest number = [Result].',
+        variables: {
+          numObj: {
             type: 'choice',
             pool: [
-              { d1: 4, d2: 0, d3: 8, d4: 3, ans: 3048 },
-              { d1: 6, d2: 1, d3: 0, d4: 9, ans: 1069 },
-              { d1: 5, d2: 0, d3: 2, d4: 7, ans: 2057 },
-              { d1: 8, d2: 3, d3: 0, d4: 1, ans: 1038 }
+              { d1: 4, d2: 0, d3: 8, d4: 3, ans: 3048, w1: 3408, w2: 3804, w3: 4038 },
+              { d1: 6, d2: 1, d3: 0, d4: 9, ans: 1069, w1: 1096, w2: 1609, w3: 1906 },
+              { d1: 5, d2: 0, d3: 2, d4: 7, ans: 2057, w1: 2075, w2: 2507, w3: 2570 },
+              { d1: 8, d2: 3, d3: 0, d4: 1, ans: 1038, w1: 1083, w2: 1308, w3: 1380 },
+              { d1: 9, d2: 2, d3: 0, d4: 5, ans: 2059, w1: 2095, w2: 2509, w3: 5029 },
             ]
-          },
-          { name: 'Result', type: 'expression', formula: 'numObj.ans' }
-        ]
+          }
+        },
+        derivations: {
+          Result: 'numObj.ans',
+          correct_answer: 'numObj.ans',
+          distractor_1: 'numObj.w1',
+          distractor_2: 'numObj.w2',
+          distractor_3: 'numObj.w3',
+        }
       },
+
+      // ── Skill 6: Rounding Off ────────────────────────────────────────────────
       {
         id: 'template-imo-g3-rounding-off',
         title: 'Rounding Off Quantities (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
-        optionsType: 'fill_blank',
-        questionText: 'What is the sum of **[num1]** rounded to the nearest ten and **[num2]** rounded to the nearest hundred?\n[[blank1]]',
-        solution: 'Step 1: Round [num1] to the nearest ten: [r1].\nStep 2: Round [num2] to the nearest hundred: [r2].\nStep 3: Add: [r1] + [r2] = [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { blank1: '[Result]' } }
-        ],
-        variables: [
-          { name: 'num1', type: 'choice', pool: [342, 581, 219, 456] },
-          { name: 'num2', type: 'choice', pool: [567, 234, 881, 149] },
-          { name: 'r1', type: 'expression', formula: 'Math.round(num1 / 10) * 10' },
-          { name: 'r2', type: 'expression', formula: 'Math.round(num2 / 100) * 100' },
-          { name: 'Result', type: 'expression', formula: 'r1 + r2' }
-        ]
+        type: 'parameterized',
+        optionsType: 'mcq',
+        questionTemplate: 'What is [num1] rounded to the nearest ten ADDED to [num2] rounded to the nearest hundred?',
+        explanationTemplate: '[num1] rounded to nearest ten = [r1].\n[num2] rounded to nearest hundred = [r2].\nSum = [r1] + [r2] = [Result].',
+        variables: {
+          numObj: {
+            type: 'choice',
+            pool: [
+              { n1: 342, n2: 567, r1: 340, r2: 600, ans: 940, w1: 950, w2: 930, w3: 960 },
+              { n1: 581, n2: 234, r1: 580, r2: 200, ans: 780, w1: 790, w2: 770, w3: 810 },
+              { n1: 219, n2: 881, r1: 220, r2: 900, ans: 1120, w1: 1110, w2: 1130, w3: 1100 },
+              { n1: 456, n2: 149, r1: 460, r2: 100, ans: 560, w1: 570, w2: 550, w3: 580 },
+              { n1: 375, n2: 750, r1: 380, r2: 800, ans: 1180, w1: 1190, w2: 1170, w3: 1200 },
+            ]
+          }
+        },
+        derivations: {
+          num1: 'numObj.n1',
+          num2: 'numObj.n2',
+          r1: 'numObj.r1',
+          r2: 'numObj.r2',
+          Result: 'numObj.ans',
+          correct_answer: 'numObj.ans',
+          distractor_1: 'numObj.w1',
+          distractor_2: 'numObj.w2',
+          distractor_3: 'numObj.w3',
+        }
       },
+
+      // ── Skill 7: Roman Numerals ──────────────────────────────────────────────
       {
         id: 'template-imo-g3-roman-numerals',
         title: 'Roman Numerals Math (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
+        type: 'parameterized',
         optionsType: 'mcq',
-        questionText: 'Solve the expression and choose the correct Roman Numeral: **[numObj.expr]**\n[[mcq]]',
-        solution: 'Step 1: Evaluate expression values in standard digits.\nStep 2: Convert standard result back to Roman Numeral: [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { mcq: '[Result]' } }
-        ],
-        variables: [
-          {
-            name: 'numObj',
+        questionTemplate: 'Solve and choose the correct Roman Numeral: [numObj.expr]',
+        explanationTemplate: 'Evaluate [numObj.expr].\nThe answer in Roman Numerals is [Result].',
+        variables: {
+          numObj: {
             type: 'choice',
             pool: [
-              { expr: 'XLIV + XXVI', ans: 'LXX', dist1: 'LXVI', dist2: 'LXXVI', dist3: 'LX' },
-              { expr: 'LXII - XIV', ans: 'XLVIII', dist1: 'XLVII', dist2: 'LIII', dist3: 'LIV' },
-              { expr: 'XXXV + XV', ans: 'L', dist1: 'XL', dist2: 'LV', dist3: 'LX' },
-              { expr: 'XCIX - LIX', ans: 'XL', dist1: 'L', dist2: 'XXXIX', dist3: 'XLI' }
+              { expr: 'XLIV + XXVI', ans: 'LXX',    dist1: 'LXVI',  dist2: 'LXXVI', dist3: 'LX' },
+              { expr: 'LXII − XIV',  ans: 'XLVIII',  dist1: 'XLVII', dist2: 'LIII',  dist3: 'LIV' },
+              { expr: 'XXXV + XV',   ans: 'L',        dist1: 'XL',    dist2: 'LV',    dist3: 'LX' },
+              { expr: 'XCIX − LIX',  ans: 'XL',       dist1: 'L',     dist2: 'XXXIX', dist3: 'XLI' },
+              { expr: 'XX + XXX',    ans: 'L',        dist1: 'XL',    dist2: 'LX',    dist3: 'LV' },
             ]
-          },
-          { name: 'Result', type: 'expression', formula: 'numObj.ans' },
-          { name: 'distractor_1', type: 'expression', formula: 'numObj.dist1' },
-          { name: 'distractor_2', type: 'expression', formula: 'numObj.dist2' },
-          { name: 'distractor_3', type: 'expression', formula: 'numObj.dist3' }
+          }
+        },
+        derivations: {
+          Result: 'numObj.ans',
+          correct_answer: 'numObj.ans',
+          distractor_1: 'numObj.dist1',
+          distractor_2: 'numObj.dist2',
+          distractor_3: 'numObj.dist3',
+        },
+        // Roman answers are strings — override numeric fallback
+        options: [
+          { label: '[numObj.ans]',   isCorrect: 'true' },
+          { label: '[numObj.dist1]', isCorrect: 'false' },
+          { label: '[numObj.dist2]', isCorrect: 'false' },
+          { label: '[numObj.dist3]', isCorrect: 'false' },
         ]
       },
+
+      // ── Skill 8: Even & Odd Operations ──────────────────────────────────────
       {
         id: 'template-imo-g3-even-odd',
         title: 'Even & Odd Operations Rules (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
+        type: 'parameterized',
         optionsType: 'mcq',
-        questionText: 'If **A** is an odd number and **B** is an even number, what type of number is **(A * B) + A**?\n[[mcq]]',
-        solution: 'Step 1: Odd (A) * Even (B) = Even.\nStep 2: Even (A*B) + Odd (A) = Odd.\nStep 3: Result is always Odd!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { mcq: '[Result]' } }
+        questionTemplate: 'If A is an odd number and B is an even number, what type is (A × B) + A?',
+        explanationTemplate: 'Odd × Even = Even.\nEven + Odd = Odd.\nSo (A × B) + A is Always Odd.',
+        // Static options (no numeric derivation needed)
+        options: [
+          { label: 'Always Odd',    isCorrect: true },
+          { label: 'Always Even',   isCorrect: false },
+          { label: 'Can be either', isCorrect: false },
+          { label: 'Always Zero',   isCorrect: false },
         ],
-        variables: [
-          { name: 'Result', type: 'choice', pool: ['Always Odd'] },
-          { name: 'distractor_1', type: 'choice', pool: ['Always Even'] },
-          { name: 'distractor_2', type: 'choice', pool: ['Can be either'] }
-        ]
+        variables: {}
       },
+
+      // ── Skill 9: Number Patterns & Skip Counting ─────────────────────────────
       {
         id: 'template-imo-g3-patterns-skip',
         title: 'Skip Counting Sequence (IMO G3)',
         subject: 'math',
         topic: 'number-sense',
         grade: '3',
-        type: 'universal',
-        optionsType: 'fill_blank',
-        questionText: 'Find the missing number in the sequence: **[numObj.seq1], [numObj.seq2], [numObj.seq3], ____, [numObj.seq5]**.\n[[blank1]]',
-        solution: 'Step 1: Find difference: [numObj.seq2] - [numObj.seq1] = [numObj.seq2 - numObj.seq1].\nStep 2: Add difference to third term: [numObj.seq3] + [numObj.seq2 - numObj.seq1] = [Result]!',
-        validationRules: [
-          { type: 'exact_match', target: 'answer', value: { blank1: '[Result]' } }
-        ],
-        variables: [
-          {
-            name: 'numObj',
+        type: 'parameterized',
+        optionsType: 'mcq',
+        questionTemplate: 'Find the missing number: [numObj.seq1], [numObj.seq2], [numObj.seq3], ____, [numObj.seq5].',
+        explanationTemplate: 'Common difference = [numObj.seq2] − [numObj.seq1] = [step].\nMissing term = [numObj.seq3] + [step] = [Result].',
+        variables: {
+          numObj: {
             type: 'choice',
             pool: [
-              { seq1: 1245, seq2: 1270, seq3: 1295, ans: 1320, seq5: 1345 },
-              { seq1: 500, seq2: 525, seq3: 550, ans: 575, seq5: 600 },
-              { seq1: 2010, seq2: 2020, seq3: 2030, ans: 2040, seq5: 2050 },
-              { seq1: 4150, seq2: 4200, seq3: 4250, ans: 4300, seq5: 4350 }
+              { seq1: 1245, seq2: 1270, seq3: 1295, ans: 1320, seq5: 1345, step: 25, w1: 1310, w2: 1330, w3: 1295 },
+              { seq1: 500,  seq2: 525,  seq3: 550,  ans: 575,  seq5: 600,  step: 25, w1: 565,  w2: 585,  w3: 600  },
+              { seq1: 2010, seq2: 2020, seq3: 2030, ans: 2040, seq5: 2050, step: 10, w1: 2035, w2: 2045, w3: 2050 },
+              { seq1: 4150, seq2: 4200, seq3: 4250, ans: 4300, seq5: 4350, step: 50, w1: 4275, w2: 4325, w3: 4350 },
+              { seq1: 1100, seq2: 1200, seq3: 1300, ans: 1400, seq5: 1500, step: 100, w1: 1350, w2: 1450, w3: 1500 },
             ]
-          },
-          { name: 'Result', type: 'expression', formula: 'numObj.ans' }
-        ]
-      }
+          }
+        },
+        derivations: {
+          step: 'numObj.step',
+          Result: 'numObj.ans',
+          correct_answer: 'numObj.ans',
+          distractor_1: 'numObj.w1',
+          distractor_2: 'numObj.w2',
+          distractor_3: 'numObj.w3',
+        }
+      },
     ];
 
     for (const t of templates) {

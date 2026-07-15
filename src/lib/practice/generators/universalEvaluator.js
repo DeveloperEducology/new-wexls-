@@ -10,29 +10,99 @@ import { drawVisualChoicePanel } from './universal/components/VisualChoice.js';
 import { renderPlaceValue } from './universal/components/PlaceValue.js';
 import { COMPONENT_REGISTRY } from './universal/components/index.js';
 
-// Legacy positional wrappers for backward compatibility
+// Legacy and custom positional wrappers for backward compatibility and template rendering
 export function drawPlaceValue(thousands, hundreds, tens, ones, showChart = true, color = undefined) {
-  return renderPlaceValue({ thousands, hundreds, tens, ones, showChart, color });
+  return COMPONENT_REGISTRY.PlaceValue({ thousands, hundreds, tens, ones, showChart, color });
 }
-
 export function drawBaseTenBlocks(rodsCount, blocksCount, flatsCount = 0, cubesCount = 0, color = undefined) {
-  return renderPlaceValue({ tens: rodsCount, ones: blocksCount, hundreds: flatsCount, thousands: cubesCount, showChart: false, color });
+  return COMPONENT_REGISTRY.PlaceValue({ tens: rodsCount, ones: blocksCount, hundreds: flatsCount, thousands: cubesCount, showChart: false, color });
 }
-
 export function drawTenFrame(filledCount, crossedOutCount = 0, color = 'red') {
-  return renderTenFrame({ filledCount, crossedOutCount, color });
+  return COMPONENT_REGISTRY.TenFrame({ filledCount, crossedOutCount, color });
 }
-
 export function drawJarOfMarbles(colorA, countA, colorB, countB, seed) {
-  return renderJarOfMarbles({ colorA, countA, colorB, countB }, seededRandom(seed));
+  return COMPONENT_REGISTRY.JarOfMarbles({ colorA, countA, colorB, countB }, seed);
 }
-
 export function drawSpinner(colorA, sectorsA, colorB, sectorsB) {
-  return renderSpinner({ colorA, sectorsA, colorB, sectorsB });
+  return COMPONENT_REGISTRY.Spinner({ colorA, sectorsA, colorB, sectorsB });
 }
-
-export function drawItemCounter(itemCount, itemType = 'cupcake') {
-  return renderItemCounter({ count: itemCount, itemType });
+export function drawItemCounter(itemCount, itemType = 'cupcake', crossedOutCount = 0, itemsPerRow = 5) {
+  return COMPONENT_REGISTRY.ItemCounter({ count: itemCount, itemType, crossedOutCount, itemsPerRow });
+}
+export function drawNumberLine(min, max, step, pointValue, pointLabel = '', markedPoints = '', jumps = '', interactive = false, color = 'blue') {
+  return COMPONENT_REGISTRY.NumberLine({ min, max, step, pointValue, pointLabel, markedPoints, jumps, interactive, color });
+}
+export function drawHundredChart(missing = '', highlighted = '', color = 'blue') {
+  return COMPONENT_REGISTRY.HundredChart({ missing, highlighted, color });
+}
+export function drawRekenrek(rows = 2, values = '0,0') {
+  return COMPONENT_REGISTRY.Rekenrek({ rows, values });
+}
+export function drawNumberBond(whole, left, right, missing = '') {
+  return COMPONENT_REGISTRY.NumberBond({ whole, left, right, missing });
+}
+export function drawTallyChart(categories, counts, showFrequency = true) {
+  return COMPONENT_REGISTRY.TallyChart({ categories, counts, showFrequency });
+}
+export function drawFractionBar(denominator, numerator, color = 'blue', interactive = false) {
+  return COMPONENT_REGISTRY.FractionBar({ denominator, numerator, color, interactive });
+}
+export function drawFractionCircle(denominator, numerator, color = 'red', interactive = false) {
+  return COMPONENT_REGISTRY.FractionCircle({ denominator, numerator, color, interactive });
+}
+export function drawFractionGrid(rows, cols, shaded, color = 'green', interactive = false) {
+  return COMPONENT_REGISTRY.FractionGrid({ rows, cols, shaded, color, interactive });
+}
+export function drawDecimalGrid(value, color = 'orange') {
+  return COMPONENT_REGISTRY.DecimalGrid({ value, color });
+}
+export function drawDecimalLine(min, max, step, markedPoint, pointLabel = '', color = 'blue') {
+  return COMPONENT_REGISTRY.DecimalLine({ min, max, step, markedPoint, pointLabel, color });
+}
+export function drawShapeCanvas(shape, label = '', color = 'purple') {
+  return COMPONENT_REGISTRY.ShapeCanvas({ shape, label, color });
+}
+export function drawCoordinatePlane(xMin, xMax, yMin, yMax, points = '', polygon = '') {
+  return COMPONENT_REGISTRY.CoordinatePlane({ xMin, xMax, yMin, yMax, points, polygon });
+}
+export function drawProtractor(angle) {
+  return COMPONENT_REGISTRY.Protractor({ angle });
+}
+export function drawRuler(length, objectLength, objectType = 'pencil') {
+  return COMPONENT_REGISTRY.Ruler({ length, objectLength, objectType });
+}
+export function drawGeoboard(gridSize, polygon = '', color = 'red') {
+  return COMPONENT_REGISTRY.Geoboard({ gridSize, polygon, color });
+}
+export function drawBarGraph(title, categories, values, yMax = undefined, color = 'blue') {
+  return COMPONENT_REGISTRY.BarGraph({ title, categories, values, yMax, color });
+}
+export function drawPictograph(categories, values, emoji = '🍎', key = 1, showCount = true) {
+  return COMPONENT_REGISTRY.Pictograph({ categories, values, emoji, key, showCount });
+}
+export function drawFrequencyTable(title, categories, values, headers = 'Category,Frequency') {
+  return COMPONENT_REGISTRY.FrequencyTable({ title, categories, values, headers });
+}
+export function drawAnalogClock(hour, minute, interactive = false) {
+  return COMPONENT_REGISTRY.AnalogClock({ hour, minute, interactive });
+}
+export function drawCalendar(month, daysInMonth, startDay, highlightDays = '') {
+  return COMPONENT_REGISTRY.Calendar({ month, daysInMonth, startDay, highlightDays });
+}
+export function drawThermometer(min, max, value, unit = 'C') {
+  return COMPONENT_REGISTRY.Thermometer({ min, max, value, unit });
+}
+export function drawBalanceScale(leftWeight, rightWeight, leftLabel = 'Box A', rightLabel = 'Box B', showStacked = false) {
+  return COMPONENT_REGISTRY.BalanceScale({ leftWeight, rightWeight, leftLabel, rightLabel, showStacked });
+}
+export function drawMeasuringJug(capacity, step, value) {
+  return COMPONENT_REGISTRY.MeasuringJug({ capacity, step, value });
+}
+export function drawMoneyDisplay(amount) {
+  return COMPONENT_REGISTRY.MoneyDisplay({ amount });
+}
+export function drawPriceTagCompare(itemA, priceA, itemB, priceB) {
+  return COMPONENT_REGISTRY.PriceTagCompare({ itemA, priceA, itemB, priceB });
 }
 
 function hashSeed(seed) {
@@ -258,6 +328,29 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
 
     let combos = buildCombinations(variables);
     if (!combos.length) return { questionText: '', options: [], correctAnswerIndex: -1 };
+
+    // ── Level-pool filtering ──────────────────────────────────────────────────
+    // If the template has index_l1/l2/l3/l4 pools (compiled by the grid editor),
+    // restrict combos to only the rows belonging to the current difficulty level.
+    let levelPoolKey = currentLevel <= 1 ? 'index_l1'
+                     : currentLevel === 2 ? 'index_l2'
+                     : currentLevel === 3 ? 'index_l3'
+                     : 'index_l4';
+    let rawLevelPool = variables[levelPoolKey];
+    if (levelPoolKey === 'index_l4' && (!rawLevelPool || (Array.isArray(rawLevelPool) && rawLevelPool.length === 0) || (rawLevelPool.values && rawLevelPool.values.length === 0) || (rawLevelPool.pool && rawLevelPool.pool.length === 0))) {
+      levelPoolKey = 'index_l3';
+      rawLevelPool = variables[levelPoolKey];
+    }
+    const levelPool = rawLevelPool
+      ? (rawLevelPool.values || rawLevelPool.pool || (Array.isArray(rawLevelPool) ? rawLevelPool : null))
+      : null;
+    if (levelPool && levelPool.length > 0 && variables.index) {
+      const levelSet = new Set(levelPool.map(Number));
+      const filtered = combos.filter(c => c.index !== undefined && levelSet.has(Number(c.index)));
+      if (filtered.length > 0) combos = filtered; // only restrict if we found matches
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
 
     // Align parallel choice lists (e.g. animal and image)
     if (variables.animal && variables.image) {
@@ -549,14 +642,10 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
 
       let targetOptionCount = 4;
 
-      if (currentLevel === 1) {
-        targetOptionCount = 2;
-      } else if (currentLevel === 2) {
-        targetOptionCount = 3;
-      } else if (currentLevel === 3) {
-        targetOptionCount = 4;
+      const isExplicitMsq = resolvedInteractionEngine === 'msq' || config.optionsType === 'msq';
+      if (isExplicitMsq) {
+        isMultiSelectMode = true;
       } else if (currentLevel === 4) {
-        targetOptionCount = 4;
         isMultiSelectMode = true;
       }
 
@@ -568,7 +657,12 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
         return shuffled.slice(0, count);
       };
 
-      if (isMultiSelectMode) {
+      if (isExplicitMsq) {
+        // For explicitly authored MSQ questions, we MUST show ALL correct options
+        // to avoid mismatch with the compiled validation rules.
+        pickedCorrect = correctOptions;
+        pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
+      } else if (isMultiSelectMode) {
         const targetCorrectCount = Math.min(correctOptions.length, 2);
         pickedCorrect = pickRandomMany(correctOptions, targetCorrectCount > 0 ? targetCorrectCount : 1);
         pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
@@ -600,8 +694,12 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
           } else if (typeof val === 'string' && ctx[val] !== undefined) {
             resolvedProps[key] = ctx[val];
           } else {
-            const num = Number(val);
-            resolvedProps[key] = Number.isFinite(num) ? num : val;
+            try {
+              resolvedProps[key] = resolveExpression(val, ctx);
+            } catch {
+              const num = Number(val);
+              resolvedProps[key] = Number.isFinite(num) ? num : val;
+            }
           }
         }
         try {

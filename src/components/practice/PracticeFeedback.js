@@ -12,7 +12,7 @@ function cleanText(value) {
 }
 
 function isSvgString(value) {
-  return typeof value === 'string' && value.trim().startsWith('<svg');
+  return typeof value === 'string' && value.includes('<svg');
 }
 
 function cleanSvgContent(svgStr) {
@@ -31,56 +31,149 @@ function cleanSvgContent(svgStr) {
 }
 
 function InlineMarkdown({ text }) {
-  const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
-  const normalizedText = sanitizedText
-    .replace(/\\n/g, '\n')
-    .replace(/\/n/g, '\n');
+  // Strip HTML comments
+  const cleanText = String(text || '').replace(/<!--[\s\S]*?-->/g, '');
 
-  const parseMathAndText = (str, keyPrefix) => {
-    const subSegments = str.split(/(\$[^\$]+\$)/g);
-    return subSegments.map((subPiece, subIndex) => {
-      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-      if (mathMatch) {
-        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
-      }
-      if (subPiece.includes('<svg')) {
-        const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
-        return (
-          <span key={`${keyPrefix}-${subIndex}`}>
-            {svgParts.map((svgPart, pIdx) => {
-              if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
-                return (
-                  <span
-                    key={pIdx}
-                    dangerouslySetInnerHTML={{ __html: svgPart }}
-                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
-                  />
-                );
-              }
-              return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
-            })}
-          </span>
-        );
-      }
-      return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
-    });
-  };
+  if (!cleanText.includes('<svg')) {
+    const parseMathAndText = (str, keyPrefix) => {
+      const subSegments = str.split(/(\$[^\$]+\$)/g);
+      return subSegments.map((subPiece, subIndex) => {
+        const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
+        if (mathMatch) {
+          return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+        }
+        return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+      });
+    };
 
-  return (
-    <span style={{ whiteSpace: 'pre-line' }}>
-      {normalizedText.split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
+    const renderInlineContent = (inputText, key) => {
+      const sanitizedText = String(inputText || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+      const normalizedText = sanitizedText
+        .replace(/\\n/g, '\n')
+        .replace(/\/n/g, '\n');
+
+      return normalizedText.split(/(\*\*[^*]+\*\*)/g).map((piece, index) => {
         const match = piece.match(/^\*\*([^*]+)\*\*$/);
         if (match) {
-          return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+          return <strong key={index}>{parseMathAndText(match[1], `bold-${key}-${index}`)}</strong>;
         }
         
         return (
           <span key={index}>
-            {parseMathAndText(piece, `text-${index}`)}
+            {parseMathAndText(piece, `text-${key}-${index}`)}
           </span>
         );
+      });
+    };
+
+    const lines = cleanText.split('\n');
+    const renderedElements = [];
+    let currentTableRows = [];
+
+    const renderTable = (rows, key) => {
+      const cleanRows = rows.filter(r => !/^[|\s:-]+$/.test(r.trim()));
+      if (cleanRows.length === 0) return null;
+
+      return (
+        <div key={key} style={{ overflowX: 'auto', margin: '14px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <table style={{
+            borderCollapse: 'collapse',
+            width: 'auto',
+            border: '2px solid #cbd5e1',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+          }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                {cleanRows[0].split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map((col, colIdx) => (
+                  <th key={colIdx} style={{
+                    border: '1px solid #cbd5e1',
+                    padding: '10px 20px',
+                    fontSize: '15px',
+                    fontWeight: 800,
+                    color: '#475569',
+                    textAlign: 'center'
+                  }}>
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cleanRows.slice(1).map((row, rowIdx) => (
+                <tr key={rowIdx} style={{ backgroundColor: rowIdx % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  {row.split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map((col, colIdx) => (
+                    <td key={colIdx} style={{
+                      border: '1px solid #e2e8f0',
+                      padding: '10px 20px',
+                      fontSize: '15px',
+                      fontWeight: 700,
+                      color: '#0f172a',
+                      textAlign: 'center'
+                    }}>
+                      {col.startsWith('<u>') && col.endsWith('</u>') ? (
+                        <u style={{ color: '#16a34a', fontWeight: 900 }}>{col.replace(/<\/?u>/g, '')}</u>
+                      ) : (
+                        col
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+        currentTableRows.push(line);
+      } else {
+        if (currentTableRows.length > 0) {
+          renderedElements.push(renderTable(currentTableRows, `table-${i}`));
+          currentTableRows = [];
+        }
+        renderedElements.push(
+          <div key={i} style={{ margin: '4px 0', minHeight: '1.2em' }}>
+            {renderInlineContent(line, i)}
+          </div>
+        );
+      }
+    }
+    if (currentTableRows.length > 0) {
+      renderedElements.push(renderTable(currentTableRows, `table-last`));
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {renderedElements}
+      </div>
+    );
+  }
+
+  // If text contains SVG, split into SVG and non-SVG segments
+  const segments = cleanText.split(/(<svg[\s\S]*?<\/svg>)/g);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {segments.map((segment, idx) => {
+        const isSvg = segment.trim().startsWith('<svg') && segment.trim().endsWith('</svg>');
+        if (isSvg) {
+          return (
+            <div
+              key={idx}
+              dangerouslySetInnerHTML={{ __html: segment }}
+              style={{ display: 'flex', justifyContent: 'center', margin: '10px 0', width: '100%' }}
+            />
+          );
+        }
+        return <InlineMarkdown key={idx} text={segment} />;
       })}
-    </span>
+    </div>
   );
 }
 
@@ -291,6 +384,29 @@ function renderSolutionVisual(question) {
 
 function renderSolutionPart(part, index, context = {}) {
   if (part == null) return null;
+
+  const textValue = typeof part === 'string' || typeof part === 'number'
+    ? String(part)
+    : (part.content || part.text || '');
+
+  if (isSvgString(textValue)) {
+    return (
+      <div
+        key={index}
+        style={{
+          width: context.inGroup ? 'auto' : '100%',
+          maxWidth: context.inGroup ? 170 : 560,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flex: context.inGroup ? '0 0 auto' : 'initial',
+          margin: context.inGroup ? 0 : '6px auto',
+          ...(part.style || {}),
+        }}
+        dangerouslySetInnerHTML={{ __html: textValue }}
+      />
+    );
+  }
 
   if (typeof part === 'string' || typeof part === 'number') {
     return (
@@ -987,7 +1103,16 @@ function renderCorrectAnswer(question) {
   if (isCategorization) return null; // already rendered by renderInteractiveSolution
 
   // Try to resolve the expected answer value
-  const isMcq = question.type === 'mcq' || question.interaction === 'choice' || question.interaction === 'multi_select';
+  const isMcq = question.type === 'mcq' || question.optionsType === 'mcq' ||
+    question.interaction === 'choice' || question.interaction === 'multi_select' ||
+    question.interaction === 'multi-choice' || question.optionsType === 'msq' ||
+    (typeof question.interaction === 'object'
+      ? (question.interaction?.engine === 'msq' || question.interaction?.engine === 'mcq')
+      : false);
+  const isMsq = question.optionsType === 'msq' ||
+    (typeof question.interaction === 'object'
+      ? question.interaction?.engine === 'msq' || question.interaction?.inputMode === 'multi-choice'
+      : question.interaction === 'msq' || question.interaction === 'multi-choice');
   
   let expected = null;
   if (isMcq) {
@@ -1012,8 +1137,16 @@ function renderCorrectAnswer(question) {
   } else {
     expected = question.answer ?? question.correctAnswer;
     if (!expected && Array.isArray(question.validationRules)) {
-      const rule = question.validationRules.find(r => r.type === 'exact_match' && r.target === 'answer');
-      if (rule) expected = rule.value;
+      // Handle MSQ all_correct rule — collect all correct labels as an array
+      const allCorrectRule = question.validationRules.find(r => r.type === 'all_correct' && r.target === 'answer');
+      if (allCorrectRule) {
+        expected = Array.isArray(allCorrectRule.values)
+          ? allCorrectRule.values
+          : [allCorrectRule.value].filter(Boolean);
+      } else {
+        const rule = question.validationRules.find(r => r.type === 'exact_match' && r.target === 'answer');
+        if (rule) expected = rule.value;
+      }
     }
   }
 
@@ -1033,7 +1166,31 @@ function renderCorrectAnswer(question) {
         Correct Answer
       </h4>
       
-      {typeof expected === 'object' && !Array.isArray(expected) ? (
+      {Array.isArray(expected) ? (
+        // MSQ layout: render each correct answer as a badge
+        <div>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: '#7c3aed', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            ☑ Select ALL correct answers
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {expected.map((val, idx) => (
+              <div key={idx} style={{
+                padding: '8px 16px',
+                background: '#f5f3ff',
+                borderRadius: 10,
+                border: '2px solid #7c3aed',
+                color: '#5b21b6',
+                fontWeight: 900,
+                fontSize: 'clamp(15px, 2.8vw, 18px)',
+                fontFamily: 'var(--font-outfit), sans-serif',
+                boxShadow: '0 2px 8px rgba(124,58,237,0.10)',
+              }}>
+                {String(val)}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : typeof expected === 'object' && !Array.isArray(expected) ? (
         // Multi-blank layout: Render question blueprint with values filled in
         (() => {
           const qText = question.questionText || '';
@@ -1111,11 +1268,16 @@ function renderCorrectAnswer(question) {
           color: '#15803d',
           fontWeight: 900,
           fontSize: 'clamp(18px, 3.2vw, 21px)',
-          display: 'inline-block',
+          display: isSvgString(String(expected)) ? 'block' : 'inline-block',
           fontFamily: 'var(--font-outfit), sans-serif',
-          boxShadow: '0 4px 10px rgba(34, 197, 94, 0.05)'
+          boxShadow: '0 4px 10px rgba(34, 197, 94, 0.05)',
+          ...(isSvgString(String(expected)) ? { maxWidth: 360, margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' } : {})
         }}>
-          {String(expected)}
+          {isSvgString(String(expected)) ? (
+            <div dangerouslySetInnerHTML={{ __html: String(expected) }} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} />
+          ) : (
+            String(expected)
+          )}
         </div>
       )}
     </div>
@@ -1274,7 +1436,11 @@ export default function PracticeFeedback({
             fontWeight: 500,
             lineHeight: 1.8,
           }}>
-            <InlineMarkdown text={cleanExp} />
+            {isSvgString(cleanExp) ? (
+              <div dangerouslySetInnerHTML={{ __html: cleanExp }} />
+            ) : (
+              <InlineMarkdown text={cleanExp} />
+            )}
           </div>
         )}
 
@@ -1359,7 +1525,11 @@ export default function PracticeFeedback({
             lineHeight: 1.8,
           }}
         >
-          <InlineMarkdown text={cleanExp} />
+          {isSvgString(cleanExp) ? (
+            <div dangerouslySetInnerHTML={{ __html: cleanExp }} />
+          ) : (
+            <InlineMarkdown text={cleanExp} />
+          )}
         </div>
       )}
 

@@ -3,7 +3,8 @@ import { getMongoDb, hasMongoConfig } from '../../db/mongo.js';
 const DEFAULT_COLLECTION = 'questions';
 
 function getCollectionName() {
-  return process.env.MONGODB_QUESTIONS_COLLECTION || DEFAULT_COLLECTION;
+  const name = process.env.MONGODB_QUESTIONS_COLLECTION;
+  return name ? name.trim() : DEFAULT_COLLECTION;
 }
 
 function activeStatusFilter() {
@@ -39,6 +40,7 @@ function buildSkillFilter({ subject, topic, skill }) {
     );
   });
 
+  const escapedTopic = topic ? String(topic).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') : '';
   return {
     $and: [
       {
@@ -51,6 +53,11 @@ function buildSkillFilter({ subject, topic, skill }) {
       {
         $or: [
           { topic },
+          ...(escapedTopic ? [
+            { topic: { $regex: `^${escapedTopic}(?:-|$)` } },
+            { 'metadata.topic': { $regex: `^${escapedTopic}(?:-|$)` } },
+            { 'question.metadata.topic': { $regex: `^${escapedTopic}(?:-|$)` } }
+          ] : []),
           { 'metadata.topic': topic },
           { 'question.metadata.topic': topic },
         ],

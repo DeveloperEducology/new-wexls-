@@ -573,6 +573,7 @@ function lkgComparingEngine(config, params, random) {
     const questionText = `Which group has ${comparison}?`;
     return {
       type: 'mcq',
+      interaction: 'side_by_side_display',
       questionText,
       parts: [
         { type: 'text', content: questionText },
@@ -1452,50 +1453,133 @@ function lkgSizeEngine(config, params, random) {
 
   if (subType === 'tall_short') {
     const isTaller = random() > 0.5;
-    const questionText = isTaller ? "Which tree is taller?" : "Which tree is shorter?";
     
-    const tallItem = lkgSizeImageAssets.find(x => x.id === 'tree_tall') || { image: '/images/lkg/size/tree_tall.png', emoji: '🌲' };
-    const shortItem = lkgSizeImageAssets.find(x => x.id === 'tree_short') || { image: '/images/lkg/size/tree_short.png', emoji: '🌳' };
+    const PAIRS = [
+      { 
+        tall: { emoji: '🦒', label: 'tall giraffe' }, 
+        short: { emoji: '🐕', label: 'short dog' }, 
+        question: (t) => t ? "Which animal is taller?" : "Which animal is shorter?",
+        desc: (t) => t ? "The giraffe is taller than the dog." : "The dog is shorter than the giraffe."
+      },
+      { 
+        tall: { emoji: '🌲', label: 'tall tree' }, 
+        short: { emoji: '🌳', label: 'short tree' }, 
+        question: (t) => t ? "Which tree is taller?" : "Which tree is shorter?",
+        desc: (t) => t ? "The pine tree is taller than the deciduous tree." : "The deciduous tree is shorter than the pine tree."
+      },
+      { 
+        tall: { emoji: '🗼', label: 'tall tower' }, 
+        short: { emoji: '🏠', label: 'short house' }, 
+        question: (t) => t ? "Which building is taller?" : "Which building is shorter?",
+        desc: (t) => t ? "The tower is taller than the house." : "The house is shorter than the tower."
+      },
+      { 
+        tall: { emoji: '🪜', label: 'tall ladder' }, 
+        short: { emoji: '📦', label: 'short box' }, 
+        question: (t) => t ? "Which is taller?" : "Which is shorter?",
+        desc: (t) => t ? "The ladder is taller than the box." : "The box is shorter than the ladder."
+      }
+    ];
+
+    const chosenPair = PAIRS[Math.floor(random() * PAIRS.length)];
+    const questionText = chosenPair.question(isTaller);
+    const solutionText = chosenPair.desc(isTaller);
 
     const isFirstTall = random() > 0.5;
-    const groupA = isFirstTall ? tallItem : shortItem;
-    const groupB = isFirstTall ? shortItem : tallItem;
-    
-    const answerId = isTaller 
-      ? (isFirstTall ? 'group_a' : 'group_b')
-      : (isFirstTall ? 'group_b' : 'group_a');
+    const item0 = isFirstTall ? chosenPair.tall : chosenPair.short;
+    const item1 = isFirstTall ? chosenPair.short : chosenPair.tall;
+
+    const CW = 400;
+    const CH = 260;
+
+    const backgroundSvg = `<svg width="${CW}" height="${CH}" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#bae6fd"/>
+          <stop offset="100%" stop-color="#e0f2fe"/>
+        </linearGradient>
+        <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#86efac"/>
+          <stop offset="100%" stop-color="#4ade80"/>
+        </linearGradient>
+      </defs>
+      <style>
+        .svg-object-0, .svg-object-1 {
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+          transform-origin: center;
+          transform-box: fill-box;
+        }
+        /* Hover outline (blue) */
+        .hotspotCanvasInner[data-hovered-index="0"] .svg-object-0,
+        .hotspotCanvasInner[data-hovered-index="1"] .svg-object-1 {
+          filter: drop-shadow(4px 0 0 #38bdf8) drop-shadow(-4px 0 0 #38bdf8) drop-shadow(0 4px 0 #38bdf8) drop-shadow(0 -4px 0 #38bdf8) drop-shadow(0 0 10px rgba(56, 189, 248, 0.45)) !important;
+        }
+        /* Selected outline (green) */
+        .hotspotCanvasInner[data-selected-index="0"] .svg-object-0,
+        .hotspotCanvasInner[data-selected-index="1"] .svg-object-1 {
+          filter: drop-shadow(4px 0 0 #22c55e) drop-shadow(-4px 0 0 #22c55e) drop-shadow(0 4px 0 #22c55e) drop-shadow(0 -4px 0 #22c55e) drop-shadow(0 0 14px rgba(34, 197, 94, 0.55)) !important;
+        }
+      </style>
+      <!-- Background Sky & Grass -->
+      <rect x="0" y="0" width="${CW}" height="170" fill="url(#skyGrad)" rx="16"/>
+      <rect x="0" y="170" width="${CW}" height="90" fill="url(#grassGrad)" rx="16"/>
+      
+      <!-- Stands / Pedestals -->
+      <ellipse cx="100" cy="195" rx="55" ry="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+      <ellipse cx="300" cy="195" rx="55" ry="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+      
+      <!-- Emojis (Index 0 on Left, Index 1 on Right) -->
+      <text class="svg-object-0" x="100" y="185" font-size="${isFirstTall ? 115 : 65}" text-anchor="middle" dominant-baseline="auto">${item0.emoji}</text>
+      <text class="svg-object-1" x="300" y="185" font-size="${isFirstTall ? 65 : 115}" text-anchor="middle" dominant-baseline="auto">${item1.emoji}</text>
+      
+      <!-- Labels under Stands -->
+      <text x="100" y="225" font-size="14" fill="#475569" font-family="Outfit, sans-serif" font-weight="900" text-anchor="middle">A</text>
+      <text x="300" y="225" font-size="14" fill="#475569" font-family="Outfit, sans-serif" font-weight="900" text-anchor="middle">B</text>
+    </svg>`;
+
+    // Tight hotspots wrapping each emoji shape precisely
+    const w0 = isFirstTall ? 115 : 65;
+    const h0 = isFirstTall ? 115 : 65;
+    const x0 = 100 - w0 / 2;
+    const y0 = 185 - h0;
+
+    const w1 = isFirstTall ? 65 : 115;
+    const h1 = isFirstTall ? 65 : 115;
+    const x1 = 300 - w1 / 2;
+    const y1 = 185 - h1;
+
+    const hotspots = [
+      { optionIndex: 0, x: Math.round(x0), y: Math.round(y0), width: w0, height: h0, label: `Object A (${item0.label})`, transparent: true },
+      { optionIndex: 1, x: Math.round(x1), y: Math.round(y1), width: w1, height: h1, label: `Object B (${item1.label})`, transparent: true }
+    ];
+
+    const isCorrectFirst = isTaller ? isFirstTall : !isFirstTall;
+    const answerId = isCorrectFirst ? 'left' : 'right';
 
     return {
       type: 'mcq',
+      interaction: 'hotspot_select',
       questionText,
+      transparent: true,
       parts: [
-        { type: 'text', content: questionText }
-      ],
-      options: [
+        { type: 'text', content: questionText },
         {
-          id: 'group_a',
-          label: 'Tree A',
-          imageUrl: resolveAssetImage(groupA),
-          emoji: groupA.emoji,
-          width: '70px',
-          height: isFirstTall ? '140px' : '70px',
-          fontSize: isFirstTall ? '72px' : '36px',
-          hideLabel: true
-        },
-        {
-          id: 'group_b',
-          label: 'Tree B',
-          imageUrl: resolveAssetImage(groupB),
-          emoji: groupB.emoji,
-          width: '70px',
-          height: isFirstTall ? '70px' : '140px',
-          fontSize: isFirstTall ? '36px' : '72px',
-          hideLabel: true
+          type: 'hotspot_canvas',
+          canvasWidth: CW,
+          canvasHeight: CH,
+          backgroundSvg,
+          hotspots,
+          transparent: true,
+          hideHotspotText: true
         }
       ],
+      options: [
+        { id: 'left', label: `Object A` },
+        { id: 'right', label: `Object B` }
+      ],
       answer: answerId,
-      correctAnswerIndex: answerId === 'group_a' ? 0 : 1,
-      solution: { sections: [{ type: 'text', content: `Tree A is ${isFirstTall ? 'taller' : 'shorter'} and Tree B is ${isFirstTall ? 'shorter' : 'taller'}.` }] }
+      correctAnswerIndex: isCorrectFirst ? 0 : 1,
+      solution: { sections: [{ type: 'text', content: solutionText }] }
     };
   }
 

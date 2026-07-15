@@ -33,6 +33,150 @@ export const lkgCountingObjects = [
       "https://static.vecteezy.com/system/resources/thumbnails/057/695/897/small/distinct-mango-tree-outline-art-vector.jpg",
     emoji: "🥭"
   },
+  {
+    name: "circle",
+    plural: "circles",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1783922815731-Circle.png",
+    emoji: "⭕"
+  },
+  {
+    name: "chicken",
+    plural: "chickens",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1783701896620-chicken.png",
+    emoji: "🐔"
+  },
+  {
+    name: "horse",
+    plural: "horses",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1783701733613-horse.png",
+    emoji: "🐴"
+  },
+  {
+    name: "cow",
+    plural: "cows",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/animals/1783602350026-cow.webp",
+    emoji: "🐮"
+  },
+  {
+    name: "red-ball-rubber",
+    plural: "red-ball-rubbers",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781532694068-red-ball-rubber.png",
+    emoji: "🔴"
+  },
+  {
+    name: "red-ball",
+    plural: "red-balls",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781532581246-red-ball.jpg",
+    emoji: "🔴"
+  },
+  {
+    name: "3d-lion",
+    plural: "3d-lions",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781492477059-3d-lion.webp",
+    emoji: "🦁"
+  },
+  {
+    name: "wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-png",
+    plural: "wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-pngs",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781460897576-wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-png.webp",
+    emoji: "🐘"
+  },
+  {
+    name: "jet",
+    plural: "jets",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781331340158-jet.png",
+    emoji: "✈️"
+  },
+  {
+    name: "cab-a4ab8edb7ef",
+    plural: "cab-a4ab8edb7efs",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/gemini-words/rhymingFamilies/ab/cab-a4ab8edb7ef62609.png",
+    emoji: "🚖"
+  },
+  {
+    name: "chest",
+    plural: "chests",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781143400291-chest.png",
+    emoji: "📦"
+  },
+  {
+    name: "ship",
+    plural: "ships",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983615179-ship.png",
+    emoji: "🚢"
+  },
+  {
+    name: "bicycle",
+    plural: "bicycles",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983603490-bicycle.png",
+    emoji: "🚲"
+  },
+  {
+    name: "ruler",
+    plural: "rulers",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983581178-ruler.png",
+    emoji: "📏"
+  },
+  {
+    name: "eraser",
+    plural: "erasers",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983578222-eraser.png",
+    emoji: "🧽"
+  },
+  {
+    name: "pen",
+    plural: "pens",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983574216-pen.png",
+    emoji: "🖊️"
+  },
+  {
+    name: "carrot",
+    plural: "carrots",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983463554-carrot.png",
+    emoji: "🥕"
+  },
+  {
+    name: "orange",
+    plural: "oranges",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983422567-orange.png",
+    emoji: "🍊"
+  },
+  {
+    name: "butterfly",
+    plural: "butterflies",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983349559-butterfly.png",
+    emoji: "🦋"
+  },
+  {
+    name: "bee",
+    plural: "bees",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983345541-bee.png",
+    emoji: "🐝"
+  },
+  {
+    name: "crab",
+    plural: "crabs",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983341294-crab.png",
+    emoji: "🦀"
+  },
+  {
+    name: "whale",
+    plural: "whales",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983326490-whale.png",
+    emoji: "🐋"
+  },
+  {
+    name: "zebra",
+    plural: "zebras",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983290364-zebra.png",
+    emoji: "🦓"
+  },
+  {
+    name: "dot",
+    plural: "dots",
+    image: "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983193275-dot.png",
+    emoji: "⚫"
+  }
 ];
 
 // Category A: Shapes Image Assets
@@ -105,4 +249,179 @@ export const lkgMoneyImageAssets = [
   { id: "coin_2", name: "2 rupee coin", image: "/images/lkg/money/coin_2.png", sampleUrl: "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=200&auto=format&fit=crop", emoji: "🪙" },
   { id: "coin_5", name: "5 rupee coin", image: "/images/lkg/money/coin_5.png", sampleUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200&auto=format&fit=crop", emoji: "🪙" },
   { id: "coin_10", name: "10 rupee coin", image: "/images/lkg/money/coin_10.png", sampleUrl: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?q=80&w=200&auto=format&fit=crop", emoji: "🪙" }
+];
+
+// === CLOUDFLARE IMAGE ASSETS ===
+export const cloudflareImageAssets = [
+  {
+    "name": "circle",
+    "singular": "circle",
+    "plural": "circles",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1783922815731-Circle.png",
+    "firstLetter": "c"
+  },
+  {
+    "name": "chicken",
+    "singular": "chicken",
+    "plural": "chickens",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1783701896620-chicken.png",
+    "firstLetter": "c"
+  },
+  {
+    "name": "horse",
+    "singular": "horse",
+    "plural": "horses",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1783701733613-horse.png",
+    "firstLetter": "h"
+  },
+  {
+    "name": "cow",
+    "singular": "cow",
+    "plural": "cows",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/animals/1783602350026-cow.webp",
+    "firstLetter": "c"
+  },
+  {
+    "name": "red-ball-rubber",
+    "singular": "red-ball-rubber",
+    "plural": "red-ball-rubbers",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781532694068-red-ball-rubber.png",
+    "firstLetter": "r",
+    "color": "red"
+  },
+  {
+    "name": "red-ball",
+    "singular": "red-ball",
+    "plural": "red-balls",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781532581246-red-ball.jpg",
+    "firstLetter": "r",
+    "color": "red"
+  },
+  {
+    "name": "3d-lion",
+    "singular": "3d-lion",
+    "plural": "3d-lions",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781492477059-3d-lion.webp",
+    "firstLetter": "3"
+  },
+  {
+    "name": "wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-png",
+    "singular": "wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-png",
+    "plural": "wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-pngs",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781460897576-wonderful-vintage-cute-cartoon-elephant-3d-render-exclusive-free-png.webp",
+    "firstLetter": "w"
+  },
+  {
+    "name": "jet",
+    "singular": "jet",
+    "plural": "jets",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781331340158-jet.png",
+    "firstLetter": "j"
+  },
+  {
+    "name": "cab-a4ab8edb7ef",
+    "singular": "cab-a4ab8edb7ef",
+    "plural": "cab-a4ab8edb7efs",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/gemini-words/rhymingFamilies/ab/cab-a4ab8edb7ef62609.png",
+    "firstLetter": "c"
+  },
+  {
+    "name": "chest",
+    "singular": "chest",
+    "plural": "chests",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781143400291-chest.png",
+    "firstLetter": "c"
+  },
+  {
+    "name": "ship",
+    "singular": "ship",
+    "plural": "ships",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983615179-ship.png",
+    "firstLetter": "s"
+  },
+  {
+    "name": "bicycle",
+    "singular": "bicycle",
+    "plural": "bicycles",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983603490-bicycle.png",
+    "firstLetter": "b"
+  },
+  {
+    "name": "ruler",
+    "singular": "ruler",
+    "plural": "rulers",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983581178-ruler.png",
+    "firstLetter": "r"
+  },
+  {
+    "name": "eraser",
+    "singular": "eraser",
+    "plural": "erasers",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983578222-eraser.png",
+    "firstLetter": "e"
+  },
+  {
+    "name": "pen",
+    "singular": "pen",
+    "plural": "pens",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983574216-pen.png",
+    "firstLetter": "p"
+  },
+  {
+    "name": "carrot",
+    "singular": "carrot",
+    "plural": "carrots",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983463554-carrot.png",
+    "firstLetter": "c"
+  },
+  {
+    "name": "orange",
+    "singular": "orange",
+    "plural": "oranges",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983422567-orange.png",
+    "firstLetter": "o",
+    "color": "orange"
+  },
+  {
+    "name": "butterfly",
+    "singular": "butterfly",
+    "plural": "butterflies",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983349559-butterfly.png",
+    "firstLetter": "b"
+  },
+  {
+    "name": "bee",
+    "singular": "bee",
+    "plural": "bees",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983345541-bee.png",
+    "firstLetter": "b"
+  },
+  {
+    "name": "crab",
+    "singular": "crab",
+    "plural": "crabs",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983341294-crab.png",
+    "firstLetter": "c"
+  },
+  {
+    "name": "whale",
+    "singular": "whale",
+    "plural": "whales",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983326490-whale.png",
+    "firstLetter": "w"
+  },
+  {
+    "name": "zebra",
+    "singular": "zebra",
+    "plural": "zebras",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983290364-zebra.png",
+    "firstLetter": "z"
+  },
+  {
+    "name": "dot",
+    "singular": "dot",
+    "plural": "dots",
+    "imageUrl": "https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780983193275-dot.png",
+    "firstLetter": "d"
+  }
 ];

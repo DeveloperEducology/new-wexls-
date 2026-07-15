@@ -1,0 +1,1442 @@
+[
+  {
+    "id": "science_properties-of-objects_q1",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A window pane\n* A clean glass cup\n* Clear plastic wrap\n* A camera lens",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "flexible",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "transparent (see-through)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A window pane\n* A clean glass cup\n* Clear plastic wrap\n* A camera lens"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "You can see clearly through all of these objects because they allow light to pass through them."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q2",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A rubber band\n* A garden hose\n* A leather belt\n* A piece of string",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "flexible (can bend easily)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "fragile",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "metallic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A rubber band\n* A garden hose\n* A leather belt\n* A piece of string"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "All of these items can be bent, folded, or curved easily without breaking."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q3",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* Sandpaper\n* A brick wall\n* The bark of a tree\n* A concrete sidewalk",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "rough",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "smooth",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "transparent",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* Sandpaper\n* A brick wall\n* The bark of a tree\n* A concrete sidewalk"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "If you run your hand over any of these items, their surfaces feel bumpy, uneven, and scratchy."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q4",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A piece of chalk\n* An eggshell\n* A ceramic plate\n* A thin glass ornament",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "flexible",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "magnetic",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "fragile (breaks easily)",
+        "isCorrect": true
+      }
+    ],
+    "correctAnswerIndex": 2,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A piece of chalk\n* An eggshell\n* A ceramic plate\n* A thin glass ornament"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects are brittle and will easily crack, shatter, or break if dropped or put under pressure."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q5",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A wet ice cube\n* A freshly waxed floor\n* A banana peel on the ground\n* A puddle of liquid soap",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "rough",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "slippery",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A wet ice cube\n* A freshly waxed floor\n* A banana peel on the ground\n* A puddle of liquid soap"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "All of these objects have very low friction, meaning things will slide across them easily."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q6",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A steel filing cabinet\n* An iron skillet\n* A metal refrigerator door\n* A steel paperclip",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "magnetic",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "liquid",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "transparent",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A steel filing cabinet\n* An iron skillet\n* A metal refrigerator door\n* A steel paperclip"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These items contain metals like iron or steel, which are attracted to magnets."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q7",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A silk scarf\n* A polished marble countertop\n* A shiny smartphone screen\n* A plastic billiard ball",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "rough",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "smooth",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "gaseous",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A silk scarf\n* A polished marble countertop\n* A shiny smartphone screen\n* A plastic billiard ball"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These items have even, level surfaces without bumps or ridges, making them feel sleek to the touch."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q8",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A copper penny\n* A brass key\n* An aluminum soda can\n* A steel bolt",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "metallic",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "transparent",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "organic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A copper penny\n* A brass key\n* An aluminum soda can\n* A steel bolt"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "All of these objects are made of metal, making them good conductors of heat and electricity."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q9",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A cotton ball\n* A velvet pillow\n* A woolen sweater\n* A plush teddy bear",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "hard",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "soft",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A cotton ball\n* A velvet pillow\n* A woolen sweater\n* A plush teddy bear"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects are gentle to the touch and easily change shape or compress when squeezed."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q10",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* Helium inside a balloon\n* Steam coming out of a kettle\n* Oxygen in the air\n* Carbon dioxide in a soda bubble",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "solid",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "liquid",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "gas",
+        "isCorrect": true
+      }
+    ],
+    "correctAnswerIndex": 2,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* Helium inside a balloon\n* Steam coming out of a kettle\n* Oxygen in the air\n* Carbon dioxide in a soda bubble"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These substances do not have a fixed shape or volume; they expand to fill whatever container they are in."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q11",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A wooden log\n* A plastic toy boat\n* A cork stopper\n* A dry leaf",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "sinks in water",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "buoyant (floats on water)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A wooden log\n* A plastic toy boat\n* A cork stopper\n* A dry leaf"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects are less dense than water, allowing them to stay at the surface of the water."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q12",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A marble\n* A metal coin\n* A pebble\n* An iron anchor",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "floats on water",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "sinks in water",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "soluble in water",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A marble\n* A metal coin\n* A pebble\n* An iron anchor"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects are denser than water, causing them to fall to the bottom when submerged."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q13",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A spoonful of sugar\n* Table salt\n* A powder drink mix\n* A bath bomb",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "soluble in water (dissolves)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "magnetic",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "insoluble in water",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A spoonful of sugar\n* Table salt\n* A powder drink mix\n* A bath bomb"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "When mixed into water, these substances break down completely and blend into the liquid."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q14",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A plastic button\n* A glass marble\n* A cooking oil droplet\n* A metal bolt",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "insoluble in water (does not dissolve)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "soluble in water",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "gaseous",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A plastic button\n* A glass marble\n* A cooking oil droplet\n* A metal bolt"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "Even if placed in water for a long time, these items will not break down or dissolve into the liquid."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q15",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A dry kitchen sponge\n* A paper towel\n* A cotton bath towel\n* A piece of cardboard",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "absorbent (soaks up liquid)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "waterproof",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A dry kitchen sponge\n* A paper towel\n* A cotton bath towel\n* A piece of cardboard"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These items have tiny pores or spaces that easily draw in and hold liquids."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q16",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A plastic rain poncho\n* Rubber rain boots\n* A silicone baking mat\n* A wax-coated paper cup",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "absorbent",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "waterproof (repels water)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "fragile",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A plastic rain poncho\n* Rubber rain boots\n* A silicone baking mat\n* A wax-coated paper cup"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These materials do not let water pass through them or soak into them."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q17",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* Cooking oil\n* Molasses\n* Maple syrup\n* Honey",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "viscous (thick, slow-pouring liquid)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "solid",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "transparent",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* Cooking oil\n* Molasses\n* Maple syrup\n* Honey"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These liquids have high internal friction, meaning they are thick and flow slowly compared to water."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q18",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A feather\n* A piece of dust\n* A single strand of hair\n* A dandelion seed",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "heavy",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "lightweight",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A feather\n* A piece of dust\n* A single strand of hair\n* A dandelion seed"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These items have very little mass and can easily be moved or blown away by a gentle breeze."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q19",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A bowling ball\n* A cast-iron skillet\n* A concrete cinder block\n* A heavy textbook",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "heavy (difficult to lift)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "lightweight",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "flexible",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A bowling ball\n* A cast-iron skillet\n* A concrete cinder block\n* A heavy textbook"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects have a high mass relative to their size, requiring significant force to pick up."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q20",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A drop of rain\n* A cup of orange juice\n* Melted wax\n* Running tap water",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "solid",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "liquid",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "gas",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A drop of rain\n* A cup of orange juice\n* Melted wax\n* Running tap water"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These substances have a definite volume but no fixed shape, flowing to match the shape of whatever container holds them."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q21",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* An iron nail\n* A copper wire\n* A silver spoon\n* A brass key",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "electrical conductor",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "electrical insulator",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "gaseous",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* An iron nail\n* A copper wire\n* A silver spoon\n* A brass key"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "All of these metals easily allow electric currents to flow through them."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q22",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A rubber glove\n* A wooden toothpick\n* A plastic spoon\n* A glass rod",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "electrical conductor",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "electrical insulator",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A rubber glove\n* A wooden toothpick\n* A plastic spoon\n* A glass rod"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These materials block the flow of electricity, making them safe to use to shield electrical currents."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q23",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A metal baking pan\n* A cast-iron pot\n* A copper kettle\n* A stainless steel grill grate",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "thermal conductor (transfers heat quickly)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "thermal insulator",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "flexible",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A metal baking pan\n* A cast-iron pot\n* A copper kettle\n* A stainless steel grill grate"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects are made of metal, meaning heat travels through them rapidly, which is why they are great for cooking."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q24",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* An oven mitt\n* A styrofoam cooler\n* A wooden spoon handle\n* A wool blanket",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "thermal conductor",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "thermal insulator (keeps heat from moving easily)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "magnetic",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* An oven mitt\n* A styrofoam cooler\n* A wooden spoon handle\n* A wool blanket"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These materials are poor conductors of heat, so they help block or slow down the transfer of heat."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q25",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A brick\n* An iron anvil\n* A diamond ring\n* A granite boulder",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "soft",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "hard (resists scratching and bending)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "liquid",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A brick\n* An iron anvil\n* A diamond ring\n* A granite boulder"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These materials have a rigid structure that makes them highly resistant to being dented, scratched, or deformed."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q26",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A mirror\n* A polished silver platter\n* A calm lake surface\n* A glossy phone screen",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "reflective (returns light)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "rough",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "transparent",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A mirror\n* A polished silver platter\n* A calm lake surface\n* A glossy phone screen"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These objects have smooth, shiny surfaces that bounce light rays back to create a clear image or glare."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q27",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* A lemon slice\n* A green apple\n* Vinegar\n* Plain Greek yogurt",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "salty",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "sweet",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "sour",
+        "isCorrect": true
+      }
+    ],
+    "correctAnswerIndex": 2,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* A lemon slice\n* A green apple\n* Vinegar\n* Plain Greek yogurt"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These foods and liquids contain acids that create an acidic, tangy taste on your tongue."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q28",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* Pretzel twists\n* Soy sauce\n* Potato chips\n* Ocean saltwater",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "sweet",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "salty",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "bitter",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* Pretzel twists\n* Soy sauce\n* Potato chips\n* Ocean saltwater"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These items contain a high concentration of sodium chloride (salt), giving them a distinct savory flavor."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q29",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* Honey\n* Ripe strawberries\n* Maple syrup\n* Milk chocolate",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "sweet",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_1",
+        "label": "sour",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_2",
+        "label": "salty",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 0,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* Honey\n* Ripe strawberries\n* Maple syrup\n* Milk chocolate"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "These foods contain natural sugars or added sweeteners that trigger your sweet taste buds."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  },
+  {
+    "id": "science_properties-of-objects_q30",
+    "type": "mcq",
+    "subject": "science",
+    "topic": "properties-of-objects",
+    "skillId": "science-g5-compare-properties-objects",
+    "questionText": "Which property do these four objects have in common?\n\n* Freshly baked cookies\n* A blooming rose\n* Scented laundry detergent\n* A pine tree branch",
+    "options": [
+      {
+        "id": "opt_0",
+        "label": "odorless",
+        "isCorrect": false
+      },
+      {
+        "id": "opt_1",
+        "label": "fragrant (has a noticeable scent)",
+        "isCorrect": true
+      },
+      {
+        "id": "opt_2",
+        "label": "tasteless",
+        "isCorrect": false
+      }
+    ],
+    "correctAnswerIndex": 1,
+    "parts": [
+      {
+        "type": "text",
+        "content": "Which property do these four objects have in common?\n\n* Freshly baked cookies\n* A blooming rose\n* Scented laundry detergent\n* A pine tree branch"
+      }
+    ],
+    "solution": {
+      "sections": [
+        {
+          "type": "text",
+          "content": "All of these objects release molecules into the air that can easily be detected by your sense of smell."
+        }
+      ]
+    },
+    "status": "active",
+    "metadata": {
+      "subject": "science",
+      "topic": "properties-of-objects",
+      "skillId": "science-g5-compare-properties-objects",
+      "templateId": "questionBank.mcq",
+      "engine": "questionBank"
+    }
+  }
+]

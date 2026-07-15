@@ -3,6 +3,84 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { COMPONENT_REGISTRY } from '../../../lib/practice/generators/universal/components/index.js';
+import {
+  drawBaseTenBlocks,
+  drawPlaceValue,
+  drawTenFrame,
+  drawVisualChoicePanel,
+  drawJarOfMarbles,
+  drawSpinner,
+  drawItemCounter,
+  drawNumberLine,
+  drawHundredChart,
+  drawRekenrek,
+  drawNumberBond,
+  drawTallyChart,
+  drawFractionBar,
+  drawFractionCircle,
+  drawFractionGrid,
+  drawDecimalGrid,
+  drawDecimalLine,
+  drawShapeCanvas,
+  drawCoordinatePlane,
+  drawProtractor,
+  drawRuler,
+  drawGeoboard,
+  drawBarGraph,
+  drawPictograph,
+  drawFrequencyTable,
+  drawAnalogClock,
+  drawCalendar,
+  drawThermometer,
+  drawBalanceScale,
+  drawMeasuringJug,
+  drawMoneyDisplay,
+  drawPriceTagCompare
+} from '../../../lib/practice/generators/universalEvaluator.js';
+
+const DRAWING_HELPERS = {
+  drawBaseTenBlocks,
+  drawPlaceValue,
+  drawTenFrame,
+  drawVisualChoicePanel,
+  drawJarOfMarbles,
+  drawSpinner,
+  drawItemCounter,
+  drawNumberLine,
+  drawHundredChart,
+  drawRekenrek,
+  drawNumberBond,
+  drawTallyChart,
+  drawFractionBar,
+  drawFractionCircle,
+  drawFractionGrid,
+  drawDecimalGrid,
+  drawDecimalLine,
+  drawShapeCanvas,
+  drawCoordinatePlane,
+  drawProtractor,
+  drawRuler,
+  drawGeoboard,
+  drawBarGraph,
+  drawPictograph,
+  drawFrequencyTable,
+  drawAnalogClock,
+  drawCalendar,
+  drawThermometer,
+  drawBalanceScale,
+  drawMeasuringJug,
+  drawMoneyDisplay,
+  drawPriceTagCompare
+};
+
+const padOptions = (options) => {
+  const baseOptions = options || [];
+  const padded = [...baseOptions];
+  while (padded.length < 4) {
+    padded.push({ label: '', isCorrect: padded.length === 0 });
+  }
+  return padded;
+};
 
 export default function BaseGeneratorLayout({
   title: pageTitle,
@@ -22,6 +100,12 @@ export default function BaseGeneratorLayout({
   const [solution, setSolution] = useState(presets[0]?.solution || '');
   const [placeholders, setPlaceholders] = useState(Object.keys(presets[0]?.placeholders || {}));
   const [placeholderValues, setPlaceholderValues] = useState(presets[0]?.placeholders || {});
+  
+  // MCQ and Options parameters
+  const [optionsType, setOptionsType] = useState(presets[0]?.optionsType || 'fill_blank');
+  const [mcqColumns, setMcqColumns] = useState(String(presets[0]?.layoutConfig?.columns || '2'));
+  const [optionsCount, setOptionsCount] = useState(presets[0]?.options?.length || 4);
+  const [mcqOptions, setMcqOptions] = useState(() => padOptions(presets[0]?.options));
 
   // Visual parameters
   const [visualComponent, setVisualComponent] = useState(presets[0]?.visualComponent || defaultVisualComponent);
@@ -53,9 +137,58 @@ export default function BaseGeneratorLayout({
     setVisualComponent(preset.visualComponent || defaultVisualComponent);
     setVisualProps(preset.visualProps || defaultVisualProps);
     setVisualPosition(preset.visualPosition || 'middle');
+    setOptionsType(preset.optionsType || 'fill_blank');
+    setMcqColumns(preset.layoutConfig?.columns ? String(preset.layoutConfig.columns) : '2');
+    setOptionsCount(preset.options?.length || 4);
+    setMcqOptions(padOptions(preset.options));
     setPublishStatus(null);
     setPublishError(null);
   };
+
+  // Dynamically sync placeholder input fields when user types custom variable names
+  useEffect(() => {
+    const varRegex = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+    const foundVars = new Set();
+    
+    let match;
+    while ((match = varRegex.exec(blueprint)) !== null) {
+      foundVars.add(match[1]);
+    }
+    while ((match = varRegex.exec(solution)) !== null) {
+      foundVars.add(match[1]);
+    }
+    
+    foundVars.delete('animal');
+    foundVars.delete('image');
+    
+    if (foundVars.size === 0) return;
+
+    setPlaceholders((prev) => {
+      let updated = false;
+      const newPlaceholders = [...prev];
+      
+      foundVars.forEach((vName) => {
+        if (!newPlaceholders.includes(vName)) {
+          newPlaceholders.push(vName);
+          updated = true;
+        }
+      });
+      
+      if (updated) {
+        setPlaceholderValues((prevVals) => {
+          const newPlaceholderValues = { ...prevVals };
+          foundVars.forEach((vName) => {
+            if (newPlaceholderValues[vName] === undefined) {
+              newPlaceholderValues[vName] = '1-9';
+            }
+          });
+          return newPlaceholderValues;
+        });
+        return newPlaceholders;
+      }
+      return prev;
+    });
+  }, [blueprint, solution]);
 
   // Helper to parse lists like "Marcus, Emma, Jamal" or ranges like "3-8"
   const resolvePlaceholder = (valStr) => {
@@ -68,7 +201,12 @@ export default function BaseGeneratorLayout({
         const wrapped = cleanStr.startsWith('[') ? cleanStr : `[${cleanStr}]`;
         const arr = JSON.parse(wrapped);
         if (Array.isArray(arr) && arr.length > 0) {
-          return arr[Math.floor(Math.random() * arr.length)];
+          const val = arr[Math.floor(Math.random() * arr.length)];
+          const num = Number(val);
+          if (val !== '' && !isNaN(num) && isFinite(num)) {
+            return num;
+          }
+          return val;
         }
       } catch (e) {
         // Fall back to regular string splitting
@@ -77,7 +215,12 @@ export default function BaseGeneratorLayout({
 
     if (cleanStr.includes(',')) {
       const arr = cleanStr.split(',').map(s => s.trim()).filter(Boolean);
-      return arr[Math.floor(Math.random() * arr.length)] || '';
+      const val = arr[Math.floor(Math.random() * arr.length)] || '';
+      const num = Number(val);
+      if (val !== '' && !isNaN(num) && isFinite(num)) {
+        return num;
+      }
+      return val;
     }
     const rangeRegex = /^(\d+)-(\d+)$/;
     const match = cleanStr.match(rangeRegex);
@@ -85,6 +228,11 @@ export default function BaseGeneratorLayout({
       const min = parseInt(match[1], 10);
       const max = parseInt(match[2], 10);
       return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    
+    const num = Number(cleanStr);
+    if (cleanStr !== '' && !isNaN(num) && isFinite(num)) {
+      return num;
     }
     return cleanStr;
   };
@@ -147,7 +295,11 @@ export default function BaseGeneratorLayout({
     const mathRegex = /\{=\s*(.*?)\s*=\}/g;
     result = result.replace(mathRegex, (match, expr) => {
       try {
-        const evaluated = new Function('ctx', `with(ctx) { return ${expr}; }`)(resolvedValues);
+        const evaluationCtx = {
+          ...resolvedValues,
+          ...DRAWING_HELPERS
+        };
+        const evaluated = new Function('ctx', `with(ctx) { return ${expr}; }`)(evaluationCtx);
         if (typeof evaluated === 'number' && !Number.isInteger(evaluated)) {
           return Math.round(evaluated * 100) / 100;
         }
@@ -230,14 +382,19 @@ export default function BaseGeneratorLayout({
     const mathRegex = /\{=\s*(.*?)\s*=\}/g;
     let exprCount = 0;
     let match;
+    const nonDrawingExprNames = [];
     while ((match = mathRegex.exec(solution)) !== null) {
       exprCount++;
       const exprName = exprCount === 1 ? 'Result' : `Result_${exprCount}`;
+      const formula = match[1].trim();
       compiledVariables.push({
         name: exprName,
         type: 'expression',
-        formula: match[1].trim()
+        formula: formula
       });
+      if (!formula.includes('draw')) {
+        nonDrawingExprNames.push(exprName);
+      }
     }
 
     // Extract blank IDs from blueprint
@@ -261,7 +418,7 @@ export default function BaseGeneratorLayout({
           const numMatch = blankId.match(/^blank(\d+)$/i);
           if (numMatch) {
             const num = parseInt(numMatch[1], 10);
-            const exprName = num === 1 ? 'Result' : `Result_${num}`;
+            const exprName = nonDrawingExprNames[num - 1] || (num === 1 ? 'Result' : `Result_${num}`);
             answerObj[blankId] = `[${exprName}]`;
           } else {
             answerObj[blankId] = `[${blankId}]`;
@@ -277,6 +434,17 @@ export default function BaseGeneratorLayout({
       ];
     }
 
+    const compiledOptions = (optionsType === 'mcq' || optionsType === 'visual_choice')
+      ? mcqOptions.slice(0, optionsCount).filter(o => o.label.trim() !== '').map((o) => ({
+          label: o.label,
+          isCorrect: o.isCorrect
+        }))
+      : undefined;
+
+    const compiledLayout = (optionsType === 'mcq' || optionsType === 'visual_choice')
+      ? { columns: parseInt(mcqColumns, 10) }
+      : undefined;
+
     const compiledJson = {
       id: `template-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       title,
@@ -285,7 +453,7 @@ export default function BaseGeneratorLayout({
       grade,
       description: 'Generated via Template Masterclass',
       status: 'active',
-      optionsType: isMcq ? 'mcq' : 'fill_blank',
+      optionsType,
       blueprint,
       solution,
       questionText: blueprint,
@@ -293,7 +461,9 @@ export default function BaseGeneratorLayout({
         sections: [{ type: 'text', content: solution }]
       },
       validationRules,
-      variables: compiledVariables
+      variables: compiledVariables,
+      ...(compiledOptions ? { options: compiledOptions } : {}),
+      ...(compiledLayout ? { layoutConfig: compiledLayout } : {})
     };
 
     if (visualComponent !== 'none') {
@@ -307,7 +477,7 @@ export default function BaseGeneratorLayout({
     }
 
     setJsonText(JSON.stringify(compiledJson, null, 2));
-  }, [blueprint, solution, placeholderValues, title, subject, topic, grade, placeholders, visualComponent, visualProps, visualPosition]);
+  }, [blueprint, solution, placeholderValues, title, subject, topic, grade, placeholders, visualComponent, visualProps, visualPosition, optionsType, mcqOptions, mcqColumns, optionsCount]);
 
   const handlePublish = async () => {
     setPublishing(true);
@@ -360,11 +530,29 @@ export default function BaseGeneratorLayout({
       });
 
       if (hasReplacements) {
-        const num = Number(resolvedStr);
-        resolvedProps[key] = Number.isFinite(num) ? num : resolvedStr;
+        try {
+          const evaluated = new Function('ctx', `with(ctx) { return ${resolvedStr}; }`)(resolvedValues);
+          if (evaluated !== undefined && evaluated !== null && !isNaN(Number(evaluated))) {
+            resolvedProps[key] = Number(evaluated);
+          } else {
+            resolvedProps[key] = resolvedStr;
+          }
+        } catch (e) {
+          const num = Number(resolvedStr);
+          resolvedProps[key] = Number.isFinite(num) ? num : resolvedStr;
+        }
       } else {
-        const num = Number(strVal);
-        resolvedProps[key] = Number.isFinite(num) ? num : strVal;
+        try {
+          const evaluated = new Function('ctx', `with(ctx) { return ${strVal}; }`)(resolvedValues);
+          if (evaluated !== undefined && evaluated !== null && !isNaN(Number(evaluated))) {
+            resolvedProps[key] = Number(evaluated);
+          } else {
+            resolvedProps[key] = strVal;
+          }
+        } catch (e) {
+          const num = Number(strVal);
+          resolvedProps[key] = Number.isFinite(num) ? num : strVal;
+        }
       }
     });
 
@@ -486,7 +674,7 @@ export default function BaseGeneratorLayout({
             </p>
           </div>
         </div>
-        <Link href="/template-generator" style={{
+        <Link href="/template-generator/hub" style={{
           textDecoration: 'none',
           color: '#4f46e5',
           fontWeight: 700,
@@ -557,7 +745,7 @@ export default function BaseGeneratorLayout({
               ✍️ Question Settings
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontWeight: 700, fontSize: '13px', color: '#64748b', marginBottom: '6px' }}>Template Title</label>
                 <input
@@ -579,7 +767,99 @@ export default function BaseGeneratorLayout({
                   <option value="3">Grade 3</option>
                 </select>
               </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '13px', color: '#64748b', marginBottom: '6px' }}>Question Type</label>
+                <select
+                  value={optionsType}
+                  onChange={(e) => setOptionsType(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e2e8f0', borderRadius: '10px', background: '#fff' }}
+                >
+                  <option value="fill_blank">✏️ Fill in the Blank</option>
+                  <option value="mcq">🔘 Multiple Choice (MCQ)</option>
+                  <option value="visual_choice">🖼️ Visual Choice (MCQ with Options)</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '13px', color: '#64748b', marginBottom: '6px' }}>Option Columns</label>
+                <select
+                  value={mcqColumns}
+                  onChange={(e) => setMcqColumns(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e2e8f0', borderRadius: '10px', background: '#fff' }}
+                  disabled={!['mcq', 'visual_choice'].includes(optionsType)}
+                >
+                  <option value="1">1 Column (Stacked)</option>
+                  <option value="2">2 Columns (Side by Side)</option>
+                  <option value="3">3 Columns</option>
+                  <option value="4">4 Columns</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '13px', color: '#64748b', marginBottom: '6px' }}>No. of Options</label>
+                <select
+                  value={optionsCount}
+                  onChange={(e) => setOptionsCount(parseInt(e.target.value, 10))}
+                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e2e8f0', borderRadius: '10px', background: '#fff' }}
+                  disabled={!['mcq', 'visual_choice'].includes(optionsType)}
+                >
+                  <option value="2">2 Options</option>
+                  <option value="3">3 Options</option>
+                  <option value="4">4 Options</option>
+                </select>
+              </div>
             </div>
+
+            {['mcq', 'visual_choice'].includes(optionsType) && (
+              <div style={{
+                background: '#f8fafc',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1.5px solid #edf2f7',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  🔘 MCQ Options & Distractors
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {mcqOptions.slice(0, optionsCount).map((opt, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, width: '70px', color: '#64748b' }}>
+                        Option {idx + 1}:
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={`Enter option ${idx + 1} label (e.g. {{Result}} or {= drawBaseTenBlocks(...) =})`}
+                        value={opt.label}
+                        onChange={(e) => {
+                          const newOpts = [...mcqOptions];
+                          newOpts[idx] = { ...newOpts[idx], label: e.target.value };
+                          setMcqOptions(newOpts);
+                        }}
+                        style={{ flex: 1, padding: '8px 10px', border: '1.5px solid #cbd5e1', borderRadius: '8px' }}
+                      />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="radio"
+                          name="mcqCorrect"
+                          checked={opt.isCorrect}
+                          onChange={() => {
+                            const newOpts = mcqOptions.map((o, oIdx) => ({
+                              ...o,
+                              isCorrect: oIdx === idx
+                            }));
+                            setMcqOptions(newOpts);
+                          }}
+                        />
+                        <span style={{ fontSize: '13px', color: opt.isCorrect ? '#166534' : '#64748b', fontWeight: opt.isCorrect ? 700 : 500 }}>
+                          Correct
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label style={{ display: 'block', fontWeight: 700, fontSize: '13px', color: '#64748b', marginBottom: '6px' }}>
@@ -656,7 +936,13 @@ export default function BaseGeneratorLayout({
                   placeholderValues,
                   setPlaceholderValues,
                   placeholders,
-                  setPlaceholders
+                  setPlaceholders,
+                  visualComponent,
+                  setVisualComponent,
+                  blueprint,
+                  setBlueprint,
+                  solution,
+                  setSolution
                 })}
               </div>
             )}
@@ -738,13 +1024,97 @@ export default function BaseGeneratorLayout({
             }}>
               {/* Question text */}
               <div style={{ fontSize: '18px', fontWeight: 600, color: '#0f172a', marginBottom: '16px', whiteSpace: 'pre-line' }}>
-                {evaluateText(blueprint)}
+                <InlineMarkdown text={evaluateText(blueprint)} />
               </div>
 
               {/* Render Visual Preview */}
-              {visualComponent !== 'none' && (
+              {visualComponent !== 'none' && !evaluateText(blueprint).includes('<svg') && (
                 <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
                   {renderVisualPreview()}
+                </div>
+              )}
+
+              {/* Render MCQ Options if MCQ or Visual Choice is active */}
+              {['mcq', 'visual_choice'].includes(optionsType) && (
+                <div style={{
+                  display: 'grid',
+                        gridTemplateColumns: `repeat(${mcqColumns}, 1fr)`,
+                  gap: '16px',
+                  margin: '20px 0'
+                }}>
+                  {mcqOptions
+                    .slice(0, optionsCount)
+                    .map((opt, idx) => {
+                      const evaluatedVal = evaluateText(opt.label);
+                      const hasSvg = evaluatedVal.includes('<svg');
+                      const isEmpty = opt.label.trim() === '';
+                      
+                      let textHeader = '';
+                      let svgContent = evaluatedVal;
+                      if (hasSvg) {
+                        const svgIndex = evaluatedVal.indexOf('<svg');
+                        textHeader = evaluatedVal.substring(0, svgIndex).trim();
+                        svgContent = evaluatedVal.substring(svgIndex);
+                      }
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            background: isEmpty ? '#f8fafc' : '#ffffff',
+                            border: opt.isCorrect ? '2.5px solid #22c55e' : (isEmpty ? '1.5px dashed #cbd5e1' : '1.5px solid #e2e8f0'),
+                            borderRadius: '12px',
+                            padding: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: hasSvg ? '190px' : '60px',
+                            position: 'relative',
+                            boxShadow: opt.isCorrect ? '0 4px 12px rgba(34, 197, 94, 0.15)' : 'none',
+                            opacity: isEmpty ? 0.6 : 1
+                          }}
+                        >
+                          {opt.isCorrect && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              background: '#22c55e',
+                              color: '#ffffff',
+                              fontSize: '10px',
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: '20px',
+                              textTransform: 'uppercase'
+                            }}>
+                              Correct
+                            </span>
+                          )}
+                          {isEmpty ? (
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#94a3b8', fontStyle: 'italic' }}>
+                              (Option {idx + 1} Empty)
+                            </span>
+                          ) : hasSvg ? (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                              {textHeader && (
+                                <span style={{ fontSize: '14px', fontWeight: 800, color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  {textHeader}
+                                </span>
+                              )}
+                              <div
+                                dangerouslySetInnerHTML={{ __html: svgContent }}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              />
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b' }}>
+                              {evaluatedVal}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               )}
 
@@ -760,8 +1130,8 @@ export default function BaseGeneratorLayout({
                   <div style={{ fontSize: '13px', fontWeight: 800, color: '#166534', textTransform: 'uppercase', marginBottom: '8px' }}>
                     🎒 Step-by-Step Solution
                   </div>
-                  <div style={{ fontSize: '14px', color: '#1e293b', whiteSpace: 'pre-line' }}>
-                    {evaluateText(solution)}
+                  <div style={{ fontSize: '14px', color: '#1e293b' }}>
+                    <InlineMarkdown text={evaluateText(solution)} />
                   </div>
                   {renderSolutionVisual()}
                 </div>
@@ -860,6 +1230,119 @@ export default function BaseGeneratorLayout({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function InlineMarkdown({ text }) {
+  const cleanText = String(text || '').replace(/<!--[\s\S]*?-->/g, '');
+
+  if (!cleanText.includes('<svg')) {
+    const lines = cleanText.split('\n');
+    const renderedElements = [];
+    let currentTableRows = [];
+
+    const renderTable = (rows, key) => {
+      const cleanRows = rows.filter(r => !/^[|\s:-]+$/.test(r.trim()));
+      if (cleanRows.length === 0) return null;
+
+      return (
+        <div key={key} style={{ overflowX: 'auto', margin: '12px 0', display: 'flex', justifyContent: 'center' }}>
+          <table style={{
+            borderCollapse: 'collapse',
+            border: '1.5px solid #cbd5e1',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: '#ffffff'
+          }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                {cleanRows[0].split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map((col, colIdx) => (
+                  <th key={colIdx} style={{
+                    border: '1px solid #cbd5e1',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    color: '#475569',
+                    textAlign: 'center'
+                  }}>
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cleanRows.slice(1).map((row, rowIdx) => (
+                <tr key={rowIdx} style={{ backgroundColor: rowIdx % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  {row.split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map((col, colIdx) => (
+                    <td key={colIdx} style={{
+                      border: '1px solid #e2e8f0',
+                      padding: '6px 12px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#0f172a',
+                      textAlign: 'center'
+                    }}>
+                      {col.startsWith('<u>') && col.endsWith('</u>') ? (
+                        <u style={{ color: '#16a34a', fontWeight: 900 }}>{col.replace(/<\/?u>/g, '')}</u>
+                      ) : (
+                        col
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+        currentTableRows.push(line);
+      } else {
+        if (currentTableRows.length > 0) {
+          renderedElements.push(renderTable(currentTableRows, `table-${i}`));
+          currentTableRows = [];
+        }
+        renderedElements.push(
+          <div key={i} style={{ minHeight: '1.2em' }}>
+            {line}
+          </div>
+        );
+      }
+    }
+    if (currentTableRows.length > 0) {
+      renderedElements.push(renderTable(currentTableRows, `table-last`));
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {renderedElements}
+      </div>
+    );
+  }
+
+  // If text contains SVG, split into SVG and non-SVG segments
+  const segments = cleanText.split(/(<svg[\s\S]*?<\/svg>)/g);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {segments.map((segment, idx) => {
+        const isSvg = segment.trim().startsWith('<svg') && segment.trim().endsWith('</svg>');
+        if (isSvg) {
+          return (
+            <div
+              key={idx}
+              dangerouslySetInnerHTML={{ __html: segment }}
+              style={{ display: 'flex', justifyContent: 'center', margin: '10px 0', width: '100%' }}
+            />
+          );
+        }
+        return <InlineMarkdown key={idx} text={segment} />;
+      })}
     </div>
   );
 }

@@ -5,34 +5,86 @@ function getGeminiClient() {
   if (process.env.GEMINI_API_KEY) {
     return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
-
   const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
   const location = process.env.GOOGLE_CLOUD_LOCATION || process.env.GOOGLE_CLOUD_REGION || 'us-central1';
-  if (!project) {
-    return null;
-  }
-
-  return new GoogleGenAI({
-    enterprise: true,
-    project,
-    location,
-  });
+  if (!project) return null;
+  return new GoogleGenAI({ enterprise: true, project, location });
 }
 
-export async function POST(request) {
+// ── Mode 1: Skill-based generation ──────────────────────────────────────────
+async function generateFromSkill(ai, { skillId, skillDescription, subject, topic, grade, rowsPerLevel }) {
+  const n = Number(rowsPerLevel) || 3;
+  const prompt = `
+You are a senior curriculum designer and math teacher.
+Your job is to generate a complete spreadsheet-grid template for a student practice question.
+
+Skill ID: "${skillId}"
+Skill Description: "${skillDescription}"
+Subject: "${subject || 'math'}"
+Topic: "${topic || 'general'}"
+Grade: "${grade || '3'}"
+
+Generate exactly ${n * 3} rows total — ${n} rows for each difficulty level:
+  - L1 (Easy): simpler numbers, straightforward, 1-step
+  - L2 (Medium): moderate complexity, may need 2 steps
+  - L3 (Hard): larger numbers, multi-step, tricky distractors
+
+Rules:
+1. Choose meaningful column names based on the skill (e.g. "number", "digit_pos", "place_val", "Result", "Distractor1", "Distractor2", "Distractor3").
+2. Always have exactly one "Result" column (the correct answer) and three distractor columns.
+3. Distractors must be plausible wrong answers a student might choose — not random numbers.
+4. The blueprint must use {{columnName}} placeholders. Make it a clear exam-style MCQ question.
+5. The solution must be a clear step-by-step explanation using {{columnName}} placeholders.
+6. Each row must include a "_level" field: "l1", "l2", or "l3".
+
+Return ONLY valid JSON. No markdown fences. No comments. Use this exact shape:
+
+{
+  "title": "Short descriptive title",
+  "skillId": "${skillId}",
+  "subject": "${subject || 'math'}",
+  "topic": "${topic || 'general'}",
+  "grade": "${grade || '3'}",
+  "targetCollection": "dynamic_templates",
+  "columns": ["col1", "col2", "Result", "Distractor1", "Distractor2", "Distractor3"],
+  "rows": [
+    { "_level": "l1", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." },
+    { "_level": "l2", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." },
+    { "_level": "l3", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." }
+  ],
+  "blueprint": "Question text using {{col1}} etc.",
+  "solution": "Step 1: ... Step 2: ... Answer: {{Result}}",
+  "optionsBinding": [
+    { "column": "Result", "isCorrect": true },
+    { "column": "Distractor1", "isCorrect": false },
+    { "column": "Distractor2", "isCorrect": false },
+    { "column": "Distractor3", "isCorrect": false }
+  ]
+}
+`;
+
+  let response;
   try {
-    const { questionText, options, explanation, subject, topic } = await request.json();
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+  } catch {
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+  }
 
-    if (!questionText) {
-      return NextResponse.json({ success: false, error: 'Question text is required.' }, { status: 400 });
-    }
+  const text = response.text || '';
+  return JSON.parse(text.trim());
+}
 
-    const ai = getGeminiClient();
-    if (!ai) {
-      return NextResponse.json({ success: false, error: 'Gemini is not configured. Set GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT.' }, { status: 501 });
-    }
-
-    const prompt = `
+// ── Mode 2: From-question generation (existing) ──────────────────────────────
+async function generateFromQuestion(ai, { questionText, options, explanation, subject, topic }) {
+  const prompt = `
 You are a senior curriculum architect. Your task is to take a single static multiple-choice question, its choices, and its step-by-step explanation, and generalize it into a dynamic spreadsheet-compatible template.
 
 Original Static Question:
@@ -54,33 +106,12 @@ The JSON object must have this exact shape:
   "title": "A short descriptive title for the template",
   "subject": "${subject || 'math'}",
   "topic": "${topic || 'general'}",
-  "targetCollection": "templates",
+  "targetCollection": "dynamic_templates",
   "columns": ["col1", "col2", "Result", "Distractor1", "Distractor2", "Distractor3"],
   "rows": [
-    {
-      "col1": "value1_row1",
-      "col2": "value2_row1",
-      "Result": "correct_value_row1",
-      "Distractor1": "wrong1_row1",
-      "Distractor2": "wrong2_row1",
-      "Distractor3": "wrong3_row1"
-    },
-    {
-      "col1": "value1_row2",
-      "col2": "value2_row2",
-      "Result": "correct_value_row2",
-      "Distractor1": "wrong1_row2",
-      "Distractor2": "wrong2_row2",
-      "Distractor3": "wrong3_row2"
-    },
-    {
-      "col1": "value1_row3",
-      "col2": "value2_row3",
-      "Result": "correct_value_row3",
-      "Distractor1": "wrong1_row3",
-      "Distractor2": "wrong2_row3",
-      "Distractor3": "wrong3_row3"
-    }
+    { "_level": "l1", "col1": "value1_row1", "Result": "correct_value_row1", "Distractor1": "wrong1_row1", "Distractor2": "wrong2_row1", "Distractor3": "wrong3_row1" },
+    { "_level": "l2", "col1": "value1_row2", "Result": "correct_value_row2", "Distractor1": "wrong1_row2", "Distractor2": "wrong2_row2", "Distractor3": "wrong3_row2" },
+    { "_level": "l3", "col1": "value1_row3", "Result": "correct_value_row3", "Distractor1": "wrong1_row3", "Distractor2": "wrong2_row3", "Distractor3": "wrong3_row3" }
   ],
   "blueprint": "The question text with variables wrapped in double-braces like {{colName}}",
   "solution": "The step-by-step explanation, replacing specific values with double-braces like {{colName}}",
@@ -91,43 +122,56 @@ The JSON object must have this exact shape:
     { "column": "Distractor3", "isCorrect": false }
   ]
 }
-
-Instructions for generalization:
-1. Analyze the original static question: Identify the key variable values (e.g. numbers, words, names, expressions).
-2. Create column names for these variables. Make one column (e.g. "Result") represent the correct answer, and others represent the incorrect distractors.
-3. Write the "rows" array. You MUST generate at least 3 distinct variations (rows) of the variables, showing how they change together.
-4. Replace the specific numbers or terms in the question and explanation with double-braces syntax: {{columnName}}.
-5. If the question has mathematical expressions, format them beautifully in standard LaTeX notation (using $...$ for inline or $$...$$ for block).
-6. Ensure that the generated options in the rows mathematically match the question details for that row.
 `;
 
-    let response;
-    try {
-      response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        }
-      });
-    } catch (primaryError) {
-      console.warn('[templates-generate-grid] gemini-2.5-flash failed, falling back to gemini-2.5-flash-lite. Error:', primaryError);
-      response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        }
-      });
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+  } catch {
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+  }
+
+  const text = response.text || '';
+  return JSON.parse(text.trim());
+}
+
+// ── Handler ──────────────────────────────────────────────────────────────────
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const ai = getGeminiClient();
+    if (!ai) {
+      return NextResponse.json(
+        { success: false, error: 'Gemini is not configured. Set GEMINI_API_KEY.' },
+        { status: 501 }
+      );
     }
 
-    const text = response.text || '';
-    const templateJson = JSON.parse(text.trim());
+    let templateJson;
 
-    return NextResponse.json({
-      success: true,
-      template: templateJson
-    });
+    // Mode 1: skill-based
+    if (body.skillId || body.skillDescription) {
+      if (!body.skillId && !body.skillDescription) {
+        return NextResponse.json({ success: false, error: 'skillId or skillDescription is required.' }, { status: 400 });
+      }
+      templateJson = await generateFromSkill(ai, body);
+    } else {
+      // Mode 2: from-question
+      if (!body.questionText) {
+        return NextResponse.json({ success: false, error: 'questionText is required for question-to-grid mode.' }, { status: 400 });
+      }
+      templateJson = await generateFromQuestion(ai, body);
+    }
+
+    return NextResponse.json({ success: true, template: templateJson });
   } catch (error) {
     console.error('[templates-generate-grid] Error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

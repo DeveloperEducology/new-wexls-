@@ -1,0 +1,98 @@
+{
+  "id": "science-compare-properties-objects",
+  "subject": "science",
+  "topic": "properties-of-objects",
+  "title": "Compare properties of objects",
+  "optionsType": "mcq",
+  "blueprint": "Which property do these four objects have in common?\n\n* [object1]\n* [object2]\n* [object3]\n* [object4]",
+  "questionText": "Which property do these four objects have in common?\n\n* [object1]\n* [object2]\n* [object3]\n* [object4]",
+  "options": [
+    {
+      "label": "[OptionA]",
+      "isCorrect": "[IsCorrectA]"
+    },
+    {
+      "label": "[OptionB]",
+      "isCorrect": "[IsCorrectB]"
+    },
+    {
+      "label": "[OptionC]",
+      "isCorrect": "[IsCorrectC]"
+    }
+  ],
+  "explanation": {
+    "sections": [
+      {
+        "type": "text",
+        "content": "[Explanation]"
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "index",
+      "type": "array",
+      "values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+    },
+    {
+      "name": "object1",
+      "type": "expression",
+      "formula": "[\"A window pane\",\"A rubber band\",\"Sandpaper\",\"A piece of chalk\",\"A wet ice cube\",\"A steel filing cabinet\",\"A silk scarf\",\"A copper penny\",\"A cotton ball\",\"Helium inside a balloon\",\"A wooden log\",\"A marble\",\"A spoonful of sugar\",\"A plastic button\",\"A dry kitchen sponge\",\"A plastic rain poncho\",\"Cooking oil\",\"A feather\",\"A bowling ball\",\"A drop of rain\",\"An iron nail\",\"A rubber glove\",\"A metal baking pan\",\"An oven mitt\",\"A brick\",\"A mirror\",\"A lemon slice\",\"Pretzel twists\",\"Honey\",\"Freshly baked cookies\"][index]"
+    },
+    {
+      "name": "object2",
+      "type": "expression",
+      "formula": "[\"A clean glass cup\",\"A garden hose\",\"A brick wall\",\"An eggshell\",\"A freshly waxed floor\",\"An iron skillet\",\"A polished marble countertop\",\"A brass key\",\"A velvet pillow\",\"Steam coming out of a kettle\",\"A plastic toy boat\",\"A metal coin\",\"Table salt\",\"A glass marble\",\"A paper towel\",\"Rubber rain boots\",\"Molasses\",\"A piece of dust\",\"A cast-iron skillet\",\"A cup of orange juice\",\"A copper wire\",\"A wooden toothpick\",\"A cast-iron pot\",\"A styrofoam cooler\",\"An iron anvil\",\"A polished silver platter\",\"A green apple\",\"Soy sauce\",\"Ripe strawberries\",\"A blooming rose\"][index]"
+    },
+    {
+      "name": "object3",
+      "type": "expression",
+      "formula": "[\"Clear plastic wrap\",\"A leather belt\",\"The bark of a tree\",\"A ceramic plate\",\"A banana peel on the ground\",\"A metal refrigerator door\",\"A shiny smartphone screen\",\"An aluminum soda can\",\"A woolen sweater\",\"Oxygen in the air\",\"A cork stopper\",\"A pebble\",\"A powder drink mix\",\"A cooking oil droplet\",\"A cotton bath towel\",\"A silicone baking mat\",\"Maple syrup\",\"A single strand of hair\",\"A concrete cinder block\",\"Melted wax\",\"A silver spoon\",\"A plastic spoon\",\"A copper kettle\",\"A wooden spoon handle\",\"A diamond ring\",\"A calm lake surface\",\"Vinegar\",\"Potato chips\",\"Maple syrup\",\"Scented laundry detergent\"][index]"
+    },
+    {
+      "name": "object4",
+      "type": "expression",
+      "formula": "[\"A camera lens\",\"A piece of string\",\"A concrete sidewalk\",\"A thin glass ornament\",\"A puddle of liquid soap\",\"A steel paperclip\",\"A plastic billiard ball\",\"A steel bolt\",\"A plush teddy bear\",\"Carbon dioxide in a soda bubble\",\"A dry leaf\",\"An iron anchor\",\"A bath bomb\",\"A metal bolt\",\"A piece of cardboard\",\"A wax-coated paper cup\",\"Honey\",\"A dandelion seed\",\"A heavy textbook\",\"Running tap water\",\"A brass key\",\"A glass rod\",\"A stainless steel grill grate\",\"A wool blanket\",\"A granite boulder\",\"A glossy phone screen\",\"Plain Greek yogurt\",\"Ocean saltwater\",\"Milk chocolate\",\"A pine tree branch\"][index]"
+    },
+    {
+      "name": "OptionA",
+      "type": "expression",
+      "formula": "[\"flexible\",\"flexible (can bend easily)\",\"rough\",\"flexible\",\"rough\",\"magnetic\",\"rough\",\"metallic\",\"hard\",\"solid\",\"sinks in water\",\"floats on water\",\"soluble in water (dissolves)\",\"insoluble in water (does not dissolve)\",\"absorbent (soaks up liquid)\",\"absorbent\",\"viscous (thick, slow-pouring liquid)\",\"heavy\",\"heavy (difficult to lift)\",\"solid\",\"electrical conductor\",\"electrical conductor\",\"thermal conductor (transfers heat quickly)\",\"thermal conductor\",\"soft\",\"reflective (returns light)\",\"salty\",\"sweet\",\"sweet\",\"odorless\"][index]"
+    },
+    {
+      "name": "OptionB",
+      "type": "expression",
+      "formula": "[\"transparent (see-through)\",\"fragile\",\"smooth\",\"magnetic\",\"slippery\",\"liquid\",\"smooth\",\"transparent\",\"soft\",\"liquid\",\"buoyant (floats on water)\",\"sinks in water\",\"magnetic\",\"soluble in water\",\"waterproof\",\"waterproof (repels water)\",\"solid\",\"lightweight\",\"lightweight\",\"liquid\",\"electrical insulator\",\"electrical insulator\",\"thermal insulator\",\"thermal insulator (keeps heat from moving easily)\",\"hard (resists scratching and bending)\",\"rough\",\"sweet\",\"salty\",\"sour\",\"fragrant (has a noticeable scent)\"][index]"
+    },
+    {
+      "name": "OptionC",
+      "type": "expression",
+      "formula": "[\"magnetic\",\"metallic\",\"transparent\",\"fragile (breaks easily)\",\"magnetic\",\"transparent\",\"gaseous\",\"organic\",\"magnetic\",\"gas\",\"magnetic\",\"soluble in water\",\"insoluble in water\",\"gaseous\",\"magnetic\",\"fragile\",\"transparent\",\"magnetic\",\"flexible\",\"gas\",\"gaseous\",\"magnetic\",\"flexible\",\"magnetic\",\"liquid\",\"transparent\",\"sour\",\"bit\",\"salty\",\"tasteless\"][index]"
+    },
+    {
+      "name": "Correct",
+      "type": "expression",
+      "formula": "[\"transparent (see-through)\",\"flexible (can bend easily)\",\"rough\",\"fragile (breaks easily)\",\"slippery\",\"magnetic\",\"smooth\",\"metallic\",\"soft\",\"gas\",\"buoyant (floats on water)\",\"sinks in water\",\"soluble in water (dissolves)\",\"insoluble in water (does not dissolve)\",\"absorbent (soaks up liquid)\",\"waterproof (repels water)\",\"viscous (thick, slow-pouring liquid)\",\"lightweight\",\"heavy (difficult to lift)\",\"liquid\",\"electrical conductor\",\"electrical insulator\",\"thermal conductor (transfers heat quickly)\",\"thermal insulator (keeps heat from moving easily)\",\"hard (resists scratching and bending)\",\"reflective (returns light)\",\"sour\",\"salty\",\"sweet\",\"fragrant (has a noticeable scent)\"][index]"
+    },
+    {
+      "name": "Explanation",
+      "type": "expression",
+      "formula": "[\"You can see clearly through all of these objects because they allow light to pass through them.\",\"All of these items can be bent, folded, or curved easily without breaking.\",\"If you run your hand over any of these items, their surfaces feel bumpy, uneven, and scratchy.\",\"These objects are brittle and will easily crack, shatter, or break if dropped or put under pressure.\",\"All of these objects have very low friction, meaning things will slide across them easily.\",\"These items contain metals like iron or steel, which are attracted to magnets.\",\"These items have even, level surfaces without bumps or ridges, making them feel sleek to the touch.\",\"All of these objects are made of metal, making them good conductors of heat and electricity.\",\"These objects are gentle to the touch and easily change shape or compress when squeezed.\",\"These substances do not have a fixed shape or volume; they expand to fill whatever container they are in.\",\"These objects are less dense than water, allowing them to stay at the surface of the water.\",\"These objects are denser than water, causing them to fall to the bottom when submerged.\",\"When mixed into water, these substances break down completely and blend into the liquid.\",\"Even if placed in water for a long time, these items will not break down or dissolve into the liquid.\",\"These items have tiny pores or spaces that easily draw in and hold liquids.\",\"These materials do not let water pass through them or soak into them.\",\"These liquids have high internal friction, meaning they are thick and flow slowly compared to water.\",\"These items have very little mass and can easily be moved or blown away by a gentle breeze.\",\"These objects have a high mass relative to their size, requiring significant force to pick up.\",\"These substances have a definite volume but no fixed shape, flowing to match the shape of whatever container holds them.\",\"All of these metals easily allow electric currents to flow through them.\",\"These materials block the flow of electricity, making them safe to use to shield electrical currents.\",\"These objects are made of metal, meaning heat travels through them rapidly, which is why they are great for cooking.\",\"These materials are poor conductors of heat, so they help block or slow down the transfer of heat.\",\"These materials have a rigid structure that makes them highly resistant to being dented, scratched, or deformed.\",\"These objects have smooth, shiny surfaces that bounce light rays back to create a clear image or glare.\",\"These foods and liquids contain acids that create an acidic, tangy taste on your tongue.\",\"These items contain a high concentration of sodium chloride (salt), giving them a distinct savory flavor.\",\"These foods contain natural sugars or added sweeteners that trigger your sweet taste buds.\",\"All of these objects release molecules into the air that can easily be detected by your sense of smell.\"][index]"
+    },
+    {
+      "name": "IsCorrectA",
+      "type": "expression",
+      "formula": "OptionA === Correct"
+    },
+    {
+      "name": "IsCorrectB",
+      "type": "expression",
+      "formula": "OptionB === Correct"
+    },
+    {
+      "name": "IsCorrectC",
+      "type": "expression",
+      "formula": "OptionC === Correct"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
-import { SVG_DEFS } from './defs.js';
+import { SVG_DEFS, COLORS, resolveColor } from './defs.js';
 
 export function renderItemCounter(props) {
   const count = Number(props.count) || 3;
   const itemType = props.itemType || 'cupcake';
+  const color = props.color || 'yellow';
+  const crossedOutCount = Number(props.crossedOutCount) || 0;
   
   const showNumbers = props.showNumbers === true || props.showNumbers === 'true' || props.showNumbers === 1;
   const hideImages = props.hideImages === true || props.hideImages === 'true' || itemType === 'number';
@@ -13,12 +15,25 @@ export function renderItemCounter(props) {
   const scale = colWidth / 90;
   
   // Arrange in grid (custom items per row, defaults to 5)
-  const itemsPerRow = Number(props.itemsPerRow) || 5;
+  const groupByTens = props.groupByTens === true || props.groupByTens === 'true' || props.groupByTens === 1;
+  const itemsPerRow = groupByTens ? 5 : (Number(props.itemsPerRow) || 5);
   const numRows = Math.ceil(count / itemsPerRow);
   const numCols = Math.min(count, itemsPerRow);
   
+  let totalGlobalRows = numRows;
+  let numGaps = 0;
+  const gapSize = groupByTens ? Math.round(rowHeight * 0.3) : 0;
+
+  if (groupByTens) {
+    const numTens = Math.floor(count / 10);
+    const numOnes = count % 10;
+    const onesRows = Math.ceil(numOnes / 5);
+    totalGlobalRows = numTens * 2 + onesRows;
+    numGaps = (numTens > 0 && numOnes > 0) ? numTens : Math.max(0, numTens - 1);
+  }
+
   const svgWidth = numCols * colWidth + 20;
-  const svgHeight = numRows * rowHeight + 20;
+  const svgHeight = totalGlobalRows * rowHeight + numGaps * gapSize + 20;
 
   const showBorder = props.showBorder === true || props.showBorder === 'true' || props.showBorder === 1;
   const borderMarkup = showBorder ? `<rect x="5" y="5" width="80" height="90" rx="6" fill="none" stroke="#475569" stroke-width="2" />` : '';
@@ -26,10 +41,20 @@ export function renderItemCounter(props) {
   let itemsMarkup = '';
   
   for (let idx = 0; idx < count; idx++) {
-    const row = Math.floor(idx / itemsPerRow);
-    const col = idx % itemsPerRow;
+    let row, col, yOffset;
+    if (groupByTens) {
+      const groupIndex = Math.floor(idx / 10);
+      const itemInGroup = idx % 10;
+      const rowInGroup = Math.floor(itemInGroup / 5);
+      row = groupIndex * 2 + rowInGroup;
+      col = itemInGroup % 5;
+      yOffset = 10 + row * rowHeight + groupIndex * gapSize;
+    } else {
+      row = Math.floor(idx / itemsPerRow);
+      col = idx % itemsPerRow;
+      yOffset = 10 + row * rowHeight;
+    }
     const xOffset = 10 + col * colWidth;
-    const yOffset = 10 + row * rowHeight;
     
     let graphicPaths = '';
     const isUrl = typeof itemType === 'string' && (
@@ -72,6 +97,11 @@ export function renderItemCounter(props) {
         <!-- Leaf -->
         <path d="M 45 25 C 52 22 58 28 52 32 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
       `;
+    } else if (itemType === 'dot' || itemType === 'circle' || itemType === 'yellow_dot') {
+      const selectedColor = resolveColor(color, COLORS);
+      graphicPaths = `
+        <circle cx="45" cy="50" r="26" fill="${selectedColor.fill}" stroke="${selectedColor.stroke}" stroke-width="2.5" filter="url(#shadow)" />
+      `;
     } else {
       // Default to Star
       graphicPaths = `
@@ -113,6 +143,13 @@ export function renderItemCounter(props) {
       `;
     }
     
+    const isCrossed = idx >= (count - crossedOutCount);
+    const crossMarkup = isCrossed ? `
+      <!-- Cross overlay -->
+      <line x1="10" y1="15" x2="80" y2="85" stroke="#64748b" stroke-width="8" stroke-linecap="round" opacity="0.8" style="pointer-events: none;" />
+      <line x1="80" y1="15" x2="10" y2="85" stroke="#64748b" stroke-width="8" stroke-linecap="round" opacity="0.8" style="pointer-events: none;" />
+    ` : '';
+
     itemsMarkup += `
       <g transform="translate(${xOffset}, ${yOffset})" ${cursorStyle} ${clickAttr}>
         <!-- Background touch hitbox to click easily -->
@@ -124,6 +161,7 @@ export function renderItemCounter(props) {
           ${graphicPaths}
           
           ${overlayMarkup}
+          ${crossMarkup}
         </g>
       </g>
     `;

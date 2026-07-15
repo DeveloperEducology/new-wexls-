@@ -214,6 +214,17 @@ export const curriculumCatalog = {
           title: 'Units and measurement',
           grades: unitsMeasurementGrades,
         },
+        {
+          id: 'properties-of-objects',
+          title: 'Properties of objects',
+          grades: [
+            {
+              id: 5,
+              title: 'Grade 5',
+              skills: ['science-g5-compare-properties-objects']
+            }
+          ]
+        }
       ],
     },
   ],

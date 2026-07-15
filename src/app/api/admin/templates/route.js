@@ -90,6 +90,97 @@ export async function GET(req) {
   }
 }
 
+export function validateTemplateSchema(template) {
+  if (!template || typeof template !== 'object') {
+    return 'Template data is not a valid JSON object';
+  }
+
+  const id = template.id || template._id;
+  if (!id) {
+    return 'Template ID (id / _id) is required';
+  }
+
+  if (typeof id !== 'string') {
+    return 'Template ID must be a string';
+  }
+
+  // Validate ID format (slug validation)
+  if (!/^[a-zA-Z0-9-_]+$/.test(id)) {
+    return 'Template ID must contain only letters, numbers, dashes, and underscores (no spaces or special characters)';
+  }
+
+  const title = template.title || template.name || template.config?.title || template.config?.name;
+  if (!title) {
+    return 'Template title/name is required';
+  }
+
+  const type = template.type || template.config?.type || 'parameterized';
+  const config = template.config || template;
+  const interaction = config.interaction || {};
+  const interactionEngine = typeof interaction === 'object' ? interaction.engine : String(interaction);
+
+  // If it's parameterized, do deep structural check
+  if (type === 'parameterized') {
+    const questionTemplate = config.questionTemplate || config.questionText;
+    if (!questionTemplate || typeof questionTemplate !== 'string' || questionTemplate.trim() === '') {
+      return 'Question template (questionTemplate / questionText) is required';
+    }
+
+    const variables = config.variables;
+    if (variables !== undefined) {
+      if (!Array.isArray(variables) && typeof variables !== 'object') {
+        return 'Variables field must be an array or an object';
+      }
+
+      if (Array.isArray(variables)) {
+        for (let i = 0; i < variables.length; i++) {
+          const v = variables[i];
+          if (!v || typeof v !== 'object') {
+            return `Variable at index ${i} is not a valid object`;
+          }
+          if (!v.name) {
+            return `Variable at index ${i} is missing the "name" field`;
+          }
+          if (v.type === 'expression' && !v.formula) {
+            return `Variable "${v.name}" of type expression is missing the "formula" field`;
+          }
+        }
+      }
+    }
+
+    const options = config.options || config.interaction?.options;
+    if (options !== undefined) {
+      if (!Array.isArray(options)) {
+        return 'Options field must be a valid array';
+      }
+
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        if (opt === undefined || opt === null) {
+          return `Option at index ${i} is empty`;
+        }
+        const label = typeof opt === 'object' ? (opt.label ?? opt.text ?? opt.value ?? opt.content) : opt;
+        if (label === undefined || label === null || String(label).trim() === '') {
+          return `Option at index ${i} has an empty or missing label`;
+        }
+      }
+    }
+
+    // Interaction engine validation rules check
+    const validationRules = config.validationRules || [];
+    if (interactionEngine === 'msq' || config.optionsType === 'msq') {
+      const allCorrectRule = Array.isArray(validationRules)
+        ? validationRules.find(r => r && r.type === 'all_correct')
+        : null;
+      if (!allCorrectRule) {
+        return 'MSQ templates require at least one validation rule of type "all_correct"';
+      }
+    }
+  }
+
+  return null; // Passes validation!
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -97,6 +188,11 @@ export async function POST(req) {
 
     if (!tData) {
       return NextResponse.json({ success: false, error: 'Template object is required' }, { status: 400 });
+    }
+
+    const validationError = validateTemplateSchema(tData);
+    if (validationError) {
+      return NextResponse.json({ success: false, error: validationError }, { status: 400 });
     }
 
     // If it has a competitive examId, save to templates collection

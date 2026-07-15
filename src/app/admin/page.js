@@ -443,10 +443,139 @@ Correct: B
 Explanation: The word dad has the short a sound, like the a in bad.`;
 }
 
-export default function AdminConsolePage() {
+const trimmedCache = new Map();
+
+function TrimmedImage({ src, alt, style, className }) {
+  const [displaySrc, setDisplaySrc] = useState(src);
+
+  useEffect(() => {
+    if (!src) {
+      setDisplaySrc('');
+      return;
+    }
+    if (trimmedCache.has(src)) {
+      setDisplaySrc(trimmedCache.get(src));
+      return;
+    }
+    if (src.startsWith('data:')) {
+      setDisplaySrc(src);
+      return;
+    }
+
+    let active = true;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const proxiedUrl = src.startsWith('http') && !src.includes('localhost')
+      ? `/api/admin/proxy-image?url=${encodeURIComponent(src)}`
+      : src;
+    img.src = proxiedUrl;
+    img.onload = () => {
+      if (!active) return;
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const alpha = data[(y * canvas.width + x) * 4 + 3];
+            if (alpha > 0) {
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (maxX >= minX && maxY >= minY) {
+          const croppedCanvas = document.createElement('canvas');
+          const croppedCtx = croppedCanvas.getContext('2d');
+          croppedCanvas.width = maxX - minX + 1;
+          croppedCanvas.height = maxY - minY + 1;
+
+          croppedCtx.drawImage(
+            img,
+            minX, minY, croppedCanvas.width, croppedCanvas.height,
+            0, 0, croppedCanvas.width, croppedCanvas.height
+          );
+
+          const dataUrl = croppedCanvas.toDataURL();
+          trimmedCache.set(src, dataUrl);
+          setDisplaySrc(dataUrl);
+        } else {
+          setDisplaySrc(src);
+        }
+      } catch (err) {
+        console.warn('Failed to trim transparency:', err);
+        setDisplaySrc(src);
+      }
+    };
+    img.onerror = () => {
+      if (active) setDisplaySrc(src);
+    };
+
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={displaySrc || src}
+      alt={alt}
+      style={style}
+      className={className}
+      crossOrigin="anonymous"
+    />
+  );
+}
+
+export default function AdminConsolePage({ forceTab = null, hideHeader = false, hideSidebar = false, onTabChange = null, adminMode = 'school', activeFilters = null } = {}) {
   const [theme, setTheme] = useState('light');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(forceTab || 'dashboard');
   const [imageBuster, setImageBuster] = useState(Date.now());
+  useEffect(() => {
+    if (forceTab) {
+      setActiveTab(forceTab);
+    }
+  }, [forceTab]);
+
+  useEffect(() => {
+    if (activeFilters) {
+      if (adminMode === 'exam') {
+        if (activeFilters.examId) {
+          setSubject(activeFilters.examId);
+        }
+        if (activeFilters.section) {
+          setTopic(activeFilters.section);
+        }
+        if (activeFilters.topic) {
+          setSkillId(activeFilters.topic);
+        }
+      } else {
+        if (activeFilters.subjectId) {
+          setSubject(activeFilters.subjectId);
+        }
+        if (activeFilters.chapterId) {
+          setTopic(activeFilters.chapterId);
+        }
+        if (activeFilters.skillId) {
+          setSkillId(activeFilters.skillId);
+        }
+        if (activeFilters.gradeId) {
+          setEstimatedGrade(activeFilters.gradeId);
+        }
+      }
+    }
+  }, [activeFilters, adminMode]);
 
   const getBustedUrl = useCallback((url) => {
     if (!url || typeof url !== 'string') return url;
@@ -524,6 +653,9 @@ export default function AdminConsolePage() {
   const [editId, setEditId] = useState(null);
   
   const [subject, setSubject] = useState('english');
+  const [isPYQ, setIsPYQ] = useState(false);
+  const [pyqYear, setPyqYear] = useState('');
+  const [cognitiveLevel, setCognitiveLevel] = useState('');
   const [topic, setTopic] = useState('grammar');
   const [skillId, setSkillId] = useState('nouns');
   const [difficulty, _setDifficulty] = useState('easy');
@@ -4266,19 +4398,20 @@ export default function AdminConsolePage() {
             isCorrect: activeHs.isCorrect,
             isCircle: activeHs.isCircle,
             imageUrl: activeHs.imageUrl,
-            optionIndex: activeHs.optionIndex ?? idx
+            optionIndex: activeHs.optionIndex ?? idx,
+            x: activeHs.x,
+            y: activeHs.y,
+            width: activeHs.width,
+            height: activeHs.height
           };
         } else {
-          // Default mobile vs desktop sizing adjustments
-          const otherW = otherDevice === 'mobile' ? Math.min(30, activeHs.width * 2) : Math.max(10, activeHs.width / 2);
-          const otherH = otherDevice === 'mobile' ? Math.min(15, activeHs.height * 2) : Math.max(5, activeHs.height / 2);
           return {
             id: activeHs.id,
             label: activeHs.label,
             x: activeHs.x,
             y: activeHs.y,
-            width: otherW,
-            height: otherH,
+            width: activeHs.width,
+            height: activeHs.height,
             isCircle: activeHs.isCircle,
             isCorrect: activeHs.isCorrect,
             imageUrl: activeHs.imageUrl,
@@ -4682,6 +4815,9 @@ export default function AdminConsolePage() {
     setEstimatedGrade('');
     setTimeEstimate('');
     setSourceMapping('');
+    setIsPYQ(false);
+    setPyqYear('');
+    setCognitiveLevel('');
 
     // Clear Universal DnD specific fields
     setLayoutMode('');
@@ -4855,6 +4991,9 @@ export default function AdminConsolePage() {
     setEstimatedGrade(q.estimatedGrade || q.metadata?.estimatedGrade || '');
     setTimeEstimate(q.timeEstimate || q.metadata?.timeEstimate || '');
     setSourceMapping(q.sourceMapping || q.metadata?.sourceMapping || '');
+    setIsPYQ(Boolean(q.isPYQ || q.metadata?.isPYQ || false));
+    setPyqYear(q.pyqYear || q.metadata?.pyqYear || '');
+    setCognitiveLevel(q.cognitiveLevel || q.metadata?.cognitiveLevel || '');
     const activePoolId = q.poolId || q.metadata?.poolId || '';
     setPoolId(activePoolId);
     setTargetCategory(q.targetCategory || q.metadata?.targetCategory || '');
@@ -5290,7 +5429,7 @@ export default function AdminConsolePage() {
     }
     loadQuestionData(q, mode);
     setAuthoringMode('manual');
-    setActiveTab('authoring');
+    handleTabChange('authoring');
   };
 
   // --- TAB NAVIGATION DIRTY WARNING ---
@@ -5300,7 +5439,11 @@ export default function AdminConsolePage() {
         return;
       }
     }
-    setActiveTab(tabName);
+    if (onTabChange) {
+      onTabChange(tabName);
+    } else {
+      setActiveTab(tabName);
+    }
     if (tabName === 'library') {
       fetchQuestions();
     } else if (tabName === 'cache') {
@@ -6212,6 +6355,9 @@ export default function AdminConsolePage() {
       estimatedGrade: estimatedGrade.trim(),
       timeEstimate: parsedTimeLimit,
       sourceMapping: sourceMapping.trim(),
+      isPYQ: isPYQ,
+      pyqYear: pyqYear.trim(),
+      cognitiveLevel: cognitiveLevel.trim(),
       arrangeImagesRow,
       commonImageWidth: Number(commonImageWidth) || 180,
       imageRowMode,
@@ -6233,6 +6379,9 @@ export default function AdminConsolePage() {
         estimatedGrade: estimatedGrade.trim(),
         timeEstimate: parsedTimeLimit,
         sourceMapping: sourceMapping.trim(),
+        isPYQ: isPYQ,
+        pyqYear: pyqYear.trim(),
+        cognitiveLevel: cognitiveLevel.trim(),
         arrangeImagesRow,
         commonImageWidth: Number(commonImageWidth) || 180,
         imageRowMode,
@@ -8011,53 +8160,55 @@ export default function AdminConsolePage() {
   return (
     <>
     <div className={`${styles.adminContainer} ${theme === 'dark' ? styles.darkMode : theme === 'blue' ? styles.blueMode : ''}`}>
-      <header className={styles.adminHeader}>
-        <div className={styles.headerInfo}>
-          <h1>Curriculum Operations</h1>
-          <p>Educational content library, speech synthesis pipeline, and storage configurations.</p>
-        </div>
-        
-        <div className={styles.headerStatus}>
-          {/* Theme Toggle Button */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '4px',
-              border: '1.5px solid var(--color-border)',
-              background: 'var(--bg-primary)',
-              color: 'var(--color-text-main)',
-              fontSize: '12px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              textTransform: 'uppercase',
-              height: '31px',
-              boxSizing: 'border-box',
-            }}
-            title={
-              theme === 'light' ? 'Switch to Dark Mode' :
-              theme === 'dark' ? 'Switch to Ocean Blue Mode' : 'Switch to Light Mode'
-            }
-          >
-            {theme === 'light' ? '🌙 Dark Mode' :
-             theme === 'dark' ? '💧 Blue Mode' : '☀️ Light Mode'}
-          </button>
-
-          <div className={styles.compactStatusBadge} title="MongoDB Status">
-            <span className={`${styles.statusIndicatorDot} ${stats.dbConnected ? styles.dotGreen : stats.dotRed}`} />
-            <span>DB: {stats.dbConnected ? 'ONLINE' : 'OFFLINE'}</span>
+      {!hideHeader && (
+        <header className={styles.adminHeader}>
+          <div className={styles.headerInfo}>
+            <h1>Curriculum Operations</h1>
+            <p>Educational content library, speech synthesis pipeline, and storage configurations.</p>
           </div>
+          
+          <div className={styles.headerStatus}>
+            {/* Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '4px',
+                border: '1.5px solid var(--color-border)',
+                background: 'var(--bg-primary)',
+                color: 'var(--color-text-main)',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textTransform: 'uppercase',
+                height: '31px',
+                boxSizing: 'border-box',
+              }}
+              title={
+                theme === 'light' ? 'Switch to Dark Mode' :
+                theme === 'dark' ? 'Switch to Ocean Blue Mode' : 'Switch to Light Mode'
+              }
+            >
+              {theme === 'light' ? '🌙 Dark Mode' :
+               theme === 'dark' ? '💧 Blue Mode' : '☀️ Light Mode'}
+            </button>
 
-          <div className={styles.compactStatusBadge} title="Cloudflare R2 Synced Status">
-            <span className={`${styles.statusIndicatorDot} ${stats.r2Configured ? styles.dotGreen : styles.dotRed}`} />
-            <span>R2 Storage: {stats.r2Configured ? 'READY' : 'OFFLINE'}</span>
+            <div className={styles.compactStatusBadge} title="MongoDB Status">
+              <span className={`${styles.statusIndicatorDot} ${stats.dbConnected ? styles.dotGreen : stats.dotRed}`} />
+              <span>DB: {stats.dbConnected ? 'ONLINE' : 'OFFLINE'}</span>
+            </div>
+
+            <div className={styles.compactStatusBadge} title="Cloudflare R2 Synced Status">
+              <span className={`${styles.statusIndicatorDot} ${stats.r2Configured ? styles.dotGreen : stats.dotRed}`} />
+              <span>R2 Storage: {stats.r2Configured ? 'READY' : 'OFFLINE'}</span>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Dynamic Alerts Banner */}
       {alert && (
@@ -8071,58 +8222,60 @@ export default function AdminConsolePage() {
       )}
 
       {/* Tabs Row */}
-      <nav className={styles.tabsContainer}>
-        <button 
-          className={`${styles.tabButton} ${activeTab === 'dashboard' ? styles.tabButtonActive : ''}`}
-          onClick={() => handleTabChange('dashboard')}
-        >
-          OPERATIONAL OVERVIEW
-        </button>
-        <button 
-          className={`${styles.tabButton} ${activeTab === 'library' ? styles.tabButtonActive : ''}`}
-          onClick={() => handleTabChange('library')}
-        >
-          QUESTIONS LIBRARY
-        </button>
-        <button 
-          className={`${styles.tabButton} ${activeTab === 'authoring' ? styles.tabButtonActive : ''}`}
-          onClick={() => handleTabChange('authoring')}
-        >
-          AUTHORING CENTER {editMode ? ' [EDIT MODE]' : ' [CREATE MODE]'}
-        </button>
-        <button 
-          className={`${styles.tabButton} ${activeTab === 'cache' ? styles.tabButtonActive : ''}`}
-          onClick={() => handleTabChange('cache')}
-        >
-          TTS CACHE MANAGER
-        </button>
-        <button 
-          className={`${styles.tabButton} ${activeTab === 'curriculum' ? styles.tabButtonActive : ''}`}
-          onClick={() => handleTabChange('curriculum')}
-        >
-          CURRICULUM BUILDER
-        </button>
-        <button 
-          className={`${styles.tabButton} ${activeTab === 'images' ? styles.tabButtonActive : ''}`}
-          onClick={() => handleTabChange('images')}
-        >
-          🖼 IMAGE ASSETS
-        </button>
-        <a 
-          className={styles.tabButton}
-          href="/admin/templates"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
-        >
-          ⚙️ VISUAL TEMPLATE BUILDER
-        </a>
-        <a 
-          className={styles.tabButton}
-          href="/admin/links"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 800 }}
-        >
-          🗺️ APPLICATION MAP
-        </a>
-      </nav>
+      {!hideSidebar && (
+        <nav className={styles.tabsContainer}>
+          <button 
+            className={`${styles.tabButton} ${activeTab === 'dashboard' ? styles.tabButtonActive : ''}`}
+            onClick={() => handleTabChange('dashboard')}
+          >
+            OPERATIONAL OVERVIEW
+          </button>
+          <button 
+            className={`${styles.tabButton} ${activeTab === 'library' ? styles.tabButtonActive : ''}`}
+            onClick={() => handleTabChange('library')}
+          >
+            QUESTIONS LIBRARY
+          </button>
+          <button 
+            className={`${styles.tabButton} ${activeTab === 'authoring' ? styles.tabButtonActive : ''}`}
+            onClick={() => handleTabChange('authoring')}
+          >
+            AUTHORING CENTER {editMode ? ' [EDIT MODE]' : ' [CREATE MODE]'}
+          </button>
+          <button 
+            className={`${styles.tabButton} ${activeTab === 'cache' ? styles.tabButtonActive : ''}`}
+            onClick={() => handleTabChange('cache')}
+          >
+            TTS CACHE MANAGER
+          </button>
+          <button 
+            className={`${styles.tabButton} ${activeTab === 'curriculum' ? styles.tabButtonActive : ''}`}
+            onClick={() => handleTabChange('curriculum')}
+          >
+            CURRICULUM BUILDER
+          </button>
+          <button 
+            className={`${styles.tabButton} ${activeTab === 'images' ? styles.tabButtonActive : ''}`}
+            onClick={() => handleTabChange('images')}
+          >
+            🖼 IMAGE ASSETS
+          </button>
+          <a 
+            className={styles.tabButton}
+            href="/admin/templates"
+            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+          >
+            ⚙️ VISUAL TEMPLATE BUILDER
+          </a>
+          <a 
+            className={styles.tabButton}
+            href="/admin/links"
+            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 800 }}
+          >
+            🗺️ APPLICATION MAP
+          </a>
+        </nav>
+      )}
 
       {/* Active Tab View */}
       <main className={styles.consoleContent}>
@@ -11698,7 +11851,7 @@ export default function AdminConsolePage() {
                                           left: `${hs.x}%`,
                                           top: `${hs.y}%`,
                                           width: `${hs.width}%`,
-                                          height: `${hs.height}%`,
+                                          height: hs.imageUrl ? 'auto' : `${hs.height}%`,
                                           border: isSelected ? '2.5px solid #0284c7' : '1.5px dashed #0284c7',
                                           backgroundColor: hs.isCorrect 
                                             ? (isSelected ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.08)')
@@ -11723,7 +11876,7 @@ export default function AdminConsolePage() {
                                       >
                                         {hs.imageUrl ? (
                                           <>
-                                            <img src={hs.imageUrl} alt={hs.label || ''} style={{ height: '100%', width: '100%', objectFit: 'contain', pointerEvents: 'none', borderRadius: hs.isCircle ? '50%' : '8px', zIndex: 1 }} />
+                                            <TrimmedImage src={hs.imageUrl} alt={hs.label || ''} style={{ height: 'auto', width: '100%', objectFit: 'contain', pointerEvents: 'none', borderRadius: hs.isCircle ? '50%' : '8px', zIndex: 1 }} />
                                             {showHotspotLabels && hs.label && (
                                               <span style={{
                                                 position: 'absolute',
@@ -11750,6 +11903,68 @@ export default function AdminConsolePage() {
                                           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
                                             {hs.isCorrect ? '✅ ' : ''}{hs.label || '(Empty Hotspot)'}
                                           </div>
+                                        )}
+                                        {isSelected && (
+                                          <div
+                                            onPointerDown={(e) => {
+                                              e.stopPropagation();
+                                              if (!canvasRef.current) return;
+                                              e.currentTarget.setPointerCapture(e.pointerId);
+                                              setDragging({
+                                                id: hs.id,
+                                                type: 'hotspot_resize',
+                                                startX: e.clientX,
+                                                startY: e.clientY,
+                                                initialWidthPct: hs.width,
+                                                initialHeightPct: hs.height
+                                              });
+                                            }}
+                                            onPointerMove={(e) => {
+                                              if (!dragging || dragging.id !== hs.id || dragging.type !== 'hotspot_resize') return;
+                                              e.stopPropagation();
+                                              if (!canvasRef.current) return;
+                                              const canvasRect = canvasRef.current.getBoundingClientRect();
+                                              const deltaX = e.clientX - dragging.startX;
+                                              const deltaY = e.clientY - dragging.startY;
+                                              
+                                              const deltaWidthPct = (deltaX / canvasRect.width) * 100;
+                                              const deltaHeightPct = (deltaY / canvasRect.height) * 100;
+                                              
+                                              let newWidth = Math.max(2, Math.min(100 - hs.x, dragging.initialWidthPct + deltaWidthPct));
+                                              let newHeight = Math.max(2, Math.min(100 - hs.y, dragging.initialHeightPct + deltaHeightPct));
+                                              
+                                              newWidth = parseFloat(newWidth.toFixed(2));
+                                              newHeight = parseFloat(newHeight.toFixed(2));
+                                              
+                                              const updated = (hotspots || []).map(h => {
+                                                if (h.id === hs.id) {
+                                                  return { ...h, width: newWidth, height: newHeight };
+                                                }
+                                                return h;
+                                              });
+                                              syncHotspotsToOptions(updated);
+                                            }}
+                                            onPointerUp={(e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                e.currentTarget.releasePointerCapture(e.pointerId);
+                                              } catch (err) {}
+                                              setDragging(null);
+                                              setIsDirty(true);
+                                            }}
+                                            style={{
+                                              position: 'absolute',
+                                              bottom: -4,
+                                              right: -4,
+                                              width: 12,
+                                              height: 12,
+                                              backgroundColor: '#0284c7',
+                                              border: '2px solid #ffffff',
+                                              borderRadius: '50%',
+                                              cursor: 'se-resize',
+                                              zIndex: 20
+                                            }}
+                                          />
                                         )}
                                       </div>
                                     );
@@ -15196,7 +15411,7 @@ Explanation: A question must end with a question mark.`}</pre>
                             setType('fillInTheBlank');
                           }
                         }
-                        setActiveTab('authoring');
+                        handleTabChange('authoring');
                         logActivity(`Switched to authoring question for skill: ${currSelected.title || currSelected.id}`, 'info');
                       }}
                     >

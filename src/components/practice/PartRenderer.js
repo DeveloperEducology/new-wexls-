@@ -101,7 +101,7 @@ function InlineMarkdown({ text }) {
         return (
           <span key={`${keyPrefix}-${subIndex}`}>
             {svgParts.map((svgPart, pIdx) => {
-              if (svgPart.startsWith('<svg') && svgPart.endsWith('</svg>')) {
+              if (svgPart.trim().startsWith('<svg') && svgPart.trim().endsWith('</svg>')) {
                 return (
                   <span
                     key={pIdx}
@@ -161,14 +161,36 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
     .replace(/\\n/g, '\n')
     .replace(/\/n/g, '\n');
   const pieces = normalizedText.split(/(\[\[[^\]]+\]\]|\*\*\[blank(?::[^\]]+)?\]\*\*|\[blank(?::[^\]]+)?\]|\*\*[^*]+\*\*)/g);
-  const renderTextPiece = (piece, keyPrefix) => (
-    String(piece).split('\n').map((line, lineIndex, lines) => (
-      <span key={`${keyPrefix}-${lineIndex}`}>
-        <InlineMarkdown text={line} />
-        {lineIndex < lines.length - 1 ? <br /> : null}
-      </span>
-    ))
-  );
+  const renderTextPiece = (piece, keyPrefix) => {
+    const str = String(piece);
+    if (!str.includes('<svg')) {
+      return str.split('\n').map((line, lineIndex, lines) => (
+        <span key={`${keyPrefix}-${lineIndex}`}>
+          <InlineMarkdown text={line} />
+          {lineIndex < lines.length - 1 ? <br /> : null}
+        </span>
+      ));
+    }
+
+    const segments = str.split(/(<svg[\s\S]*?<\/svg>)/g);
+    return segments.map((segment, segIdx) => {
+      const isSvg = segment.trim().startsWith('<svg') && segment.trim().endsWith('</svg>');
+      if (isSvg) {
+        return (
+          <span key={`${keyPrefix}-svg-${segIdx}`}>
+            <InlineMarkdown text={segment} />
+          </span>
+        );
+      } else {
+        return segment.split('\n').map((line, lineIndex, lines) => (
+          <span key={`${keyPrefix}-txt-${segIdx}-${lineIndex}`}>
+            <InlineMarkdown text={line} />
+            {lineIndex < lines.length - 1 ? <br /> : null}
+          </span>
+        ));
+      }
+    });
+  };
 
   return (
     <span>
@@ -3920,30 +3942,44 @@ function OneMoreRowsPart({ part }) {
   );
 }
 
-function SideBySideDisplayPart({ part }) {
+function SideBySideDisplayPart({ part, userAnswer, onAnswer, isAnswered }) {
   const groupA = part.groupA || { count: 0, image: '', itemLabel: '' };
   const groupB = part.groupB || { count: 0, image: '', itemLabel: '' };
 
-  const renderGroup = (group, title) => {
+  const selectedIndex = typeof userAnswer === 'object'
+    ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
+    : Number(userAnswer);
+
+  const renderGroup = (group, title, index) => {
     const itemWidth = group.width || part.itemWidth || '46px';
     const itemHeight = group.height || part.itemHeight || '46px';
     const itemFontSize = group.fontSize || part.itemFontSize || '32px';
 
+    const isSelected = selectedIndex === index;
+
     return (
-      <div style={{
-        flex: 1,
-        minWidth: '180px',
-        padding: '16px',
-        borderRadius: '16px',
-        border: '1.5px solid #0f172a',
-        background: '#ffffff',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '12px',
-        boxShadow: '0 4px 0px #0f172a'
-      }}>
-        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <button
+        type="button"
+        disabled={isAnswered || !onAnswer}
+        onClick={() => onAnswer && onAnswer(index)}
+        style={{
+          flex: 1,
+          minWidth: '180px',
+          padding: '16px',
+          borderRadius: '16px',
+          border: isSelected ? '3.5px solid #2563eb' : '1.5px solid #0f172a',
+          background: isSelected ? '#eff6ff' : '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: isSelected ? '0 4px 0px #1e40af, 0 0 0 4px rgba(59, 130, 246, 0.4)' : '0 4px 0px #0f172a',
+          cursor: isAnswered ? 'default' : 'pointer',
+          transition: 'all 0.15s ease',
+          outline: 'none'
+        }}
+      >
+        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: isSelected ? '#1d4ed8' : '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           {title}
         </h4>
         <div style={{
@@ -3982,7 +4018,7 @@ function SideBySideDisplayPart({ part }) {
             </div>
           ))}
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -3995,8 +4031,8 @@ function SideBySideDisplayPart({ part }) {
       margin: '16px 0',
       justifyContent: 'center'
     }}>
-      {renderGroup(groupA, 'Group A')}
-      {renderGroup(groupB, 'Group B')}
+      {renderGroup(groupA, 'Group A', 0)}
+      {renderGroup(groupB, 'Group B', 1)}
     </div>
   );
 }
@@ -6931,6 +6967,7 @@ function PictographScenePart({ part }) {
 
 const PART_RENDERERS = {
 
+  section: GroupPart,
   text: TextPart,
   play_sound_card: PlaySoundCard,
   svg: SvgPart,
@@ -7073,6 +7110,101 @@ function CaseMatchShownLetterPart({ part }) {
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     </div>
+  );
+}
+
+const trimmedCache = new Map();
+
+function TrimmedImage({ src, alt, style, className }) {
+  const [displaySrc, setDisplaySrc] = useState(src);
+
+  useEffect(() => {
+    if (!src) {
+      setDisplaySrc('');
+      return;
+    }
+    if (trimmedCache.has(src)) {
+      setDisplaySrc(trimmedCache.get(src));
+      return;
+    }
+    if (src.startsWith('data:')) {
+      setDisplaySrc(src);
+      return;
+    }
+
+    let active = true;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const proxiedUrl = src.startsWith('http') && !src.includes('localhost')
+      ? `/api/admin/proxy-image?url=${encodeURIComponent(src)}`
+      : src;
+    img.src = proxiedUrl;
+    img.onload = () => {
+      if (!active) return;
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const alpha = data[(y * canvas.width + x) * 4 + 3];
+            if (alpha > 0) {
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (maxX >= minX && maxY >= minY) {
+          const croppedCanvas = document.createElement('canvas');
+          const croppedCtx = croppedCanvas.getContext('2d');
+          croppedCanvas.width = maxX - minX + 1;
+          croppedCanvas.height = maxY - minY + 1;
+
+          croppedCtx.drawImage(
+            img,
+            minX, minY, croppedCanvas.width, croppedCanvas.height,
+            0, 0, croppedCanvas.width, croppedCanvas.height
+          );
+
+          const dataUrl = croppedCanvas.toDataURL();
+          trimmedCache.set(src, dataUrl);
+          setDisplaySrc(dataUrl);
+        } else {
+          setDisplaySrc(src);
+        }
+      } catch (err) {
+        console.warn('Failed to trim transparency:', err);
+        setDisplaySrc(src);
+      }
+    };
+    img.onerror = () => {
+      if (active) setDisplaySrc(src);
+    };
+
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={displaySrc || src}
+      alt={alt}
+      style={style}
+      className={className}
+      crossOrigin="anonymous"
+    />
   );
 }
 
@@ -7410,7 +7542,7 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
                 left:   `${(newX / canvasWidth)      * 100}%`,
                 top:    `${(newY / canvasHeight)     * 100}%`,
                 width:  `${(newWidth / canvasWidth)  * 100}%`,
-                height: `${(newHeight / canvasHeight) * 100}%`,
+                height: imageUrl ? 'auto' : `${(newHeight / canvasHeight) * 100}%`,
                 borderRadius: hs.borderRadius || (hs.isCircle || hs.shape === 'circle' ? '50%' : (imageUrl ? '22px' : undefined)),
                 overflow: 'visible',
                 display: 'flex',
@@ -7423,11 +7555,11 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
               }}
             >
               {imageUrl ? (
-                <img 
+                <TrimmedImage 
                   src={imageUrl} 
                   alt={hs.label || ''} 
                   style={{ 
-                    height: '100%', 
+                    height: 'auto', 
                     width: '100%', 
                     padding: '4px',
                     boxSizing: 'border-box',

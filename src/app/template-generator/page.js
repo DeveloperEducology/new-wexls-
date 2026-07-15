@@ -1919,6 +1919,122 @@ export default function TemplateMasterclass() {
     }
   };
 
+  const handleLoadJson = () => {
+    try {
+      if (!jsonText.trim()) {
+        setPublishError('Please paste a JSON recipe into the textarea first.');
+        return;
+      }
+      const parsed = JSON.parse(jsonText);
+      
+      // Clear errors
+      setPublishError(null);
+      setPublishStatus(null);
+      
+      // Determine JNVST vs Dynamic Template
+      if (parsed.examId === 'jnvst' || parsed.exam === 'jnvst' || parsed.config) {
+        setTargetCollection('templates');
+        setTitle(parsed.name || parsed.title || 'Imported JNVST Template');
+        setJnvstSection(parsed.section || 'arithmetic');
+        setJnvstTopic(parsed.topic || 'simplification');
+        setJnvstDifficulty(parsed.difficulty || 0.5);
+        setSelectedExamId(parsed.examId || 'jnvst');
+        
+        const config = parsed.config || {};
+        setBlueprint(config.questionTemplate || '');
+        setSolution(config.explanationTemplate || '');
+        
+        const initialPlaceholders = {};
+        if (config.variables) {
+          Object.entries(config.variables).forEach(([k, v]) => {
+            if (v && typeof v === 'object') {
+              if ('min' in v && 'max' in v) {
+                initialPlaceholders[k] = `${v.min}-${v.max}`;
+              } else if (Array.isArray(v)) {
+                initialPlaceholders[k] = v.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ');
+              } else if (v.values && Array.isArray(v.values)) {
+                initialPlaceholders[k] = v.values.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ');
+              } else {
+                initialPlaceholders[k] = String(v.value ?? '');
+              }
+            } else {
+              initialPlaceholders[k] = String(v ?? '');
+            }
+          });
+        }
+        setPlaceholderValues(initialPlaceholders);
+        setPlaceholders(Object.keys(initialPlaceholders));
+        setVisualComponent('none');
+        setVisualProps({});
+        
+        if (config.options && Array.isArray(config.options)) {
+          const mapped = config.options.map(opt => ({
+            label: String(opt.label || opt.value || '').replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}'),
+            isCorrect: opt.isCorrect === true || opt.isCorrect === 'true'
+          }));
+          setOptionsState(mapped);
+        }
+      } else {
+        setTargetCollection('dynamic_templates');
+        setTitle(parsed.title || parsed.name || 'Imported Template');
+        setSubject(parsed.subject || 'math');
+        setTopic(parsed.topic || 'subtraction');
+        setGrade(parsed.grade || '1');
+        setBlueprint(parsed.blueprint || '');
+        setSolution(parsed.solution || '');
+        setVisualComponent(parsed.visualComponent || 'none');
+        setVisualProps(parsed.visualProps || {});
+        
+        const initialPlaceholders = {};
+        if (parsed.variables && Array.isArray(parsed.variables)) {
+          parsed.variables.forEach(v => {
+            if (!v || !v.name) return;
+            if (v.type === 'integer' || v.type === 'range') {
+              initialPlaceholders[v.name] = `${v.min}-${v.max}`;
+            } else if (v.type === 'array' || v.type === 'choice') {
+              const values = v.values || v.pool || [];
+              initialPlaceholders[v.name] = values.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ');
+            } else if (v.type === 'computed' || v.type === 'expression') {
+              initialPlaceholders[v.name] = v.formula || v.expression || '';
+            } else if (v.type === 'constant') {
+              initialPlaceholders[v.name] = String(v.value ?? '');
+            } else {
+              if (v.pool) {
+                initialPlaceholders[v.name] = v.pool.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ');
+              } else if (v.min !== undefined && v.max !== undefined) {
+                initialPlaceholders[v.name] = `${v.min}-${v.max}`;
+              } else if (v.formula) {
+                initialPlaceholders[v.name] = v.formula;
+              } else if (v.value !== undefined) {
+                initialPlaceholders[v.name] = String(v.value);
+              } else if (v.values) {
+                initialPlaceholders[v.name] = v.values.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ');
+              }
+            }
+          });
+        } else if (parsed.placeholders) {
+          Object.entries(parsed.placeholders).forEach(([k, v]) => {
+            initialPlaceholders[k] = String(v ?? '');
+          });
+        }
+        setPlaceholderValues(initialPlaceholders);
+        setPlaceholders(Object.keys(initialPlaceholders));
+        
+        if (parsed.options && Array.isArray(parsed.options)) {
+          const mapped = parsed.options.map(opt => ({
+            label: String(opt.label || opt.value || '').replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}'),
+            isCorrect: opt.isCorrect === true || opt.isCorrect === 'true'
+          }));
+          setOptionsState(mapped);
+        }
+      }
+      
+      alert('🎉 JSON parsed and loaded successfully into the editor fields!');
+    } catch (err) {
+      setPublishError(`JSON Parse Error: ${err.message}`);
+    }
+  };
+
   // 6. Handle loading Example Presets
   const loadPreset = (preset) => {
     if (preset.examId === 'jnvst' || preset.exam === 'jnvst') {
@@ -2368,6 +2484,22 @@ export default function TemplateMasterclass() {
           box-shadow: 0 4px 12px rgba(79,70,229,0.25);
         }
         .mc-publish-btn:hover {
+          transform: translateY(-1px);
+          opacity: 0.95;
+        }
+        .mc-parse-btn {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          font-weight: 800;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-size: 0.95rem;
+          transition: transform 0.15s, opacity 0.15s;
+          box-shadow: 0 4px 12px rgba(16,185,129,0.25);
+        }
+        .mc-parse-btn:hover {
           transform: translateY(-1px);
           opacity: 0.95;
         }
@@ -3148,7 +3280,7 @@ export default function TemplateMasterclass() {
                 />
 
                 {/* Publish row */}
-                <div className="mc-publish-row">
+                <div className="mc-publish-row" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginTop: '18px' }}>
                   <button 
                     type="button" 
                     className="mc-publish-btn"
@@ -3158,8 +3290,16 @@ export default function TemplateMasterclass() {
                     {publishing ? 'Publishing...' : '🚀 Publish Template'}
                   </button>
 
+                  <button 
+                    type="button" 
+                    className="mc-parse-btn"
+                    onClick={handleLoadJson}
+                  >
+                    📥 Parse & Load JSON to Editor
+                  </button>
+
                   {publishStatus && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12, width: '100%' }}>
                       <span className="mc-db-status" style={{ color: '#16a34a' }}>
                         🎉 Published successfully as ID: <code>{publishStatus.id}</code> ({publishStatus.mode})!
                       </span>
@@ -3180,38 +3320,42 @@ export default function TemplateMasterclass() {
                           href = `/practice?skill=${encodeURIComponent(publishStatus.id)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic === 'custom' ? (customTopic || 'custom-topic') : topic)}`;
                         }
                         return (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                              color: '#fff',
-                              padding: '10px 20px',
-                              borderRadius: 12,
-                              fontWeight: 900,
-                              fontSize: '0.9rem',
-                              textDecoration: 'none',
-                              boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                              transition: 'transform 0.15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                          >
-                            ▶ Play in Practice
-                          </a>
+                          <div>
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                color: '#fff',
+                                padding: '10px 20px',
+                                borderRadius: 12,
+                                fontWeight: 900,
+                                fontSize: '0.9rem',
+                                textDecoration: 'none',
+                                boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                transition: 'transform 0.15s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                              ▶ Play in Practice
+                            </a>
+                          </div>
                         );
                       })()}
                     </div>
                   )}
 
                   {publishError && (
-                    <span className="mc-db-status" style={{ color: '#dc2626' }}>
-                      ❌ Save Error: {publishError}
-                    </span>
+                    <div style={{ width: '100%', marginTop: 8 }}>
+                      <span className="mc-db-status" style={{ color: '#dc2626' }}>
+                        ❌ Save Error: {publishError}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

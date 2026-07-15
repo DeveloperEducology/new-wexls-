@@ -7,8 +7,18 @@ import 'katex/dist/katex.min.css';
 
 const DEFAULT_COLUMNS = ['number_to_factor', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'];
 
+// Difficulty level config
+const LEVEL_CONFIG = {
+  l1: { label: 'L1', long: 'Easy',      emoji: '🟢', color: '#10b981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.25)', pill: '#064e3b' },
+  l2: { label: 'L2', long: 'Medium',    emoji: '🟠', color: '#f59e0b', bg: 'rgba(245,158,11,0.07)',  border: 'rgba(245,158,11,0.25)',  pill: '#78350f' },
+  l3: { label: 'L3', long: 'Hard',      emoji: '🔴', color: '#ef4444', bg: 'rgba(239,68,68,0.07)',   border: 'rgba(239,68,68,0.25)',   pill: '#7f1d1d' },
+  l4: { label: 'L4', long: 'Challenge', emoji: '🔥', color: '#8b5cf6', bg: 'rgba(139,92,246,0.07)', border: 'rgba(139,92,246,0.25)', pill: '#4c1d95' },
+};
+const LEVEL_CYCLE = ['l1', 'l2', 'l3', 'l4'];
+
 const DEFAULT_ROWS = [
   {
+    _level: 'l1',
     number_to_factor: '640',
     Result: '2 x 2 x 2 x 2 x 2 x 2 x 2 x 5',
     Distractor1: '2 x 2 x 2 x 2 x 2 x 5',
@@ -16,6 +26,7 @@ const DEFAULT_ROWS = [
     Distractor3: '2 x 2 x 2 x 2 x 2 x 2 x 2 x 2 x 5'
   },
   {
+    _level: 'l2',
     number_to_factor: '450',
     Result: '2 x 3 x 3 x 5 x 5',
     Distractor1: '2 x 3 x 3 x 5',
@@ -23,6 +34,7 @@ const DEFAULT_ROWS = [
     Distractor3: '2 x 2 x 3 x 3 x 5 x 5'
   },
   {
+    _level: 'l3',
     number_to_factor: '360',
     Result: '2 x 2 x 2 x 3 x 3 x 5',
     Distractor1: '2 x 2 x 3 x 3 x 5',
@@ -413,7 +425,10 @@ export default function SpreadsheetTemplateCreator() {
     'To find the prime factorization of {{number_to_factor}},\nwe divide it by prime numbers starting from the smallest prime (2) until we get 1.\n\nThe prime factorization is: {{Result}}.'
   );
   
-  // MCQ Options binding maps
+  // Question mode: 'mcq' = single correct, 'msq' = multiple correct
+  const [questionMode, setQuestionMode] = useState('mcq');
+
+  // Options binding maps (isCorrect supports multiple true in MSQ mode)
   const [optionsBinding, setOptionsBinding] = useState([
     { column: 'Result', isCorrect: true },
     { column: 'Distractor1', isCorrect: false },
@@ -426,11 +441,22 @@ export default function SpreadsheetTemplateCreator() {
   const [subject, setSubject] = useState('math');
   const [topic, setTopic] = useState('factorization');
   const [grade, setGrade] = useState('5');
+  const [skillId, setSkillId] = useState('');
+  const [customTemplateId, setCustomTemplateId] = useState('');
   const [targetCollection, setTargetCollection] = useState('dynamic_templates');
   const [selectedExamId, setSelectedExamId] = useState('jnvst');
   const [jnvstSection, setJnvstSection] = useState('arithmetic');
   const [jnvstTopic, setJnvstTopic] = useState('simplification');
   const [jnvstDifficulty, setJnvstDifficulty] = useState(0.5);
+
+  // AI Generation state
+  const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
+  const [aiSkillDesc, setAiSkillDesc] = useState('');
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiRowsPerLevel, setAiRowsPerLevel] = useState(3);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [aiSuccess, setAiSuccess] = useState(null);
 
   // Simulator Shuffle state
   const [activeRowIndex, setActiveRowIndex] = useState(0);
@@ -440,11 +466,76 @@ export default function SpreadsheetTemplateCreator() {
   const [jsonText, setJsonText] = useState('');
   const [isDevModeOpen, setIsDevModeOpen] = useState(false);
 
+  // AI Generate handler
+  const handleAIGenerate = async () => {
+    setAiGenerating(true);
+    setAiError(null);
+    setAiSuccess(null);
+    try {
+      const payload = aiMode === 'skill'
+        ? {
+            skillId: skillId || aiSkillDesc.slice(0, 40),
+            skillDescription: aiSkillDesc,
+            subject, topic, grade,
+            rowsPerLevel: aiRowsPerLevel
+          }
+        : {
+            questionText: aiQuestion,
+            subject, topic
+          };
+
+      const res = await fetch('/api/admin/templates/generate-grid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'AI generation failed');
+
+      const tpl = data.template;
+      if (tpl.id)      setCustomTemplateId(tpl.id);
+      if (tpl.title)   setTitle(tpl.title);
+      if (tpl.skillId) setSkillId(tpl.skillId);
+      if (tpl.subject) setSubject(tpl.subject);
+      if (tpl.topic)   setTopic(tpl.topic);
+      if (tpl.grade)   setGrade(tpl.grade);
+      if (tpl.targetCollection) setTargetCollection(tpl.targetCollection);
+      if (tpl.columns) setColumns(tpl.columns.filter(c => c !== '_level'));
+      if (tpl.rows) {
+        const normalized = tpl.rows.map(r => ({ _level: 'l1', ...r }));
+        setRows(normalized);
+      }
+      if (tpl.blueprint) setBlueprint(tpl.blueprint);
+      if (tpl.solution)  setSolution(tpl.solution);
+      if (tpl.optionsBinding) setOptionsBinding(tpl.optionsBinding);
+      // Restore question mode from saved template
+      const savedMode = tpl.optionsType || tpl.interaction?.engine || tpl.config?.interaction?.engine || 'mcq';
+      setQuestionMode(savedMode === 'msq' ? 'msq' : 'mcq');
+      setActiveRowIndex(0);
+      setAiSuccess(`✅ AI generated ${data.template.rows?.length || 0} rows for "${tpl.title || skillId}"`);
+    } catch (err) {
+      setAiError('⚠️ ' + err.message);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   // Save/Publish status states
   const [publishing, setPublishing] = useState(false);
   const [publishStatus, setPublishStatus] = useState(null);
   const [publishError, setPublishError] = useState(null);
   const [linkToQuestionId, setLinkToQuestionId] = useState(null);
+
+  // Track loaded existing template for "Save Rows" patch flow
+  const [loadedTemplateId, setLoadedTemplateId] = useState(null);
+  const [savingRows, setSavingRows] = useState(false);
+  const [saveRowsStatus, setSaveRowsStatus] = useState(null);
+  // Preserve the exact raw JSON that was loaded (for "Publish Raw" flow)
+  const [rawLoadedJson, setRawLoadedJson] = useState(null);
+  const [publishingRaw, setPublishingRaw] = useState(false);
+  const [existingTemplates, setExistingTemplates] = useState([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
 
   // Handle cell edit changes
   const handleCellChange = (rowIndex, colName, value) => {
@@ -494,11 +585,21 @@ export default function SpreadsheetTemplateCreator() {
 
   // Add Row
   const handleAddRow = () => {
-    const newRow = {};
+    const newRow = { _level: 'l1' };
     columns.forEach(col => {
       newRow[col] = '';
     });
     setRows([...rows, newRow]);
+  };
+
+  // Cycle difficulty level for a row
+  const handleCycleLevel = (rowIndex) => {
+    setRows(prev => prev.map((row, idx) => {
+      if (idx !== rowIndex) return row;
+      const cur = row._level || 'l1';
+      const next = LEVEL_CYCLE[(LEVEL_CYCLE.indexOf(cur) + 1) % LEVEL_CYCLE.length];
+      return { ...row, _level: next };
+    }));
   };
 
   // Delete Row
@@ -620,38 +721,52 @@ export default function SpreadsheetTemplateCreator() {
 
   // Compile to JSON
   useEffect(() => {
-    const templateId = 'template-' + String(title || 'custom').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const templateId = customTemplateId.trim() || ('template-' + String(title || 'custom').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
     const cleanBlueprint = blueprint.replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
     const cleanSolution = solution.replace(/\{\{\{\s*/g, '{ {{').replace(/\s*\}\}\}/g, '}} }');
 
-    // Create parallel array values
+    // Create parallel array values — exclude the meta _level column
     const parallelVariables = {};
-    columns.forEach(col => {
+    const dataColumns = columns.filter(c => c !== '_level');
+    dataColumns.forEach(col => {
       parallelVariables[col] = rows.map(r => {
         const cell = String(r[col] || '').trim();
         return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
       });
     });
 
-    // Create the index range array
-    const indicesPool = Array.from({ length: rows.length }, (_, i) => i);
+    // Build level-separated index pools
+    const indicesPool    = Array.from({ length: rows.length }, (_, i) => i);
+    const indexL1 = rows.map((r, i) => (r._level || 'l1') === 'l1' ? i : null).filter(i => i !== null);
+    const indexL2 = rows.map((r, i) => (r._level || 'l1') === 'l2' ? i : null).filter(i => i !== null);
+    const indexL3 = rows.map((r, i) => (r._level || 'l1') === 'l3' ? i : null).filter(i => i !== null);
+    const indexL4 = rows.map((r, i) => (r._level || 'l1') === 'l4' ? i : null).filter(i => i !== null);
+    // questionLevel derivation: maps each row index -> 1/2/3/4
+    const levelArray   = rows.map(r => ({ l1: 1, l2: 2, l3: 3, l4: 4 }[r._level || 'l1']));
 
     if (targetCollection === 'templates') {
       // JNVST JSON format mapping
       const compiledVariables = {
-        index: indicesPool
+        index:    indicesPool,
+        index_l1: indexL1.length > 0 ? indexL1 : indicesPool,
+        index_l2: indexL2.length > 0 ? indexL2 : indicesPool,
+        index_l3: indexL3.length > 0 ? indexL3 : indicesPool,
+        index_l4: indexL4.length > 0 ? indexL4 : indicesPool,
       };
 
       const compiledDerivations = {};
-      columns.forEach(col => {
+      dataColumns.forEach(col => {
         const listStr = JSON.stringify(parallelVariables[col]);
         compiledDerivations[col] = `${listStr}[index]`;
       });
+      compiledDerivations.questionLevel = `${JSON.stringify(levelArray)}[index]`;
 
       const optionsList = optionsBinding.map(opt => ({
         label: `[${opt.column}]`,
         isCorrect: opt.isCorrect
       }));
+      const correctOptions = optionsBinding.filter(o => o.isCorrect);
+      const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
 
       const difficultyLevel = jnvstDifficulty < 0.4 ? 'easy' : (jnvstDifficulty >= 0.7 ? 'hard' : 'medium');
 
@@ -660,6 +775,7 @@ export default function SpreadsheetTemplateCreator() {
         _id: templateId,
         name: title || 'Custom Grid JNVST Template',
         type: 'parameterized',
+        generatorType: 'spreadsheet-grid',
         examId: selectedExamId,
         section: jnvstSection,
         topic: jnvstTopic,
@@ -686,8 +802,8 @@ export default function SpreadsheetTemplateCreator() {
             clickToSubmit: false
           },
           interaction: {
-            engine: 'mcq',
-            inputMode: 'choice'
+            engine: isMSQ ? 'msq' : 'mcq',
+            inputMode: isMSQ ? 'multi-choice' : 'choice'
           },
           variables: compiledVariables,
           derivations: compiledDerivations,
@@ -701,19 +817,25 @@ export default function SpreadsheetTemplateCreator() {
     } else {
       // Universal/Curriculum JSON format mapping
       const compiledVariables = [
-        {
-          name: 'index',
-          type: 'array',
-          values: indicesPool
-        }
+        { name: 'index',    type: 'array', values: indicesPool },
+        { name: 'index_l1', type: 'array', values: indexL1.length > 0 ? indexL1 : indicesPool },
+        { name: 'index_l2', type: 'array', values: indexL2.length > 0 ? indexL2 : indicesPool },
+        { name: 'index_l3', type: 'array', values: indexL3.length > 0 ? indexL3 : indicesPool },
+        { name: 'index_l4', type: 'array', values: indexL4.length > 0 ? indexL4 : indicesPool },
       ];
 
-      columns.forEach(col => {
+      dataColumns.forEach(col => {
         compiledVariables.push({
           name: col,
           type: 'expression',
           formula: `${JSON.stringify(parallelVariables[col])}[index]`
         });
+      });
+      // questionLevel: 1=easy, 2=medium, 3=hard
+      compiledVariables.push({
+        name: 'questionLevel',
+        type: 'expression',
+        formula: `${JSON.stringify(levelArray)}[index]`
       });
 
       const optionsList = optionsBinding.map(opt => ({
@@ -721,7 +843,9 @@ export default function SpreadsheetTemplateCreator() {
         isCorrect: opt.isCorrect
       }));
 
-      const correctOpt = optionsBinding.find(o => o.isCorrect);
+      const correctOptions = optionsBinding.filter(o => o.isCorrect);
+      const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
+      const correctOpt = correctOptions[0];
 
       const compiledJson = {
         id: templateId,
@@ -729,8 +853,9 @@ export default function SpreadsheetTemplateCreator() {
         subject: subject,
         topic: topic,
         grade: grade,
-        optionsType: 'mcq',
-        interaction: { engine: 'mcq', inputMode: 'choice' },
+        generatorType: 'spreadsheet-grid',
+        optionsType: isMSQ ? 'msq' : 'mcq',
+        interaction: { engine: isMSQ ? 'msq' : 'mcq', inputMode: isMSQ ? 'multi-choice' : 'choice' },
         questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
         explanation: {
           sections: [{
@@ -739,17 +864,163 @@ export default function SpreadsheetTemplateCreator() {
           }]
         },
         options: optionsList,
-        validationRules: [{
-          type: 'exact_match',
-          target: 'answer',
-          value: correctOpt ? `[${correctOpt.column}]` : ''
-        }],
+        validationRules: isMSQ
+          ? [{
+              type: 'all_correct',
+              target: 'answer',
+              values: correctOptions.map(o => `[${o.column}]`)
+            }]
+          : [{
+              type: 'exact_match',
+              target: 'answer',
+              value: correctOpt ? `[${correctOpt.column}]` : ''
+            }],
         variables: compiledVariables
       };
 
       setJsonText(JSON.stringify(compiledJson, null, 2));
     }
-  }, [columns, rows, blueprint, solution, optionsBinding, title, subject, topic, grade, targetCollection, selectedExamId, jnvstSection, jnvstTopic, jnvstDifficulty]);
+  }, [columns, rows, blueprint, solution, optionsBinding, questionMode, title, subject, topic, grade, targetCollection, selectedExamId, jnvstSection, jnvstTopic, jnvstDifficulty, customTemplateId]);
+
+  const fetchExistingTemplates = async () => {
+    setLoadingExisting(true);
+    try {
+      const res = await fetch('/api/admin/templates');
+      if (!res.ok) {
+        throw new Error(`Failed to fetch templates: HTTP status ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.success && Array.isArray(data.dynamicTemplates)) {
+        // Only load templates created by the spreadsheet grid creator
+        const grids = data.dynamicTemplates.filter(t => {
+          return t.generatorType === 'spreadsheet-grid' ||
+            (t.config && t.config.generatorType === 'spreadsheet-grid');
+        });
+        // Deduplicate: keep the first occurrence of each logical id
+        const seenIds = new Set();
+        const uniqueGrids = grids.filter(t => {
+          const uid = t._id || t.id;
+          if (seenIds.has(uid)) return false;
+          seenIds.add(uid);
+          return true;
+        });
+        setExistingTemplates(uniqueGrids);
+      } else if (data.error) {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch templates:', err);
+      setPublishError(`⚠️ Existing templates refresh failed: ${err.message}`);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExistingTemplates();
+  }, []);
+
+  const loadTemplateIntoEditor = (tpl) => {
+    try {
+      setPublishError(null);
+      setPublishStatus(null);
+      
+      const config = tpl.config || tpl;
+      if (config.title) setTitle(config.title);
+      else if (tpl.name) setTitle(tpl.name);
+      
+      if (config.subject) setSubject(config.subject);
+      if (config.topic) setTopic(config.topic);
+      if (config.grade) setGrade(config.grade);
+      
+      const vars = config.variables || {};
+      let size = 1;
+      let colData = {};
+
+      if (Array.isArray(vars)) {
+        // Curriculum Mode JSON load
+        const idxVar = vars.find(v => v.name === 'index');
+        if (idxVar && Array.isArray(idxVar.values)) {
+          size = idxVar.values.length;
+        }
+        vars.forEach(v => {
+          if (v.name !== 'index' && v.formula) {
+            const arrMatch = v.formula.match(/^(\[.*?\])\[index\]$/);
+            if (arrMatch) {
+              try {
+                colData[v.name] = JSON.parse(arrMatch[1]);
+              } catch (parseErr) {
+                console.warn(`Failed to parse array formula for column ${v.name}:`, parseErr);
+                setPublishError(`⚠️ Column array formula parse error for "${v.name}": ${parseErr.message}`);
+              }
+            }
+          }
+        });
+      } else {
+        // JNVST Mode JSON load
+        if (Array.isArray(vars.index)) {
+          size = vars.index.length;
+        }
+        const derivations = config.derivations || {};
+        Object.keys(derivations).forEach(k => {
+          const arrMatch = derivations[k].match(/^(\[.*?\])\[index\]$/);
+          if (arrMatch) {
+            try {
+              colData[k] = JSON.parse(arrMatch[1]);
+            } catch (parseErr) {
+              console.warn(`Failed to parse derivation formula for column ${k}:`, parseErr);
+              setPublishError(`⚠️ Column array formula parse error for "${k}": ${parseErr.message}`);
+            }
+          }
+        });
+      }
+
+      const activeCols = Object.keys(colData);
+      if (activeCols.length > 0) {
+        setColumns(activeCols);
+        const compiledRows = [];
+        for (let r = 0; r < size; r++) {
+          const rowObj = {};
+          activeCols.forEach(col => {
+            rowObj[col] = colData[col][r] !== undefined ? String(colData[col][r]) : '';
+          });
+          compiledRows.push(rowObj);
+        }
+        compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
+        setRows(compiledRows);
+      }
+
+      let qTemplate = config.questionTemplate || tpl.questionText || '';
+      let sTemplate = config.explanationTemplate || config.explanation?.sections?.[0]?.content || '';
+      qTemplate = qTemplate.replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}');
+      sTemplate = sTemplate.replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}');
+      setBlueprint(qTemplate);
+      setSolution(sTemplate);
+
+      const rawOpts = config.options || tpl.options;
+      if (Array.isArray(rawOpts)) {
+        const mapped = rawOpts.map(opt => {
+          const colName = String(opt.label || '').replace(/[\[\]]/g, '');
+          return {
+            column: colName,
+            isCorrect: opt.isCorrect
+          };
+        });
+        setOptionsBinding(mapped);
+      }
+
+      const tplId = tpl.id || tpl._id || null;
+      setLoadedTemplateId(tplId);
+      setCustomTemplateId(tplId || '');
+      setSaveRowsStatus(null);
+      setRawLoadedJson(tpl);
+      setJsonText(JSON.stringify(tpl, null, 2));
+      
+      alert(`🎉 Template "${tpl.title || tpl.name || tplId}" loaded into editor successfully!`);
+    } catch (err) {
+      alert(`Error loading template: ${err.message}`);
+    }
+  };
 
   // Load JSON
   const handleLoadJson = () => {
@@ -779,7 +1050,10 @@ export default function SpreadsheetTemplateCreator() {
             if (arrMatch) {
               try {
                 colData[v.name] = JSON.parse(arrMatch[1]);
-              } catch {}
+              } catch (parseErr) {
+                console.warn(`Failed to parse array formula for column ${v.name}:`, parseErr);
+                setPublishError(`⚠️ Column array formula parse error for "${v.name}": ${parseErr.message}`);
+              }
             }
           }
         });
@@ -794,7 +1068,10 @@ export default function SpreadsheetTemplateCreator() {
           if (arrMatch) {
             try {
               colData[k] = JSON.parse(arrMatch[1]);
-            } catch {}
+            } catch (parseErr) {
+              console.warn(`Failed to parse derivation formula for column ${k}:`, parseErr);
+              setPublishError(`⚠️ Column array formula parse error for "${k}": ${parseErr.message}`);
+            }
           }
         });
       }
@@ -810,7 +1087,9 @@ export default function SpreadsheetTemplateCreator() {
           });
           compiledRows.push(rowObj);
         }
-        setRows(compiledRows);
+        // ensure every loaded row has a _level
+      compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
+      setRows(compiledRows);
       }
 
       let qTemplate = config.questionTemplate || parsed.questionText || '';
@@ -833,6 +1112,13 @@ export default function SpreadsheetTemplateCreator() {
       }
 
       setPublishStatus({ id: parsed.id || 'loaded', mode: 'loaded' });
+      // Track which template was loaded so Save Rows knows what to patch
+      const tplId = parsed._id || parsed.id || null;
+      setLoadedTemplateId(tplId);
+      setCustomTemplateId(tplId || '');
+      setSaveRowsStatus(null);
+      // Preserve exact raw JSON for direct publish (bypasses grid compiler)
+      setRawLoadedJson(parsed);
     } catch (err) {
       setPublishError('Load failed: ' + err.message);
     }
@@ -844,6 +1130,18 @@ export default function SpreadsheetTemplateCreator() {
     setPublishStatus(null);
     try {
       const parsed = JSON.parse(jsonText);
+      const templateId = parsed.id || parsed._id;
+
+      // Duplicate ID validation warning
+      const isDuplicate = existingTemplates.some(t => t.id === templateId || t._id === templateId);
+      if (isDuplicate && templateId !== loadedTemplateId) {
+        const proceed = window.confirm(`⚠️ WARNING: A template with ID "${templateId}" already exists. Publishing will overwrite the existing template in the database. Do you want to proceed?`);
+        if (!proceed) {
+          setPublishing(false);
+          return;
+        }
+      }
+
       const payload = {
         template: parsed,
         linkToQuestionId: linkToQuestionId
@@ -856,6 +1154,8 @@ export default function SpreadsheetTemplateCreator() {
       const data = await res.json();
       if (data.success) {
         setPublishStatus({ id: parsed.id || data.id, mode: 'saved' });
+        // Refresh the local templates list automatically on publish success
+        fetchExistingTemplates();
       } else {
         setPublishError(data.error || 'Failed to save template to database.');
       }
@@ -863,6 +1163,96 @@ export default function SpreadsheetTemplateCreator() {
       setPublishError(err.message || 'API call failed.');
     } finally {
       setPublishing(false);
+    }
+  };
+
+  // Publish the raw loaded JSON directly — bypasses the grid compiler entirely.
+  // Use this when the template uses [bracket] placeholders or a custom variables structure.
+  const handlePublishRaw = async () => {
+    if (!rawLoadedJson) return;
+    setPublishingRaw(true);
+    setPublishError(null);
+    setPublishStatus(null);
+    try {
+      const payload = { template: rawLoadedJson, linkToQuestionId };
+      const res = await fetch('/api/admin/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPublishStatus({ id: rawLoadedJson.id || data.id || 'saved', mode: 'raw' });
+        setSaveRowsStatus({ ok: true, msg: `✅ Raw JSON saved → "${rawLoadedJson.id || 'template'}"` });
+      } else {
+        setPublishError(data.error || 'Failed to save raw template.');
+      }
+    } catch (err) {
+      setPublishError(err.message || 'API call failed.');
+    } finally {
+      setPublishingRaw(false);
+    }
+  };
+
+  // Save ONLY the rows (variables/derivations) back to an existing loaded template
+  const handleSaveRowsToExisting = async () => {
+    if (!loadedTemplateId) return;
+    setSavingRows(true);
+    setSaveRowsStatus(null);
+    setPublishError(null);
+    try {
+      // Build the compiled parallel arrays (same logic as the compile useEffect)
+      const parallelVariables = {};
+      columns.forEach(col => {
+        parallelVariables[col] = rows.map(r => {
+          const cell = String(r[col] || '').trim();
+          return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
+        });
+      });
+      const indicesPool = Array.from({ length: rows.length }, (_, i) => i);
+
+      let updates;
+      if (targetCollection === 'templates') {
+        // Competitive exam template: patch config.variables + config.derivations
+        const compiledDerivations = {};
+        columns.forEach(col => {
+          compiledDerivations[col] = `${JSON.stringify(parallelVariables[col])}[index]`;
+        });
+        updates = {
+          'config.variables': { index: indicesPool },
+          'config.derivations': compiledDerivations,
+        };
+      } else {
+        // Curriculum dynamic_template: patch variables array
+        const compiledVariables = [
+          { name: 'index', type: 'array', values: indicesPool }
+        ];
+        columns.forEach(col => {
+          compiledVariables.push({
+            name: col,
+            type: 'expression',
+            formula: `${JSON.stringify(parallelVariables[col])}[index]`
+          });
+        });
+        updates = { variables: compiledVariables };
+      }
+
+      const isExam = targetCollection === 'templates';
+      const res = await fetch('/api/admin/templates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: loadedTemplateId, updates, isExam })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSaveRowsStatus({ ok: true, msg: `✅ Saved ${rows.length} rows → template "${loadedTemplateId}"` });
+      } else {
+        setSaveRowsStatus({ ok: false, msg: '⚠️ ' + (data.error || 'Save failed') });
+      }
+    } catch (err) {
+      setSaveRowsStatus({ ok: false, msg: '⚠️ ' + err.message });
+    } finally {
+      setSavingRows(false);
     }
   };
 
@@ -1261,43 +1651,122 @@ export default function SpreadsheetTemplateCreator() {
           {/* Load Preset Selector Card */}
           <div className="grid-card" style={{ marginBottom: '20px', border: '1.5px solid #4f46e5', background: 'linear-gradient(135deg, #1e1b4b 0%, #111827 100%)' }}>
             <h3 className="grid-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ⚡ Load Preset Blueprint
+              ⚡ Load Preset Blueprint & Existing Templates
             </h3>
-            <p className="grid-card-desc">Quickly populate the grid spreadsheet with preconfigured examples for competitive exams or curriculum practice.</p>
-            <select
-              className="grid-select"
-              style={{ width: '100%', padding: '10px', fontSize: '14px', background: '#0f172a', borderColor: '#4f46e5' }}
-              onChange={(e) => {
-                const presetId = e.target.value;
-                const preset = GRID_PRESETS.find(p => p.id === presetId);
-                if (preset) {
-                  setTitle(preset.title);
-                  setTargetCollection(preset.targetCollection);
-                  if (preset.targetCollection === 'templates') {
-                    setSelectedExamId(preset.selectedExamId || 'jnvst');
-                    setJnvstSection(preset.jnvstSection || 'arithmetic');
-                    setJnvstTopic(preset.jnvstTopic || 'simplification');
-                    if (preset.jnvstDifficulty !== undefined) setJnvstDifficulty(preset.jnvstDifficulty);
-                  } else {
-                    setSubject(preset.subject || 'math');
-                    setTopic(preset.topic || 'general');
-                    setGrade(preset.grade || '5');
-                  }
-                  setColumns(preset.columns);
-                  setRows(preset.rows);
-                  setBlueprint(preset.blueprint);
-                  setSolution(preset.solution);
-                  setOptionsBinding(preset.optionsBinding);
-                  setActiveRowIndex(0);
-                }
-              }}
-              defaultValue=""
-            >
-              <option value="" disabled>✨ Select a preset to load...</option>
-              {GRID_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>{preset.name}</option>
-              ))}
-            </select>
+            <p className="grid-card-desc">Quickly populate the grid spreadsheet with preconfigured examples or load and edit an existing template from the database.</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#818cf8', display: 'block', marginBottom: '6px' }}>
+                  A. Choose from preconfigured presets
+                </label>
+                <select
+                  className="grid-select"
+                  style={{ width: '100%', padding: '10px', fontSize: '14px', background: '#0f172a', borderColor: '#4f46e5' }}
+                  onChange={(e) => {
+                    const presetId = e.target.value;
+                    const preset = GRID_PRESETS.find(p => p.id === presetId);
+                    if (preset) {
+                      setTitle(preset.title);
+                      setTargetCollection(preset.targetCollection);
+                      if (preset.targetCollection === 'templates') {
+                        setSelectedExamId(preset.selectedExamId || 'jnvst');
+                        setJnvstSection(preset.jnvstSection || 'arithmetic');
+                        setJnvstTopic(preset.jnvstTopic || 'simplification');
+                        if (preset.jnvstDifficulty !== undefined) setJnvstDifficulty(preset.jnvstDifficulty);
+                      } else {
+                        setSubject(preset.subject || 'math');
+                        setTopic(preset.topic || 'general');
+                        setGrade(preset.grade || '5');
+                      }
+                      setColumns(preset.columns);
+                      setRows(preset.rows);
+                      setBlueprint(preset.blueprint);
+                      setSolution(preset.solution);
+                      setOptionsBinding(preset.optionsBinding);
+                      setActiveRowIndex(0);
+                    }
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>✨ Select a preset blueprint...</option>
+                  {GRID_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>{preset.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#818cf8', display: 'block', marginBottom: '6px' }}>
+                  B. Load existing template from database to edit
+                </label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                  <input
+                    className="grid-input"
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '13px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0' }}
+                    placeholder="🔍 Filter templates by name or topic..."
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                  />
+                  <button
+                    onClick={fetchExistingTemplates}
+                    style={{ background: '#4f46e5', border: 'none', color: '#fff', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap' }}
+                  >
+                    {loadingExisting ? '⏳' : '🔄 Refresh'}
+                  </button>
+                </div>
+                {existingTemplates.length > 0 && (
+                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>
+                    {(() => {
+                      const filtered = existingTemplates.filter(t => {
+                        if (!templateSearch.trim()) return true;
+                        const q = templateSearch.toLowerCase();
+                        return (t.title || t.name || t.id || '').toLowerCase().includes(q) ||
+                          (t.topic || '').toLowerCase().includes(q) ||
+                          (t.subject || '').toLowerCase().includes(q);
+                      });
+                      return `${filtered.length} of ${existingTemplates.length} grid templates`;
+                    })()}
+                  </div>
+                )}
+                <select
+                  className="grid-select"
+                  style={{ width: '100%', padding: '10px', fontSize: '14px', background: '#0f172a', borderColor: '#4f46e5' }}
+                  onChange={(e) => {
+                    const tplId = e.target.value;
+                    const tpl = existingTemplates.find(t => (t.id === tplId || t._id === tplId));
+                    if (tpl) {
+                      loadTemplateIntoEditor(tpl);
+                    }
+                  }}
+                  defaultValue=""
+                  size={Math.min(8, existingTemplates.filter(t => {
+                    if (!templateSearch.trim()) return true;
+                    const q = templateSearch.toLowerCase();
+                    return (t.title || t.name || t.id || '').toLowerCase().includes(q) ||
+                      (t.topic || '').toLowerCase().includes(q) ||
+                      (t.subject || '').toLowerCase().includes(q);
+                  }).length + 1) || 3}
+                >
+                  <option value="" disabled>
+                    {loadingExisting ? '⏳ Loading database templates...' : '📂 Click a template below to load it into editor...'}
+                  </option>
+                  {existingTemplates
+                    .filter(t => {
+                      if (!templateSearch.trim()) return true;
+                      const q = templateSearch.toLowerCase();
+                      return (t.title || t.name || t.id || '').toLowerCase().includes(q) ||
+                        (t.topic || '').toLowerCase().includes(q) ||
+                        (t.subject || '').toLowerCase().includes(q);
+                    })
+                    .map((tpl, idx) => (
+                      <option key={(tpl._id || tpl.id || '') + '-' + idx} value={tpl.id || tpl._id}>
+                        {tpl.title || tpl.name || tpl.id} · {tpl.subject || 'math'} / {tpl.topic || 'general'} · {tpl.grade ? `Grade ${tpl.grade}` : ''}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           {/* Setup Metadata Card */}
@@ -1309,6 +1778,24 @@ export default function SpreadsheetTemplateCreator() {
               <div>
                 <label className="mc-dev-label">Template Title</label>
                 <input className="grid-input" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <div>
+                <label className="mc-dev-label">Template ID (Slug) <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>(optional slug override)</span></label>
+                <input
+                  className="grid-input"
+                  value={customTemplateId}
+                  onChange={(e) => setCustomTemplateId(e.target.value)}
+                  placeholder="e.g. template-imo-g3-place-face-value"
+                />
+              </div>
+              <div>
+                <label className="mc-dev-label">Skill ID <span style={{ color: '#6366f1', fontSize: '0.75rem' }}>(e.g. imo-g3-place-face)</span></label>
+                <input
+                  className="grid-input"
+                  value={skillId}
+                  onChange={(e) => setSkillId(e.target.value)}
+                  placeholder="e.g. imo-g3-place-face"
+                />
               </div>
               <div>
                 <label className="mc-dev-label">Target Database Mode</label>
@@ -1358,6 +1845,104 @@ export default function SpreadsheetTemplateCreator() {
             )}
           </div>
 
+          {/* ── AI Generation Card ───────────────────────────────────────── */}
+          <div className="grid-card" style={{ border: '1.5px solid rgba(99,102,241,0.35)', background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(16,185,129,0.03) 100%)' }}>
+            <h3 className="grid-card-title" style={{ color: '#a5b4fc' }}>
+              ✨ AI Generate Grid Template
+            </h3>
+            <p className="grid-card-desc">Let Gemini AI auto-generate columns, rows (split by L1/L2/L3), blueprint, and solution from a skill name or existing question.</p>
+
+            {/* Mode tabs */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
+              {[['skill', '🎯 From Skill Name'], ['question', '📝 From Existing Question']].map(([m, label]) => (
+                <button
+                  key={m}
+                  onClick={() => setAiMode(m)}
+                  style={{
+                    background: aiMode === m ? 'rgba(99,102,241,0.2)' : 'transparent',
+                    border: aiMode === m ? '1.5px solid #6366f1' : '1.5px solid #374151',
+                    borderRadius: '8px',
+                    color: aiMode === m ? '#a5b4fc' : '#64748b',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    padding: '6px 16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {aiMode === 'skill' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label className="mc-dev-label">Skill ID <span style={{ color: '#64748b', fontWeight: 400 }}>(auto-filled from metadata)</span></label>
+                    <input
+                      className="grid-input"
+                      value={skillId}
+                      onChange={(e) => setSkillId(e.target.value)}
+                      placeholder="e.g. imo-g3-place-face"
+                    />
+                  </div>
+                  <div>
+                    <label className="mc-dev-label">Rows per level (L1/L2/L3/L4)</label>
+                    <select className="grid-select" value={aiRowsPerLevel} onChange={e => setAiRowsPerLevel(Number(e.target.value))}>
+                      {[2,3,4,5,6].map(n => <option key={n} value={n}>{n} rows each ({n*4} total)</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="mc-dev-label">Skill Description <span style={{ color: '#64748b', fontWeight: 400 }}>(describe what to practice)</span></label>
+                  <textarea
+                    className="grid-textarea"
+                    style={{ minHeight: '80px' }}
+                    value={aiSkillDesc}
+                    onChange={e => setAiSkillDesc(e.target.value)}
+                    placeholder="e.g. Find the difference between the place value and face value of a digit in a 4-digit number. Generate easy, medium, hard rows."
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="mc-dev-label">Paste an existing question &amp; choices</label>
+                <textarea
+                  className="grid-textarea"
+                  style={{ minHeight: '100px' }}
+                  value={aiQuestion}
+                  onChange={e => setAiQuestion(e.target.value)}
+                  placeholder="e.g. In the number 5240, find the difference between the place value of 2 and the face value of 0.\nA) 200  B) 199  C) 201  D) 20"
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleAIGenerate}
+                disabled={aiGenerating || (aiMode === 'skill' ? !aiSkillDesc.trim() : !aiQuestion.trim())}
+                style={{
+                  background: aiGenerating ? '#374151' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 24px',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: aiGenerating ? 'not-allowed' : 'pointer',
+                  opacity: (aiMode === 'skill' ? !aiSkillDesc.trim() : !aiQuestion.trim()) ? 0.5 : 1,
+                  transition: 'all 0.2s'
+                }}
+              >
+                {aiGenerating ? '⏳ Generating...' : '✨ Generate with AI'}
+              </button>
+              {aiGenerating && <span style={{ fontSize: '0.82rem', color: '#a5b4fc' }}>Gemini is thinking... usually 5-10 seconds</span>}
+              {aiSuccess && <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.85rem' }}>{aiSuccess}</span>}
+            </div>
+            {aiError && <div style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '10px' }}>{aiError}</div>}
+          </div>
+
           {/* Interactive Spreadsheet Grid Card */}
           <div className="grid-card">
             <h3 className="grid-card-title">📊 Dynamic Parameter Spreadsheet</h3>
@@ -1378,38 +1963,75 @@ export default function SpreadsheetTemplateCreator() {
               <table className="spreadsheet-table">
                 <thead>
                   <tr>
-                    <th className="spreadsheet-th" style={{ width: '60px' }}>Row</th>
-                    {columns.map(col => (
+                    <th className="spreadsheet-th" style={{ width: '44px' }}>Row</th>
+                    <th className="spreadsheet-th" style={{ width: '80px', textAlign: 'center' }}>Level</th>
+                    {columns.filter(c => c !== '_level').map(col => (
                       <th key={col} className="spreadsheet-th">
                         {col}
                         <button className="spreadsheet-th-delete" onClick={() => handleDeleteColumn(col)}>×</button>
                       </th>
                     ))}
-                    <th className="spreadsheet-th" style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                    <th className="spreadsheet-th" style={{ width: '50px', textAlign: 'center' }}>Del</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, rIdx) => (
-                    <tr key={rIdx} className="spreadsheet-row" style={rIdx === activeRowIndex ? { background: 'rgba(16, 185, 129, 0.08)' } : {}}>
-                      <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold', borderRight: '1px solid #1f2937', borderBottom: '1px solid #1f2937' }}>
-                        {rIdx + 1}
-                      </td>
-                      {columns.map(col => (
-                        <td key={col} className="spreadsheet-td">
-                          <input
-                            className="spreadsheet-input"
-                            value={row[col] || ''}
-                            onChange={(e) => handleCellChange(rIdx, col, e.target.value)}
-                          />
+                  {rows.map((row, rIdx) => {
+                    const lvl = row._level || 'l1';
+                    const lc = LEVEL_CONFIG[lvl];
+                    const isActive = rIdx === activeRowIndex;
+                    return (
+                      <tr
+                        key={rIdx}
+                        className="spreadsheet-row"
+                        style={{
+                          background: isActive
+                            ? lc.bg
+                            : `rgba(${lvl === 'l1' ? '16,185,129' : lvl === 'l2' ? '245,158,11' : '239,68,68'},0.03)`,
+                          borderLeft: `3px solid ${lc.color}`,
+                        }}
+                      >
+                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold', borderRight: '1px solid #1f2937', borderBottom: '1px solid #1f2937', fontSize: '0.78rem' }}>
+                          {rIdx + 1}
                         </td>
-                      ))}
-                      <td style={{ textAlign: 'center', borderBottom: '1px solid #1f2937' }}>
-                        <button style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleDeleteRow(rIdx)}>
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Level pill — click to cycle */}
+                        <td style={{ textAlign: 'center', borderRight: '1px solid #1f2937', borderBottom: '1px solid #1f2937', padding: '4px 6px' }}>
+                          <button
+                            onClick={() => handleCycleLevel(rIdx)}
+                            title={`Click to change: ${lc.long}`}
+                            style={{
+                              background: lc.bg,
+                              border: `1.5px solid ${lc.border}`,
+                              borderRadius: '20px',
+                              color: lc.color,
+                              fontWeight: 800,
+                              fontSize: '0.72rem',
+                              padding: '3px 10px',
+                              cursor: 'pointer',
+                              letterSpacing: '0.03em',
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {lc.emoji} {lc.label} {lc.long}
+                          </button>
+                        </td>
+                        {columns.filter(c => c !== '_level').map(col => (
+                          <td key={col} className="spreadsheet-td">
+                            <input
+                              className="spreadsheet-input"
+                              value={row[col] || ''}
+                              onChange={(e) => handleCellChange(rIdx, col, e.target.value)}
+                            />
+                          </td>
+                        ))}
+                        <td style={{ textAlign: 'center', borderBottom: '1px solid #1f2937' }}>
+                          <button style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleDeleteRow(rIdx)}>
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1418,6 +2040,31 @@ export default function SpreadsheetTemplateCreator() {
               <button className="grid-btn-primary" onClick={handleAddRow}>➕ Add Row Variant</button>
               <button className="grid-btn-secondary" onClick={() => setRows([rows[0]])}>🧹 Clear rows</button>
             </div>
+
+            {/* Level distribution stats bar */}
+            {(() => {
+              const counts = { l1: 0, l2: 0, l3: 0 };
+              rows.forEach(r => { counts[r._level || 'l1']++; });
+              const total = rows.length;
+              return (
+                <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level Distribution:</span>
+                  {LEVEL_CYCLE.map(lk => {
+                    const lc = LEVEL_CONFIG[lk];
+                    const pct = total > 0 ? Math.round((counts[lk] / total) * 100) : 0;
+                    return (
+                      <div key={lk} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '80px', height: '8px', background: '#1e293b', borderRadius: '99px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: lc.color, borderRadius: '99px', transition: 'width 0.3s ease' }} />
+                        </div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: lc.color }}>{lc.emoji} {lc.label}: {counts[lk]}</span>
+                      </div>
+                    );
+                  })}
+                  <span style={{ fontSize: '0.75rem', color: '#475569' }}>({total} total rows)</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Question & Solution Blueprints Card */}
@@ -1457,20 +2104,95 @@ export default function SpreadsheetTemplateCreator() {
           <div className="grid-card">
             <h3 className="grid-card-title">📝 Step 3: Map Answer Choices to Columns</h3>
             <p className="grid-card-desc">Assign correct answers and distractor options directly to columns in your spreadsheet.</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+            {/* MCQ / MSQ mode toggle */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question Type:</span>
+              <div style={{ display: 'flex', background: '#0f172a', borderRadius: '10px', border: '1.5px solid #334155', overflow: 'hidden' }}>
+                {[['mcq', '🔘 MCQ', 'Single correct answer'], ['msq', '☑️ MSQ', 'Multiple correct answers']].map(([mode, label, hint]) => (
+                  <button
+                    key={mode}
+                    title={hint}
+                    onClick={() => {
+                      setQuestionMode(mode);
+                      if (mode === 'mcq') {
+                        // In MCQ mode keep only the first correct, uncheck the rest
+                        setOptionsBinding(prev => {
+                          const firstCorrectIdx = prev.findIndex(o => o.isCorrect);
+                          return prev.map((o, i) => ({ ...o, isCorrect: i === (firstCorrectIdx >= 0 ? firstCorrectIdx : 0) }));
+                        });
+                      }
+                    }}
+                    style={{
+                      padding: '7px 18px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: questionMode === mode
+                        ? (mode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#10b981,#059669)')
+                        : 'transparent',
+                      color: questionMode === mode ? '#fff' : '#64748b',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >{label}</button>
+                ))}
+              </div>
+              <span style={{ fontSize: '11px', color: questionMode === 'msq' ? '#a78bfa' : '#34d399', background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : 'rgba(16,185,129,0.12)', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
+                {questionMode === 'msq' ? 'Students select all that apply' : 'Students pick one answer'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {optionsBinding.map((opt, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.9rem', width: '120px', fontWeight: 'bold', color: opt.isCorrect ? '#10b981' : '#94a3b8' }}>
-                    {opt.isCorrect ? '✅ Correct Choice' : `❌ Distractor ${idx}`}
+                <div key={idx} style={{
+                  display: 'flex', gap: '12px', alignItems: 'center',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: opt.isCorrect ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)',
+                  border: opt.isCorrect ? '1.5px solid rgba(16,185,129,0.35)' : '1px solid #1e293b',
+                  transition: 'all 0.15s ease'
+                }}>
+                  {/* Correct toggle */}
+                  <button
+                    title={questionMode === 'msq' ? 'Toggle correct answer' : 'Set as the single correct answer'}
+                    onClick={() => {
+                      if (questionMode === 'msq') {
+                        // Toggle this option's correctness freely
+                        const copy = optionsBinding.map((o, i) => i === idx ? { ...o, isCorrect: !o.isCorrect } : o);
+                        setOptionsBinding(copy);
+                      } else {
+                        // MCQ: only one correct at a time
+                        const copy = optionsBinding.map((o, i) => ({ ...o, isCorrect: i === idx }));
+                        setOptionsBinding(copy);
+                      }
+                    }}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '8px', border: 'none', cursor: 'pointer', flexShrink: 0,
+                      background: opt.isCorrect
+                        ? (questionMode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#10b981,#059669)')
+                        : '#1e293b',
+                      color: opt.isCorrect ? '#fff' : '#475569',
+                      fontSize: '16px', transition: 'all 0.15s ease',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                  >
+                    {opt.isCorrect ? (questionMode === 'msq' ? '☑️' : '✅') : '⬜'}
+                  </button>
+
+                  {/* Label */}
+                  <span style={{ fontSize: '11px', width: '100px', fontWeight: 700, color: opt.isCorrect ? (questionMode === 'msq' ? '#a78bfa' : '#10b981') : '#64748b', flexShrink: 0 }}>
+                    {opt.isCorrect ? (questionMode === 'msq' ? `✓ Correct ${idx + 1}` : '✅ Correct') : `○ Option ${idx + 1}`}
                   </span>
+
+                  {/* Column picker */}
                   <select
                     className="grid-select"
-                    style={{ maxWidth: '280px' }}
+                    style={{ flex: 1, maxWidth: '260px' }}
                     value={opt.column}
                     onChange={(e) => {
                       const copy = [...optionsBinding];
-                      copy[idx].column = e.target.value;
+                      copy[idx] = { ...copy[idx], column: e.target.value };
                       setOptionsBinding(copy);
                     }}
                   >
@@ -1479,9 +2201,33 @@ export default function SpreadsheetTemplateCreator() {
                       <option key={col} value={col}>{col}</option>
                     ))}
                   </select>
+
+                  {/* Remove option row */}
+                  <button
+                    title="Remove this option row"
+                    onClick={() => setOptionsBinding(prev => prev.filter((_, i) => i !== idx))}
+                    style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, flexShrink: 0 }}
+                  >✕</button>
                 </div>
               ))}
+
+              {/* Add option row */}
+              <button
+                onClick={() => setOptionsBinding(prev => [...prev, { column: columns[0] || '', isCorrect: false }])}
+                style={{ marginTop: '4px', padding: '9px 18px', background: 'rgba(99,102,241,0.1)', border: '1.5px dashed #4f46e5', color: '#818cf8', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, alignSelf: 'flex-start', transition: 'all 0.15s ease' }}
+              >+ Add Option Row</button>
             </div>
+
+            {/* MSQ info badge */}
+            {questionMode === 'msq' && (
+              <div style={{ marginTop: '14px', padding: '10px 14px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '10px', fontSize: '12px', color: '#c4b5fd', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '16px' }}>ℹ️</span>
+                <span>
+                  <strong>MSQ mode:</strong> {optionsBinding.filter(o => o.isCorrect).length} correct answer{optionsBinding.filter(o => o.isCorrect).length !== 1 ? 's' : ''} selected.
+                  The compiled JSON will use <code style={{ background: '#1e1b4b', padding: '1px 5px', borderRadius: '4px' }}>engine: "msq"</code>, <code style={{ background: '#1e1b4b', padding: '1px 5px', borderRadius: '4px' }}>inputMode: "multi-choice"</code>, and <code style={{ background: '#1e1b4b', padding: '1px 5px', borderRadius: '4px' }}>validationRules: all_correct</code>.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Publish checklist card */}
@@ -1495,16 +2241,104 @@ export default function SpreadsheetTemplateCreator() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button className="grid-btn-primary" onClick={handlePublish} disabled={publishing}>
                 {publishing ? 'Publishing live...' : '🚀 Publish Template Live'}
               </button>
+
+              {/* Publish Raw JSON — only shown when a JSON was loaded via Parse & Load */}
+              {rawLoadedJson && (
+                <button
+                  onClick={handlePublishRaw}
+                  disabled={publishingRaw}
+                  title="Save the exact loaded JSON to DB without recompiling"
+                  style={{
+                    background: publishingRaw ? '#374151' : 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    fontWeight: 800,
+                    fontSize: '0.88rem',
+                    cursor: publishingRaw ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {publishingRaw ? '⏳ Saving...' : '📤 Publish Raw JSON'}
+                </button>
+              )}
+
+              {/* Save Rows to Existing — only shown when a template was loaded */}
+              {loadedTemplateId && (
+                <button
+                  onClick={handleSaveRowsToExisting}
+                  disabled={savingRows}
+                  style={{
+                    background: savingRows ? '#374151' : 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    fontWeight: 800,
+                    fontSize: '0.88rem',
+                    cursor: savingRows ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {savingRows ? '⏳ Saving rows...' : '💾 Save Rows → Existing Template'}
+                </button>
+              )}
+
               {publishStatus && (
                 <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.88rem' }}>
                   ✅ Published Successfully! ID: {publishStatus.id}
                 </span>
               )}
             </div>
+
+            {/* Loaded template badge */}
+            {loadedTemplateId && (
+              <div style={{
+                marginTop: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(14, 165, 233, 0.08)',
+                border: '1.5px solid rgba(14, 165, 233, 0.25)',
+                borderRadius: '8px',
+                padding: '7px 14px',
+                fontSize: '0.82rem',
+                color: '#7dd3fc'
+              }}>
+                <span>📋</span>
+                <span>Loaded template:</span>
+                <code style={{ background: '#0f172a', padding: '2px 8px', borderRadius: '4px', color: '#f0f9ff', fontWeight: 700 }}>
+                  {loadedTemplateId}
+                </code>
+                <button
+                  onClick={() => { setLoadedTemplateId(null); setSaveRowsStatus(null); }}
+                  style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0 }}
+                  title="Clear loaded template"
+                >✕</button>
+              </div>
+            )}
+
+            {saveRowsStatus && (
+              <div style={{
+                marginTop: '10px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: saveRowsStatus.ok ? '#10b981' : '#f87171'
+              }}>
+                {saveRowsStatus.msg}
+              </div>
+            )}
             {publishError && (
               <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '12px' }}>
                 ⚠️ Error: {publishError}

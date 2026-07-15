@@ -1,6 +1,6 @@
 import { getMongoDb } from '@/lib/db/mongo';
 
-const COLLECTION_NAME = process.env.MONGODB_CURRICULUM_COLLECTION || 'curriculum_nodes';
+const COLLECTION_NAME = (process.env.MONGODB_CURRICULUM_COLLECTION || 'curriculum_nodes').trim();
 const NODE_TYPES = new Set(['subject', 'topic', 'chapter', 'skill']);
 
 let cachedV2Nodes = null;

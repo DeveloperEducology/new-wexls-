@@ -61,16 +61,81 @@ function numberToWords(num) {
   return String(num); // fallback for very large numbers
 }
 
+/**
+ * Evaluate inline {= expr =} expressions within a string.
+ * Returns an array of parts: each item is either a plain string or { type: 'svg', content: string }.
+ * If there are no {= =} blocks, returns [{ type: 'text', content: str }] wrapped in original part.
+ */
+function resolveInlineExpressions(str, context) {
+  const INLINE_RE = /\{=\s*([\s\S]+?)\s*=\}/g;
+  if (!INLINE_RE.test(str)) return null; // nothing to process
+  INLINE_RE.lastIndex = 0;
+
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = INLINE_RE.exec(str)) !== null) {
+    const before = str.slice(lastIndex, match.index);
+    if (before) parts.push({ type: 'text', content: before });
+
+    const expr = match[1];
+    let result;
+    try {
+      result = resolveExpression(expr, context);
+    } catch (e) {
+      result = match[0]; // keep as-is on error
+    }
+
+    const resultStr = String(result ?? '');
+    if (resultStr.includes('<svg')) {
+      parts.push({ type: 'svg', content: resultStr });
+    } else if (resultStr) {
+      parts.push({ type: 'text', content: resultStr });
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  const tail = str.slice(lastIndex);
+  if (tail) parts.push({ type: 'text', content: tail });
+
+  return parts.length > 0 ? parts : null;
+}
+
 function resolvePartStrings(part, resolvedVariables) {
   if (typeof part === 'string') {
-    return interpolateString(part, resolvedVariables);
+    const interpolated = interpolateString(part, resolvedVariables);
+    if (typeof interpolated === 'string') {
+      const inlineParts = resolveInlineExpressions(interpolated, resolvedVariables);
+      if (inlineParts) {
+        // If only one svg part, return it directly
+        if (inlineParts.length === 1) return inlineParts[0];
+        // Otherwise wrap in a section with sub-parts
+        return { type: 'section', parts: inlineParts };
+      }
+    }
+    return interpolated;
   }
   if (!part || typeof part !== 'object') {
     return part;
   }
   const resolved = { ...part };
   if (typeof resolved.content === 'string') {
-    resolved.content = interpolateString(resolved.content, resolvedVariables);
+    const interpolated = interpolateString(resolved.content, resolvedVariables);
+    if (typeof interpolated === 'string') {
+      const inlineParts = resolveInlineExpressions(interpolated, resolvedVariables);
+      if (inlineParts) {
+        if (inlineParts.length === 1) {
+          // Merge the single result into this part
+          return { ...resolved, ...inlineParts[0] };
+        }
+        return { ...resolved, type: 'section', content: undefined, parts: inlineParts };
+      }
+      resolved.content = interpolated;
+    } else {
+      resolved.content = interpolated;
+    }
   }
   if (typeof resolved.text === 'string') {
     resolved.text = interpolateString(resolved.text, resolvedVariables);
@@ -207,8 +272,34 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
 
 export function resolveValidationRules(rules, resolvedVariables) {
   if (!Array.isArray(rules)) return [];
+
+  const findNonSvgResultFallback = (resolvedVars) => {
+    const keys = Object.keys(resolvedVars || {})
+      .filter(k => /^Result(_\d+)?$/.test(k))
+      .sort((a, b) => {
+        const numA = a === 'Result' ? 1 : parseInt(a.split('_')[1], 10);
+        const numB = b === 'Result' ? 1 : parseInt(b.split('_')[1], 10);
+        return numA - numB;
+      });
+
+    for (const key of keys) {
+      const val = resolvedVars[key];
+      if (val !== undefined && val !== null && !(typeof val === 'string' && val.includes('<svg'))) {
+        return val;
+      }
+    }
+    return null;
+  };
+
   const resolveTemplateValue = (value) => {
-    if (typeof value === 'string') return interpolateString(value, resolvedVariables);
+    if (typeof value === 'string') {
+      const resolved = interpolateString(value, resolvedVariables);
+      if (typeof resolved === 'string' && resolved.includes('<svg')) {
+        const fallback = findNonSvgResultFallback(resolvedVariables);
+        if (fallback !== null) return fallback;
+      }
+      return resolved;
+    }
     if (Array.isArray(value)) return value.map(resolveTemplateValue);
     if (value && typeof value === 'object') {
       return Object.fromEntries(
@@ -1141,22 +1232,40 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       return resolvedPart;
     });
   } else {
+    // Helper: expand a text block through inline {= expr =} expressions
+    const expandTextBlock = (text) => {
+      const inlineParts = resolveInlineExpressions(text, resolvedVariables);
+      if (!inlineParts) return [{ type: 'text', content: text }];
+      if (inlineParts.length === 1) return [inlineParts[0]];
+      return [{ type: 'section', parts: inlineParts }];
+    };
+
     // Split the questionText by newlines to support placing visuals in the middle
     const textBlocks = questionText.split(/\n\n/);
     if (textBlocks.length > 1) {
-      parts = textBlocks.map(block => ({ type: 'text', content: block }));
+      parts = textBlocks.flatMap(block => expandTextBlock(block));
     } else {
       const textLines = questionText.split(/\n/);
       if (textLines.length > 1) {
-        parts = textLines.map(line => ({ type: 'text', content: line }));
+        parts = textLines.flatMap(line => expandTextBlock(line));
       } else {
-        parts = [{ type: 'text', content: questionText }];
+        parts = expandTextBlock(questionText);
       }
     }
   }
+
   
   if (Array.isArray(template.visuals)) {
     for (const v of template.visuals) {
+      // Skip duplicate rendering if the visual is already drawn inline via a {= draw... =} expression
+      const blueprint = template.blueprint || template.questionText || '';
+      const compName = v.component;
+      const isDrawnInline = blueprint.includes(`draw${compName}`) ||
+                            (compName === 'Clock' && blueprint.includes('drawAnalogClock')) ||
+                            (compName === 'FractionModel' && (blueprint.includes('drawFractionBar') || blueprint.includes('drawFractionCircle') || blueprint.includes('drawFractionGrid')));
+      if (isDrawnInline) {
+        continue;
+      }
 
       // Handle VisualChoice: produce two visual_panel parts instead of SVG
       if (v.component === 'VisualChoice') {

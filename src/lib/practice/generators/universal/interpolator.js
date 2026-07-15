@@ -4,6 +4,13 @@ import { resolveExpression } from './expressionParser.js';
 export function interpolateString(str, context) {
   if (typeof str !== 'string') return str;
 
+  // Handle {{var}} mustache-style placeholders (used by template builder blueprint/solution)
+  str = str.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (_, name) => {
+    const trimmed = name.trim();
+    if (context[trimmed] !== undefined) return context[trimmed];
+    try { return resolveExpression(trimmed, context); } catch (e) { return `{{${trimmed}}}`; }
+  });
+
   // If the string is exactly a single placeholder, return the resolved value directly to preserve types (objects, arrays)
   const exactMatch = str.trim().match(/^\[([A-Za-z0-9_]+)\]$/);
   if (exactMatch) {
@@ -46,6 +53,7 @@ export function interpolateString(str, context) {
 
   return restoreBlankTokens(resolved);
 }
+
 
 // Resolve labels that might be expressions or variables with/without brackets
 export function resolveLabelOrExpression(label, context) {

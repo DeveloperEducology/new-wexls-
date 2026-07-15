@@ -619,7 +619,11 @@ export async function GET(request) {
     5
   );
 
-  const isStaticSkill = skillNode?.isStatic === true || skillNode?.metadata?.isStatic === true || skillNode?.static === true;
+  const isStaticSkill = skillNode?.isStatic === true || 
+                        skillNode?.metadata?.isStatic === true || 
+                        skillNode?.static === true ||
+                        searchParams.get('mode') === 'static' ||
+                        searchParams.get('isStatic') === 'true';
 
   const withCompetency = (payload, ctx) => normalizeWithCompetency(payload, {
     ...ctx,

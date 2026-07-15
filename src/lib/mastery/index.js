@@ -45,7 +45,7 @@ export function getMasteryPhase(smartScore = 0) {
 
 export function recommendDifficulty({ smartScore = 0, practiceLevel = 1, wrongStreak = 0 } = {}) {
   if (wrongStreak >= 2) return 'easy';
-  if (practiceLevel >= 5 || smartScore >= 90) return 'hard';
+  if (practiceLevel >= 4 || smartScore >= 90) return 'hard';
   if (practiceLevel >= 3 || smartScore >= 70) return 'medium';
   return 'easy';
 }
@@ -159,7 +159,7 @@ export function updateMasteryState(previousState, attempt) {
   const nextLevelStreak = attempt.isCorrect ? Number(previous.levelStreak || 0) + 1 : 0;
   const didLevelUp = attempt.isCorrect && nextLevelStreak >= streakThreshold;
   const practiceLevel = didLevelUp
-    ? Math.min(Number(previous.practiceLevel || attempt.practiceLevel || 1) + 1, 5)
+    ? Math.min(Number(previous.practiceLevel || attempt.practiceLevel || 1) + 1, 4)
     : Number(previous.practiceLevel || attempt.practiceLevel || 1);
   const levelStreak = didLevelUp ? 0 : nextLevelStreak;
   const attempts = Number(previous.attempts || 0) + 1;
