@@ -410,9 +410,9 @@ function renderSolutionPart(part, index, context = {}) {
 
   if (typeof part === 'string' || typeof part === 'number') {
     return (
-      <p key={index} style={{ margin: 0 }}>
+      <div key={index} style={{ margin: 0 }}>
         <InlineMarkdown text={part} />
-      </p>
+      </div>
     );
   }
 
@@ -497,9 +497,9 @@ function renderSolutionPart(part, index, context = {}) {
   }
 
   return (
-    <p key={index} style={{ margin: 0, ...(part.style || {}) }}>
+    <div key={index} style={{ margin: 0, ...(part.style || {}) }}>
       <InlineMarkdown text={part.content || part.text || ''} />
-    </p>
+    </div>
   );
 }
 
