@@ -84,6 +84,24 @@ const BUILDERS = [
     bg: '#f8fafc',
     link: '/template-generator',
     badge: 'Legacy'
+  },
+  {
+    title: 'Clipart Prompt Builder',
+    description: 'Design premium child-friendly vector clipart prompts following the IXL design recipe guidelines.',
+    icon: '🎨',
+    color: '#ec4899',
+    bg: '#fdf2f8',
+    link: '/admin/illustration-builder',
+    badge: 'AI Assets'
+  },
+  {
+    title: 'Image Question Extractor',
+    description: 'Convert worksheets and illustrations into structured interactive questions using Gemini.',
+    icon: '✨',
+    color: '#8b5cf6',
+    bg: '#f5f3ff',
+    link: '/admin/questions/from-image',
+    badge: 'AI Importer'
   }
 ];
 

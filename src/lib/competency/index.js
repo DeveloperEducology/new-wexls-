@@ -1396,6 +1396,17 @@ export const competencyGraphs = {
     mechanics: {
       competencies: [
         {
+          id: 'iit_p6_concept_of_force',
+          title: 'Force: push, pull, and effects',
+          prerequisites: [],
+        },
+        {
+          id: 'iit_p6_unit_normalization_time',
+          title: 'Unit Normalization (Time)',
+          prerequisites: ['iit_p6_concept_of_force'],
+          remediation: ['iit_p6_concept_of_force'],
+        },
+        {
           id: 'iit_kinematics_vs_dynamics',
           title: 'Mechanics — Kinematics vs. Dynamics Concepts',
           prerequisites: [],
@@ -1617,6 +1628,8 @@ export const competencyGraphs = {
         }
       ],
       skillMap: {
+        'iit-p6-concept-of-force': 'iit_p6_concept_of_force',
+        'iit-p6-unit-normalization-time': 'iit_p6_unit_normalization_time',
         'iit-kinematics-vs-dynamics': 'iit_kinematics_vs_dynamics',
         'iit-relativity-rest-motion': 'iit_relativity_rest_motion',
         'iit-rectilinear-vs-curvilinear': 'iit_rectilinear_vs_curvilinear',

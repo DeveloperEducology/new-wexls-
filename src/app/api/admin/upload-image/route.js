@@ -188,7 +188,12 @@ export async function POST(request) {
       });
     }
 
-    return NextResponse.json({ results, errors }, { status: 200 });
+    return NextResponse.json({ 
+      success: errors.length === 0, 
+      url: results[0]?.url || '', 
+      results, 
+      errors 
+    }, { status: 200 });
   } catch (err) {
     console.error('[upload-image] Error:', err);
     return NextResponse.json({ error: err.message || 'Upload failed.' }, { status: 500 });

@@ -15,7 +15,7 @@ function getGeminiClient() {
 async function generateFromSkill(ai, { skillId, skillDescription, subject, topic, grade, rowsPerLevel }) {
   const n = Number(rowsPerLevel) || 3;
   const prompt = `
-You are a senior curriculum designer and math teacher.
+You are a senior curriculum designer and curriculum engineer.
 Your job is to generate a complete spreadsheet-grid template for a student practice question.
 
 Skill ID: "${skillId}"
@@ -25,15 +25,19 @@ Topic: "${topic || 'general'}"
 Grade: "${grade || '3'}"
 
 Generate exactly ${n * 3} rows total — ${n} rows for each difficulty level:
-  - L1 (Easy): simpler numbers, straightforward, 1-step
-  - L2 (Medium): moderate complexity, may need 2 steps
-  - L3 (Hard): larger numbers, multi-step, tricky distractors
+  - L1 (Easy): simpler numbers or basic vocabulary, straightforward, 1-step
+  - L2 (Medium): moderate complexity, compound words, phonics patterns
+  - L3 (Hard): advanced words/math problems, tricky distractors
 
 Rules:
-1. Choose meaningful column names based on the skill (e.g. "number", "digit_pos", "place_val", "Result", "Distractor1", "Distractor2", "Distractor3").
-2. Always have exactly one "Result" column (the correct answer) and three distractor columns.
-3. Distractors must be plausible wrong answers a student might choose — not random numbers.
-4. The blueprint must use {{columnName}} placeholders. Make it a clear exam-style MCQ question.
+1. Choose meaningful column names based on the subject:
+   - For Math: e.g. "number", "Result", "Distractor1", "Distractor2", "Distractor3"
+   - For English / Phonics / Vocabulary: Use separate columns for words, images, and audio. e.g. "target_word", "target_image", "target_audio", "Result_word", "Result_image", "Result_audio", "Distractor1_word", "Distractor1_image", "Distractor1_audio", "Distractor2_word", "Distractor2_image", "Distractor2_audio".
+2. Always have exactly one correct option column and 2 or 3 distractor option columns.
+3. For English templates with Audio and Images:
+   - Always populate audio column values using the TTS voice synthesis format: \`/api/tts?voice=Puck&text=WORD\` (e.g. \`/api/tts?voice=Puck&text=feet\`).
+   - Populate image column values using standard R2 clipart link format: \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/WORD.jpg\` (e.g. \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/feet.jpg\` or \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/WORD.png\`).
+4. The blueprint must use {{columnName}} placeholders. For English/PreK/UKG/LKG topics, question prompts must contain the target image as a markdown image link, e.g. \`![{{target_word}}]({{target_image}})\`.
 5. The solution must be a clear step-by-step explanation using {{columnName}} placeholders.
 6. Each row must include a "_level" field: "l1", "l2", or "l3".
 
@@ -46,21 +50,20 @@ Return ONLY valid JSON. No markdown fences. No comments. Use this exact shape:
   "topic": "${topic || 'general'}",
   "grade": "${grade || '3'}",
   "targetCollection": "dynamic_templates",
-  "columns": ["col1", "col2", "Result", "Distractor1", "Distractor2", "Distractor3"],
+  "columns": ["col1", "col2", "Result", "Distractor1", "Distractor2"],
   "rows": [
-    { "_level": "l1", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." },
-    { "_level": "l2", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." },
-    { "_level": "l3", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." }
+    { "_level": "l1", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "..." }
   ],
   "blueprint": "Question text using {{col1}} etc.",
-  "solution": "Step 1: ... Step 2: ... Answer: {{Result}}",
+  "solution": "Step-by-step explanation: ... Answer: {{Result}}",
   "optionsBinding": [
-    { "column": "Result", "isCorrect": true },
-    { "column": "Distractor1", "isCorrect": false },
-    { "column": "Distractor2", "isCorrect": false },
-    { "column": "Distractor3", "isCorrect": false }
+    { "column": "Result", "imageColumn": "Result_image", "audioColumn": "Result_audio", "isCorrect": true },
+    { "column": "Distractor1", "imageColumn": "Distractor1_image", "audioColumn": "Distractor1_audio", "isCorrect": false },
+    { "column": "Distractor2", "imageColumn": "Distractor2_image", "audioColumn": "Distractor2_audio", "isCorrect": false }
   ]
 }
+
+Note: For Math, leave "imageColumn" and "audioColumn" out of "optionsBinding" (or set to null/empty). For English, map them to the corresponding column names.
 `;
 
   let response;

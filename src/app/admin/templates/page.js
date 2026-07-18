@@ -1930,6 +1930,92 @@ export default function VisualTemplateBuilderPage() {
   const [galleryZoomImg, setGalleryZoomImg] = useState(null);
   const [activeHsIdx, setActiveHsIdx] = useState(0);
 
+  const [selectedPreviewOption, setSelectedPreviewOption] = useState(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [audioPlayingUrl, setAudioPlayingUrl] = useState(null);
+
+  // Auto-reset preview states when template or seed changes
+  useEffect(() => {
+    setSelectedPreviewOption(null);
+    setShowConfetti(false);
+  }, [template, seed]);
+
+  const playPreviewSound = (isCorrect) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (isCorrect) {
+        // High double-beep chime
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        osc.start();
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08); // A5
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.stop(audioCtx.currentTime + 0.45);
+      } else {
+        // Lower saw buzz sound
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(110, audioCtx.currentTime); // Low buzz
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      }
+    } catch (e) {
+      console.warn('Web Audio player failed:', e);
+    }
+  };
+
+  const playPreviewAudio = (url, text, voice = 'Puck') => {
+    if (typeof window === 'undefined') return;
+    
+    // Stop any speech synthesis first
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    if (url && (url.startsWith('/api/') || url.startsWith('http'))) {
+      const audio = new Audio(url);
+      setAudioPlayingUrl(url);
+      audio.play()
+        .then(() => {
+          audio.onended = () => setAudioPlayingUrl(null);
+        })
+        .catch(e => {
+          setAudioPlayingUrl(null);
+          speakTextFallback(text, voice);
+        });
+    } else {
+      speakTextFallback(text, voice);
+    }
+  };
+
+  const speakTextFallback = (text, voice) => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+      
+      // Flash waves animations by temporarily setting active url
+      setAudioPlayingUrl('synthesis');
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.85;
+      utterance.onend = () => setAudioPlayingUrl(null);
+      utterance.onerror = () => setAudioPlayingUrl(null);
+      synth.speak(utterance);
+    } catch (e) {
+      setAudioPlayingUrl(null);
+    }
+  };
+
   // Curriculum skill linking states
   const [linkToSkill, setLinkToSkill] = useState(false);
   const [curriculumNodes, setCurriculumNodes] = useState([]);
@@ -5706,161 +5792,185 @@ export default function VisualTemplateBuilderPage() {
                   </div>
                 </div>
               <div className={styles.varList}>
-                {template.variables.map((variable, idx) => (
-                  <div key={idx} className={styles.varCard}>
-                    <div className={styles.varCardHeader}>
-                      <input
-                        type="text"
-                        className={styles.varNameInput}
-                        value={variable.name || ''}
-                        onChange={(e) => updateVariable(idx, 'name', e.target.value)}
-                        aria-label={`Variable ${idx + 1} Name`}
-                      />
-                      <button type="button" className={styles.varDeleteBtn} onClick={() => removeVariable(idx)} title="Delete Variable">
-                        ✕
-                      </button>
-                    </div>
+                {template.variables.map((variable, idx) => {
+                  const resolvedVars = evaluatedQuestion.ok ? (evaluatedQuestion.question?.schema?.variables || evaluatedQuestion.question?.metadata) : null;
+                  const resolvedValue = resolvedVars ? resolvedVars[variable.name] : null;
+                  const typeColors = {
+                    integer: '#eff6ff', // blue
+                    expression: '#faf5ff', // purple
+                    pool_selection: '#f0fdf4', // green
+                    string_template: '#fff7ed', // orange
+                    array_transform: '#f5f3ff', // violet
+                    list: '#fff1f2', // rose
+                  };
+                  const cardBg = typeColors[variable.type] || '#f8fafc';
 
-                    <div className={styles.varFields}>
-                      <label htmlFor={`var-type-${idx}`}>Type</label>
-                      <select
-                        id={`var-type-${idx}`}
-                        className={styles.select}
-                        value={variable.type || 'integer'}
-                        onChange={(e) => updateVariable(idx, 'type', e.target.value)}
-                      >
-                        {VARIABLE_TYPES.map(type => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-                    </div>
+                  return (
+                    <div key={idx} className={styles.varCard} style={{ background: cardBg, transition: 'background 0.3s ease' }}>
+                      <div className={styles.varCardHeader}>
+                        <input
+                          type="text"
+                          className={styles.varNameInput}
+                          value={variable.name || ''}
+                          onChange={(e) => updateVariable(idx, 'name', e.target.value)}
+                          aria-label={`Variable ${idx + 1} Name`}
+                        />
+                        <button type="button" className={styles.varDeleteBtn} onClick={() => removeVariable(idx)} title="Delete Variable">
+                          ✕
+                        </button>
+                      </div>
 
-                    <div style={{ marginTop: '8px' }}>
-                      {variable.type === 'integer' && (
-                        <div className={styles.varFieldsSubGrid}>
+                      <div className={styles.varFields}>
+                        <label htmlFor={`var-type-${idx}`}>Type</label>
+                        <select
+                          id={`var-type-${idx}`}
+                          className={styles.select}
+                          value={variable.type || 'integer'}
+                          onChange={(e) => updateVariable(idx, 'type', e.target.value)}
+                        >
+                          {VARIABLE_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ marginTop: '8px' }}>
+                        {variable.type === 'integer' && (
+                          <div className={styles.varFieldsSubGrid}>
+                            <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                              <label htmlFor={`var-min-${idx}`} style={{ fontSize: '11px' }}>Min (Value or Exp)</label>
+                              <input
+                                id={`var-min-${idx}`}
+                                type="text"
+                                className={styles.input}
+                                style={{ padding: '6px 10px', fontSize: '13px' }}
+                                value={variable.min || ''}
+                                onChange={(e) => updateVariable(idx, 'min', e.target.value)}
+                              />
+                            </div>
+                            <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                              <label htmlFor={`var-max-${idx}`} style={{ fontSize: '11px' }}>Max (Value or Exp)</label>
+                              <input
+                                id={`var-max-${idx}`}
+                                type="text"
+                                className={styles.input}
+                                style={{ padding: '6px 10px', fontSize: '13px' }}
+                                value={variable.max || ''}
+                                onChange={(e) => updateVariable(idx, 'max', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {variable.type === 'expression' && (
                           <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                            <label htmlFor={`var-min-${idx}`} style={{ fontSize: '11px' }}>Min (Value or Exp)</label>
+                            <label htmlFor={`var-formula-${idx}`} style={{ fontSize: '11px' }}>Math Formula (e.g. A + B)</label>
                             <input
-                              id={`var-min-${idx}`}
+                              id={`var-formula-${idx}`}
                               type="text"
                               className={styles.input}
                               style={{ padding: '6px 10px', fontSize: '13px' }}
-                              value={variable.min || ''}
-                              onChange={(e) => updateVariable(idx, 'min', e.target.value)}
+                              value={variable.formula || ''}
+                              onChange={(e) => updateVariable(idx, 'formula', e.target.value)}
                             />
                           </div>
+                        )}
+
+                        {variable.type === 'pool_selection' && (
+                          <div className={styles.poolVariableFields}>
+                            <div>
+                              <label htmlFor={`var-source-${idx}`}>Source ID</label>
+                              <input
+                                id={`var-source-${idx}`}
+                                className={styles.input}
+                                value={variable.sourceId || variable.source || ''}
+                                onChange={(e) => updateVariable(idx, 'source', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor={`var-pool-${idx}`}>Pool ID</label>
+                              <input
+                                id={`var-pool-${idx}`}
+                                className={styles.input}
+                                value={variable.poolId || ''}
+                                onChange={(e) => updateVariable(idx, 'poolId', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor={`var-category-${idx}`}>Category</label>
+                              <input
+                                id={`var-category-${idx}`}
+                                className={styles.input}
+                                value={variable.category || ''}
+                                onChange={(e) => updateVariable(idx, 'category', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor={`var-count-${idx}`}>Count</label>
+                              <input
+                                id={`var-count-${idx}`}
+                                type="number"
+                                min="1"
+                                className={styles.input}
+                                value={variable.count || 1}
+                                onChange={(e) => updateVariable(idx, 'count', Number(e.target.value))}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {['string_template', 'array_transform', 'conditional', 'computed'].includes(variable.type) && (
                           <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                            <label htmlFor={`var-max-${idx}`} style={{ fontSize: '11px' }}>Max (Value or Exp)</label>
+                            <label htmlFor={`var-logic-${idx}`} style={{ fontSize: '11px' }}>Formula / Template / Transform</label>
                             <input
-                              id={`var-max-${idx}`}
+                              id={`var-logic-${idx}`}
                               type="text"
                               className={styles.input}
                               style={{ padding: '6px 10px', fontSize: '13px' }}
-                              value={variable.max || ''}
-                              onChange={(e) => updateVariable(idx, 'max', e.target.value)}
+                              value={variable.formula || variable.template || ''}
+                              placeholder="e.g. NounsPool[0].label or Numbers[0] + Numbers[1]"
+                              onChange={(e) => updateVariable(idx, variable.type === 'string_template' ? 'template' : 'formula', e.target.value)}
                             />
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {variable.type === 'expression' && (
-                        <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                          <label htmlFor={`var-formula-${idx}`} style={{ fontSize: '11px' }}>Math Formula (e.g. A + B)</label>
-                          <input
-                            id={`var-formula-${idx}`}
-                            type="text"
-                            className={styles.input}
-                            style={{ padding: '6px 10px', fontSize: '13px' }}
-                            value={variable.formula || ''}
-                            onChange={(e) => updateVariable(idx, 'formula', e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      {variable.type === 'pool_selection' && (
-                        <div className={styles.poolVariableFields}>
-                          <div>
-                            <label htmlFor={`var-source-${idx}`}>Source ID</label>
+                        {variable.type === 'list' && (
+                          <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <label htmlFor={`var-items-${idx}`} style={{ fontSize: '11px', margin: 0 }}>Comma separated list</label>
+                              <button
+                                type="button"
+                                className={styles.btn + ' ' + styles.btnSecondary}
+                                style={{ padding: '2px 6px', fontSize: '11px', height: 'auto' }}
+                                onClick={() => openGallery(`variable_items_${idx}`, Array.isArray(variable.items) ? variable.items.join(', ') : (variable.items || ''))}
+                              >
+                                📷 Gallery
+                              </button>
+                            </div>
                             <input
-                              id={`var-source-${idx}`}
+                              id={`var-items-${idx}`}
+                              type="text"
                               className={styles.input}
-                              value={variable.sourceId || variable.source || ''}
-                              onChange={(e) => updateVariable(idx, 'source', e.target.value)}
+                              style={{ padding: '6px 10px', fontSize: '13px' }}
+                              value={Array.isArray(variable.items) ? variable.items.join(', ') : (variable.items || '')}
+                              onChange={(e) => updateVariable(idx, 'items', e.target.value.split(',').map(s => s.trim()))}
                             />
                           </div>
-                          <div>
-                            <label htmlFor={`var-pool-${idx}`}>Pool ID</label>
-                            <input
-                              id={`var-pool-${idx}`}
-                              className={styles.input}
-                              value={variable.poolId || ''}
-                              onChange={(e) => updateVariable(idx, 'poolId', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor={`var-category-${idx}`}>Category</label>
-                            <input
-                              id={`var-category-${idx}`}
-                              className={styles.input}
-                              value={variable.category || ''}
-                              onChange={(e) => updateVariable(idx, 'category', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor={`var-count-${idx}`}>Count</label>
-                            <input
-                              id={`var-count-${idx}`}
-                              type="number"
-                              min="1"
-                              className={styles.input}
-                              value={variable.count || 1}
-                              onChange={(e) => updateVariable(idx, 'count', Number(e.target.value))}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {['string_template', 'array_transform', 'conditional', 'computed'].includes(variable.type) && (
-                        <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                          <label htmlFor={`var-logic-${idx}`} style={{ fontSize: '11px' }}>Formula / Template / Transform</label>
-                          <input
-                            id={`var-logic-${idx}`}
-                            type="text"
-                            className={styles.input}
-                            style={{ padding: '6px 10px', fontSize: '13px' }}
-                            value={variable.formula || variable.template || ''}
-                            placeholder="e.g. NounsPool[0].label or Numbers[0] + Numbers[1]"
-                            onChange={(e) => updateVariable(idx, variable.type === 'string_template' ? 'template' : 'formula', e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      {variable.type === 'list' && (
-                        <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <label htmlFor={`var-items-${idx}`} style={{ fontSize: '11px', margin: 0 }}>Comma separated list</label>
-                            <button
-                              type="button"
-                              className={styles.btn + ' ' + styles.btnSecondary}
-                              style={{ padding: '2px 6px', fontSize: '11px', height: 'auto' }}
-                              onClick={() => openGallery(`variable_items_${idx}`, Array.isArray(variable.items) ? variable.items.join(', ') : (variable.items || ''))}
-                            >
-                              📷 Gallery
-                            </button>
-                          </div>
-                          <input
-                            id={`var-items-${idx}`}
-                            type="text"
-                            className={styles.input}
-                            style={{ padding: '6px 10px', fontSize: '13px' }}
-                            value={Array.isArray(variable.items) ? variable.items.join(', ') : (variable.items || '')}
-                            onChange={(e) => updateVariable(idx, 'items', e.target.value.split(',').map(s => s.trim()))}
-                          />
+                        )}
+                      </div>
+                      {resolvedValue !== null && resolvedValue !== undefined && (
+                        <div className={styles.resolvedValueBadge}>
+                          <span>Value:</span>
+                          <code>
+                            {typeof resolvedValue === 'object' 
+                              ? (resolvedValue.src || resolvedValue.imageUrl || resolvedValue.label || resolvedValue.text || JSON.stringify(resolvedValue)) 
+                              : String(resolvedValue)}
+                          </code>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {template.variables.length === 0 && (
                   <p className={styles.emptyStateText} style={{ padding: '12px' }}>No variables declared. Constants will be evaluated.</p>
                 )}
@@ -7876,145 +7986,214 @@ export default function VisualTemplateBuilderPage() {
                   </button>
                 </div>
               </div>
-              <div className={styles.livePreviewBody}>
-                {evaluatedQuestion.ok ? (
-                  (() => {
-                    const q = evaluatedQuestion.question;
-                    const visualParts = (q.parts || []).filter(part => part.type !== 'text').slice(0, 4);
-                    const options = Array.isArray(q.options) ? q.options.slice(0, 6) : [];
-                    const correctValue = q.correctAnswer ?? q.answer ?? q.correctAnswerText;
 
-                    return (
-                      <>
-                        <div className={styles.railPrompt}>
-                          {renderPreviewTextWithBlanks(q.questionText || 'Preview question text appears here.', q)}
-                        </div>
+              {/* Slate Device Frame Wrapper */}
+              <div className={styles.deviceMockupWrapper}>
+                <div className={styles.deviceMockupScreen}>
+                  
+                  {/* Confetti Rain Overlay */}
+                  {showConfetti && (
+                    <div className={styles.confettiContainer}>
+                      {Array.from({ length: 30 }).map((_, i) => {
+                        const left = Math.random() * 100;
+                        const delay = Math.random() * 1.5;
+                        const duration = 1.5 + Math.random() * 1.5;
+                        const size = 6 + Math.random() * 8;
+                        const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#ef4444'];
+                        const color = colors[i % colors.length];
+                        return (
+                          <div
+                            key={i}
+                            className={styles.confettiPiece}
+                            style={{
+                              left: `${left}%`,
+                              width: `${size}px`,
+                              height: `${size}px`,
+                              backgroundColor: color,
+                              animationDelay: `${delay}s`,
+                              animationDuration: `${duration}s`,
+                              borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
 
-                        {visualParts.length > 0 && (
-                          <div className={styles.railVisualStack}>
-                            {visualParts.map((part, idx) => {
-                              const svg = part.svg || part.content || part.imageUrl;
-                              const hasInlineSvg = typeof svg === 'string' && isInlineSvg(svg);
-                              const imageUrl = part.imageUrl && !isInlineSvg(part.imageUrl) ? part.imageUrl : null;
+                  <div className={styles.livePreviewBody}>
+                    {evaluatedQuestion.ok ? (
+                      (() => {
+                        const q = evaluatedQuestion.question;
+                        const visualParts = (q.parts || []).filter(part => part.type !== 'text').slice(0, 4);
+                        const options = Array.isArray(q.options) ? q.options.slice(0, 6) : [];
+                        const correctValue = q.correctAnswer ?? q.answer ?? q.correctAnswerText;
 
-                              if (hasInlineSvg) {
-                                return (
-                                  <div
-                                    key={`${part.type || 'visual'}-${part.id || idx}`}
-                                    className={styles.railSvg}
-                                    dangerouslySetInnerHTML={{ __html: cleanSvgContent(svg) }}
-                                  />
-                                );
-                              }
+                        // Check if this template is a pre-K skill
+                        const isPreK = true; // Premium visual mode enabled for previews
 
-                              if (imageUrl) {
-                                return (
-                                  <img
-                                    key={`${part.type || 'image'}-${part.id || idx}`}
-                                    className={styles.railImage}
-                                    src={imageUrl}
-                                    alt={part.alt || part.label || 'Question visual'}
-                                  />
-                                );
-                              }
+                        return (
+                          <>
+                            {/* Question Header & Prompt */}
+                            <div className={styles.railPrompt}>
+                              {/* Audio button for the main question text */}
+                              <button
+                                type="button"
+                                className={`${styles.inlineAudioBtn} ${audioPlayingUrl === 'prompt' ? styles.inlineAudioBtnActive : ''}`}
+                                onClick={() => playPreviewAudio(q.soundUrl, q.questionText || '', q.voice)}
+                              >
+                                🔊
+                              </button>
+                              <span>
+                                {renderPreviewTextWithBlanks(q.questionText || 'Preview question text appears here.', q)}
+                              </span>
+                            </div>
 
-                              if (part.type === 'categorization' || part.type === 'categorizationv2') {
-                                return (
-                                  <div key={`category-${idx}`} className={styles.railSummaryBox}>
-                                    <strong>Sorting activity</strong>
-                                    <span>{part.categories?.length || 0} groups · {part.items?.length || 0} items</span>
-                                  </div>
-                                );
-                              }
+                            {/* Visual/Image components */}
+                            {visualParts.length > 0 && (
+                              <div className={styles.railVisualStack}>
+                                {visualParts.map((part, idx) => {
+                                  const svg = part.svg || part.content || part.imageUrl;
+                                  const hasInlineSvg = typeof svg === 'string' && isInlineSvg(svg);
+                                  const imageUrl = part.imageUrl && !isInlineSvg(part.imageUrl) ? part.imageUrl : null;
+                                  const soundText = part.label || part.alt || part.title || 'Image';
+                                  const hasAudio = part.audioUrl || part.type === 'audio';
 
-                              return (
-                                <div key={`${part.type || 'part'}-${part.id || idx}`} className={styles.railSummaryBox}>
-                                  <strong>{part.type || 'Visual'}</strong>
-                                  <span>{part.label || part.title || 'Dynamic visual component'}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {options.length > 0 ? (
-                          <div className={styles.railOptions}>
-                            {options.map((opt, idx) => {
-                              const label = typeof opt === 'string' ? opt : (opt.label ?? opt.value ?? `Option ${idx + 1}`);
-                              const hasCorrectValue = correctValue !== undefined && correctValue !== null;
-                              const isCorrect = idx === q.correctAnswerIndex
-                                || Boolean(opt?.isCorrect)
-                                || (hasCorrectValue && String(label) === String(correctValue))
-                                || (hasCorrectValue && opt?.value !== undefined && String(opt.value) === String(correctValue));
-                              const media = getOptionMediaContent(opt);
-                              return (
-                                <div
-                                  key={`rail-option-${idx}-${String(label).slice(0, 18)}`}
-                                  className={`${styles.railOption} ${isCorrect ? styles.railOptionCorrect : ''}`}
-                                  style={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    minHeight: '52px',
-                                    padding: '6px 12px'
-                                  }}
-                                >
-                                  {media && (
-                                    <div style={{
-                                      flexShrink: 0,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      width: '40px',
-                                      height: '40px',
-                                      background: '#f8fafc',
-                                      borderRadius: '6px',
-                                      border: '1px solid #e2e8f0',
-                                      padding: '2px',
-                                      overflow: 'hidden'
-                                    }}>
-                                      {media.type === 'image' && (
-                                        <img src={media.content} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                  return (
+                                    <div key={idx} className={styles.railVisualCard}>
+                                      {/* Audio trigger for visual element */}
+                                      {hasAudio && (
+                                        <button
+                                          type="button"
+                                          className={`${styles.cardAudioBtn} ${audioPlayingUrl === part.audioUrl ? styles.cardAudioBtnActive : ''}`}
+                                          onClick={() => playPreviewAudio(part.audioUrl, soundText, q.voice)}
+                                        >
+                                          🔊
+                                        </button>
                                       )}
-                                      {media.type === 'svg' && (
-                                        <div dangerouslySetInnerHTML={{ __html: cleanSvgContent(media.content) }} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                                      
+                                      {hasInlineSvg && (
+                                        <div
+                                          className={styles.railSvg}
+                                          dangerouslySetInnerHTML={{ __html: cleanSvgContent(svg) }}
+                                        />
                                       )}
-                                      {media.type === 'emoji' && (
-                                        <span style={{ fontSize: '20px', lineHeight: 1 }}>{media.content}</span>
+
+                                      {imageUrl && (
+                                        <img
+                                          className={styles.railImage}
+                                          src={imageUrl}
+                                          alt={part.alt || part.label || 'Question visual'}
+                                        />
+                                      )}
+
+                                      {!hasInlineSvg && !imageUrl && (
+                                        <div className={styles.railSummaryBox}>
+                                          <strong>{part.type || 'Visual'}</strong>
+                                          <span>{part.label || part.title || 'Dynamic visual component'}</span>
+                                        </div>
                                       )}
                                     </div>
-                                  )}
-                                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155', wordBreak: 'break-word' }}>
-                                      {(!media || (label && !isInlineSvg(label) && !getImageUrlPreview(label))) ? String(label) : ''}
-                                    </span>
-                                  </div>
-                                  {isCorrect && <strong style={{ marginLeft: 'auto' }}>Correct</strong>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className={styles.railSummaryBox}>
-                            <strong>Answer</strong>
-                            <span>{String(correctValue ?? 'Generated by validation rules')}</span>
-                          </div>
-                        )}
+                                  );
+                                })}
+                              </div>
+                            )}
 
-                        <div className={styles.railMeta}>
-                          <span>{q.type || template.interactionType || 'activity'}</span>
-                          <span>{template.difficultyLevel || 'medium'}</span>
-                        </div>
-                      </>
-                    );
-                  })()
-                ) : (
-                  <div className={styles.railError}>
-                    <strong>Preview needs attention</strong>
-                    <span>{evaluatedQuestion.error}</span>
+                            {/* Options choices */}
+                            {options.length > 0 ? (
+                              <div className={styles.railOptions}>
+                                {options.map((opt, idx) => {
+                                  const label = typeof opt === 'string' ? opt : (opt.label ?? opt.value ?? `Option ${idx + 1}`);
+                                  const hasCorrectValue = correctValue !== undefined && correctValue !== null;
+                                  const isCorrect = idx === q.correctAnswerIndex
+                                    || Boolean(opt?.isCorrect)
+                                    || (hasCorrectValue && String(label) === String(correctValue))
+                                    || (hasCorrectValue && opt?.value !== undefined && String(opt.value) === String(correctValue));
+                                  const media = getOptionMediaContent(opt);
+                                  
+                                  const isSelected = selectedPreviewOption === idx;
+                                  const optionClass = `${styles.railOptionButton} ` +
+                                    `${isSelected && isCorrect ? styles.railOptionButtonSuccess : ''} ` +
+                                    `${isSelected && !isCorrect ? styles.railOptionButtonFailure : ''}`;
+
+                                  return (
+                                    <button
+                                      key={`rail-option-${idx}-${String(label).slice(0, 18)}`}
+                                      type="button"
+                                      className={optionClass}
+                                      onClick={() => {
+                                        setSelectedPreviewOption(idx);
+                                        if (isCorrect) {
+                                          playPreviewSound(true);
+                                          setShowConfetti(true);
+                                        } else {
+                                          playPreviewSound(false);
+                                          setShowConfetti(false);
+                                        }
+                                        // Auto play option audio if readable
+                                        if (opt?.audioUrl || q.metaConfig?.readOptions) {
+                                          playPreviewAudio(opt?.audioUrl, String(label), q.voice);
+                                        }
+                                      }}
+                                    >
+                                      {media && (
+                                        <div style={{
+                                          flexShrink: 0,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '40px',
+                                          height: '40px',
+                                          background: '#f8fafc',
+                                          borderRadius: '6px',
+                                          border: '1px solid #e2e8f0',
+                                          padding: '2px',
+                                          overflow: 'hidden'
+                                        }}>
+                                          {media.type === 'image' && (
+                                            <img src={media.content} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                          )}
+                                          {media.type === 'svg' && (
+                                            <div dangerouslySetInnerHTML={{ __html: cleanSvgContent(media.content) }} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                                          )}
+                                          {media.type === 'emoji' && (
+                                            <span style={{ fontSize: '20px', lineHeight: 1 }}>{media.content}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155', wordBreak: 'break-word' }}>
+                                          {(!media || (label && !isInlineSvg(label) && !getImageUrlPreview(label))) ? String(label) : ''}
+                                        </span>
+                                      </div>
+                                      {/* Feedback symbols */}
+                                      {isSelected && isCorrect && <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '16px' }}>✓</span>}
+                                      {isSelected && !isCorrect && <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '16px' }}>✗</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className={styles.railSummaryBox}>
+                                <strong>Answer</strong>
+                                <span>{String(correctValue ?? 'Generated by validation rules')}</span>
+                              </div>
+                            )}
+
+                            <div className={styles.railMeta}>
+                              <span>{q.type || template.interactionType || 'activity'}</span>
+                              <span>{template.difficultyLevel || 'medium'}</span>
+                            </div>
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <div className={styles.railError}>
+                        <strong>Preview needs attention</strong>
+                        <span>{evaluatedQuestion.error}</span>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </aside>
           </div>

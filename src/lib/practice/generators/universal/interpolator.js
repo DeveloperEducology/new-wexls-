@@ -42,13 +42,18 @@ export function interpolateString(str, context) {
     return resolveExpression(trimmed, context);
   });
 
-  const resolved = withPathTokens.replace(/\[(.*?)\]/g, (_, name) => {
+  const resolved = withPathTokens.replace(/\[(.*?)\]/g, (match, name) => {
+    if (match.startsWith('[[') || name.startsWith('[') || name.startsWith('speak:')) return match;
     const trimmed = name.trim();
     if (context[trimmed] !== undefined) {
       return context[trimmed];
     }
     // Try resolving as an expression directly if it's like [A - B]
-    return resolveExpression(trimmed, context);
+    try {
+      return resolveExpression(trimmed, context);
+    } catch {
+      return match;
+    }
   });
 
   return restoreBlankTokens(resolved);
@@ -60,7 +65,7 @@ export function resolveLabelOrExpression(label, context) {
   if (typeof label !== 'string') return label;
   
   let interpolated = label;
-  if (label.includes('[') && label.includes(']')) {
+  if ((label.includes('[') && label.includes(']')) || (label.includes('{{') && label.includes('}}'))) {
     interpolated = interpolateString(label, context);
   }
 

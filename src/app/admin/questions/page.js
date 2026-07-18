@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import SiteHeader from '../../../components/layout/SiteHeader';
 
 export default function AdminQuestionsManager() {
@@ -474,6 +475,12 @@ export default function AdminQuestionsManager() {
         <div className="admin-title-row">
           <h1 className="admin-title">Exam Content Manager</h1>
           <div style={{ display: 'flex', gap: '12px' }}>
+            <Link href="/admin/illustration-builder" className="btn-outline" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span>🎨</span> Clipart Prompt Builder
+            </Link>
+            <Link href="/admin/questions/from-image" className="btn-outline" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span>✨</span> Generate from Image
+            </Link>
             <button className="btn-outline" onClick={() => setShowImportForm(true)}>Bulk JSON Import</button>
             <button className="btn-primary" onClick={() => setShowAddForm(true)}>+ Add Question</button>
           </div>
@@ -705,12 +712,18 @@ export default function AdminQuestionsManager() {
                         </td>
                         <td>
                           {isEditing ? (
-                            <textarea
-                              className="textarea-input"
-                              style={{ width: '100%' }}
-                              value={editDraftForm.questionText}
-                              onChange={(e) => setEditDraftForm(prev => ({ ...prev, questionText: e.target.value }))}
-                            />
+                            <>
+                              <div style={{ fontSize: '11px', color: '#64748b', margin: '4px 0 8px 0', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <span>💡 Use <strong>_</strong> for a Tap-to-Fill blank.</span>
+                                <button type="button" onClick={() => setEditDraftForm(prev => ({ ...prev, questionText: prev.questionText + ' _' }))} style={{ padding: '2px 4px', fontSize: '9px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '3px', cursor: 'pointer' }}>+ Insert Blank</button>
+                              </div>
+                              <textarea
+                                className="textarea-input"
+                                style={{ width: '100%' }}
+                                value={editDraftForm.questionText}
+                                onChange={(e) => setEditDraftForm(prev => ({ ...prev, questionText: e.target.value }))}
+                              />
+                            </>
                           ) : (
                             <div style={{ fontWeight: 650, color: '#334155', lineHeight: '1.4' }}>{q.questionText}</div>
                           )}
@@ -857,6 +870,10 @@ export default function AdminQuestionsManager() {
                 </div>
                 <div className="form-group-full">
                   <label className="label-text">Question Text (supports LaTeX \\( ... \\) and \\([ ... \\))</label>
+                  <div style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 8px 0', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span>💡 Use <strong>_</strong> or <strong>___</strong> for a Tap-to-Fill blank.</span>
+                    <button type="button" onClick={() => setNewQ(prev => ({ ...prev, questionText: prev.questionText + ' _' }))} style={{ padding: '2px 6px', fontSize: '10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer' }}>+ Insert Blank</button>
+                  </div>
                   <textarea className="textarea-input" value={newQ.questionText} onChange={(e) => setNewQ({ ...newQ, questionText: e.target.value })} required />
                 </div>
                 

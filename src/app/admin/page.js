@@ -3283,6 +3283,29 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       timeEstimate: '30',
       sourceMapping: 'CCSS.MATH.CONTENT.1.MD.B.3',
       teacherNotes: 'Interactive drag and drop sorting.'
+    },
+    {
+      name: 'Tap-to-Fill (Sentence Blank)',
+      description: 'Tap an option to fill a blank inside a sentence',
+      type: 'tap_to_fill',
+      subject: 'english',
+      topic: 'grammar',
+      skillId: 'sentence-completion',
+      questionText: 'Complete the sentence with an uppercase letter.',
+      parts: [
+        { type: 'text', content: '_an we go home now?' }
+      ],
+      options: [
+        { label: 'c', isCorrect: false },
+        { label: 'C', isCorrect: true },
+      ],
+      explanation: 'The sentence starts with a capital letter. "Can" begins with uppercase C.',
+      difficulty: 'beginner',
+      tags: 'grammar, uppercase, sentence',
+      estimatedGrade: 'Grade 1',
+      timeEstimate: '20',
+      sourceMapping: 'CCSS.ELA-LITERACY.L.1.2.A',
+      teacherNotes: 'Student taps the correct letter option to complete the sentence blank.'
     }
   ];
 
@@ -4686,10 +4709,6 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     const updated = [...parts];
     updated[index] = { ...updated[index], content: value };
     setParts(updated);
-    
-    if (index === 0 && updated[0].type === 'text') {
-      setQuestionText(value);
-    }
   };
 
   const handleUpdatePartFields = (index, fields) => {
@@ -4698,10 +4717,6 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     const updated = [...parts];
     updated[index] = { ...updated[index], ...fields };
     setParts(updated);
-
-    if (index === 0 && updated[0].type === 'text' && fields.content !== undefined) {
-      setQuestionText(fields.content);
-    }
   };
 
   const handleAddPart = (partType) => {
@@ -5486,7 +5501,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
         : (tpl.distractorCategories || tpl.metadata?.distractorCategories || '')
     );
     
-    if (tpl.type === 'mcq') {
+    if (tpl.type === 'mcq' || tpl.type === 'tap_to_fill') {
       setOptions(tpl.options.map(opt => ({
         label: opt.label,
         isCorrect: opt.isCorrect,
@@ -5728,7 +5743,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
         setDifficulty(result.difficulty);
       }
       
-      if (result.type === 'mcq' || result.type === 'dynamic_pool') {
+      if (result.type === 'mcq' || result.type === 'tap_to_fill' || result.type === 'dynamic_pool') {
         setOptions(result.options);
         if (result.correctAnswerIndex !== -1) {
           setCorrectAnswer(result.options[result.correctAnswerIndex].label);
@@ -6049,7 +6064,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
 
   // --- PREVIEW SIMULATION ---
   const handleSimulateCorrect = () => {
-    if (type === 'mcq') {
+    if (type === 'mcq' || type === 'tap_to_fill') {
       const correctIdx = options.findIndex(o => o.isCorrect);
       if (correctIdx === -1) {
         setAlert({ type: 'error', text: 'Select a correct option in the manual builder first!' });
@@ -6099,7 +6114,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
   };
 
   const handleSimulateWrong = () => {
-    if (type === 'mcq') {
+    if (type === 'mcq' || type === 'tap_to_fill') {
       const correctIdx = options.findIndex(o => o.isCorrect);
       let wrongIdx = options.findIndex(o => !o.isCorrect);
       if (wrongIdx === -1) {
@@ -6630,7 +6645,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       if (finalLayouts.desktop.backgroundSvg) hotspotPart.backgroundSvg = finalLayouts.desktop.backgroundSvg;
       
       payload.parts = [...parts.map(p => ({ ...p })), hotspotPart];
-    } else if (type === 'mcq') {
+    } else if (type === 'mcq' || type === 'tap_to_fill') {
       if (directImageSelect) {
         payload.interaction = 'direct_image_select';
         payload.directImageSelect = true;
@@ -6995,7 +7010,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       return;
     }
 
-    if (type === 'mcq') {
+    if (type === 'mcq' || type === 'tap_to_fill') {
       if (directImageSelect) {
         const imageParts = parts.filter(part => part?.type === 'image' && (part.imageUrl || part.src || part.content));
         if (imageParts.length < 2) {
@@ -7471,7 +7486,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
         target: item.target || item.categoryId,
         hasImage: Boolean(item.imageUrl || item.svg),
       })),
-      answer: type === 'mcq'
+      answer: (type === 'mcq' || type === 'tap_to_fill')
         ? options.findIndex(option => option.isCorrect)
         : type === 'fillInTheBlank'
           ? fibAnswers
@@ -8029,7 +8044,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       commonImageWidth: Number(commonImageWidth) || 180,
       imageRowMode,
       imageRowGap: Number(imageRowGap) || 20,
-      options: directImageSelect ? [] : ((type === 'mcq' || type === 'dynamic_pool') ? (mockDynamicPoolOptions || options).map((o, idx) => ({
+      options: directImageSelect ? [] : ((type === 'mcq' || type === 'tap_to_fill' || type === 'dynamic_pool') ? (mockDynamicPoolOptions || options).map((o, idx) => ({
         id: o.id || `opt_${idx}`,
         label: o.label,
         imageUrl: (type === 'dynamic_pool' && hideOptionImages) ? undefined : (o.imageUrl || undefined),
@@ -8054,8 +8069,8 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
           ? mockItemsForDynamicCategorization
           : undefined,
       wordCards: ((type === 'dynamic_pool' && interaction === 'word_completion') || type === 'word_completion_pool') ? mockWordCompletionCards : undefined,
-      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : (type === 'mcq' ? options.findIndex(o => o.isCorrect) : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? (mockWordCompletionAnswer ?? mockDynamicPoolAnswer) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
-      correctAnswer: directImageSelect ? undefined : (type === 'mcq' ? undefined : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? (mockWordCompletionAnswer ?? mockDynamicPoolAnswer) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      answer: directImageSelect ? parts.findIndex(p => p.isCorrect) : ((type === 'mcq' || type === 'tap_to_fill') ? options.findIndex(o => o.isCorrect) : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? (mockWordCompletionAnswer ?? mockDynamicPoolAnswer) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
+      correctAnswer: directImageSelect ? undefined : ((type === 'mcq' || type === 'tap_to_fill') ? undefined : ((type === 'dynamic_pool' || type === 'word_completion_pool') ? (mockWordCompletionAnswer ?? mockDynamicPoolAnswer) : ((type === 'categorizationv2' || type === 'categorization') ? categorizationItems.reduce((acc, item) => { acc[item.id] = item.categoryId || item.target || ''; return acc; }, {}) : (extractBlankIds(parts, questionText).length > 1 ? fibAnswers : correctAnswer)))),
       metaConfig: { 
         readable, 
         readOptions,
@@ -9098,7 +9113,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                             {visibleColumns.type && (
                               <td>
                                 <span style={{ fontSize: 11, fontWeight: 800 }}>
-                                  {q.type === 'mcq' ? 'MCQ' : (q.type === 'dynamic_pool' ? 'POOL' : String(q.type).toUpperCase())}
+                                  {q.type === 'mcq' || q.type === 'tap_to_fill' ? (q.type === 'mcq' ? 'MCQ' : 'TAP-FILL') : (q.type === 'dynamic_pool' ? 'POOL' : String(q.type).toUpperCase())}
                                 </span>
                               </td>
                             )}
@@ -9870,20 +9885,27 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setQuestionText(val);
-                                const firstTextIdx = parts.findIndex(p => p.type === 'text');
-                                if (firstTextIdx !== -1) {
-                                  const updated = [...parts];
-                                  updated[firstTextIdx] = { ...updated[firstTextIdx], content: val };
-                                  setParts(updated);
-                                } else {
-                                  setParts([{ type: 'text', content: val }, ...parts]);
-                                }
                                 ignoreDirtyChange.current = false;
                                 setIsDirty(true);
                               }}
                               placeholder="Enter question statement... Markdown bolding is supported (e.g. **frog**)"
                               rows={3}
                             />
+                            <div style={{ fontSize: '11px', color: '#64748b', margin: '6px 0 0 0', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <span>💡 Use <strong>_</strong> or <strong>___</strong> for a Tap-to-Fill blank.</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newVal = questionText + ' _';
+                                  setQuestionText(newVal);
+                                  ignoreDirtyChange.current = false;
+                                  setIsDirty(true);
+                                }}
+                                style={{ padding: '2px 6px', fontSize: '10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer' }}
+                              >
+                                + Insert Blank
+                              </button>
+                            </div>
                           </div>
 
                           {/* Layout Parts (Visual Structured Editor) */}
@@ -9939,6 +9961,19 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                                             placeholder="Enter text (supports blanks e.g. [[ans]] or [blank:my_id])"
                                             rows={2}
                                           />
+                                          <div style={{ fontSize: '10px', color: '#64748b', margin: '4px 0 8px 0', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                            <span>💡 Use <strong>_</strong> for a Tap-to-Fill blank.</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const newVal = (part.content || '') + ' _';
+                                                handleUpdatePartContent(realIdx, newVal);
+                                              }}
+                                              style={{ padding: '2px 4px', fontSize: '9px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '3px', cursor: 'pointer' }}
+                                            >
+                                              + Insert Blank
+                                            </button>
+                                          </div>
                                           <div className={styles.formRow} style={{ marginTop: 8 }}>
                                             <div className={styles.formGroup} style={{ flex: 1 }}>
                                               <label style={{ fontSize: 11, fontWeight: 700 }}>Font Weight</label>
@@ -10556,6 +10591,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                               }}
                             >
                               <option value="mcq">Multiple Choice Question (MCQ)</option>
+                              <option value="tap_to_fill">Tap-to-Fill MCQ (Sentence Blank)</option>
                               <option value="dynamic_pool">Dynamic Option Pool</option>
                               <option value="mcq_hotspot">Multiple Choice (Hotspot Select)</option>
                               <option value="shadow_match">Shadow Match (Sticker Drag)</option>
@@ -10568,7 +10604,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                             </select>
                           </div>
 
-                          {(type === 'mcq' || isPoolDrivenAuthoringType(type)) && (
+                          {(type === 'mcq' || type === 'tap_to_fill' || isPoolDrivenAuthoringType(type)) && (
                             <div className={styles.formGroup}>
                               {isPoolDrivenAuthoringType(type) && (
                                 <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 8, padding: 12, marginBottom: 16 }}>
@@ -13914,7 +13950,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                             }
                           })()}
 
-                          {type !== 'mcq' && type !== 'dynamic_pool' && type !== 'mcq_hotspot' && type !== 'categorizationv2' && type !== 'categorization' && type !== 'fillInTheBlank' && (
+                          {type !== 'mcq' && type !== 'tap_to_fill' && type !== 'dynamic_pool' && type !== 'mcq_hotspot' && type !== 'categorizationv2' && type !== 'categorization' && type !== 'fillInTheBlank' && (
                             <div className={styles.formGroup}>
                               <label className={styles.filterLabel}>Correct Answer Phrase</label>
                               <input 

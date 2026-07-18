@@ -2461,17 +2461,52 @@ export default function AdminV2Page() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.25rem' }}>
                       <label className="form-label-premium" style={{ color: formData.isStatic ? '#94a3b8' : undefined }}>Engine</label>
-                      <input 
-                        type="text" 
-                        name="engine" 
-                        required={!formData.isStatic}
-                        disabled={formData.isStatic}
-                        value={formData.isStatic ? 'questionBank' : formData.engine} 
-                        onChange={handleInputChange}
-                        placeholder={formData.isStatic ? 'Disabled for Static routing mode' : 'e.g. StickersEngine'}
-                        className="form-input-premium"
-                        style={{ background: formData.isStatic ? '#f1f5f9' : '#fff' }}
-                      />
+                      {formData.isStatic ? (
+                        <input 
+                          type="text" 
+                          disabled 
+                          value="questionBank" 
+                          className="form-input-premium"
+                          style={{ background: '#f1f5f9' }}
+                        />
+                      ) : (
+                        <>
+                          <select
+                            value={['universal-template', 'questionBank', 'lkg', 'ukg-numbers-counting', 'noun', 'verb', 'pronoun', ''].includes(formData.engine) ? formData.engine : 'custom'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'custom') {
+                                setFormData(prev => ({ ...prev, engine: '' }));
+                              } else {
+                                setFormData(prev => ({ ...prev, engine: val }));
+                              }
+                            }}
+                            className="premium-select"
+                          >
+                            <option value="universal-template">Universal Template Engine (universal-template)</option>
+                            <option value="lkg">LKG Generator Engine (lkg)</option>
+                            <option value="questionBank">Static Question Bank (questionBank)</option>
+                            <option value="ukg-numbers-counting">UKG Numbers Counting Engine (ukg-numbers-counting)</option>
+                            <option value="noun">Noun Engine (noun)</option>
+                            <option value="verb">Verb Engine (verb)</option>
+                            <option value="pronoun">Pronoun Engine (pronoun)</option>
+                            <option value="">None (empty)</option>
+                            <option value="custom">Custom Engine...</option>
+                          </select>
+                          {!['universal-template', 'questionBank', 'lkg', 'ukg-numbers-counting', 'noun', 'verb', 'pronoun', ''].includes(formData.engine) && (
+                            <input 
+                              type="text" 
+                              name="engine" 
+                              required
+                              value={formData.engine} 
+                              onChange={handleInputChange}
+                              placeholder="Type custom engine name (e.g. StickersEngine)"
+                              className="form-input-premium"
+                              style={{ marginTop: '6px' }}
+                            />
+                          )}
+                        </>
+                      )}
                     </div>
                     {/* Difficulty Scaling */}
                     {!formData.isStatic && (

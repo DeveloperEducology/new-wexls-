@@ -220,7 +220,7 @@ function fillTemplate(tmpl, ctx) {
   // Evaluate any math expressions wrapped in [expression] — skip if starts with [ (double bracket already gone)
   result = result.replace(/\[\s*(.*?)\s*\]/g, (match, expr) => {
     // Skip placeholders and double-bracket-like patterns
-    if (match.startsWith('[[') || expr.startsWith('[')) return match;
+    if (match.startsWith('[[') || expr.startsWith('[') || expr.startsWith('speak:')) return match;
     if (ctx[expr] !== undefined) return String(ctx[expr]);
     try {
       return String(evalDerivation(expr, ctx));
@@ -326,7 +326,14 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     const optionDefs = config.options || config.interaction?.options || [];
     let isMultiSelectMode = false;
 
-    let combos = buildCombinations(variables);
+    // Filter out level index pools (e.g. index_l1, index_l2, etc.) from Cartesian product combinations
+    const combinationVariables = {};
+    for (const [k, v] of Object.entries(variables)) {
+      if (!k.startsWith('index_l') && !k.startsWith('index_level')) {
+        combinationVariables[k] = v;
+      }
+    }
+    let combos = buildCombinations(combinationVariables);
     if (!combos.length) return { questionText: '', options: [], correctAnswerIndex: -1 };
 
     // ── Level-pool filtering ──────────────────────────────────────────────────
@@ -407,6 +414,11 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     const rng = seededRandom(seed);
     const idx = Math.floor(rng() * finalCombos.length);
     const combo = { ...finalCombos[idx] };
+    for (const [k, v] of Object.entries(variables)) {
+      if (combo[k] === undefined) {
+        combo[k] = v.values || v.pool || (Array.isArray(v) ? v : v.value ?? '');
+      }
+    }
     
     // Image pool selection and variable mapping (similar to base evaluator)
     if (Array.isArray(config.visuals)) {
@@ -562,6 +574,7 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     }
 
     const questionText = fillTemplate(questionTemplate, ctx);
+    let resolvedQuestionText = questionText;
     const explanationText = fillTemplate(explanationTemplate, ctx);
 
     // Build options array
@@ -582,6 +595,8 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
         }
         return {
           label: fillTemplate(String(opt.label ?? opt.value ?? opt.text ?? ''), ctx),
+          imageUrl: opt.imageUrl ? fillTemplate(opt.imageUrl, ctx) : undefined,
+          audioUrl: opt.audioUrl ? fillTemplate(opt.audioUrl, ctx) : undefined,
           isCorrect,
           misconception: opt.misconception ? fillTemplate(opt.misconception, ctx) : undefined,
           feedback: opt.feedback ? fillTemplate(opt.feedback, ctx) : undefined,
@@ -677,8 +692,142 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     const shuffledOptions = seededShuffle(options, rng);
     const correctAnswerIndex = shuffledOptions.findIndex(o => o.isCorrect);
 
-    // ── Resolve visuals array → SVG parts (same logic as base evaluator) ────
+    // ── Resolve parts array ──
     const parts = [];
+    if (Array.isArray(config.parts || template.parts)) {
+      const partsToResolve = config.parts || template.parts;
+      partsToResolve.forEach(part => {
+        const resolvedPart = { ...part };
+        if (typeof resolvedPart.content === 'string') {
+          resolvedPart.content = interpolateString(resolvedPart.content, ctx);
+        }
+        if (typeof resolvedPart.prompt === 'string') {
+          resolvedPart.prompt = interpolateString(resolvedPart.prompt, ctx);
+        }
+        if (typeof resolvedPart.label === 'string') {
+          resolvedPart.label = interpolateString(resolvedPart.label, ctx);
+        }
+        if (typeof resolvedPart.backgroundSvg === 'string') {
+          resolvedPart.backgroundSvg = interpolateString(resolvedPart.backgroundSvg, ctx);
+        }
+        if (typeof resolvedPart.imageUrl === 'string') {
+          resolvedPart.imageUrl = interpolateString(resolvedPart.imageUrl, ctx);
+        }
+        if (typeof resolvedPart.audioUrl === 'string') {
+          resolvedPart.audioUrl = interpolateString(resolvedPart.audioUrl, ctx);
+        }
+        if (Array.isArray(resolvedPart.categories)) {
+          resolvedPart.categories = resolvedPart.categories.map(cat => ({
+            ...cat,
+            label: cat.label ? interpolateString(cat.label, ctx) : undefined,
+            imageUrl: cat.imageUrl ? interpolateString(cat.imageUrl, ctx) : undefined,
+            prefillImageUrl: cat.prefillImageUrl ? interpolateString(cat.prefillImageUrl, ctx) : undefined
+          }));
+        }
+        if (Array.isArray(resolvedPart.items)) {
+          resolvedPart.items = resolvedPart.items.map(item => ({
+            ...item,
+            content: item.content ? interpolateString(item.content, ctx) : undefined,
+            label: item.label ? interpolateString(item.label, ctx) : undefined,
+            imageUrl: item.imageUrl ? interpolateString(item.imageUrl, ctx) : undefined,
+            audioUrl: item.audioUrl ? interpolateString(item.audioUrl, ctx) : undefined,
+            alt: item.alt ? interpolateString(item.alt, ctx) : undefined,
+            svg: item.svg ? interpolateString(item.svg, ctx) : undefined
+          }));
+        }
+        parts.push(resolvedPart);
+      });
+    } else if (questionText) {
+      // Stripped version of question text for display in mascot / speech bubbles
+      const imgRegex = /!\[([^\]]*)\]\(([^)]*)\)|!([a-zA-Z0-9_-]*)\(([^)]*)\)/g;
+      resolvedQuestionText = questionText.replace(imgRegex, '').replace(/\s+/g, ' ').trim();
+
+      const textBlocks = questionText.split(/\n\n/);
+      const blocks = textBlocks.length > 1 ? textBlocks : questionText.split(/\n/);
+      blocks.forEach(block => {
+        const trimmed = block.trim();
+        if (!trimmed) return;
+
+        // Try exact match for a block being a single image
+        const stdMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+        const shortMatch = trimmed.match(/^!([a-zA-Z0-9_-]*)\((.*?)\)$/);
+
+        if (stdMatch) {
+          parts.push({
+            type: 'image',
+            imageUrl: interpolateString(stdMatch[2], ctx),
+            alt: interpolateString(stdMatch[1] || 'image', ctx)
+          });
+        } else if (shortMatch) {
+          parts.push({
+            type: 'image',
+            imageUrl: interpolateString(shortMatch[2], ctx),
+            alt: interpolateString(shortMatch[1] || 'image', ctx)
+          });
+        } else {
+          // If a block contains inline image references, let's split it up
+          let lastIndex = 0;
+          let match;
+          const localImgRegex = /!\[([^\]]*)\]\(([^)]*)\)|!([a-zA-Z0-9_-]*)\(([^)]*)\)/g;
+          let hasImages = false;
+
+          while ((match = localImgRegex.exec(trimmed)) !== null) {
+            hasImages = true;
+            const prevText = trimmed.slice(lastIndex, match.index).trim();
+            if (prevText) {
+              parts.push({
+                type: 'text',
+                content: interpolateString(prevText, ctx)
+              });
+            }
+
+            let altText = 'image';
+            let imageUrl = '';
+            if (match[1] !== undefined) {
+              altText = match[1] || 'image';
+              imageUrl = match[2];
+            } else {
+              altText = match[3] || 'image';
+              imageUrl = match[4];
+            }
+
+            parts.push({
+              type: 'image',
+              imageUrl: interpolateString(imageUrl.trim(), ctx),
+              alt: interpolateString(altText.trim(), ctx)
+            });
+
+            lastIndex = localImgRegex.lastIndex;
+          }
+
+          if (hasImages) {
+            const remainingText = trimmed.slice(lastIndex).trim();
+            if (remainingText) {
+              parts.push({
+                type: 'text',
+                content: interpolateString(remainingText, ctx)
+              });
+            }
+          } else {
+            // Check if block is a raw URL
+            if (trimmed.startsWith('http') && trimmed.match(/\.(png|jpg|jpeg|gif|webp|svg|avif)($|\?)/i)) {
+              parts.push({
+                type: 'image',
+                imageUrl: interpolateString(trimmed, ctx),
+                alt: 'image'
+              });
+            } else {
+              parts.push({
+                type: 'text',
+                content: interpolateString(trimmed, ctx)
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // ── Resolve visuals array → SVG parts (same logic as base evaluator) ────
     if (Array.isArray(config.visuals || template.visuals)) {
       const visualDefs = config.visuals || template.visuals;
       for (const v of visualDefs) {
@@ -732,11 +881,14 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     const answer = config.answer || null;
 
     const result = {
-      questionText,
+      questionText: resolvedQuestionText,
       options: shuffledOptions,
       correctAnswerIndex,
       explanation: explanationText ? { sections: [{ type: 'text', content: explanationText }] } : null,
       parts,
+      soundUrl: config.soundUrl ? interpolateString(config.soundUrl, ctx) : undefined,
+      soundText: config.soundText ? interpolateString(config.soundText, ctx) : undefined,
+      voice: config.voice || undefined,
       metaConfig: {
         readable: true,
         readOptions: interactionEngine !== 'fill_blank' && interactionEngine !== 'fillInTheBlank',

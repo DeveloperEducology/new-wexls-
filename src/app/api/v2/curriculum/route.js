@@ -28,6 +28,28 @@ export async function GET(request) {
       try {
         const db = await getMongoDb();
         if (db) {
+          const chapterCollName = iit ? 'iit_chapters' : (imo ? 'imo_chapters' : 'chapters_v2');
+          const unitCollName = iit ? 'iit_units' : (imo ? 'imo_units' : 'units_v2');
+          
+          const dbChapters = await db.collection(chapterCollName).find({}).toArray();
+          const dbUnits = await db.collection(unitCollName).find({}).toArray();
+          
+          const chapterMap = new Map(dbChapters.map(c => [c.id, c]));
+          const unitMap = new Map(dbUnits.map(u => [u.id, u]));
+          
+          nodes.forEach(node => {
+            if (node.chapterId) {
+              const chapter = chapterMap.get(node.chapterId);
+              if (chapter) {
+                node.topicId = chapter.unitId || chapter.topicId;
+                const unit = unitMap.get(chapter.unitId || chapter.topicId);
+                if (unit) {
+                  node.subjectId = unit.subjectId;
+                }
+              }
+            }
+          });
+
           const skillIds = nodes.map(n => n.id).filter(Boolean);
           if (skillIds.length > 0) {
             const questions = await db.collection('questions')

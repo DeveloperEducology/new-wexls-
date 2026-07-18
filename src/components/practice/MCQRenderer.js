@@ -93,36 +93,57 @@ function responsivePx(value, minPx, fallbackMaxPx) {
   return `clamp(${minPx}px, ${Math.max(minPx, numeric * 0.16)}vw, ${numeric}px)`;
 }
 
-function InlineMarkdown({ text }) {
+function InlineMarkdown({ text, userAnswerLabel }) {
   const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
   
   const parseMathAndText = (str, keyPrefix) => {
     const subSegments = str.split(/(\$[^\$]+\$)/g);
-    return subSegments.map((subPiece, subIndex) => {
+    return subSegments.flatMap((subPiece, subIndex) => {
       const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
       if (mathMatch) {
-        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+        return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />];
       }
-      if (subPiece.includes('<svg')) {
-        const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
-        return (
-          <span key={`${keyPrefix}-${subIndex}`}>
-            {svgParts.map((svgPart, pIdx) => {
-              if (svgPart.trim().startsWith('<svg') && svgPart.trim().endsWith('</svg>')) {
-                return (
-                  <span
-                    key={pIdx}
-                    dangerouslySetInnerHTML={{ __html: svgPart }}
-                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
-                  />
-                );
-              }
-              return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
-            })}
-          </span>
-        );
-      }
-      return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+      
+      // Match blank placeholders: '___' or '_' (not part of words, or standing alone) or '{{blank}}'
+      const blankSegments = subPiece.split(/(___|_|\{\{blank\}\})/g);
+      return blankSegments.map((segment, segIdx) => {
+        if (segment === '_' || segment === '___' || segment === '{{blank}}') {
+          if (userAnswerLabel) {
+            return (
+              <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankFilled}>
+                {userAnswerLabel}
+              </span>
+            );
+          } else {
+            return (
+              <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankEmpty}>
+                &nbsp;&nbsp;
+              </span>
+            );
+          }
+        }
+        
+        if (segment.includes('<svg')) {
+          const svgParts = segment.split(/(<svg[\s\S]*?<\/svg>)/g);
+          return (
+            <span key={`${keyPrefix}-${subIndex}-${segIdx}`}>
+              {svgParts.map((svgPart, pIdx) => {
+                if (svgPart.trim().startsWith('<svg') && svgPart.trim().endsWith('</svg>')) {
+                  return (
+                    <span
+                      key={pIdx}
+                      dangerouslySetInnerHTML={{ __html: svgPart }}
+                      style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                    />
+                  );
+                }
+                return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+              })}
+            </span>
+          );
+        }
+        return <span key={`${keyPrefix}-${subIndex}-${segIdx}`}>{parseHTMLToJSX(segment.replace(/^#{1,4}\s*/, ''))}</span>;
+      });
     });
   };
 
@@ -450,6 +471,7 @@ export default function MCQRenderer({
   isAnswered,
   onSubmit,
 }) {
+  const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
   const isPreK = useMemo(() => {
     const getSafeString = (val) => {
       if (!val) return '';
@@ -461,7 +483,6 @@ export default function MCQRenderer({
     const topic = getSafeString(question?.metadata?.topic || question?.topic).toLowerCase();
     const grade = getSafeString(question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade).toLowerCase();
     const skillId = getSafeString(question?.metadata?.skillId || question?.skillId).toLowerCase();
-    const routeSearch = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
     const checkPreK = (s) => (
       s.includes('lkg') || s.includes('prek') || s.includes('ukg') || s.includes('pre-k') ||
       s.includes('letter-identification') || s.includes('letter-recognition') ||
@@ -469,7 +490,7 @@ export default function MCQRenderer({
       s.includes('short-vowel') || s.includes('cvc')
     );
     return checkPreK(topic) || checkPreK(grade) || checkPreK(skillId) || checkPreK(routeSearch);
-  }, [question]);
+  }, [question, routeSearch]);
 
   const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true ||
     question.optionsType === 'msq' ||
@@ -505,9 +526,13 @@ export default function MCQRenderer({
     return [];
   }, [userAnswer, isMultiSelect]);
 
+  const hasSelection = userAnswer !== null && userAnswer !== undefined && userAnswer !== '';
   const selectedIndex = typeof userAnswer === 'object'
     ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
     : Number(userAnswer);
+  const selectedOptionLabel = hasSelection && Array.isArray(question.options) && selectedIndex >= 0 && selectedIndex < question.options.length
+    ? getOptionLabel(question.options[selectedIndex], selectedIndex)
+    : null;
   const optionLayout = getOptionLayout(question);
   const hasMedia = (question.options || []).some((option) => hasVisualContent(option));
   const gridClassName = getGridClassName(question, optionLayout);
@@ -524,7 +549,7 @@ export default function MCQRenderer({
     .join(' ');
   const cleanString = (str) => String(str || '').replace(/\s+/g, ' ').trim();
   const hideHeader = question.questionText && (
-    isPreK ||
+    (isPreK && routeSearch.includes('theme=montessori')) ||
     cleanString(firstPartText) === cleanString(question.questionText) ||
     cleanString(combinedPartsText) === cleanString(question.questionText)
   );
@@ -616,7 +641,7 @@ export default function MCQRenderer({
           fontWeight: 900,
           fontFamily: 'var(--font-outfit), sans-serif',
         } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-          <InlineMarkdown text={paragraphs[0]} />
+          <InlineMarkdown text={paragraphs[0]} userAnswerLabel={selectedOptionLabel} />
         </h2>
       );
       if (middleVisuals.length > 0) {
@@ -638,7 +663,7 @@ export default function MCQRenderer({
           fontWeight: 900,
           fontFamily: 'var(--font-outfit), sans-serif',
         } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-          <InlineMarkdown text={paragraphs.slice(1).join('\n\n')} />
+          <InlineMarkdown text={paragraphs.slice(1).join('\n\n')} userAnswerLabel={selectedOptionLabel} />
         </h2>
       );
     } else {
@@ -654,7 +679,7 @@ export default function MCQRenderer({
             fontWeight: 900,
             fontFamily: 'var(--font-outfit), sans-serif',
           } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-            <InlineMarkdown text={lines[0]} />
+            <InlineMarkdown text={lines[0]} userAnswerLabel={selectedOptionLabel} />
           </h2>
         );
         if (middleVisuals.length > 0) {
@@ -676,7 +701,7 @@ export default function MCQRenderer({
             fontWeight: 900,
             fontFamily: 'var(--font-outfit), sans-serif',
           } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-            <InlineMarkdown text={lines.slice(1).join('\n')} />
+            <InlineMarkdown text={lines.slice(1).join('\n')} userAnswerLabel={selectedOptionLabel} />
           </h2>
         );
       } else {
@@ -690,7 +715,7 @@ export default function MCQRenderer({
             fontWeight: 900,
             fontFamily: 'var(--font-outfit), sans-serif',
           } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-            <InlineMarkdown text={text} />
+            <InlineMarkdown text={text} userAnswerLabel={selectedOptionLabel} />
           </h2>
         );
         if (middleVisuals.length > 0) {
@@ -804,7 +829,7 @@ export default function MCQRenderer({
                   fontWeight: 900,
                   fontFamily: 'var(--font-outfit), sans-serif',
                 } : { margin: 0, color: '#0f172a', fontSize: 'clamp(18px, 4.2vw, 24px)', lineHeight: 1.85, fontWeight: 400 }}>
-                  <InlineMarkdown text={question.questionText} />
+                  <InlineMarkdown text={question.questionText} userAnswerLabel={selectedOptionLabel} />
                 </h2>
               </div>
             ) : null}
@@ -1256,12 +1281,15 @@ export default function MCQRenderer({
                           : `rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'})`,
                         transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
                         zIndex: selected ? 30 : 10,
-                        ...(isMultiSelect ? { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' } : {})
+                        // keeps standard column layout so label is centered below the image
                       } : {})
                     }}
                   >
                     {isPreK && isMultiSelect && (
                       <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
                         width: '28px',
                         height: '28px',
                         borderRadius: '8px',
@@ -1270,13 +1298,13 @@ export default function MCQRenderer({
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        marginRight: '12px',
                         color: '#ffffff',
                         fontSize: '16px',
                         fontWeight: '950',
                         flexShrink: 0,
                         boxShadow: selected ? '0 4px 10px rgba(56, 189, 248, 0.3)' : 'none',
                         transition: 'all 0.2s ease',
+                        zIndex: 20
                       }}>
                         {selected ? '✓' : ''}
                       </div>
@@ -1361,7 +1389,7 @@ export default function MCQRenderer({
                             width: option.width || '100%',
                             maxWidth: option.width ? undefined : (optionLayout.mediaMaxWidth || 260),
                             height: option.height || 'auto',
-                            maxHeight: option.height ? undefined : (isPreK ? 'clamp(64px, 10vh, 90px)' : 140),
+                            maxHeight: option.height ? undefined : (isPreK ? 'clamp(90px, 14vh, 120px)' : 140),
                             objectFit: 'contain',
                             borderRadius: 14,
                           }}

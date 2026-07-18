@@ -68,7 +68,9 @@ export async function createIitNode(type, data) {
   if (normalized.gradeId) normalized.gradeId = slugify(normalized.gradeId);
   if (normalized.chapterId) normalized.chapterId = slugify(normalized.chapterId);
 
-  await collection.updateOne({ id }, { $set: normalized }, { upsert: true });
+  const updateDoc = { ...normalized };
+  delete updateDoc._id;
+  await collection.updateOne({ id }, { $set: updateDoc, $setOnInsert: { _id: id } }, { upsert: true });
   return collection.findOne({ id });
 }
 
@@ -192,6 +194,31 @@ export async function seedIitInitial() {
       { id: 'iit-p6-noncontact-types', title: 'Magnetic, electrostatic, and gravitational forces', chapterId: 'iit-motion-6', code: 'P.6.2.3', templateId: 'iit-p6-noncontact-types', engine: 'questionBank', order: 8 },
       { id: 'iit-p6-distance-displacement', title: 'Distance and displacement calculations', chapterId: 'iit-motion-6', code: 'P.6.2.4', templateId: 'iit-p6-distance-displacement', engine: 'questionBank', order: 9 },
       { id: 'iit-p6-net-force', title: 'Calculate net force and direction', chapterId: 'iit-motion-6', code: 'P.6.2.5', templateId: 'iit-p6-net-force', engine: 'questionBank', order: 10 },
+      {
+        id: 'iit-p6-unit-normalization-time',
+        title: 'Unit Normalization (Time)',
+        chapterId: 'iit-motion-6',
+        code: 'P.6.2.6',
+        templateId: 'iit-p6-unit-normalization-time',
+        engine: 'universal-template',
+        order: 11,
+        metadata: {
+          difficultyScaling: true,
+          templateLevels: [
+            { level: 1, templateIds: ['iit-p6-unit-normalization-time'] },
+            { level: 2, templateIds: ['iit-p6-direct-velocity-application'] },
+            { level: 3, templateIds: ['iit-p6-multi-step-procedural-synthesis'] }
+          ]
+        },
+        templateLevels: [
+          { level: 1, templateIds: ['iit-p6-unit-normalization-time'] },
+          { level: 2, templateIds: ['iit-p6-direct-velocity-application'] },
+          { level: 3, templateIds: ['iit-p6-multi-step-procedural-synthesis'] }
+        ]
+      },
+      { id: 'iit-p6-direct-velocity-application', title: 'Direct Velocity Application', chapterId: 'iit-motion-6', code: 'P.6.2.7', templateId: 'iit-p6-direct-velocity-application', engine: 'universal-template', order: 12 },
+      { id: 'iit-p6-segmented-motion-aggregation', title: 'Segmented Motion Aggregation', chapterId: 'iit-motion-6', code: 'P.6.2.8', templateId: 'iit-p6-segmented-motion-aggregation', engine: 'universal-template', order: 13 },
+      { id: 'iit-p6-multi-step-procedural-synthesis', title: 'Multi-Step Procedural Synthesis', chapterId: 'iit-motion-6', code: 'P.6.2.9', templateId: 'iit-p6-multi-step-procedural-synthesis', engine: 'universal-template', order: 14 },
 
       // Grade 6 Mechanics - Measurement (27 Chained Micro-skills)
       { id: 'iit-p6-compare-without-measuring', title: 'Compare quantities visually without measuring', chapterId: 'iit-measurement-6', code: 'P.6.1.1', templateId: 'iit-p6-compare-without-measuring', engine: 'questionBank', order: 1 },

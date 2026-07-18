@@ -297,7 +297,7 @@ export async function GET(request) {
   if (cachedPayload) {
     return NextResponse.json(cachedPayload, {
       headers: {
-        'Cache-Control': 'private, max-age=0',
+        'Cache-Control': 'public, max-age=60, s-maxage=1200, stale-while-revalidate=86400',
         'X-Practice-Cache': 'HIT',
       },
     });
@@ -307,7 +307,7 @@ export async function GET(request) {
     return NextResponse.json(payload, {
       ...init,
       headers: {
-        'Cache-Control': 'private, max-age=0',
+        'Cache-Control': 'public, max-age=60, s-maxage=1200, stale-while-revalidate=86400',
         'X-Practice-Cache': 'MISS',
         ...(init.headers || {}),
       },
@@ -703,8 +703,78 @@ export async function GET(request) {
     );
   }
   
-  // Handle universal-template dynamic template engine
-  if (skillNode?.engine === 'universal-template' || skillNode?.engine === 'universal-templete') {
+  const isLkgTemplate = resolvedTemplateId && String(resolvedTemplateId).startsWith('lkg.english.');
+
+  // ── Dynamic Pool Engine (option-pooling) ──────────────────────────────────
+  if (skillNode?.engine === 'dynamic_pool') {
+    try {
+      const { findVocabularyPool } = await import('../../../lib/practice/questionBank/questionRepository.js');
+      const { generateFromDynamicPool } = await import('../../../lib/practice/engine/DynamicPoolGenerator.js');
+      
+      const poolId = skillNode.poolId || resolvedTemplateId;
+      const poolDoc = await findVocabularyPool(poolId);
+      if (!poolDoc) {
+        return NextResponse.json(
+          { success: false, error: `Vocabulary pool not found: ${poolId}` },
+          { status: 404 }
+        );
+      }
+
+      const historyContext = {
+        correctStreak: Number(searchParams.get('correctStreak') || 0),
+        practiceLevel: Number(searchParams.get('practiceLevel') || 1),
+        levelStreak: Number(searchParams.get('levelStreak') || 0),
+        lastResult: searchParams.get('lastResult') || 'none',
+        remediationActive: searchParams.get('remediationActive') === 'true',
+        remediationStep: Number(searchParams.get('remediationStep') || 0),
+      };
+
+      const rawQuestion = generateFromDynamicPool(
+        poolDoc,
+        seed,
+        difficulty,
+        historyContext,
+        skillNode?.grade || skillNode?.metadata?.grade || 'ukg'
+      );
+
+      const question = {
+        ...rawQuestion,
+        id: `dynamic-pool-${resolvedSkillId}-${seed}`,
+        metadata: {
+          subject: resolvedSubject,
+          topic: resolvedTopic,
+          skillId: resolvedSkillId,
+          poolId,
+          engine: 'dynamic_pool',
+          grade: skillNode?.grade || skillNode?.metadata?.grade || 'ukg',
+          seed
+        }
+      };
+
+      const responsePayload = {
+        success: true,
+        question,
+        seed,
+        template: {
+          logicType: resolvedSkillId,
+          logic_type: resolvedSkillId,
+          templateId: poolId,
+          engine: 'dynamic_pool'
+        }
+      };
+
+      return respond(withCompetency(responsePayload, { subject: resolvedSubject, topic: resolvedTopic, skill: resolvedSkillId }));
+    } catch (err) {
+      console.error('Error generating question via dynamic_pool engine:', err);
+      return NextResponse.json(
+        { success: false, error: `Dynamic pool engine error: ${err.message}` },
+        { status: 500 }
+      );
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if ((skillNode?.engine === 'universal-template' || skillNode?.engine === 'universal-templete') && !isLkgTemplate) {
     try {
       const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
       
@@ -771,7 +841,7 @@ export async function GET(request) {
     const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
     const templateDoc = await findDynamicTemplateById(resolvedTemplateId);
 
-    if (templateDoc) {
+    if (templateDoc && !isLkgTemplate) {
       const resolvedTemplateDoc = await resolveTemplatePools(templateDoc);
       const rawQuestion = await evaluateUniversalOrPoolTemplate({
         resolvedTemplateDoc,
@@ -823,7 +893,7 @@ export async function GET(request) {
         $or: [{ _id: resolvedTemplateId }, { id: resolvedTemplateId }]
       });
 
-      if (tmplDoc) {
+      if (tmplDoc && !isLkgTemplate) {
         const cfg = tmplDoc.config || tmplDoc;
         // Convert to universal-template format expected by evaluateUniversalOrPoolTemplate
         const universalDoc = {
@@ -904,41 +974,10 @@ export async function GET(request) {
     console.error('Practice DB node check error:', error);
   }
 
-  const isMathTopic = (subject === 'math' || subject === 'arithmetic') && [
-    'addition', 'subtraction', 'multiplication', 'division', 'time', 'fractions', 'place-values', 
-    'testing', 'ratio', 'ratios', 'lkg', 'shapes', 'measurement', 'standard-object-measurement', 
-    'story-math', 'interactive-tools', 'cube-tools', 'ukg-numbers-counting',
-    'integers', 'equations', 'geometry', 'mensuration', 'data-handling', 'algebra', 'trigonometry', 
-    'data-interpretation', 'arithmetic-ability', 'decimals', 'simplification', 'percentage', 
-    'profit-loss', 'simple-interest', 'perimeter-area-volume', 'factors-multiples', 'numbers', 
-    'four-fundamental-operations'
-  ].includes(targetTopic);
-
-  const isSocialTopic = (subject === 'social' || subject === 'gk' || subject === 'general_knowledge' || subject === 'general_awareness' || subject === 'intelligence') && [
-    'gk', 'history', 'geography', 'general-science', 'culture-sports', 'civics', 'current-affairs', 
-    'indian-history', 'economics', 'polity', 'general_knowledge', 'general_awareness',
-    'odd-one-out', 'figure-matching', 'pattern-completion', 'figure-series-completion', 'analogy', 
-    'geometrical-figure-completion', 'mirror-imaging', 'punched-hold-pattern', 'space-visualization', 
-    'embedded-figure', 'analogies', 'classification', 'series', 'logical-reasoning', 'syllogisms', 
-    'blood-relations', 'direction-sense', 'coding-decoding', 'non-verbal-reasoning'
-  ].includes(targetTopic);
-
-  const isScienceTopic = subject === 'science' && ['units-measurement', 'solar-system', 'ukg-science'].includes(targetTopic);
-  
-  const isEnglishTopic = (subject === 'english' || subject === 'language') && (
-    [
-      'grammar', 'lkg', 'english-lkg', 'beginning_sounds', 'identify_category', 'letter_recognition', 
-      'case_match', 'word_recognition', 'rhyming', 'color_identification', 'letter_lines', 
-      'phonics_vowels', 'phonics_images',
-      'comprehension', 'vocabulary', 'fill-in-the-blanks', 'sentence-correction', 'prepositions', 
-      'verbs', 'articles', 'spelling-check', 'reading-comprehension', 'spot-the-error', 
-      'synonyms-antonyms', 'one-word-substitution', 'idioms-phrases'
-    ].includes(targetTopic) ||
-    resolvedTopic === 'lkg' ||
-    resolvedTopic === 'english-lkg' ||
-    topic === 'lkg' ||
-    topic === 'english-lkg'
-  );
+  const isMathTopic = subject === 'math' || subject === 'arithmetic' || resolvedSubject === 'math';
+  const isSocialTopic = subject === 'social' || subject === 'gk' || subject === 'general_knowledge' || subject === 'general_awareness' || subject === 'intelligence' || resolvedSubject === 'social';
+  const isScienceTopic = subject === 'science' || resolvedSubject === 'science';
+  const isEnglishTopic = subject === 'english' || subject === 'language' || resolvedSubject === 'english';
 
   if (!topicContract && !isMathTopic && !isSocialTopic && !isScienceTopic && !isEnglishTopic) {
     if (isDbTopicActive) {
@@ -1181,8 +1220,9 @@ export async function GET(request) {
       }, { subject, topic, skill }));
     }
 
-    if (subject === 'english' && (['grammar', 'lkg', 'english-lkg'].includes(targetTopic) || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg')) {
-      const isLkg = targetTopic === 'lkg' || targetTopic === 'english-lkg' || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg';
+    const isLkgTemplate = resolvedTemplateId && String(resolvedTemplateId).startsWith('lkg.english.');
+    if (subject === 'english' && (isLkgTemplate || ['grammar', 'lkg', 'english-lkg'].includes(targetTopic) || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg')) {
+      const isLkg = isLkgTemplate || targetTopic === 'lkg' || targetTopic === 'english-lkg' || resolvedTopic === 'lkg' || resolvedTopic === 'english-lkg' || topic === 'english-lkg' || topic === 'lkg';
       const generator = isLkg
         ? await (await import('../../../lib/practice/generators/english/topics/lkg/engine.js')).resolveLkgGenerator(resolvedSkillId, config)
         : await (await import('../../../lib/practice/generators/english/topics/grammar/engine.js')).resolveGrammarGenerator(resolvedSkillId, config);

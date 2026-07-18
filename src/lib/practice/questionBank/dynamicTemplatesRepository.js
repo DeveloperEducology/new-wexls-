@@ -59,22 +59,16 @@ export async function saveDynamicTemplate(template) {
   const now = new Date();
   
   const { _id, createdAt, updatedAt, ...rest } = template;
-  
+  const existing = await collection.findOne({ id: template.id });
   const cleaned = {
     ...rest,
+    createdAt: existing ? existing.createdAt : now,
     updatedAt: now
   };
 
-  const updateObj = {
-    $set: cleaned,
-    $setOnInsert: {
-      createdAt: now
-    }
-  };
-
-  const result = await collection.updateOne(
+  const result = await collection.replaceOne(
     { id: template.id },
-    updateObj,
+    cleaned,
     { upsert: true }
   );
 

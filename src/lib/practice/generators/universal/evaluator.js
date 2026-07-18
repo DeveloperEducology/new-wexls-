@@ -778,6 +778,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       return {
         label: isPictureChoice && resolvedImageUrl ? opt.alt || opt.text || `Option` : resolvedLabel,
         ...(resolvedImageUrl ? { imageUrl: resolvedImageUrl } : {}),
+        audioUrl: opt.audioUrl ? resolveLabelOrExpression(opt.audioUrl, resolvedVariables) : undefined,
         isCorrect,
         misconception: opt.misconception ? resolveLabelOrExpression(opt.misconception, resolvedVariables) : undefined,
         feedback: opt.feedback ? resolveLabelOrExpression(opt.feedback, resolvedVariables) : undefined,
@@ -878,6 +879,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       }
       if (typeof resolvedPart.backgroundSvg === 'string') {
         resolvedPart.backgroundSvg = interpolateString(resolvedPart.backgroundSvg, resolvedVariables);
+      }
+      if (typeof resolvedPart.imageUrl === 'string') {
+        resolvedPart.imageUrl = interpolateString(resolvedPart.imageUrl, resolvedVariables);
+      }
+      if (typeof resolvedPart.audioUrl === 'string') {
+        resolvedPart.audioUrl = interpolateString(resolvedPart.audioUrl, resolvedVariables);
       }
       
       if (Array.isArray(resolvedPart.categories)) {
@@ -1390,6 +1397,9 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     interaction: template.optionsType || (isVisualChoice ? 'visual_choice' : 'mcq'),
     questionText,
     parts,
+    soundUrl: template.soundUrl ? interpolateString(template.soundUrl, resolvedVariables) : undefined,
+    soundText: template.soundText ? interpolateString(template.soundText, resolvedVariables) : undefined,
+    voice: template.voice || undefined,
     options: isVisualChoice
       ? visualPanels.map((p, idx) => ({ id: `panel_${idx}`, label: String(p.count), isPanel: true }))
       : optionsList.map((o, idx) => ({

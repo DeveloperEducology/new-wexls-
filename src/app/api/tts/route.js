@@ -26,7 +26,10 @@ export async function GET(request) {
       if (cached) {
         // If we have an R2 URL already, redirect to it directly (CDN caches this)
         if (cached.r2Url) {
-          return NextResponse.redirect(cached.r2Url);
+          return NextResponse.redirect(cached.r2Url, {
+            status: 308,
+            headers: { 'Cache-Control': 'public, max-age=31536000, immutable' }
+          });
         }
         
         // If we have base64 in cache, but no r2Url, upload to R2 and update cache
@@ -42,7 +45,10 @@ export async function GET(request) {
                   { _id: cacheKey },
                   { $set: { r2Url } }
                 );
-                return NextResponse.redirect(r2Url);
+                return NextResponse.redirect(r2Url, {
+                  status: 308,
+                  headers: { 'Cache-Control': 'public, max-age=31536000, immutable' }
+                });
               } else {
                 console.log(`[TTS] Lazy upload to R2 returned null URL`);
               }
@@ -113,7 +119,10 @@ export async function GET(request) {
     }
 
     if (r2Url) {
-      return NextResponse.redirect(r2Url);
+      return NextResponse.redirect(r2Url, {
+        status: 308,
+        headers: { 'Cache-Control': 'public, max-age=31536000, immutable' }
+      });
     }
 
     return new Response(wavBuffer, {

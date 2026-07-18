@@ -1269,7 +1269,7 @@ function PracticePageContent() {
   const [levelStreak, setLevelStreak] = useState(0);
   const [levelModal, setLevelModal] = useState(null);
   const [lastResult, setLastResult] = useState('none');
-  const [difficulty, setDifficulty] = useState('adaptive');
+  const [difficulty, setDifficulty] = useState(resolveSearchValue(searchParams, 'difficulty') || 'adaptive');
   // ── practiceMode & staticSkillIndex are derived from URL (not React state) ─
   // practiceMode = 'adaptive' | 'static'  → read from searchParams above
   // staticSkillIndex is computed live so no useState needed
@@ -2249,8 +2249,8 @@ function PracticePageContent() {
             levelStreak,
             lastResult: 'correct',
             slideIn: true,
-          }), 400);
-        }, 800);
+          }), 200);
+        }, 400);
       } else {
         // Incorrect: show explanation feedback first, save routing target in state
         setNextStaticQn(nextQn);
@@ -2272,8 +2272,8 @@ function PracticePageContent() {
           levelStreak,
           lastResult: canonicalCorrect ? 'correct' : 'incorrect',
           slideIn: true,
-        }), 400);
-      }, 800);
+        }), 200);
+      }, 400);
       return;
     }
 
@@ -2414,7 +2414,7 @@ function PracticePageContent() {
           }
           fetchQuestion(false, nextQuestionSession);
         });
-      }, 950);
+      }, 450);
     } else {
       setIsSubmitting(false);
       submittingRef.current = false;

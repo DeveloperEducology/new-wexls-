@@ -572,6 +572,53 @@ export default function TemplateMasterclass() {
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState('jnvst');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('import_dynamic_template');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          const tmpl = Array.isArray(parsed) ? parsed[0] : parsed;
+          if (tmpl && tmpl.templateText) {
+            setBlueprint(tmpl.templateText);
+            if (tmpl.explanationTemplate) {
+              setSolution(tmpl.explanationTemplate);
+            } else {
+              setSolution('The correct answer is {{Result}}.');
+            }
+            
+            // Map variables
+            if (Array.isArray(tmpl.variables)) {
+              const keys = tmpl.variables.map(v => v.name);
+              const vals = {};
+              tmpl.variables.forEach(v => {
+                vals[v.name] = Array.isArray(v.values) ? v.values.join(', ') : String(v.values);
+              });
+              setPlaceholders(keys);
+              setPlaceholderValues(vals);
+            }
+            
+            if (Array.isArray(tmpl.optionsTemplate)) {
+              const mappedOpts = tmpl.optionsTemplate.map((optLabel, idx) => ({
+                label: optLabel,
+                isCorrect: idx === 0 // assume first option is correct
+              }));
+              setOptionsState(mappedOpts);
+            }
+            
+            setTitle('Imported AI Parameter Template');
+            setSubject('english');
+            setTopic('phonics');
+
+            localStorage.removeItem('import_dynamic_template');
+          }
+        } catch (e) {
+          console.error('Failed to import dynamic template:', e);
+        }
+      }
+    }
+  }, []);
+
   // Fetch Exams list from DB
   useEffect(() => {
     async function fetchExams() {

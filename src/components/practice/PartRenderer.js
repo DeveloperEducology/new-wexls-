@@ -83,7 +83,7 @@ function cleanText(value) {
   return String(value || '').replace(/\*\*/g, '').replace(/^#{1,4}\s*/gm, '');
 }
 
-function InlineMarkdown({ text }) {
+function InlineMarkdown({ text, userAnswerLabel }) {
   const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
   const normalizedText = sanitizedText
     .replace(/\\n/g, '\n')
@@ -91,31 +91,52 @@ function InlineMarkdown({ text }) {
 
   const parseMathAndText = (str, keyPrefix) => {
     const subSegments = str.split(/(\$[^\$]+\$)/g);
-    return subSegments.map((subPiece, subIndex) => {
+    return subSegments.flatMap((subPiece, subIndex) => {
       const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
       if (mathMatch) {
-        return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+        return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />];
       }
-      if (subPiece.includes('<svg')) {
-        const svgParts = subPiece.split(/(<svg[\s\S]*?<\/svg>)/g);
-        return (
-          <span key={`${keyPrefix}-${subIndex}`}>
-            {svgParts.map((svgPart, pIdx) => {
-              if (svgPart.trim().startsWith('<svg') && svgPart.trim().endsWith('</svg>')) {
-                return (
-                  <span
-                    key={pIdx}
-                    dangerouslySetInnerHTML={{ __html: svgPart }}
-                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
-                  />
-                );
-              }
-              return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
-            })}
-          </span>
-        );
-      }
-      return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
+
+      // Match blank placeholders: '___' or '_' (not part of words, or standing alone) or '{{blank}}'
+      const blankSegments = subPiece.split(/(___|_|\{\{blank\}\})/g);
+      return blankSegments.map((segment, segIdx) => {
+        if (segment === '_' || segment === '___' || segment === '{{blank}}') {
+          if (userAnswerLabel) {
+            return (
+              <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankFilled}>
+                {userAnswerLabel}
+              </span>
+            );
+          } else {
+            return (
+              <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankEmpty}>
+                &nbsp;&nbsp;
+              </span>
+            );
+          }
+        }
+
+        if (segment.includes('<svg')) {
+          const svgParts = segment.split(/(<svg[\s\S]*?<\/svg>)/g);
+          return (
+            <span key={`${keyPrefix}-${subIndex}-${segIdx}`}>
+              {svgParts.map((svgPart, pIdx) => {
+                if (svgPart.trim().startsWith('<svg') && svgPart.trim().endsWith('</svg>')) {
+                  return (
+                    <span
+                      key={pIdx}
+                      dangerouslySetInnerHTML={{ __html: svgPart }}
+                      style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                    />
+                  );
+                }
+                return <span key={pIdx}>{parseHTMLToJSX(svgPart.replace(/^#{1,4}\s*/, ''))}</span>;
+              })}
+            </span>
+          );
+        }
+        return <span key={`${keyPrefix}-${subIndex}-${segIdx}`}>{parseHTMLToJSX(segment.replace(/^#{1,4}\s*/, ''))}</span>;
+      });
     });
   };
 
@@ -156,7 +177,7 @@ function InlineMarkdown({ text }) {
   );
 }
 
-function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
+function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question, userAnswerLabel }) {
   const normalizedText = String(text || '')
     .replace(/\\n/g, '\n')
     .replace(/\/n/g, '\n');
@@ -166,7 +187,7 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
     if (!str.includes('<svg')) {
       return str.split('\n').map((line, lineIndex, lines) => (
         <span key={`${keyPrefix}-${lineIndex}`}>
-          <InlineMarkdown text={line} />
+          <InlineMarkdown text={line} userAnswerLabel={userAnswerLabel} />
           {lineIndex < lines.length - 1 ? <br /> : null}
         </span>
       ));
@@ -178,13 +199,13 @@ function TextWithBlanks({ text, userAnswer, onAnswer, isAnswered, question }) {
       if (isSvg) {
         return (
           <span key={`${keyPrefix}-svg-${segIdx}`}>
-            <InlineMarkdown text={segment} />
+            <InlineMarkdown text={segment} userAnswerLabel={userAnswerLabel} />
           </span>
         );
       } else {
         return segment.split('\n').map((line, lineIndex, lines) => (
           <span key={`${keyPrefix}-txt-${segIdx}-${lineIndex}`}>
-            <InlineMarkdown text={line} />
+            <InlineMarkdown text={line} userAnswerLabel={userAnswerLabel} />
             {lineIndex < lines.length - 1 ? <br /> : null}
           </span>
         ));
@@ -277,7 +298,7 @@ function isMarkdownTable(text) {
   return lines.length >= 2 && lines[0].startsWith('|') && /^\|?\s*:?-{3,}:?\s*\|/.test(lines[1]);
 }
 
-function MarkdownTable({ text, userAnswer, onAnswer, isAnswered, question }) {
+function MarkdownTable({ text, userAnswer, onAnswer, isAnswered, question, userAnswerLabel }) {
   const lines = String(text || '').trim().split('\n').map((line) => line.trim()).filter(Boolean);
   const rows = lines
     .filter((_, index) => index !== 1)
@@ -290,7 +311,7 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered, question }) {
           <tr>
             {(rows[0] || []).map((cell, index) => (
               <th key={index} style={{ padding: '12px 14px', background: '#eff6ff', color: '#1e3a8a', fontSize: 13, fontWeight: 900, borderBottom: '1px solid #dbeafe', textAlign: 'center' }}>
-                <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />
+                <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} userAnswerLabel={userAnswerLabel} />
               </th>
             ))}
           </tr>
@@ -300,7 +321,7 @@ function MarkdownTable({ text, userAnswer, onAnswer, isAnswered, question }) {
             <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} style={{ padding: '12px 14px', borderTop: rowIndex === 0 ? 'none' : '1px solid #e5eefb', color: '#0f172a', fontSize: 18, fontWeight: 800, textAlign: 'center' }}>
-                  <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />
+                  <TextWithBlanks text={cell} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} userAnswerLabel={userAnswerLabel} />
                 </td>
               ))}
             </tr>
@@ -343,6 +364,21 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
     return cleanSpeechText(speakTextValue || content);
   }, [speakTextValue, content]);
 
+  const selectedIndex = useMemo(() => {
+    return typeof userAnswer === 'object'
+      ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
+      : Number(userAnswer);
+  }, [userAnswer]);
+
+  const userAnswerLabel = useMemo(() => {
+    if (userAnswer === null || userAnswer === undefined || userAnswer === '') return null;
+    if (Array.isArray(question?.options) && selectedIndex >= 0 && selectedIndex < question.options.length) {
+      const opt = question.options[selectedIndex];
+      return typeof opt === 'object' ? (opt.label ?? opt.text) : opt;
+    }
+    return null;
+  }, [userAnswer, question?.options, selectedIndex]);
+
   useEffect(() => {
     const shouldAutoplay = (isPreK || question?.layoutConfig?.audio === true) && question?.layoutConfig?.audio !== false;
     if (shouldAutoplay && !isAnswered && content && !spokenRef.current && !part.noAutoplay && (partIndex === undefined || partIndex === 0)) {
@@ -375,9 +411,9 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
 
   const renderSegment = (text) => {
     if (isMarkdownTable(text)) {
-      return <MarkdownTable text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />;
+      return <MarkdownTable text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} userAnswerLabel={userAnswerLabel} />;
     }
-    return <TextWithBlanks text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} />;
+    return <TextWithBlanks text={text} userAnswer={userAnswer} onAnswer={onAnswer} isAnswered={isAnswered} question={question} userAnswerLabel={userAnswerLabel} />;
   };
 
   const pieces = useMemo(() => {

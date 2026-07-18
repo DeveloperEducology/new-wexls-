@@ -2068,3 +2068,244 @@
   flex-direction: column;
   gap: 16px;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Premium Visual Builder Styles Additions
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Color-Coded Steppers with connections */
+.stepTabsContainer {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+  position: relative;
+}
+
+.stepTab {
+  border: 1.5px solid transparent;
+  padding: 10px 20px !important;
+}
+
+.stepTabActive {
+  background: linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%) !important;
+  color: #4338ca !important;
+  border-color: #c7d2fe !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+  transform: translateY(-1px);
+}
+
+.stepTabCompleted {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+}
+
+.stepTabCompleted .stepNumber {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.stepNumber {
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(148, 163, 184, 0.1);
+}
+
+/* Variable Card Live Badge */
+.resolvedValueBadge {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 6px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.resolvedValueBadge span {
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.resolvedValueBadge code {
+  color: #0f172a;
+  font-family: monospace;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+/* Premium Tablet/Device Frame Preview Mockup */
+.deviceMockupWrapper {
+  border: 10px solid #1e293b;
+  border-radius: 28px;
+  background: #0f172a;
+  padding: 6px;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(15,23,42,0.1);
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+  max-width: 350px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.deviceMockupScreen {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  min-height: 480px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Interactive Option Buttons */
+.railOptionButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.04);
+}
+
+.railOptionButton:hover {
+  border-color: #93c5fd;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.06);
+}
+
+.railOptionButtonSuccess {
+  border-color: #22c55e !important;
+  background: #f0fdf4 !important;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2), 0 8px 16px rgba(34, 197, 94, 0.1) !important;
+  animation: option-bounce 0.4s ease;
+}
+
+.railOptionButtonFailure {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2), 0 8px 16px rgba(239, 68, 68, 0.1) !important;
+  animation: option-shake 0.4s ease;
+}
+
+/* Visual Cards */
+.railVisualCard {
+  position: relative;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  padding: 12px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.railVisualCard:hover {
+  transform: scale(1.02);
+}
+
+/* Audio Trigger Buttons */
+.inlineAudioBtn,
+.cardAudioBtn {
+  background: #8b5cf6;
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(139, 92, 246, 0.3);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+}
+
+.inlineAudioBtn {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.cardAudioBtn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+}
+
+.inlineAudioBtn:hover,
+.cardAudioBtn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.4);
+}
+
+.inlineAudioBtnActive,
+.cardAudioBtnActive {
+  background: #7c3aed;
+  animation: pulse-audio 1.2s infinite;
+}
+
+/* Confetti System */
+.confettiContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.confettiPiece {
+  position: absolute;
+  top: -20px;
+  opacity: 0.85;
+  animation: confetti-fall linear forwards;
+}
+
+/* Animations */
+@keyframes confetti-fall {
+  0% {
+    top: -20px;
+    transform: translateX(0) rotate(0deg);
+  }
+  50% {
+    transform: translateX(12px) rotate(180deg);
+  }
+  100% {
+    top: 100%;
+    transform: translateX(-12px) rotate(360deg);
+  }
+}
+
+@keyframes option-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px) scale(1.02); }
+}
+
+@keyframes option-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+@keyframes pulse-audio {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.6); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+}
+

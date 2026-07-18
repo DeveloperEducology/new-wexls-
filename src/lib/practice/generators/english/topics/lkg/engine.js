@@ -638,9 +638,11 @@ function generateLetterRecognitionQuestion(skillId, seed, r, variables = {}, con
   
   if (
     skillId === 'lkg-english-letter-recognition-uppercase' ||
-    skillId === 'lkg-english-letter-recognition-lowercase'
+    skillId === 'lkg-english-letter-recognition-lowercase' ||
+    skillId === 'ukg-eng-letter-id-find-upper' ||
+    skillId === 'ukg-eng-letter-id-find-lower'
   ) {
-    const isUpper = skillId === 'lkg-english-letter-recognition-uppercase';
+    const isUpper = skillId === 'lkg-english-letter-recognition-uppercase' || skillId === 'ukg-eng-letter-id-find-upper';
     const alphabet = isUpper ? UPPER_ALPHABET : LOWER_ALPHABET;
     const targetIdx = Math.floor(r * 26);
     const targetLetter = alphabet[targetIdx];
@@ -1089,9 +1091,11 @@ function generateLetterRecognitionQuestion(skillId, seed, r, variables = {}, con
 
   } else if (
     skillId === 'lkg-english-letter-recognition-audio-to-letter' ||
-    skillId === 'lkg-english-letter-id-hear-lower'
+    skillId === 'lkg-english-letter-id-hear-lower' ||
+    skillId === 'ukg-eng-letter-id-hear-upper' ||
+    skillId === 'ukg-eng-letter-id-hear-lower'
   ) {
-    const isUpper = skillId !== 'lkg-english-letter-id-hear-lower';
+    const isUpper = skillId !== 'lkg-english-letter-id-hear-lower' && skillId !== 'ukg-eng-letter-id-hear-lower';
     const letterIdx = Math.floor(r * 26);
     const alphabet = isUpper ? UPPER_ALPHABET : LOWER_ALPHABET;
     const letter = alphabet[letterIdx];
@@ -2745,7 +2749,7 @@ function generateLocPositionMultiQuestion(skillId, seed, r) {
 
 export async function resolveLkgGenerator(skillId, config = {}) {
   const skillDef = lkgEnglishMicroSkillRegistry[skillId];
-  const templateId = skillDef?.templateId || skillId;
+  const templateId = skillDef?.templateId || config.logic_type || skillId;
   const template = lkgEnglishTemplateRegistry[templateId];
   
   if (!template) {

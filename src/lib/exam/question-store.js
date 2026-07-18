@@ -59,7 +59,13 @@ export async function getQuestion(id) {
   const db = await getMongoDb();
   if (!db) return null;
   const { ObjectId } = await import('mongodb');
-  return db.collection('questions').findOne({ _id: new ObjectId(id) });
+  let query = {};
+  try {
+    query = { _id: new ObjectId(id) };
+  } catch (err) {
+    query = { $or: [{ _id: id }, { id: id }] };
+  }
+  return db.collection('questions').findOne(query);
 }
 
 /**
@@ -261,8 +267,14 @@ export async function updateQuestionStatus(id, status) {
   const db = await getMongoDb();
   if (!db) return;
   const { ObjectId } = await import('mongodb');
+  let query = {};
+  try {
+    query = { _id: new ObjectId(id) };
+  } catch (err) {
+    query = { $or: [{ _id: id }, { id: id }] };
+  }
   await db.collection('questions').updateOne(
-    { _id: new ObjectId(id) },
+    query,
     { $set: { status, updatedAt: new Date() } }
   );
 }
@@ -271,8 +283,14 @@ export async function updateQuestion(id, updates) {
   const db = await getMongoDb();
   if (!db) return;
   const { ObjectId } = await import('mongodb');
+  let query = {};
+  try {
+    query = { _id: new ObjectId(id) };
+  } catch (err) {
+    query = { $or: [{ _id: id }, { id: id }] };
+  }
   await db.collection('questions').updateOne(
-    { _id: new ObjectId(id) },
+    query,
     { $set: { ...updates, updatedAt: new Date() } }
   );
 }

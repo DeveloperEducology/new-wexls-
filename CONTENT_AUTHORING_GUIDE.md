@@ -755,7 +755,7 @@ Pattern:
 
 ```json
 {
-  "questionText": "How many apples are there?",
+  "questionText": " apples are there?",
   "interaction": {
     "engine": "number_input",
     "inputMode": "number"

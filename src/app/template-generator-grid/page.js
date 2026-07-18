@@ -405,6 +405,96 @@ const GRID_PRESETS = [
       { column: 'Distractor2', isCorrect: false },
       { column: 'Distractor3', isCorrect: false }
     ]
+  },
+  {
+    id: 'english-vowel-sound',
+    name: '📖 English: Match Vowel Sound (CVC/Long E)',
+    title: 'Match Vowel Sound',
+    targetCollection: 'dynamic_templates',
+    subject: 'english',
+    topic: 'lkg',
+    grade: 'LKG',
+    columns: ['target_word', 'target_image', 'Result_word', 'Result_image', 'Result_audio', 'Distractor_word', 'Distractor_image', 'Distractor_audio'],
+    rows: [
+      {
+        _level: 'l1',
+        target_word: 'feet',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/feet.jpg',
+        Result_word: 'meet',
+        Result_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/meet.jpg',
+        Result_audio: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/audio/tts/Puck/cb89f8fc4d5ed15960f971e8cf3b929950c15fc324584bcb4495f1da371c5923.wav',
+        Distractor_word: 'deck',
+        Distractor_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/deck.jpg',
+        Distractor_audio: '/api/tts?voice=Puck&text=deck'
+      },
+      {
+        _level: 'l2',
+        target_word: 'cat',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780142885298-cat.png',
+        Result_word: 'bat',
+        Result_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/1779984418831-bat.png',
+        Result_audio: '/api/tts?voice=Puck&text=bat',
+        Distractor_word: 'dog',
+        Distractor_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781330207379-dog.png',
+        Distractor_audio: '/api/tts?voice=Puck&text=dog'
+      },
+      {
+        _level: 'l3',
+        target_word: 'seed',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/seed.jpg',
+        Result_word: 'jeep',
+        Result_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/jeep.jpg',
+        Result_audio: '/api/tts?voice=Puck&text=jeep',
+        Distractor_word: 'hen',
+        Distractor_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/1780406160428-hen_cartoon.webp',
+        Distractor_audio: '/api/tts?voice=Puck&text=hen'
+      }
+    ],
+    blueprint: 'Listen to the word. Think about the vowel sound.\n\n![{{target_word}}]({{target_image}})\n\nWhich word has the same vowel sound?',
+    solution: 'The word **{{target_word}}** has the same vowel sound as **{{Result_word}}**.',
+    optionsBinding: [
+      { column: 'Result_word', imageColumn: 'Result_image', audioColumn: 'Result_audio', isCorrect: true },
+      { column: 'Distractor_word', imageColumn: 'Distractor_image', audioColumn: 'Distractor_audio', isCorrect: false }
+    ]
+  },
+  {
+    id: 'english-vocab-id',
+    name: '📖 English: Word to Image Identification',
+    title: 'Word to Image Identification',
+    targetCollection: 'dynamic_templates',
+    subject: 'english',
+    topic: 'lkg',
+    grade: 'LKG',
+    columns: ['word', 'Opt1_word', 'Opt1_image', 'Opt2_word', 'Opt2_image', 'Opt3_word', 'Opt3_image'],
+    rows: [
+      {
+        _level: 'l1',
+        word: 'apple',
+        Opt1_word: 'apple',
+        Opt1_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780323338637-Fruits-Playing-Football.webp',
+        Opt2_word: 'dog',
+        Opt2_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781330207379-dog.png',
+        Opt3_word: 'cup',
+        Opt3_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781329973512-cup.png'
+      },
+      {
+        _level: 'l2',
+        word: 'feet',
+        Opt1_word: 'feet',
+        Opt1_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/feet.jpg',
+        Opt2_word: 'deck',
+        Opt2_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/deck.jpg',
+        Opt3_word: 'sun',
+        Opt3_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1781329978632-sun.png'
+      }
+    ],
+    blueprint: 'Which picture represents the word: **"{{word}}"**?',
+    solution: 'Choose the option that shows the picture of **{{word}}**.',
+    optionsBinding: [
+      { column: 'Opt1_word', imageColumn: 'Opt1_image', isCorrect: true },
+      { column: 'Opt2_word', imageColumn: 'Opt2_image', isCorrect: false },
+      { column: 'Opt3_word', imageColumn: 'Opt3_image', isCorrect: false }
+    ]
   }
 ];
 
@@ -458,6 +548,50 @@ export default function SpreadsheetTemplateCreator() {
   const [aiError, setAiError] = useState(null);
   const [aiSuccess, setAiSuccess] = useState(null);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('import_spreadsheet_rows');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Extract columns from keys of the first object, excluding _level and explanation
+            const keys = Object.keys(parsed[0]).filter(k => k !== '_level' && k !== 'explanation');
+            
+            // Map rows to include _level if not present
+            const loadedRows = parsed.map((row, idx) => ({
+              _level: row._level || (idx % 2 === 0 ? 'l1' : 'l2'),
+              ...row
+            }));
+            
+            // Update states
+            setColumns(keys);
+            setRows(loadedRows);
+            setTitle('Imported AI Clipart Spreadsheet');
+            setSubject('english');
+            setTopic('phonics');
+            setBlueprint('Identify the correct clipart matching: {{target_word}}.');
+            setSolution('The target word is {{target_word}}, which matches the result {{Result}}.');
+            
+            // Set bindings for options based on Result and distractor columns
+            const newBindings = [
+              { column: 'Result', isCorrect: true }
+            ];
+            if (keys.includes('distractor_1')) newBindings.push({ column: 'distractor_1', isCorrect: false });
+            if (keys.includes('distractor_2')) newBindings.push({ column: 'distractor_2', isCorrect: false });
+            if (keys.includes('distractor_3')) newBindings.push({ column: 'distractor_3', isCorrect: false });
+            setOptionsBinding(newBindings);
+
+            // Clear from localStorage so it only imports once
+            localStorage.removeItem('import_spreadsheet_rows');
+          }
+        } catch (e) {
+          console.error('Failed to import rows from localStorage:', e);
+        }
+      }
+    }
+  }, []);
+
   // Simulator Shuffle state
   const [activeRowIndex, setActiveRowIndex] = useState(0);
   const [shuffleClass, setShuffleClass] = useState('');
@@ -465,6 +599,136 @@ export default function SpreadsheetTemplateCreator() {
   // Compiler output state
   const [jsonText, setJsonText] = useState('');
   const [isDevModeOpen, setIsDevModeOpen] = useState(false);
+
+  // Image Picker & Upload Modal States
+  const [isImgModalOpen, setIsImgModalOpen] = useState(false);
+  const [imgModalTarget, setImgModalTarget] = useState(null); // { rIdx, col }
+  const [imgModalTab, setImgModalTab] = useState('gallery'); // 'gallery' | 'upload' | 'web'
+  const [modalSearchText, setModalSearchText] = useState('');
+  const [modalGalleryImages, setModalGalleryImages] = useState([]);
+  const [modalGalleryLoading, setModalGalleryLoading] = useState(false);
+  const [modalUploadFile, setModalUploadFile] = useState(null);
+  const [modalUploading, setModalUploading] = useState(false);
+
+  // Web Search States inside Modal
+  const [webSearchQuery, setWebSearchQuery] = useState('');
+  const [webSearchType, setWebSearchType] = useState('clipart'); // 'clipart' | 'photo' | 'any'
+  const [webSearchResults, setWebSearchResults] = useState([]);
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
+  const [webSearchSelectedUrl, setWebSearchSelectedUrl] = useState(''); // track downloading image URL
+
+  const fetchModalGalleryImages = async () => {
+    setModalGalleryLoading(true);
+    try {
+      // Load both base images and subdirectories if needed
+      const res = await fetch('/api/admin/list-images?prefix=images');
+      const data = await res.json();
+      if (data.images) {
+        setModalGalleryImages(data.images);
+      }
+    } catch (err) {
+      console.error('Failed to load gallery images:', err);
+    } finally {
+      setModalGalleryLoading(false);
+    }
+  };
+
+  const openImagePickerModal = (rIdx, col) => {
+    setImgModalTarget({ rIdx, col });
+    setIsImgModalOpen(true);
+    setImgModalTab('gallery');
+    setModalUploadFile(null);
+    setModalSearchText('');
+    
+    // Autofill web search query with the target word cell value if available
+    const row = rows[rIdx] || {};
+    const textCol = [`${col.replace(/_image$/, '')}_word`, `${col.replace(/_image$/, '')}_label`, `${col.replace(/_image$/, '')}_option`, col.replace(/_image$/, ''), 'target_word', 'Result_word', 'word', 'label'].find(c => columns.includes(c) && row[c]);
+    if (textCol && row[textCol]) {
+      setWebSearchQuery(String(row[textCol]).trim());
+    } else {
+      setWebSearchQuery('');
+    }
+
+    setWebSearchResults([]);
+    fetchModalGalleryImages();
+  };
+
+  const handleWebSearch = async (query = webSearchQuery, type = webSearchType) => {
+    if (!query || !query.trim()) return;
+    setWebSearchLoading(true);
+    try {
+      const res = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(query.trim())}&type=${type}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Web search failed');
+      setWebSearchResults(data.results || []);
+    } catch (err) {
+      alert('Search Error: ' + err.message);
+    } finally {
+      setWebSearchLoading(false);
+    }
+  };
+
+  const handleWebSearchSelect = async (item) => {
+    if (webSearchSelectedUrl) return; // prevent double clicks
+    setWebSearchSelectedUrl(item.image);
+    try {
+      const res = await fetch('/api/admin/fetch-url-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: item.image,
+          folder: 'images/lkg', // default folder for vocabulary clipart
+          customName: webSearchQuery.trim() || 'web-search-import'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to download search image');
+      
+      if (imgModalTarget) {
+        const { rIdx, col } = imgModalTarget;
+        handleCellChange(rIdx, col, data.r2Url);
+      }
+      setIsImgModalOpen(false);
+    } catch (err) {
+      alert('Failed to save search image: ' + err.message);
+    } finally {
+      setWebSearchSelectedUrl('');
+    }
+  };
+
+  const handleUploadImage = async (e) => {
+    e.preventDefault();
+    if (!modalUploadFile) return;
+    setModalUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', modalUploadFile);
+      formData.append('folder', 'images/lkg'); // default folder for vocabulary illustrations
+
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      
+      const isSuccess = data.success || (data.results && data.results.length > 0);
+      if (!res.ok || !isSuccess) {
+        throw new Error(data.error || (data.errors && data.errors[0]?.error) || 'Failed to upload image');
+      }
+
+      const uploadedUrl = data.url || (data.results && data.results[0]?.url);
+      if (imgModalTarget && uploadedUrl) {
+        const { rIdx, col } = imgModalTarget;
+        handleCellChange(rIdx, col, uploadedUrl);
+      }
+      setIsImgModalOpen(false);
+    } catch (err) {
+      alert('Upload error: ' + err.message);
+    } finally {
+      setModalUploading(false);
+    }
+  };
 
   // AI Generate handler
   const handleAIGenerate = async () => {
@@ -510,7 +774,7 @@ export default function SpreadsheetTemplateCreator() {
       if (tpl.optionsBinding) setOptionsBinding(tpl.optionsBinding);
       // Restore question mode from saved template
       const savedMode = tpl.optionsType || tpl.interaction?.engine || tpl.config?.interaction?.engine || 'mcq';
-      setQuestionMode(savedMode === 'msq' ? 'msq' : 'mcq');
+      setQuestionMode(savedMode === 'msq' ? 'msq' : savedMode === 'tap_to_fill' ? 'tap_to_fill' : 'mcq');
       setActiveRowIndex(0);
       setAiSuccess(`✅ AI generated ${data.template.rows?.length || 0} rows for "${tpl.title || skillId}"`);
     } catch (err) {
@@ -538,10 +802,26 @@ export default function SpreadsheetTemplateCreator() {
   const [templateSearch, setTemplateSearch] = useState('');
 
   // Handle cell edit changes
+  const [mirrorTargetToResult, setMirrorTargetToResult] = useState(true);
+
   const handleCellChange = (rowIndex, colName, value) => {
     setRows(prev => prev.map((row, idx) => {
       if (idx === rowIndex) {
-        return { ...row, [colName]: value };
+        const updatedRow = { ...row, [colName]: value };
+        
+        if (mirrorTargetToResult) {
+          if (colName === 'target_word' && columns.includes('Result')) {
+            updatedRow['Result'] = value;
+          } else if (colName === 'target_image' && columns.includes('Result_image')) {
+            updatedRow['Result_image'] = value;
+          } else if (colName === 'target_audio' && columns.includes('Result_audio')) {
+            updatedRow['Result_audio'] = value;
+          } else if (colName === 'target' && columns.includes('Result')) {
+            updatedRow['Result'] = value;
+          }
+        }
+        
+        return updatedRow;
       }
       return row;
     }));
@@ -590,6 +870,86 @@ export default function SpreadsheetTemplateCreator() {
       newRow[col] = '';
     });
     setRows([...rows, newRow]);
+  };
+
+  // State & Helpers for Cell Interactivity and Auto-TTS Generation
+  const [warmingTts, setWarmingTts] = useState(false);
+  const isAudioUrl = (val) => typeof val === 'string' && (val.startsWith('/api/tts') || val.includes('.wav') || val.includes('.mp3'));
+  const isImageUrl = (val) => typeof val === 'string' && (val.startsWith('http') && (val.includes('.jpg') || val.includes('.jpeg') || val.includes('.png') || val.includes('.webp') || val.includes('.gif') || val.includes('.svg')));
+
+  const playAudio = (url) => {
+    try {
+      const audio = new Audio(url);
+      audio.play().catch(e => console.error('Audio play error:', e));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAutoGenerateTTS = async () => {
+    setWarmingTts(true);
+    // Find all audio columns
+    const audioCols = columns.filter(col => col.endsWith('_audio') || col === 'audio');
+    if (audioCols.length === 0) {
+      alert("No audio columns found! Create a column ending in '_audio' (e.g. Result_audio) to use this tool.");
+      setWarmingTts(false);
+      return;
+    }
+
+    const updatedRows = [...rows];
+    let count = 0;
+    const warmPromises = [];
+
+    updatedRows.forEach((row) => {
+      audioCols.forEach(audioCol => {
+        // Only generate if the audio cell is empty
+        if (!row[audioCol]) {
+          let textCol = null;
+          const prefix = audioCol.replace(/_audio$/, '');
+          
+          // Try to find matching text column
+          const candidates = [`${prefix}_word`, `${prefix}_label`, `${prefix}_option`, prefix, 'word', 'label'];
+          for (const cand of candidates) {
+            if (columns.includes(cand) && row[cand]) {
+              textCol = cand;
+              break;
+            }
+          }
+
+          if (textCol) {
+            const textValue = String(row[textCol] || '').trim();
+            if (textValue && !textValue.startsWith('http') && !textValue.startsWith('![')) {
+              const voice = 'Puck';
+              const ttsUrl = `/api/tts?voice=${voice}&text=${encodeURIComponent(textValue)}`;
+              
+              row[audioCol] = ttsUrl;
+              count++;
+
+              // Warm server-side cache
+              warmPromises.push(
+                fetch(ttsUrl)
+                  .then(res => res.ok ? res.json() : null)
+                  .catch(() => null)
+              );
+            }
+          }
+        }
+      });
+    });
+
+    setRows(updatedRows);
+    
+    if (count > 0) {
+      try {
+        await Promise.all(warmPromises);
+        alert(`🪄 Successfully generated & pre-cached ${count} audio cell(s)!`);
+      } catch (err) {
+        alert(`🪄 Generated ${count} audio paths! Warming cache completed in background.`);
+      }
+    } else {
+      alert("No empty audio cells with matching text fields were found.");
+    }
+    setWarmingTts(false);
   };
 
   // Cycle difficulty level for a row
@@ -677,6 +1037,35 @@ export default function SpreadsheetTemplateCreator() {
           return <span key={index} style={{ color: '#dc2626' }}>{part}</span>;
         }
       }
+      const imgRegex = /!\[(.*?)\]\((.*?)\)/g;
+      if (imgRegex.test(part)) {
+        const subParts = part.split(/(!\[.*?\]\(.*?\))/g);
+        return (
+          <span key={index} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+            {subParts.map((sub, sIdx) => {
+              const match = /!\[(.*?)\]\((.*?)\)/.exec(sub);
+              if (match) {
+                return (
+                  <img
+                    key={`${index}-${sIdx}`}
+                    src={match[2]}
+                    alt={match[1]}
+                    style={{
+                      maxWidth: '120px',
+                      maxHeight: '100px',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                      border: '1px solid #475569',
+                      margin: '4px 0'
+                    }}
+                  />
+                );
+              }
+              return sub ? <span key={`${index}-${sIdx}`}>{sub}</span> : null;
+            })}
+          </span>
+        );
+      }
       return <span key={index}>{part}</span>;
     });
   };
@@ -761,12 +1150,18 @@ export default function SpreadsheetTemplateCreator() {
       });
       compiledDerivations.questionLevel = `${JSON.stringify(levelArray)}[index]`;
 
-      const optionsList = optionsBinding.map(opt => ({
-        label: `[${opt.column}]`,
-        isCorrect: opt.isCorrect
-      }));
+      const optionsList = optionsBinding.map(opt => {
+        const item = {
+          label: `[${opt.column}]`,
+          isCorrect: opt.isCorrect
+        };
+        if (opt.imageColumn) item.imageUrl = `[${opt.imageColumn}]`;
+        if (opt.audioColumn) item.audioUrl = `[${opt.audioColumn}]`;
+        return item;
+      });
       const correctOptions = optionsBinding.filter(o => o.isCorrect);
       const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
+      const isTapToFill = questionMode === 'tap_to_fill';
 
       const difficultyLevel = jnvstDifficulty < 0.4 ? 'easy' : (jnvstDifficulty >= 0.7 ? 'hard' : 'medium');
 
@@ -802,8 +1197,8 @@ export default function SpreadsheetTemplateCreator() {
             clickToSubmit: false
           },
           interaction: {
-            engine: isMSQ ? 'msq' : 'mcq',
-            inputMode: isMSQ ? 'multi-choice' : 'choice'
+            engine: isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'),
+            inputMode: isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')
           },
           variables: compiledVariables,
           derivations: compiledDerivations,
@@ -838,13 +1233,19 @@ export default function SpreadsheetTemplateCreator() {
         formula: `${JSON.stringify(levelArray)}[index]`
       });
 
-      const optionsList = optionsBinding.map(opt => ({
-        label: `[${opt.column}]`,
-        isCorrect: opt.isCorrect
-      }));
+      const optionsList = optionsBinding.map(opt => {
+        const item = {
+          label: `[${opt.column}]`,
+          isCorrect: opt.isCorrect
+        };
+        if (opt.imageColumn) item.imageUrl = `[${opt.imageColumn}]`;
+        if (opt.audioColumn) item.audioUrl = `[${opt.audioColumn}]`;
+        return item;
+      });
 
       const correctOptions = optionsBinding.filter(o => o.isCorrect);
       const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
+      const isTapToFill = questionMode === 'tap_to_fill';
       const correctOpt = correctOptions[0];
 
       const compiledJson = {
@@ -854,8 +1255,8 @@ export default function SpreadsheetTemplateCreator() {
         topic: topic,
         grade: grade,
         generatorType: 'spreadsheet-grid',
-        optionsType: isMSQ ? 'msq' : 'mcq',
-        interaction: { engine: isMSQ ? 'msq' : 'mcq', inputMode: isMSQ ? 'multi-choice' : 'choice' },
+        optionsType: isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'),
+        interaction: { engine: isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'), inputMode: isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice') },
         questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
         explanation: {
           sections: [{
@@ -975,19 +1376,48 @@ export default function SpreadsheetTemplateCreator() {
         });
       }
 
-      const activeCols = Object.keys(colData);
-      if (activeCols.length > 0) {
-        setColumns(activeCols);
-        const compiledRows = [];
-        for (let r = 0; r < size; r++) {
-          const rowObj = {};
-          activeCols.forEach(col => {
-            rowObj[col] = colData[col][r] !== undefined ? String(colData[col][r]) : '';
+      // Try to load rows directly from the template's saved rows array
+      const savedRows = tpl.rows || config.rows;
+      if (Array.isArray(savedRows) && savedRows.length > 0) {
+        const keys = Object.keys(savedRows[0]).filter(k => k !== '_level' && k !== 'id' && k !== '_id');
+        setColumns(keys);
+        const cleanLevel = (lvl) => {
+          if (!lvl) return 'l1';
+          const clean = String(lvl).toLowerCase().trim();
+          if (['l1', 'l2', 'l3', 'l4'].includes(clean)) return clean;
+          const num = parseInt(clean.replace(/\D/g, ''), 10);
+          if (!isNaN(num)) {
+            if (num <= 1) return 'l1';
+            if (num === 2) return 'l2';
+            if (num === 3) return 'l3';
+            return 'l4';
+          }
+          return 'l1';
+        };
+        const mappedRows = savedRows.map(row => {
+          const rowObj = { _level: cleanLevel(row._level) };
+          keys.forEach(col => {
+            rowObj[col] = row[col] !== undefined ? String(row[col]) : '';
           });
-          compiledRows.push(rowObj);
+          return rowObj;
+        });
+        setRows(mappedRows);
+      } else {
+        // Fallback: reconstruct rows from variable array formulas
+        const activeCols = Object.keys(colData);
+        if (activeCols.length > 0) {
+          setColumns(activeCols);
+          const compiledRows = [];
+          for (let r = 0; r < size; r++) {
+            const rowObj = {};
+            activeCols.forEach(col => {
+              rowObj[col] = colData[col][r] !== undefined ? String(colData[col][r]) : '';
+            });
+            compiledRows.push(rowObj);
+          }
+          compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
+          setRows(compiledRows);
         }
-        compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
-        setRows(compiledRows);
       }
 
       let qTemplate = config.questionTemplate || tpl.questionText || '';
@@ -1357,16 +1787,16 @@ export default function SpreadsheetTemplateCreator() {
         
         .grid-page {
           min-height: 100vh;
-          background: #0b0f19;
+          background: #f0f7ff;
           font-family: 'Outfit', sans-serif;
-          color: #f1f5f9;
+          color: #1e293b;
           display: flex;
           flex-direction: column;
         }
 
         .grid-top-bar {
-          background: #111827;
-          border-bottom: 1.5px solid #1f2937;
+          background: #ffffff;
+          border-bottom: 1.5px solid #e2e8f0;
           height: 64px;
           display: flex;
           align-items: center;
@@ -1375,18 +1805,19 @@ export default function SpreadsheetTemplateCreator() {
           position: sticky;
           top: 0;
           z-index: 100;
+          box-shadow: 0 4px 12px rgba(148, 163, 184, 0.05);
         }
         .grid-top-brand {
           font-size: 1.2rem;
           font-weight: 800;
-          color: #10b981;
+          color: #2563eb;
           text-decoration: none;
           display: flex;
           align-items: center;
           gap: 10px;
         }
         .grid-top-brand span {
-          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+          background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
           color: white;
           padding: 3px 8px;
           border-radius: 6px;
@@ -1414,8 +1845,8 @@ export default function SpreadsheetTemplateCreator() {
         }
 
         .grid-preview-panel {
-          background: #0f172a;
-          border-left: 1.5px solid #1e293b;
+          background: #ffffff;
+          border-left: 1.5px solid #cbd5e1;
           padding: 32px 24px;
           position: sticky;
           top: 64px;
@@ -1424,18 +1855,20 @@ export default function SpreadsheetTemplateCreator() {
           display: flex;
           flex-direction: column;
           gap: 24px;
+          box-shadow: -4px 0 20px rgba(148, 163, 184, 0.05);
         }
 
         .grid-card {
-          background: #111827;
-          border: 1.5px solid #1f2937;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
           border-radius: 20px;
           padding: 24px;
+          box-shadow: 0 10px 25px rgba(148, 163, 184, 0.06);
         }
         .grid-card-title {
           font-size: 1.15rem;
           font-weight: 800;
-          color: #f8fafc;
+          color: #0f172a;
           margin-bottom: 6px;
           display: flex;
           align-items: center;
@@ -1443,7 +1876,7 @@ export default function SpreadsheetTemplateCreator() {
         }
         .grid-card-desc {
           font-size: 0.88rem;
-          color: #94a3b8;
+          color: #64748b;
           margin-bottom: 20px;
           line-height: 1.5;
         }
@@ -1451,10 +1884,11 @@ export default function SpreadsheetTemplateCreator() {
         /* Interactive Spreadsheet CSS */
         .spreadsheet-container {
           overflow-x: auto;
-          border: 1.5px solid #1f2937;
+          border: 1.5px solid #cbd5e1;
           border-radius: 12px;
-          background: #0b0f19;
+          background: #ffffff;
           margin-bottom: 16px;
+          box-shadow: inset 0 2px 4px rgba(148, 163, 184, 0.03);
         }
         .spreadsheet-table {
           width: 100%;
@@ -1462,11 +1896,11 @@ export default function SpreadsheetTemplateCreator() {
           font-size: 0.88rem;
         }
         .spreadsheet-th {
-          background: #111827;
-          border-bottom: 2px solid #1f2937;
-          border-right: 1px solid #1f2937;
+          background: #f8fafc;
+          border-bottom: 2px solid #cbd5e1;
+          border-right: 1px solid #cbd5e1;
           padding: 10px 14px;
-          color: #94a3b8;
+          color: #475569;
           font-weight: 800;
           text-align: left;
           position: relative;
@@ -1486,19 +1920,19 @@ export default function SpreadsheetTemplateCreator() {
           opacity: 1;
         }
         .spreadsheet-td {
-          border-bottom: 1px solid #1f2937;
-          border-right: 1px solid #1f2937;
+          border-bottom: 1px solid #cbd5e1;
+          border-right: 1px solid #cbd5e1;
           padding: 0;
           background: transparent;
         }
         .spreadsheet-row:nth-child(even) .spreadsheet-td {
-          background: #0f172a;
+          background: #f8fafc;
         }
         .spreadsheet-input {
           width: 100%;
           border: none;
           background: transparent;
-          color: #f1f5f9;
+          color: #1e293b;
           padding: 10px 14px;
           font-family: inherit;
           font-size: 0.88rem;
@@ -1506,22 +1940,23 @@ export default function SpreadsheetTemplateCreator() {
           box-sizing: border-box;
         }
         .spreadsheet-input:focus {
-          background: rgba(16, 185, 129, 0.08);
-          box-shadow: inset 0 0 0 1px #10b981;
+          background: rgba(59, 130, 246, 0.04);
+          box-shadow: inset 0 0 0 1px #3b82f6;
         }
         .spreadsheet-btn-row {
           display: flex;
           gap: 12px;
           margin-bottom: 16px;
+          flex-wrap: wrap;
         }
 
         .grid-textarea {
           width: 100%;
           min-height: 100px;
-          background: #0b0f19;
-          border: 1.5px solid #1f2937;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
           border-radius: 12px;
-          color: #f1f5f9;
+          color: #1e293b;
           padding: 14px;
           font-family: inherit;
           font-size: 0.95rem;
@@ -1532,13 +1967,13 @@ export default function SpreadsheetTemplateCreator() {
           transition: border-color 0.15s;
         }
         .grid-textarea:focus {
-          border-color: #10b981;
+          border-color: #3b82f6;
         }
         .grid-input {
-          background: #0b0f19;
-          border: 1.5px solid #1f2937;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
           border-radius: 8px;
-          color: #f1f5f9;
+          color: #1e293b;
           padding: 10px 14px;
           outline: none;
           font-family: inherit;
@@ -1547,13 +1982,13 @@ export default function SpreadsheetTemplateCreator() {
           box-sizing: border-box;
         }
         .grid-input:focus {
-          border-color: #10b981;
+          border-color: #3b82f6;
         }
         .grid-select {
-          background: #0b0f19;
-          border: 1.5px solid #1f2937;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
           border-radius: 8px;
-          color: #f1f5f9;
+          color: #1e293b;
           padding: 10px 14px;
           outline: none;
           font-family: inherit;
@@ -1563,7 +1998,7 @@ export default function SpreadsheetTemplateCreator() {
         }
 
         .grid-btn-primary {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           color: white;
           border: none;
           padding: 10px 20px;
@@ -1577,23 +2012,28 @@ export default function SpreadsheetTemplateCreator() {
           opacity: 0.95;
         }
         .grid-btn-secondary {
-          background: #1f2937;
-          color: #d1d5db;
-          border: 1.5px solid #374151;
+          background: #ffffff;
+          color: #475569;
+          border: 1.5px solid #cbd5e1;
           padding: 10px 20px;
           border-radius: 8px;
           font-weight: 700;
           font-size: 0.9rem;
           cursor: pointer;
+          transition: all 0.15s;
+        }
+        .grid-btn-secondary:hover {
+          background: #f8fafc;
+          border-color: #94a3b8;
         }
 
         .grid-preview-box {
-          background: #111827;
-          border: 1.5px solid #1f2937;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
           border-radius: 18px;
           padding: 20px;
           min-height: 180px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          box-shadow: 0 10px 30px rgba(148, 163, 184, 0.1);
         }
         .grid-preview-header {
           display: flex;
@@ -1604,14 +2044,14 @@ export default function SpreadsheetTemplateCreator() {
         .grid-preview-header-title {
           font-size: 0.72rem;
           font-weight: 800;
-          color: #10b981;
+          color: #2563eb;
           text-transform: uppercase;
           letter-spacing: 0.08em;
         }
         .grid-shuffle-btn {
-          background: rgba(16, 185, 129, 0.1);
-          color: #10b981;
-          border: 1.5px solid rgba(16, 185, 129, 0.2);
+          background: rgba(59, 130, 246, 0.1);
+          color: #2563eb;
+          border: 1.5px solid rgba(59, 130, 246, 0.2);
           padding: 6px 12px;
           border-radius: 20px;
           font-size: 0.78rem;
@@ -1622,8 +2062,15 @@ export default function SpreadsheetTemplateCreator() {
           gap: 6px;
           transition: all 0.2s;
         }
+        }
         .grid-shuffle-btn:hover {
-          background: rgba(16, 185, 129, 0.2);
+          background: rgba(59, 130, 246, 0.2);
+        }
+        .cell-image-preview-wrapper {
+          position: relative;
+        }
+        .cell-image-preview-wrapper:hover .cell-image-tooltip {
+          display: block !important;
         }
       ` }} />
 
@@ -1649,20 +2096,20 @@ export default function SpreadsheetTemplateCreator() {
           <LatexToolbar activeField={activeField} />
 
           {/* Load Preset Selector Card */}
-          <div className="grid-card" style={{ marginBottom: '20px', border: '1.5px solid #4f46e5', background: 'linear-gradient(135deg, #1e1b4b 0%, #111827 100%)' }}>
-            <h3 className="grid-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="grid-card" style={{ marginBottom: '20px', border: '1.5px solid #bfdbfe', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
+            <h3 className="grid-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af' }}>
               ⚡ Load Preset Blueprint & Existing Templates
             </h3>
-            <p className="grid-card-desc">Quickly populate the grid spreadsheet with preconfigured examples or load and edit an existing template from the database.</p>
+            <p className="grid-card-desc" style={{ color: '#1e3a8a' }}>Quickly populate the grid spreadsheet with preconfigured examples or load and edit an existing template from the database.</p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '12px' }}>
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#818cf8', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#2563eb', display: 'block', marginBottom: '6px' }}>
                   A. Choose from preconfigured presets
                 </label>
                 <select
                   className="grid-select"
-                  style={{ width: '100%', padding: '10px', fontSize: '14px', background: '#0f172a', borderColor: '#4f46e5' }}
+                  style={{ width: '100%', padding: '10px', fontSize: '14px' }}
                   onChange={(e) => {
                     const presetId = e.target.value;
                     const preset = GRID_PRESETS.find(p => p.id === presetId);
@@ -1697,20 +2144,20 @@ export default function SpreadsheetTemplateCreator() {
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#818cf8', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#2563eb', display: 'block', marginBottom: '6px' }}>
                   B. Load existing template from database to edit
                 </label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                   <input
                     className="grid-input"
-                    style={{ flex: 1, padding: '8px 12px', fontSize: '13px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0' }}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '13px' }}
                     placeholder="🔍 Filter templates by name or topic..."
                     value={templateSearch}
                     onChange={(e) => setTemplateSearch(e.target.value)}
                   />
                   <button
                     onClick={fetchExistingTemplates}
-                    style={{ background: '#4f46e5', border: 'none', color: '#fff', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap' }}
+                    style={{ background: '#2563eb', border: 'none', color: '#fff', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap' }}
                   >
                     {loadingExisting ? '⏳' : '🔄 Refresh'}
                   </button>
@@ -1731,7 +2178,7 @@ export default function SpreadsheetTemplateCreator() {
                 )}
                 <select
                   className="grid-select"
-                  style={{ width: '100%', padding: '10px', fontSize: '14px', background: '#0f172a', borderColor: '#4f46e5' }}
+                  style={{ width: '100%', padding: '10px', fontSize: '14px' }}
                   onChange={(e) => {
                     const tplId = e.target.value;
                     const tpl = existingTemplates.find(t => (t.id === tplId || t._id === tplId));
@@ -1846,8 +2293,8 @@ export default function SpreadsheetTemplateCreator() {
           </div>
 
           {/* ── AI Generation Card ───────────────────────────────────────── */}
-          <div className="grid-card" style={{ border: '1.5px solid rgba(99,102,241,0.35)', background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(16,185,129,0.03) 100%)' }}>
-            <h3 className="grid-card-title" style={{ color: '#a5b4fc' }}>
+          <div className="grid-card" style={{ border: '1.5px solid rgba(59,130,246,0.2)', background: 'linear-gradient(135deg, rgba(59,130,246,0.04) 0%, rgba(16,185,129,0.02) 100%)' }}>
+            <h3 className="grid-card-title" style={{ color: '#1e40af' }}>
               ✨ AI Generate Grid Template
             </h3>
             <p className="grid-card-desc">Let Gemini AI auto-generate columns, rows (split by L1/L2/L3), blueprint, and solution from a skill name or existing question.</p>
@@ -1859,10 +2306,10 @@ export default function SpreadsheetTemplateCreator() {
                   key={m}
                   onClick={() => setAiMode(m)}
                   style={{
-                    background: aiMode === m ? 'rgba(99,102,241,0.2)' : 'transparent',
-                    border: aiMode === m ? '1.5px solid #6366f1' : '1.5px solid #374151',
+                    background: aiMode === m ? 'rgba(59,130,246,0.15)' : 'transparent',
+                    border: aiMode === m ? '1.5px solid #2563eb' : '1.5px solid #cbd5e1',
+                    color: aiMode === m ? '#1e3a8a' : '#475569',
                     borderRadius: '8px',
-                    color: aiMode === m ? '#a5b4fc' : '#64748b',
                     fontWeight: 800,
                     fontSize: '0.82rem',
                     padding: '6px 16px',
@@ -1948,15 +2395,43 @@ export default function SpreadsheetTemplateCreator() {
             <h3 className="grid-card-title">📊 Dynamic Parameter Spreadsheet</h3>
             <p className="grid-card-desc">Define columns as placeholder variables, and fill out rows with parallel values. commas in cells are supported as plain text.</p>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center' }}>
-              <input
-                className="grid-input"
-                style={{ maxWidth: '240px' }}
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                placeholder="e.g. synonym or fruit_count"
-              />
-              <button className="grid-btn-secondary" onClick={handleAddColumn}>➕ Add Column</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  className="grid-input"
+                  style={{ maxWidth: '240px' }}
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  placeholder="e.g. synonym or fruit_count"
+                />
+                <button className="grid-btn-secondary" onClick={handleAddColumn}>➕ Add Column</button>
+              </div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 'bold',
+                color: '#1e3a8a',
+                cursor: 'pointer',
+                background: '#eff6ff',
+                padding: '6px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #bfdbfe',
+                userSelect: 'none',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; }}
+              >
+                <input
+                  type="checkbox"
+                  checked={mirrorTargetToResult}
+                  onChange={(e) => setMirrorTargetToResult(e.target.checked)}
+                  style={{ cursor: 'pointer', width: '14px', height: '14px' }}
+                />
+                🔗 Auto-Mirror Target ➔ Result
+              </label>
             </div>
 
             <div className="spreadsheet-container">
@@ -1977,7 +2452,8 @@ export default function SpreadsheetTemplateCreator() {
                 <tbody>
                   {rows.map((row, rIdx) => {
                     const lvl = row._level || 'l1';
-                    const lc = LEVEL_CONFIG[lvl];
+                    const safeLvl = ['l1', 'l2', 'l3', 'l4'].includes(lvl) ? lvl : 'l1';
+                    const lc = LEVEL_CONFIG[safeLvl];
                     const isActive = rIdx === activeRowIndex;
                     return (
                       <tr
@@ -2015,16 +2491,142 @@ export default function SpreadsheetTemplateCreator() {
                             {lc.emoji} {lc.label} {lc.long}
                           </button>
                         </td>
-                        {columns.filter(c => c !== '_level').map(col => (
-                          <td key={col} className="spreadsheet-td">
-                            <input
-                              className="spreadsheet-input"
-                              value={row[col] || ''}
-                              onChange={(e) => handleCellChange(rIdx, col, e.target.value)}
-                            />
-                          </td>
-                        ))}
-                        <td style={{ textAlign: 'center', borderBottom: '1px solid #1f2937' }}>
+                        {columns.filter(c => c !== '_level').map(col => {
+                          const hasAudioBtn = isAudioUrl(row[col]);
+                          const hasImageBtn = col.endsWith('_image') || col === 'image';
+                          const hasPreviewThumb = isImageUrl(row[col]);
+
+                          let paddingRight = 4;
+                          if (hasAudioBtn && hasImageBtn) {
+                            paddingRight = 64;
+                          } else if (hasPreviewThumb && hasImageBtn) {
+                            paddingRight = 64;
+                          } else if (hasAudioBtn || hasImageBtn || hasPreviewThumb) {
+                            paddingRight = 36;
+                          }
+
+                          return (
+                            <td key={col} className="spreadsheet-td" style={{ position: 'relative' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', width: '100%', paddingRight: `${paddingRight}px` }}>
+                                <input
+                                  className="spreadsheet-input"
+                                  value={row[col] || ''}
+                                  onChange={(e) => handleCellChange(rIdx, col, e.target.value)}
+                                />
+                              </div>
+                              {hasAudioBtn && (
+                                <button
+                                  onClick={() => playAudio(row[col])}
+                                  title="Play audio preview"
+                                  style={{
+                                    position: 'absolute',
+                                    right: '6px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: '#eff6ff',
+                                    border: '1px solid #bfdbfe',
+                                    borderRadius: '50%',
+                                    width: '24px',
+                                    height: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    color: '#2563eb',
+                                    fontSize: '0.72rem',
+                                    transition: 'all 0.15s',
+                                    zIndex: 5
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; }}
+                                >
+                                  🔊
+                                </button>
+                              )}
+                              {hasImageBtn && (
+                                <button
+                                  onClick={() => openImagePickerModal(rIdx, col)}
+                                  title="Pick from R2 Gallery or Upload"
+                                  style={{
+                                    position: 'absolute',
+                                    right: hasPreviewThumb ? '34px' : '6px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: '#f0f9ff',
+                                    border: '1px solid #bae6fd',
+                                    borderRadius: '6px',
+                                    width: '24px',
+                                    height: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    transition: 'all 0.15s',
+                                    zIndex: 5
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e0f2fe'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f9ff'; }}
+                                >
+                                  🖼️
+                                </button>
+                              )}
+                              {hasPreviewThumb && (
+                                <div
+                                  className="cell-image-preview-wrapper"
+                                  style={{
+                                    position: 'absolute',
+                                    right: '6px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #cbd5e1',
+                                    overflow: 'hidden',
+                                    cursor: 'pointer',
+                                    background: '#f8fafc',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 4
+                                  }}
+                                >
+                                  <img
+                                    src={row[col]}
+                                    alt="Preview"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                  <div
+                                    className="cell-image-tooltip"
+                                    style={{
+                                      display: 'none',
+                                      position: 'absolute',
+                                      bottom: '30px',
+                                      right: '-10px',
+                                      zIndex: 1000,
+                                      background: 'white',
+                                      border: '2px solid #cbd5e1',
+                                      borderRadius: '12px',
+                                      padding: '4px',
+                                      boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                                      width: '120px',
+                                      height: '120px',
+                                      pointerEvents: 'none'
+                                    }}
+                                  >
+                                    <img
+                                      src={row[col]}
+                                      alt="Large Preview"
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td style={{ textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>
                           <button style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleDeleteRow(rIdx)}>
                             🗑️
                           </button>
@@ -2038,13 +2640,25 @@ export default function SpreadsheetTemplateCreator() {
 
             <div className="spreadsheet-btn-row">
               <button className="grid-btn-primary" onClick={handleAddRow}>➕ Add Row Variant</button>
+              <button
+                className="grid-btn-secondary"
+                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none' }}
+                onClick={handleAutoGenerateTTS}
+                disabled={warmingTts}
+              >
+                {warmingTts ? '⏳ Generating TTS...' : '🪄 Auto-Generate & Warm TTS Audios'}
+              </button>
               <button className="grid-btn-secondary" onClick={() => setRows([rows[0]])}>🧹 Clear rows</button>
             </div>
 
             {/* Level distribution stats bar */}
             {(() => {
-              const counts = { l1: 0, l2: 0, l3: 0 };
-              rows.forEach(r => { counts[r._level || 'l1']++; });
+              const counts = { l1: 0, l2: 0, l3: 0, l4: 0 };
+              rows.forEach(r => { 
+                const lvl = r._level || 'l1';
+                const safeLvl = ['l1', 'l2', 'l3', 'l4'].includes(lvl) ? lvl : 'l1';
+                counts[safeLvl]++; 
+              });
               const total = rows.length;
               return (
                 <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2109,7 +2723,7 @@ export default function SpreadsheetTemplateCreator() {
             <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', alignItems: 'center' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question Type:</span>
               <div style={{ display: 'flex', background: '#0f172a', borderRadius: '10px', border: '1.5px solid #334155', overflow: 'hidden' }}>
-                {[['mcq', '🔘 MCQ', 'Single correct answer'], ['msq', '☑️ MSQ', 'Multiple correct answers']].map(([mode, label, hint]) => (
+                {[['mcq', '🔘 MCQ', 'Single correct answer'], ['msq', '☑️ MSQ', 'Multiple correct answers'], ['tap_to_fill', '✏️ Tap-to-Fill', 'Student taps option into a blank']].map(([mode, label, hint]) => (
                   <button
                     key={mode}
                     title={hint}
@@ -2130,7 +2744,7 @@ export default function SpreadsheetTemplateCreator() {
                       border: 'none',
                       cursor: 'pointer',
                       background: questionMode === mode
-                        ? (mode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#10b981,#059669)')
+                        ? (mode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : mode === 'tap_to_fill' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#10b981,#059669)')
                         : 'transparent',
                       color: questionMode === mode ? '#fff' : '#64748b',
                       transition: 'all 0.18s ease'
@@ -2138,8 +2752,8 @@ export default function SpreadsheetTemplateCreator() {
                   >{label}</button>
                 ))}
               </div>
-              <span style={{ fontSize: '11px', color: questionMode === 'msq' ? '#a78bfa' : '#34d399', background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : 'rgba(16,185,129,0.12)', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
-                {questionMode === 'msq' ? 'Students select all that apply' : 'Students pick one answer'}
+              <span style={{ fontSize: '11px', color: questionMode === 'msq' ? '#a78bfa' : questionMode === 'tap_to_fill' ? '#f59e0b' : '#34d399', background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : questionMode === 'tap_to_fill' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
+                {questionMode === 'msq' ? 'Students select all that apply' : questionMode === 'tap_to_fill' ? 'Student taps an option to fill the blank' : 'Students pick one answer'}
               </span>
             </div>
 
@@ -2185,22 +2799,65 @@ export default function SpreadsheetTemplateCreator() {
                     {opt.isCorrect ? (questionMode === 'msq' ? `✓ Correct ${idx + 1}` : '✅ Correct') : `○ Option ${idx + 1}`}
                   </span>
 
-                  {/* Column picker */}
-                  <select
-                    className="grid-select"
-                    style={{ flex: 1, maxWidth: '260px' }}
-                    value={opt.column}
-                    onChange={(e) => {
-                      const copy = [...optionsBinding];
-                      copy[idx] = { ...copy[idx], column: e.target.value };
-                      setOptionsBinding(copy);
-                    }}
-                  >
-                    <option value="" disabled>-- Select Column --</option>
-                    {columns.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
+                   {/* Column picker (Label) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Label Text</span>
+                    <select
+                      className="grid-select"
+                      style={{ width: '100%', padding: '6px 8px', fontSize: '12px' }}
+                      value={opt.column}
+                      onChange={(e) => {
+                        const copy = [...optionsBinding];
+                        copy[idx] = { ...copy[idx], column: e.target.value };
+                        setOptionsBinding(copy);
+                      }}
+                    >
+                      <option value="" disabled>-- Select Column --</option>
+                      {columns.map(col => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Column picker (Image URL) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Image Column (optional)</span>
+                    <select
+                      className="grid-select"
+                      style={{ width: '100%', padding: '6px 8px', fontSize: '12px' }}
+                      value={opt.imageColumn || ''}
+                      onChange={(e) => {
+                        const copy = [...optionsBinding];
+                        copy[idx] = { ...copy[idx], imageColumn: e.target.value || undefined };
+                        setOptionsBinding(copy);
+                      }}
+                    >
+                      <option value="">-- None / No Image --</option>
+                      {columns.map(col => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Column picker (Audio URL) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Audio Column (optional)</span>
+                    <select
+                      className="grid-select"
+                      style={{ width: '100%', padding: '6px 8px', fontSize: '12px' }}
+                      value={opt.audioColumn || ''}
+                      onChange={(e) => {
+                        const copy = [...optionsBinding];
+                        copy[idx] = { ...copy[idx], audioColumn: e.target.value || undefined };
+                        setOptionsBinding(copy);
+                      }}
+                    >
+                      <option value="">-- None / No Audio --</option>
+                      {columns.map(col => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
 
                   {/* Remove option row */}
                   <button
@@ -2385,7 +3042,7 @@ export default function SpreadsheetTemplateCreator() {
             </div>
 
             {/* Render Blueprint text */}
-            <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#f1f5f9', whiteSpace: 'pre-line' }}>
+            <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line' }}>
               {renderEvaluatedText(blueprint)}
             </div>
 
@@ -2394,20 +3051,48 @@ export default function SpreadsheetTemplateCreator() {
               {optionsBinding.map((opt, idx) => {
                 const row = rows[activeRowIndex] || {};
                 const cellVal = row[opt.column] || `{{${opt.column || 'Select Column'}}}`;
+                const imageVal = opt.imageColumn ? row[opt.imageColumn] : null;
+                const audioVal = opt.audioColumn ? row[opt.audioColumn] : null;
                 return (
                   <div key={idx} style={{
-                    background: '#1e293b',
-                    border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #334155',
+                    background: '#f8fafc',
+                    border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #cbd5e1',
                     padding: '12px 16px',
                     borderRadius: '10px',
                     fontSize: '0.88rem',
-                    color: '#e2e8f0',
+                    color: '#1e293b',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '8px'
                   }}>
-                    <span>{renderMathText(cellVal)}</span>
-                    {opt.isCorrect && <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.78rem' }}>CORRECT ANSWER</span>}
+                    {imageVal && (
+                      <img
+                        src={imageVal}
+                        alt="Option visual"
+                        style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1', alignSelf: 'center', marginBottom: '4px' }}
+                      />
+                    )}
+                    <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {audioVal && (
+                          <button
+                            title="Play option audio sound"
+                            onClick={() => {
+                              try {
+                                const audio = new Audio(audioVal);
+                                audio.play();
+                              } catch (e) {
+                                console.warn('Failed to play preview audio:', e);
+                              }
+                            }}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#2563eb', padding: 0 }}
+                          >🔊</button>
+                        )}
+                        <span>{renderMathText(cellVal)}</span>
+                      </div>
+                      {opt.isCorrect && <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.78rem' }}>CORRECT ANSWER</span>}
+                    </div>
                   </div>
                 );
               })}
@@ -2415,21 +3100,21 @@ export default function SpreadsheetTemplateCreator() {
 
             {/* Render Explanation Solution */}
             {solution.trim() && (
-              <div style={{ marginTop: '28px', background: 'rgba(16, 185, 129, 0.05)', border: '1.5px dashed rgba(16, 185, 129, 0.2)', padding: '16px', borderRadius: '12px' }}>
+              <div style={{ marginTop: '28px', background: 'rgba(16, 185, 129, 0.03)', border: '1.5px dashed rgba(16, 185, 129, 0.2)', padding: '16px', borderRadius: '12px' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>🎒 Step-by-step Solution</div>
-                <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
+                <div style={{ fontSize: '0.88rem', color: '#475569', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
                   {renderEvaluatedText(solution)}
                 </div>
               </div>
             )}
           </div>
           
-          <div style={{ background: '#111827', border: '1.5px solid #1f2937', padding: '16px', borderRadius: '16px', fontSize: '0.85rem' }}>
+          <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', padding: '16px', borderRadius: '16px', fontSize: '0.85rem' }}>
             <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>ℹ️ Parallel Array Compilation</div>
-            <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, color: '#64748b', lineHeight: 1.5 }}>
               This editor automatically compiles your rows into parallel list arrays (<code>[val1, val2, ...][index]</code>) mapped to a single synchronized <code>index</code> variable.
             </p>
-            <p style={{ margin: '8px 0 0', color: '#94a3b8', lineHeight: 1.5 }}>
+            <p style={{ margin: '8px 0 0', color: '#64748b', lineHeight: 1.5 }}>
               This guarantees that the platform's execution engine shuffles cell values synchronously, with <strong>zero dynamic formula errors</strong>!
             </p>
           </div>
@@ -2437,6 +3122,417 @@ export default function SpreadsheetTemplateCreator() {
         </div>
 
       </div>
+
+      {/* ── Image Picker Modal ── */}
+      {isImgModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            width: '680px',
+            maxWidth: '95%',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
+            border: '1.5px solid #bfdbfe',
+            overflow: 'hidden',
+            fontFamily: 'inherit'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '18px 24px',
+              borderBottom: '1.5px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#1e3a8a' }}>
+                🖼️ Image Picker & Uploader
+              </h3>
+              <button
+                onClick={() => setIsImgModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  fontWeight: 'bold'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div style={{
+              display: 'flex',
+              background: '#f1f5f9',
+              borderBottom: '1.5px solid #cbd5e1',
+              padding: '8px 20px',
+              gap: '8px'
+            }}>
+              <button
+                onClick={() => setImgModalTab('gallery')}
+                style={{
+                  background: imgModalTab === 'gallery' ? 'white' : 'transparent',
+                  borderStyle: 'solid',
+                  borderWidth: imgModalTab === 'gallery' ? '1px 1px 0 1px' : '0px',
+                  borderColor: '#cbd5e1',
+                  borderRadius: '6px 6px 0 0',
+                  padding: '8px 16px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: imgModalTab === 'gallery' ? '#2563eb' : '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                🖼️ Pick from Gallery
+              </button>
+              <button
+                onClick={() => setImgModalTab('upload')}
+                style={{
+                  background: imgModalTab === 'upload' ? 'white' : 'transparent',
+                  borderStyle: 'solid',
+                  borderWidth: imgModalTab === 'upload' ? '1px 1px 0 1px' : '0px',
+                  borderColor: '#cbd5e1',
+                  borderRadius: '6px 6px 0 0',
+                  padding: '8px 16px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: imgModalTab === 'upload' ? '#2563eb' : '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                📁 Upload New Image
+              </button>
+              <button
+                onClick={() => setImgModalTab('web')}
+                style={{
+                  background: imgModalTab === 'web' ? 'white' : 'transparent',
+                  borderStyle: 'solid',
+                  borderWidth: imgModalTab === 'web' ? '1px 1px 0 1px' : '0px',
+                  borderColor: '#cbd5e1',
+                  borderRadius: '6px 6px 0 0',
+                  padding: '8px 16px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: imgModalTab === 'web' ? '#2563eb' : '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                🔍 Web Search
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              {imgModalTab === 'gallery' && (
+                <div>
+                  {/* Search Bar */}
+                  <input
+                    type="text"
+                    className="grid-input"
+                    placeholder="🔍 Search gallery by filename or tags..."
+                    value={modalSearchText}
+                    onChange={(e) => setModalSearchText(e.target.value)}
+                    style={{ marginBottom: '16px' }}
+                  />
+
+                  {modalGalleryLoading ? (
+                    <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b' }}>
+                      ⏳ Loading gallery illustration assets...
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Image Cards Grid */}
+                      {(() => {
+                        const filtered = modalGalleryImages.filter(img => {
+                          if (!modalSearchText.trim()) return true;
+                          const q = modalSearchText.toLowerCase();
+                          return (img.key || '').toLowerCase().includes(q);
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', border: '1.5px dashed #cbd5e1', borderRadius: '12px' }}>
+                              No matching illustrations found in R2 database. Try uploading one!
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                            gap: '12px'
+                          }}>
+                            {filtered.map((img, idx) => {
+                              const imgUrl = img.r2Url || `https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/${img.key}`;
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    if (imgModalTarget) {
+                                      const { rIdx, col } = imgModalTarget;
+                                      handleCellChange(rIdx, col, imgUrl);
+                                    }
+                                    setIsImgModalOpen(false);
+                                  }}
+                                  style={{
+                                    border: '1.5px solid #cbd5e1',
+                                    borderRadius: '10px',
+                                    padding: '6px',
+                                    background: '#f8fafc',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    transition: 'all 0.15s'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = '#2563eb';
+                                    e.currentTarget.style.background = '#eff6ff';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = '#cbd5e1';
+                                    e.currentTarget.style.background = '#f8fafc';
+                                  }}
+                                >
+                                  <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+                                    <img
+                                      src={imgUrl}
+                                      alt="Gallery Clipart"
+                                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }}
+                                    />
+                                  </div>
+                                  <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={img.key.split('/').pop()}>
+                                    {img.key.split('/').pop()}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {imgModalTab === 'upload' && (
+                <form onSubmit={handleUploadImage} style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '10px' }}>
+                  <div style={{
+                    border: '2px dashed #bfdbfe',
+                    borderRadius: '12px',
+                    padding: '30px 20px',
+                    textAlign: 'center',
+                    background: '#f0f9ff'
+                  }}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setModalUploadFile(e.target.files[0])}
+                      style={{ display: 'none' }}
+                      id="modal-file-upload-input"
+                    />
+                    <label
+                      htmlFor="modal-file-upload-input"
+                      style={{
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '10px'
+                      }}
+                    >
+                      <span style={{ fontSize: '2.5rem' }}>📁</span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2563eb' }}>
+                        {modalUploadFile ? modalUploadFile.name : 'Select an image file to upload'}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        Supports JPG, PNG, WEBP, SVG up to 5MB
+                      </span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="grid-btn-primary"
+                    disabled={modalUploading || !modalUploadFile}
+                    style={{
+                      alignSelf: 'center',
+                      background: modalUploading ? '#64748b' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 30px',
+                      fontSize: '0.9rem',
+                      borderRadius: '8px',
+                      fontWeight: 800,
+                      cursor: modalUploading ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {modalUploading ? '⏳ Uploading...' : '🚀 Upload & Set Cell Value'}
+                  </button>
+                </form>
+              )}
+
+              {imgModalTab === 'web' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Search Bar Form */}
+                  <form
+                    onSubmit={e => { e.preventDefault(); handleWebSearch(); }}
+                    style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                  >
+                    <input
+                      type="text"
+                      className="grid-input"
+                      placeholder="Search DuckDuckGo (e.g. chopping wood)..."
+                      value={webSearchQuery}
+                      onChange={e => setWebSearchQuery(e.target.value)}
+                      style={{ flex: 1, minWidth: 160 }}
+                    />
+                    <select
+                      className="grid-select"
+                      value={webSearchType}
+                      onChange={e => setWebSearchType(e.target.value)}
+                      style={{ width: 120 }}
+                    >
+                      <option value="clipart">🎨 Clipart</option>
+                      <option value="photo">📷 Photo</option>
+                      <option value="any">🌐 Any</option>
+                    </select>
+                    <button
+                      type="submit"
+                      className="grid-btn-primary"
+                      disabled={webSearchLoading}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      {webSearchLoading ? '⏳ Searching...' : '🔍 Search'}
+                    </button>
+                  </form>
+
+                  {/* Search Results Grid */}
+                  {(() => {
+                    if (webSearchLoading) {
+                      return <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>Searching Web Images (via DuckDuckGo)...</div>;
+                    }
+                    if (webSearchResults.length === 0) {
+                      return (
+                        <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🌐</div>
+                          <div style={{ fontSize: '0.85rem' }}>Enter a keyword and click Search to query DuckDuckGo</div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                        gap: '12px',
+                        maxHeight: '45vh',
+                        overflowY: 'auto',
+                        padding: '4px'
+                      }}>
+                        {webSearchResults.map((item, idx) => {
+                          const isDownloading = webSearchSelectedUrl === item.image;
+                          return (
+                            <div
+                              key={idx}
+                              title={item.title}
+                              onClick={() => {
+                                if (!webSearchSelectedUrl) handleWebSearchSelect(item);
+                              }}
+                              style={{
+                                background: '#f8fafc',
+                                border: isDownloading ? '2.5px solid #2563eb' : '2.5px solid #cbd5e1',
+                                borderRadius: '10px',
+                                padding: '6px',
+                                cursor: isDownloading ? 'wait' : (webSearchSelectedUrl ? 'not-allowed' : 'pointer'),
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s',
+                                minHeight: '110px',
+                                position: 'relative',
+                                opacity: (!!webSearchSelectedUrl && !isDownloading) ? 0.6 : 1
+                              }}
+                              onMouseEnter={e => {
+                                if (!webSearchSelectedUrl) {
+                                  e.currentTarget.style.borderColor = '#2563eb';
+                                  e.currentTarget.style.transform = 'scale(1.03)';
+                                }
+                              }}
+                              onMouseLeave={e => {
+                                if (!webSearchSelectedUrl) {
+                                  e.currentTarget.style.borderColor = '#cbd5e1';
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                }
+                              }}
+                            >
+                              <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                                <img
+                                  src={item.thumbnail || item.image}
+                                  alt=""
+                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }}
+                                  loading="lazy"
+                                  onError={e => { e.target.style.opacity = '.3'; }}
+                                />
+                              </div>
+                              <div style={{
+                                fontSize: '0.62rem',
+                                color: '#475569',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: '100%',
+                                textAlign: 'center'
+                              }}>
+                                {item.source || 'Web Image'}
+                              </div>
+                              {isDownloading && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 0, left: 0, right: 0, bottom: 0,
+                                  background: 'rgba(255, 255, 255, 0.7)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  color: '#2563eb',
+                                  borderRadius: '8px'
+                                }}>
+                                  ⏳ Saving...
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

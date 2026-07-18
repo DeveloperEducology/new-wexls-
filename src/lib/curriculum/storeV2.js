@@ -96,7 +96,9 @@ export async function createV2Node(type, data) {
   if (normalized.gradeId) normalized.gradeId = slugify(normalized.gradeId);
   if (normalized.chapterId) normalized.chapterId = slugify(normalized.chapterId);
 
-  await collection.updateOne({ id }, { $set: normalized }, { upsert: true });
+  const updateDoc = { ...normalized };
+  delete updateDoc._id;
+  await collection.updateOne({ id }, { $set: updateDoc, $setOnInsert: { _id: id } }, { upsert: true });
   return collection.findOne({ id });
 }
 
