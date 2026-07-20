@@ -13,14 +13,22 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
     onAnswerRef.current = onAnswer;
   }, [onAnswer]);
 
+  const targetsRef = useRef(targets);
+  useEffect(() => {
+    targetsRef.current = targets;
+  }, [targets]);
+
   const isFirstRender = useRef(true);
+
+  const itemsSignature = items.map((item) => item.id).join('|');
+  const targetsSignature = targets.map((target) => target.id).join('|');
 
   useEffect(() => {
     setPlacements({});
     setSelectedItemId(null);
     setDraggingItemId(null);
     isFirstRender.current = true;
-  }, [items.map((item) => item.id).join('|'), targets.map((target) => target.id).join('|')]);
+  }, [itemsSignature, targetsSignature]);
 
   const sourceItems = useMemo(() => {
     if (isCopiable) return items;
@@ -30,7 +38,7 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
 
   const emitAnswer = useCallback((nextPlacements) => {
     // Answer is complete when all targets have a placement
-    const complete = targets.every((target) => nextPlacements[target.id]);
+    const complete = targetsRef.current.every((target) => nextPlacements[target.id]);
     
     if (!complete) {
       onAnswerRef.current?.(null);
@@ -51,7 +59,7 @@ export default function useCatV2SimpleDnd({ items, targets, onAnswer, isAnswered
     });
 
     onAnswerRef.current?.(answerPayload);
-  }, [targets]);
+  }, []);
 
   useEffect(() => {
     if (isFirstRender.current) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import styles from '../../FillInTheBlankRenderer.module.css';
 import { speakText } from '@/lib/ttsClient';
@@ -1926,14 +1926,19 @@ export default function CatV2HtmlRenderer({
   onAnswer,
   isAnswered,
 }) {
-  const rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization')?.categories || [];
-  const categories = rawCategories.map((cat) => {
-    if (typeof cat === 'string') {
-      return { id: cat, label: cat };
-    }
-    return cat;
-  });
-  const items = question.items || question.parts?.find((part) => part.type === 'categorization')?.items || [];
+  const categories = useMemo(() => {
+    const rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.categories || [];
+    return rawCategories.map((cat) => {
+      if (typeof cat === 'string') {
+        return { id: cat, label: cat };
+      }
+      return cat;
+    });
+  }, [question.categories, question.parts]);
+
+  const items = useMemo(() => {
+    return question.items || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.items || [];
+  }, [question.items, question.parts]);
   const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
   const layoutMode = question.layoutMode || question.metadata?.layoutMode || question.htmlLayout || 'category_sort';
   const isWordCompletion = layoutMode === 'word_completion' || layoutMode === 'complete_words';
