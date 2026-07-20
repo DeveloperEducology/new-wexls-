@@ -315,7 +315,7 @@ export async function POST(request) {
             }
           }
         }
-      } else if ((payload.type === 'mcq' || payload.type === 'multiplechoice' || payload.type === 'multipleChoice' || payload.type === 'dynamic_pool') && Array.isArray(payload.options)) {
+      } else if ((payload.type === 'mcq' || payload.type === 'multiplechoice' || payload.type === 'multipleChoice' || payload.type === 'dynamic_pool' || payload.type === 'sentence_ordering') && Array.isArray(payload.options)) {
         const optionsWithAudio = [];
         for (let i = 0; i < payload.options.length; i++) {
           const option = payload.options[i];

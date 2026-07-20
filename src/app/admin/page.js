@@ -6667,6 +6667,17 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
         payload.answer = correctIdx;
         payload.parts = parts.map(p => ({ ...p }));
       }
+    } else if (type === 'sentence_ordering') {
+      payload.options = options.map((opt, idx) => ({
+        id: opt.id || `opt_${idx}`,
+        label: opt.label.trim(),
+        imageUrl: opt.imageUrl || undefined,
+        audioUrl: opt.audioUrl || undefined,
+      }));
+      payload.answer = correctAnswer.trim();
+      payload.correctAnswer = correctAnswer.trim();
+      payload.interaction = 'sentence_ordering';
+      payload.parts = parts.map(p => ({ ...p }));
     } else if (type === 'word_completion_pool') {
       const selectedCategory = targetCategory.trim();
       payload.type = 'dynamic_pool';
