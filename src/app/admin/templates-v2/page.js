@@ -429,19 +429,19 @@ const SUBJECT_MODES = {
     label: 'English',
     strands: ['vocabulary', 'phonics', 'grammar', 'reading'],
     visuals: ['Text', 'Image', 'Audio', 'ReadingPassage'],
-    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'matching', 'fill_blank', 'text_input', 'sequence']
+    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'matching', 'fill_blank', 'text_input', 'sequence', 'categorizationv2', 'categorisationv2']
   },
   math: {
     label: 'Math',
     strands: ['arithmetic', 'fractions', 'geometry', 'measurement'],
     visuals: ['Text', 'NumberLine', 'FractionBar', 'Clock', 'BaseTenBlocks', 'MeasuringCup', 'GeometryCanvas', 'DragCanvas'],
-    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'fill_blank', 'number_input', 'sequence', 'interactive_tool']
+    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'fill_blank', 'number_input', 'sequence', 'interactive_tool', 'categorizationv2', 'categorisationv2']
   },
   science: {
     label: 'Science',
     strands: ['diagrams', 'labeling', 'experiments'],
     visuals: ['Text', 'Image', 'Audio', 'SVG', 'Video', 'GeometryCanvas', 'DragCanvas'],
-    interactions: ['mcq', 'picture_mcq', 'multi_select', 'drag_drop', 'sorting', 'matching', 'hotspot', 'label_diagram']
+    interactions: ['mcq', 'picture_mcq', 'multi_select', 'drag_drop', 'sorting', 'matching', 'hotspot', 'label_diagram', 'categorizationv2', 'categorisationv2']
   },
   gk: {
     label: 'General Knowledge',
@@ -477,13 +477,13 @@ const SUBJECT_MODES = {
     label: 'Arithmetic',
     strands: ['numbers', 'fractions', 'percentages', 'ratios', 'profit-loss', 'mensuration'],
     visuals: ['Text', 'NumberLine', 'FractionBar', 'BaseTenBlocks', 'Clock', 'GeometryCanvas', 'DragCanvas'],
-    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'fill_blank', 'number_input', 'sequence', 'interactive_tool']
+    interactions: ['mcq', 'multi_select', 'drag_drop', 'sorting', 'fill_blank', 'number_input', 'sequence', 'interactive_tool', 'categorizationv2', 'categorisationv2']
   },
   language: {
     label: 'Language',
     strands: ['comprehension', 'grammar', 'vocabulary'],
     visuals: ['Text', 'Image', 'Audio', 'ReadingPassage'],
-    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'matching', 'fill_blank', 'text_input', 'sequence']
+    interactions: ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'matching', 'fill_blank', 'text_input', 'sequence', 'categorizationv2', 'categorisationv2']
   }
 };
 
@@ -537,7 +537,9 @@ const INTERACTION_ENGINES = [
   'hotspot',
   'draw_line',
   'label_diagram',
-  'interactive_tool'
+  'interactive_tool',
+  'categorizationv2',
+  'categorisationv2'
 ];
 
 const VALIDATION_RULE_TYPES = [

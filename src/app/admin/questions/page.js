@@ -22,8 +22,10 @@ export default function AdminQuestionsManager() {
     section: 'mat',
     topic: 'series',
     difficulty: 0.5,
+    questionMode: 'mcq', // 'mcq', 'msq', 'tap_to_fill', 'categorizationv2', 'categorisationv2'
     questionText: '',
     options: { A: '', B: '', C: '', D: '' },
+    optionsCategories: { A: '', B: '', C: '', D: '' },
     correctOption: 'A',
     explanationText: '',
     isPYQ: false,
@@ -124,8 +126,10 @@ export default function AdminQuestionsManager() {
           section: 'mat',
           topic: 'series',
           difficulty: 0.5,
+          questionMode: 'mcq',
           questionText: '',
           options: { A: '', B: '', C: '', D: '' },
+          optionsCategories: { A: '', B: '', C: '', D: '' },
           correctOption: 'A',
           explanationText: '',
           isPYQ: false,
@@ -857,6 +861,15 @@ export default function AdminQuestionsManager() {
                   </select>
                 </div>
                 <div className="form-group">
+                  <label className="label-text">Question Mode / Interaction</label>
+                  <select className="select-input" value={newQ.questionMode} onChange={(e) => setNewQ({ ...newQ, questionMode: e.target.value })}>
+                    <option value="mcq">Choice (MCQ)</option>
+                    <option value="msq">Multi-Choice (MSQ)</option>
+                    <option value="tap_to_fill">Tap to Fill Blank</option>
+                    <option value="categorizationv2">Categorization V2 (Matching/Sort)</option>
+                  </select>
+                </div>
+                <div className="form-group">
                   <label className="label-text">Topic</label>
                   <input type="text" className="text-input" value={newQ.topic} onChange={(e) => setNewQ({ ...newQ, topic: e.target.value })} />
                 </div>
@@ -878,24 +891,37 @@ export default function AdminQuestionsManager() {
                 </div>
                 
                 {['A', 'B', 'C', 'D'].map(o => (
-                  <div key={o} className="form-group">
-                    <label className="label-text">Option {o}</label>
-                    <input type="text" className="text-input" value={newQ.options[o]} onChange={(e) => {
-                      const val = e.target.value;
-                      setNewQ(prev => ({ ...prev, options: { ...prev.options, [o]: val } }));
-                    }} required />
+                  <div key={o} className="form-group-full" style={{ display: 'grid', gridTemplateColumns: newQ.questionMode === 'categorizationv2' ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                    <div>
+                      <label className="label-text">{newQ.questionMode === 'categorizationv2' ? `Item card ${o}` : `Option ${o}`}</label>
+                      <input type="text" className="text-input" value={newQ.options[o]} onChange={(e) => {
+                        const val = e.target.value;
+                        setNewQ(prev => ({ ...prev, options: { ...prev.options, [o]: val } }));
+                      }} required />
+                    </div>
+                    {newQ.questionMode === 'categorizationv2' && (
+                      <div>
+                        <label className="label-text">Correct Category / Target {o}</label>
+                        <input type="text" className="text-input" placeholder="e.g. Cause or Category target label" value={newQ.optionsCategories?.[o] || ''} onChange={(e) => {
+                          const val = e.target.value;
+                          setNewQ(prev => ({ ...prev, optionsCategories: { ...prev.optionsCategories, [o]: val } }));
+                        }} required />
+                      </div>
+                    )}
                   </div>
                 ))}
 
-                <div className="form-group">
-                  <label className="label-text">Correct Option</label>
-                  <select className="select-input" value={newQ.correctOption} onChange={(e) => setNewQ({ ...newQ, correctOption: e.target.value })}>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </select>
-                </div>
+                {newQ.questionMode !== 'categorizationv2' && (
+                  <div className="form-group">
+                    <label className="label-text">Correct Option</label>
+                    <select className="select-input" value={newQ.correctOption} onChange={(e) => setNewQ({ ...newQ, correctOption: e.target.value })}>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="form-group-full">
                   <label className="label-text">Explanation Text</label>

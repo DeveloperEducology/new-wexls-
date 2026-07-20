@@ -232,7 +232,9 @@ export async function POST(request) {
       const collectionName = process.env.MONGODB_QUESTIONS_COLLECTION || 'questions';
       const collection = db.collection(collectionName);
       
-      const doc = {
+      const isCatV2 = payload.questionMode === 'categorizationv2' || payload.questionMode === 'categorisationv2';
+      
+      let doc = {
         examId: payload.examId,
         section: payload.section,
         topic: payload.topic || '',
@@ -244,11 +246,65 @@ export async function POST(request) {
         explanationText: payload.explanationText || '',
         isPYQ: Boolean(payload.isPYQ),
         pyqYear: payload.pyqYear ? Number(payload.pyqYear) : null,
-        metadata: payload.metadata || {},
+        metadata: {
+          ...(payload.metadata || {}),
+          questionMode: payload.questionMode || 'mcq',
+          optionsCategories: payload.optionsCategories || {}
+        },
         tags: payload.tags || [],
         status: payload.status || 'active',
         updatedAt: new Date()
       };
+
+      if (isCatV2) {
+        const uniqueCats = Array.from(new Set(Object.values(payload.optionsCategories || {}))).filter(Boolean);
+        const categories = uniqueCats.map(cat => ({ id: cat, label: cat }));
+        const items = [];
+        const answer = {};
+
+        Object.entries(payload.options || {}).forEach(([key, label]) => {
+          if (label) {
+            const cat = payload.optionsCategories?.[key];
+            if (cat) {
+              const itemId = `item_${key}`;
+              items.push({
+                id: itemId,
+                content: label,
+                label: label,
+                target: cat,
+                categoryId: cat
+              });
+              answer[itemId] = cat;
+            }
+          }
+        });
+
+        doc = {
+          ...doc,
+          type: 'categorizationv2',
+          interaction: { engine: 'categorizationv2', inputMode: 'drag-drop' },
+          layoutMode: 'grid_fill',
+          columns: 1,
+          grid: { columns: 1 },
+          categories,
+          items,
+          answer,
+          correctAnswer: answer,
+          parts: [
+            { type: 'text', content: payload.questionText },
+            {
+              type: 'categorizationv2',
+              categories,
+              items,
+              answerKey: answer,
+              isVertical: true,
+              layoutMode: 'grid_fill',
+              columns: 1,
+              grid: { columns: 1 }
+            }
+          ]
+        };
+      }
       
       const idToUpdate = payload._id || payload.id;
       if (idToUpdate) {
