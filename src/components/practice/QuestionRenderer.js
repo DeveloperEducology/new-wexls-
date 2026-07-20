@@ -27,7 +27,15 @@ const CategorizationRenderer = dynamic(
   { ssr: false, loading: LoadingRenderer },
 );
 
+const SentenceOrderingRenderer = dynamic(
+  () => import('./SentenceOrderingRenderer'),
+  { ssr: false, loading: LoadingRenderer },
+);
+
 const RENDERERS = {
+  sentence_ordering: SentenceOrderingRenderer,
+  sentenceOrdering: SentenceOrderingRenderer,
+  ordering: SentenceOrderingRenderer,
   mcq: MCQRenderer,
   multiplechoice: MCQRenderer,
   multipleChoice: MCQRenderer,

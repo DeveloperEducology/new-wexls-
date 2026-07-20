@@ -3285,27 +3285,26 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       teacherNotes: 'Interactive drag and drop sorting.'
     },
     {
-      name: 'Tap-to-Fill (Sentence Blank)',
-      description: 'Tap an option to fill a blank inside a sentence',
-      type: 'tap_to_fill',
+      name: 'Sentence Ordering (Scrambled Words)',
+      description: 'Arrange scrambled words to form a correct sentence',
+      type: 'sentence_ordering',
       subject: 'english',
       topic: 'grammar',
-      skillId: 'sentence-completion',
-      questionText: 'Complete the sentence with an uppercase letter.',
-      parts: [
-        { type: 'text', content: '_an we go home now?' }
-      ],
+      skillId: 'sentence-structure',
+      questionText: 'Put the words in order to make a complete sentence.',
+      correctAnswer: 'The birds fly.',
       options: [
-        { label: 'c', isCorrect: false },
-        { label: 'C', isCorrect: true },
+        { label: 'birds', isCorrect: false },
+        { label: 'fly.', isCorrect: false },
+        { label: 'The', isCorrect: false }
       ],
-      explanation: 'The sentence starts with a capital letter. "Can" begins with uppercase C.',
+      explanation: 'The correct sentence is "The birds fly.". It starts with a capital "The" and ends with a period.',
       difficulty: 'beginner',
-      tags: 'grammar, uppercase, sentence',
+      tags: 'grammar, sentence-structure, ordering',
       estimatedGrade: 'Grade 1',
-      timeEstimate: '20',
-      sourceMapping: 'CCSS.ELA-LITERACY.L.1.2.A',
-      teacherNotes: 'Student taps the correct letter option to complete the sentence blank.'
+      timeEstimate: '30',
+      sourceMapping: 'CCSS.ELA-LITERACY.L.1.1.J',
+      teacherNotes: 'Interactive click-to-reorder sentence builder.'
     }
   ];
 
@@ -5501,7 +5500,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
         : (tpl.distractorCategories || tpl.metadata?.distractorCategories || '')
     );
     
-    if (tpl.type === 'mcq' || tpl.type === 'tap_to_fill') {
+    if (tpl.type === 'mcq' || tpl.type === 'tap_to_fill' || tpl.type === 'sentence_ordering') {
       setOptions(tpl.options.map(opt => ({
         label: opt.label,
         isCorrect: opt.isCorrect,
@@ -8044,7 +8043,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       commonImageWidth: Number(commonImageWidth) || 180,
       imageRowMode,
       imageRowGap: Number(imageRowGap) || 20,
-      options: directImageSelect ? [] : ((type === 'mcq' || type === 'tap_to_fill' || type === 'dynamic_pool') ? (mockDynamicPoolOptions || options).map((o, idx) => ({
+      options: directImageSelect ? [] : ((type === 'mcq' || type === 'tap_to_fill' || type === 'dynamic_pool' || type === 'sentence_ordering') ? (mockDynamicPoolOptions || options).map((o, idx) => ({
         id: o.id || `opt_${idx}`,
         label: o.label,
         imageUrl: (type === 'dynamic_pool' && hideOptionImages) ? undefined : (o.imageUrl || undefined),
@@ -10592,6 +10591,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                             >
                               <option value="mcq">Multiple Choice Question (MCQ)</option>
                               <option value="tap_to_fill">Tap-to-Fill MCQ (Sentence Blank)</option>
+                              <option value="sentence_ordering">Sentence Ordering (Scrambled Words)</option>
                               <option value="dynamic_pool">Dynamic Option Pool</option>
                               <option value="mcq_hotspot">Multiple Choice (Hotspot Select)</option>
                               <option value="shadow_match">Shadow Match (Sticker Drag)</option>
@@ -10604,7 +10604,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                             </select>
                           </div>
 
-                          {(type === 'mcq' || type === 'tap_to_fill' || isPoolDrivenAuthoringType(type)) && (
+                          {(type === 'mcq' || type === 'tap_to_fill' || type === 'sentence_ordering' || isPoolDrivenAuthoringType(type)) && (
                             <div className={styles.formGroup}>
                               {isPoolDrivenAuthoringType(type) && (
                                 <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 8, padding: 12, marginBottom: 16 }}>

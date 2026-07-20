@@ -315,6 +315,12 @@ export function isAnswerCorrect(question, userAnswer) {
     return ruleResult;
   }
 
+  if (type === 'sentence_ordering' || interaction === 'sentence_ordering') {
+    const expected = String(question.correctAnswer || question.answer || '').trim().replace(/\s+/g, ' ');
+    const actual = String(userAnswer || '').trim().replace(/\s+/g, ' ');
+    return actual === expected;
+  }
+
   if (interaction === 'balloon_tap') {
     const hitsNeeded = question.hitsNeeded || 3;
     const hits = Number(userAnswer);

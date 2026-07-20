@@ -20,6 +20,11 @@ const InteractiveToolRenderer = dynamic(
   { ssr: false, loading: LoadingRenderer },
 );
 
+const SentenceOrderingRenderer = dynamic(
+  () => import('./SentenceOrderingRenderer'),
+  { ssr: false, loading: LoadingRenderer },
+);
+
 const ENGINE_TYPE_MAP = {
   mcq: 'mcq',
   picture_mcq: 'picture_mcq',
@@ -37,6 +42,7 @@ const ENGINE_TYPE_MAP = {
   categorizationv2: 'categorizationv2',
   hotspot: 'hotspot_select',
   interactive_tool: 'interactiveTool',
+  sentence_ordering: 'sentence_ordering',
 };
 
 function normalizeUniversalQuestion(question) {
@@ -81,6 +87,8 @@ export default function UniversalActivityRenderer({
   const normalizedType = String(normalizedQuestion?.type || '').trim().toLowerCase();
   const Renderer = normalizedType === 'categorizationv2'
     ? CategorizationRenderer
+    : normalizedType === 'sentence_ordering'
+    ? SentenceOrderingRenderer
     : normalizedType === 'fillintheblank' || normalizedType === 'fillinTheblank'.toLowerCase()
     ? FillInTheBlankRenderer
     : normalizedType === 'interactivetool'
