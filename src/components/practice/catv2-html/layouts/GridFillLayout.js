@@ -574,17 +574,25 @@ export default function GridFillLayout({
           {targets.map((target) => {
             const item = dnd.getTargetItem(target.id);
             const active = dnd.selectedItemId && !item;
+            const swapColumns = Boolean(
+              question.grid?.swapColumns || 
+              question.swapColumns || 
+              target.labelPosition === 'left' || 
+              question.grid?.targetOnLeft ||
+              question.behavior?.swapColumns
+            );
             return (
               <div
-                key={target.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  width: '100%',
-                  justifyContent: 'center',
-                }}
-              >
+                  key={target.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    width: '100%',
+                    justifyContent: 'center',
+                    flexDirection: swapColumns ? 'row-reverse' : 'row'
+                  }}
+                >
                 {/* Drop Zone (grey placeholder slot on the left) */}
                 <CatV2DropZone
                   label=""

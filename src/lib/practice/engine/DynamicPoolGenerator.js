@@ -677,10 +677,14 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
       const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
 
-      return {
+       return {
         id: `${poolDoc.id || 'dynamic_pool'}_${seed}_sort`,
         type: isCatV2 ? 'categorizationv2' : 'categorization',
         interaction: isCatV2 ? 'categorizationv2' : 'categorization',
+        layoutMode: poolDoc.layoutMode || poolDoc.metadata?.layoutMode || 'grid_fill',
+        columns: poolDoc.columns !== undefined ? poolDoc.columns : (poolDoc.metadata?.columns !== undefined ? poolDoc.metadata.columns : 1),
+        swapColumns: poolDoc.swapColumns !== undefined ? poolDoc.swapColumns : poolDoc.metadata?.swapColumns,
+        grid: poolDoc.grid || poolDoc.metadata?.grid || { columns: 1 },
         questionText,
         audioUrl: questionAudioUrl,
         voice,
@@ -690,7 +694,18 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
         correctAnswer: answer,
         explanation,
         solution,
-        parts,
+        parts: parts.map(p => {
+          if (p.type === 'categorizationv2' || p.type === 'categorization') {
+            return {
+              ...p,
+              layoutMode: poolDoc.layoutMode || poolDoc.metadata?.layoutMode || 'grid_fill',
+              columns: poolDoc.columns !== undefined ? poolDoc.columns : (poolDoc.metadata?.columns !== undefined ? poolDoc.metadata.columns : 1),
+              swapColumns: poolDoc.swapColumns !== undefined ? poolDoc.swapColumns : poolDoc.metadata?.swapColumns,
+              grid: poolDoc.grid || poolDoc.metadata?.grid || { columns: 1 }
+            };
+          }
+          return p;
+        }),
         metadata: {
           ...(poolDoc.metadata || {}),
           subject: poolDoc.subject || 'science',
