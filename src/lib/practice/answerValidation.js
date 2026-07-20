@@ -83,6 +83,12 @@ function getNormalizedTypeAndInteraction(question) {
     interaction = String(question.interaction || '').toLowerCase();
   }
 
+  // Normalize spelling (s -> z) for categorization engines
+  if (type === 'categorisationv2') type = 'categorizationv2';
+  if (type === 'categorisation') type = 'categorization';
+  if (interaction === 'categorisationv2') interaction = 'categorizationv2';
+  if (interaction === 'categorisation') interaction = 'categorization';
+
   if ((type === '' || type === 'parameterized') && Array.isArray(question.options)) {
     if (interaction === 'msq' || question.optionsType === 'msq') {
       type = 'multi_select';

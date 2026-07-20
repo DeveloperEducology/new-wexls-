@@ -1162,6 +1162,7 @@ export default function SpreadsheetTemplateCreator() {
       const correctOptions = optionsBinding.filter(o => o.isCorrect);
       const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
       const isTapToFill = questionMode === 'tap_to_fill';
+      const isCategorizationV2 = questionMode === 'categorizationv2' || questionMode === 'categorisationv2';
 
       const difficultyLevel = jnvstDifficulty < 0.4 ? 'easy' : (jnvstDifficulty >= 0.7 ? 'hard' : 'medium');
 
@@ -1197,8 +1198,8 @@ export default function SpreadsheetTemplateCreator() {
             clickToSubmit: false
           },
           interaction: {
-            engine: isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'),
-            inputMode: isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')
+            engine: isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq')),
+            inputMode: isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice'))
           },
           variables: compiledVariables,
           derivations: compiledDerivations,
@@ -1246,6 +1247,7 @@ export default function SpreadsheetTemplateCreator() {
       const correctOptions = optionsBinding.filter(o => o.isCorrect);
       const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
       const isTapToFill = questionMode === 'tap_to_fill';
+      const isCategorizationV2 = questionMode === 'categorizationv2' || questionMode === 'categorisationv2';
       const correctOpt = correctOptions[0];
 
       const compiledJson = {
@@ -1255,8 +1257,11 @@ export default function SpreadsheetTemplateCreator() {
         topic: topic,
         grade: grade,
         generatorType: 'spreadsheet-grid',
-        optionsType: isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'),
-        interaction: { engine: isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'), inputMode: isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice') },
+        optionsType: isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq')),
+        interaction: {
+          engine: isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq')),
+          inputMode: isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice'))
+        },
         questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
         explanation: {
           sections: [{
@@ -2752,8 +2757,15 @@ export default function SpreadsheetTemplateCreator() {
                   >{label}</button>
                 ))}
               </div>
-              <span style={{ fontSize: '11px', color: questionMode === 'msq' ? '#a78bfa' : questionMode === 'tap_to_fill' ? '#f59e0b' : '#34d399', background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : questionMode === 'tap_to_fill' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
-                {questionMode === 'msq' ? 'Students select all that apply' : questionMode === 'tap_to_fill' ? 'Student taps an option to fill the blank' : 'Students pick one answer'}
+              <span style={{
+                fontSize: '11px',
+                color: questionMode === 'msq' ? '#a78bfa' : (questionMode === 'tap_to_fill' ? '#f59e0b' : (questionMode.includes('categor') ? '#38bdf8' : '#34d399')),
+                background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : (questionMode === 'tap_to_fill' ? 'rgba(245,158,11,0.12)' : (questionMode.includes('categor') ? 'rgba(56,189,248,0.12)' : 'rgba(16,185,129,0.12)')),
+                padding: '3px 10px',
+                borderRadius: '999px',
+                fontWeight: 600
+              }}>
+                {questionMode === 'msq' ? 'Students select all that apply' : questionMode === 'tap_to_fill' ? 'Student taps an option to fill the blank' : (questionMode.includes('categor') ? 'Students drag items to category targets' : 'Students pick one answer')}
               </span>
             </div>
 

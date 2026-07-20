@@ -41,6 +41,12 @@ export function generateFromDynamicPool(poolDoc, seed, difficulty, history = {},
 }
 
 function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade = 'lkg') {
+  if (poolDoc) {
+    if (poolDoc.interaction === 'categorisationv2') poolDoc.interaction = 'categorizationv2';
+    if (poolDoc.type === 'categorisationv2') poolDoc.type = 'categorizationv2';
+    if (poolDoc.interaction === 'categorisation') poolDoc.interaction = 'categorization';
+    if (poolDoc.type === 'categorisation') poolDoc.type = 'categorization';
+  }
   const prng = createSeededRandom(seed);
   const voice = poolDoc.voice || 'Puck';
   const hasExplicitLabelDisplay = Object.prototype.hasOwnProperty.call(poolDoc, 'hideOptionLabel')

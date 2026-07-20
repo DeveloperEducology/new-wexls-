@@ -40,6 +40,8 @@ const ENGINE_TYPE_MAP = {
   label_diagram: 'categorizationv2',
   categorization: 'categorizationv2',
   categorizationv2: 'categorizationv2',
+  categorisation: 'categorizationv2',
+  categorisationv2: 'categorizationv2',
   hotspot: 'hotspot_select',
   interactive_tool: 'interactiveTool',
   sentence_ordering: 'sentence_ordering',

@@ -365,7 +365,7 @@ export default function OptionPoolingPlayground() {
       const userStr = String(val?.ans || val || '').trim().toLowerCase();
       const correctStr = String(q.correctAnswer || q.answer?.ans || '').trim().toLowerCase();
       setIsCorrect(userStr === correctStr);
-    } else if (q.type === 'categorization' || q.type === 'categorizationv2') {
+    } else if (q.type === 'categorization' || q.type === 'categorizationv2' || q.type === 'categorisationv2') {
       // Direct correct checking if layout has answer mapping
       setIsCorrect(true);
     }
@@ -849,6 +849,8 @@ export default function OptionPoolingPlayground() {
                   >
                     <option value="mcq">Standard MCQ (Single Select)</option>
                     <option value="categorization">Categorization / Sorting</option>
+                    <option value="categorizationv2">Categorization V2 (Grid/Match/Sort)</option>
+                    <option value="categorisationv2">Categorisation V2 (Grid/Match/Sort - spelling s)</option>
                     <option value="word_completion">Word Completion (Phonics)</option>
                     <option value="interactive_stickers">Drag-and-Drop Stickers</option>
                   </select>
@@ -999,7 +1001,7 @@ export default function OptionPoolingPlayground() {
                   </div>
                 )}
 
-                {interactionType === 'categorization' && (
+                {(interactionType === 'categorization' || interactionType === 'categorizationv2' || interactionType === 'categorisationv2') && (
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: '600' }}>
                       Items Per Category

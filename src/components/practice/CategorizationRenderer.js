@@ -81,6 +81,7 @@ export default function CategorizationRenderer({
 
   if (
     question.type === 'categorizationv2'
+    || question.type === 'categorisationv2'
     || question.renderer === 'html'
     || CATV2_HTML_LAYOUTS.has(catV2LayoutMode)
   ) {
@@ -113,7 +114,7 @@ export default function CategorizationRenderer({
     return cat;
   });
   const items = question.items || question.parts?.find((part) => part.type === 'categorization')?.items || [];
-  const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
+  const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2' || question.type === 'categorisationv2';
   const hasGridCategory = categories.some((cat) => cat.isGrid === true || (Number(cat.rows) > 0 && Number(cat.columns) > 0));
   const isCubeTrain = !hasGridCategory && (categories.some((cat) => cat.id === 'cube_train') || items.some((item) => item.visual === 'cube'));
 
