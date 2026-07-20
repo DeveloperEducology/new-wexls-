@@ -5,6 +5,8 @@ import SiteHeader from '@/components/layout/SiteHeader';
 import HomeHero from '@/components/home/HomeHero';
 import GradeFilterDropdownV2 from './GradeFilterDropdownV2';
 import { getMongoDb } from '@/lib/db/mongo';
+import { cookies, headers } from 'next/headers';
+import { verifyAccessToken } from '@/lib/authService';
 
 export const metadata = {
   title: 'Explore Grade Curriculum & Learning Skills (V2) | KlassChamp',
@@ -214,8 +216,46 @@ export default async function GradesV2Page({ searchParams }) {
   const params = await searchParams;
   const activeSubjectId = params?.subject || 'math';
   const selectedGradeId = params?.grade || 'all';
-  const activeView = params?.view || 'grid';
   const searchQuery = params?.q || '';
+
+  // Security Check: Only display table view to developers
+  let isDeveloper = false;
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host') || '';
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      isDeveloper = true;
+    }
+  } catch (e) {}
+
+  if (!isDeveloper) {
+    try {
+      const cookieStore = await cookies();
+      const accessCookie = cookieStore?.get('klasschamp_access');
+      if (accessCookie) {
+        const session = verifyAccessToken(accessCookie.value);
+        if (session?.userId) {
+          const db = await getMongoDb();
+          if (db) {
+            const { ObjectId } = require('mongodb');
+            let userDoc = null;
+            if (ObjectId.isValid(session.userId)) {
+              userDoc = await db.collection('users').findOne({ _id: new ObjectId(session.userId) });
+            }
+            if (!userDoc) {
+              userDoc = await db.collection('users').findOne({ username: session.userId });
+            }
+            if (userDoc && (userDoc.role === 'admin' || userDoc.role === 'developer')) {
+              isDeveloper = true;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Force grid view if the user is not a developer
+  const activeView = isDeveloper ? (params?.view || 'grid') : 'grid';
 
   // Load new v2 collection data
   let grades = await listV2Nodes('grade');
@@ -369,40 +409,42 @@ export default async function GradesV2Page({ searchParams }) {
         <div className="curriculum-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
           
           {/* View Toggler */}
-          <div style={{ display: 'flex', gap: '0.5rem', background: '#e2e8f0', borderRadius: '8px', padding: '4px', alignSelf: 'flex-start', margin: '1rem 0' }}>
-            <Link 
-              href={`/grades-v2?subject=${activeSubjectNode.id}&grade=${selectedGradeId}&view=grid`}
-              style={{
-                textDecoration: 'none',
-                background: activeView === 'grid' ? '#ffffff' : 'transparent',
-                color: activeView === 'grid' ? '#4f46e5' : '#475569',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontWeight: 700,
-                fontSize: '13px',
-                boxShadow: activeView === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              📱 Grid View
-            </Link>
-            <Link 
-              href={`/grades-v2?subject=${activeSubjectNode.id}&grade=${selectedGradeId}&view=table`}
-              style={{
-                textDecoration: 'none',
-                background: activeView === 'table' ? '#ffffff' : 'transparent',
-                color: activeView === 'table' ? '#4f46e5' : '#475569',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontWeight: 700,
-                fontSize: '13px',
-                boxShadow: activeView === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              📋 KPI Mapping Table
-            </Link>
-          </div>
+          {isDeveloper && (
+            <div style={{ display: 'flex', gap: '0.5rem', background: '#e2e8f0', borderRadius: '8px', padding: '4px', alignSelf: 'flex-start', margin: '1rem 0' }}>
+              <Link 
+                href={`/grades-v2?subject=${activeSubjectNode.id}&grade=${selectedGradeId}&view=grid`}
+                style={{
+                  textDecoration: 'none',
+                  background: activeView === 'grid' ? '#ffffff' : 'transparent',
+                  color: activeView === 'grid' ? '#4f46e5' : '#475569',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  boxShadow: activeView === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📱 Grid View
+              </Link>
+              <Link 
+                href={`/grades-v2?subject=${activeSubjectNode.id}&grade=${selectedGradeId}&view=table`}
+                style={{
+                  textDecoration: 'none',
+                  background: activeView === 'table' ? '#ffffff' : 'transparent',
+                  color: activeView === 'table' ? '#4f46e5' : '#475569',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  boxShadow: activeView === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📋 KPI Mapping Table
+              </Link>
+            </div>
+          )}
 
           {activeView === 'table' ? (
             <section className="grade-content" style={{ flex: 1, width: '100%' }}>
