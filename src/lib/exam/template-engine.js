@@ -243,6 +243,45 @@ export function instantiateParameterized(template, count) {
     }
     // ────────────────────────────────────────────────────────────────────
 
+    // ── Sentence Ordering mode ──────────────────────────────────────────
+    const isSentenceOrdering = template.type === 'sentence_ordering' || 
+                              config.interaction === 'sentence_ordering' || 
+                              (config.interaction && config.interaction.engine === 'sentence_ordering');
+    if (isSentenceOrdering) {
+      const correctAnswer = String(ctx.correct_answer || ctx.answer || '').trim();
+      let optionsList = [];
+
+      if (Array.isArray(configOptions) && configOptions.length > 0) {
+        optionsList = configOptions.map(opt => ({
+          label: String(evalOptionLabel(opt.label, ctx)).trim()
+        })).filter(o => o.label !== '');
+      } else {
+        const splitWords = correctAnswer.split(/\s+/).filter(Boolean);
+        optionsList = splitWords.map(word => ({ label: word }));
+      }
+
+      generated.push({
+        examId,
+        section,
+        topic,
+        templateId: String(template.id || template._id || ''),
+        difficulty,
+        questionText: questionText || "Put the words in order to make a complete sentence.",
+        options: optionsList,
+        answer: correctAnswer,
+        correctAnswer: correctAnswer,
+        interaction: 'sentence_ordering',
+        type: 'sentence_ordering',
+        explanationText,
+        isPYQ: false,
+        tags: tags || [topic],
+        templateVariables: combo,
+        status: 'active',
+      });
+      continue;
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     // Build options (correct + 3 distractors), shuffle
     let correct;
     let distractors = [];
