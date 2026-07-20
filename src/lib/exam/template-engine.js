@@ -494,7 +494,8 @@ function evalDerivation(expr, ctx) {
       resolved = resolved.replace(new RegExp(`${key}_denominator`, 'g'), String(den));
       resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), `(${num}/${den})`);
     } else {
-      resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), String(val));
+      const replacement = typeof val === 'string' ? JSON.stringify(val) : String(val);
+      resolved = resolved.replace(new RegExp(`\\b${key}\\b`, 'g'), replacement);
     }
   }
 
