@@ -773,7 +773,7 @@ export default function AdminV2Page() {
           }
 
           // 3. Categorization/Sorting structure
-          if (qType === 'categorization') {
+          if (qType === 'categorization' || qType === 'categorizationv2') {
             const categoriesArray = [];
             if (formData.cat1Id) categoriesArray.push({ id: formData.cat1Id, label: formData.cat1Label || formData.cat1Id });
             if (formData.cat2Id) categoriesArray.push({ id: formData.cat2Id, label: formData.cat2Label || formData.cat2Id });
@@ -814,6 +814,28 @@ export default function AdminV2Page() {
                 value: correctDndMap
               }
             ];
+
+            if (qType === 'categorizationv2') {
+              payload.interaction = { engine: 'categorizationv2', inputMode: 'drag-drop' };
+              payload.layoutMode = 'grid_fill';
+              payload.columns = 1;
+              payload.grid = { columns: 1 };
+              payload.answer = correctDndMap;
+              payload.correctAnswer = correctDndMap;
+              payload.parts = [
+                { type: 'text', content: formData.questionText },
+                {
+                  type: 'categorizationv2',
+                  categories: categoriesArray,
+                  items: itemsArray.map(it => ({ id: it.id, content: it.label, label: it.label, target: it.categoryId, categoryId: it.categoryId })),
+                  answerKey: correctDndMap,
+                  isVertical: true,
+                  layoutMode: 'grid_fill',
+                  columns: 1,
+                  grid: { columns: 1 }
+                }
+              ];
+            }
           }
 
           // 4. Interactive Applet structure
@@ -3283,7 +3305,8 @@ export default function AdminV2Page() {
                             >
                               <option value="mcq">Multiple Choice (MCQ)</option>
                               <option value="fill_in_the_blank">Fill in the Blank</option>
-                              <option value="categorization">Categorization / Sorting</option>
+                              <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
+                              <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
                               <option value="visual_choice">Visual Choice (MCQ with drawings/SVGs)</option>
                               <option value="interactiveApplet">Interactive Applet / Tool</option>
                             </select>
@@ -3382,7 +3405,7 @@ export default function AdminV2Page() {
                         )}
 
                         {/* 3. Categorization inputs */}
-                        {(adminMode === 'school' || adminMode === 'iit') && formData.type === 'categorization' && (
+                        {(adminMode === 'school' || adminMode === 'iit') && (formData.type === 'categorization' || formData.type === 'categorizationv2') && (
                           <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
                             <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569' }}>
                               📁 Categorization Buckets & Draggable Items
