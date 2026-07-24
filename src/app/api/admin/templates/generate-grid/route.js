@@ -32,14 +32,21 @@ Generate exactly ${n * 3} rows total — ${n} rows for each difficulty level:
 Rules:
 1. Choose meaningful column names based on the subject:
    - For Math: e.g. "number", "Result", "Distractor1", "Distractor2", "Distractor3"
-   - For English / Phonics / Vocabulary: Use separate columns for words, images, and audio. e.g. "target_word", "target_image", "target_audio", "Result_word", "Result_image", "Result_audio", "Distractor1_word", "Distractor1_image", "Distractor1_audio", "Distractor2_word", "Distractor2_image", "Distractor2_audio".
-2. Always have exactly one correct option column and 2 or 3 distractor option columns.
-3. For English templates with Audio and Images:
+   - For English / Phonics / Vocabulary / Spelling:
+     * "target_word": The full target word (e.g. "cat", "pencil", "pig") - NEVER use "---" or placeholders!
+     * "target_image": Image URL
+     * "target_audio": Audio TTS URL
+     * "Result": The correct answer (e.g. "c" or "cat")
+     * "Distractor1", "Distractor2", "Distractor3": WRONG options (e.g. "i", "p", "a"), NOT the letters of the target word!
+2. NEVER use "---", "n/a", or dummy dashes in any cell value. Every cell must contain a real, valid value!
+3. Always have exactly one correct option column and 2 or 3 distractor option columns.
+4. For English templates with Audio and Images:
    - Always populate audio column values using the TTS voice synthesis format: \`/api/tts?voice=Puck&text=WORD\` (e.g. \`/api/tts?voice=Puck&text=feet\`).
    - Populate image column values using standard R2 clipart link format: \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/WORD.jpg\` (e.g. \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/feet.jpg\` or \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/WORD.png\`).
-4. The blueprint must use {{columnName}} placeholders. For English/PreK/UKG/LKG topics, question prompts must contain the target image as a markdown image link, e.g. \`![{{target_word}}]({{target_image}})\`.
-5. The solution must be a clear step-by-step explanation using {{columnName}} placeholders.
-6. Each row must include a "_level" field: "l1", "l2", or "l3".
+5. The blueprint must use {{columnName}} placeholders. Do NOT repeat answer variables in text unless intended. For spelling, use: \`Listen to the word. Then, spell it.\n\n![{{target_word}}]({{target_image}})\`
+6. The solution must be a clear step-by-step explanation using {{columnName}} placeholders.
+7. Each row must include a "_level" field: "l1", "l2", or "l3".
+
 
 Return ONLY valid JSON. No markdown fences. No comments. Use this exact shape:
 

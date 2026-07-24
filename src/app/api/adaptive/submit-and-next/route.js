@@ -189,6 +189,8 @@ export async function POST(request) {
       hintUsed: Boolean(body.hintUsed),
       phase: body.phase || previousMastery?.state || 'practicing',
       errorType: body.errorType || null,
+      isStatic: body.isStatic || body.mode === 'static' || body.practiceMode === 'static' || question?.isStatic || question?.metadata?.isStatic,
+      mode: body.mode || body.practiceMode || (question?.isStatic ? 'static' : undefined),
     });
 
     const now = new Date();

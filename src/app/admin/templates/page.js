@@ -2143,8 +2143,8 @@ export default function VisualTemplateBuilderPage() {
         if (!payload.poolId) {
           throw new Error('JSON is missing a "poolId" property.');
         }
-        if (!payload.pools && !payload.categories) {
-          throw new Error('JSON must contain a "pools" or "categories" object.');
+        if (!payload.pools && !payload.categories && !payload.candidates && !payload.words) {
+          throw new Error('JSON must contain a "pools", "categories", "words", or "candidates" array.');
         }
       }
 
@@ -5109,7 +5109,21 @@ export default function VisualTemplateBuilderPage() {
                     value={template.type || 'math'}
                     onChange={(e) => {
                       const nextType = e.target.value;
-                      updateField('type', nextType === 'math' ? undefined : nextType);
+                      setTemplate(prev => {
+                        const next = { ...prev };
+                        if (nextType === 'math') {
+                          delete next.type;
+                          delete next.poolId;
+                          delete next.targetCategory;
+                          delete next.targetCategories;
+                          delete next.distractorCategories;
+                          delete next.optionMode;
+                          delete next.optionTextFormat;
+                        } else {
+                          next.type = nextType;
+                        }
+                        return next;
+                      });
                     }}
                   >
                     <option value="math">Visual Mathematics (Static/Formula)</option>
@@ -5392,6 +5406,148 @@ export default function VisualTemplateBuilderPage() {
                             <option value="pick_from_sentence">pick_from_sentence (Select Word in Sentence)</option>
                           </select>
                         </div>
+
+                        {/* Distractor Categories */}
+                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                            🎭 Distractor Categories
+                            <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>(pool categories to pull wrong-answer options from)</span>
+                          </label>
+                          {template.poolId && getPoolCategories(template.poolId).length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px 14px', background: '#fff5f5', borderRadius: '10px', border: '1px solid #fecaca' }}>
+                              {getPoolCategories(template.poolId).map(category => {
+                                const selected = Array.isArray(template.distractorCategories) ? template.distractorCategories : [];
+                                const isChecked = selected.includes(category);
+                                return (
+                                  <label key={category} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: isChecked ? '#fee2e2' : '#fff', border: isChecked ? '1px solid #f87171' : '1px solid #cbd5e1', fontSize: '13px', fontWeight: isChecked ? 700 : 500, color: isChecked ? '#991b1b' : '#334155', transition: 'all 0.15s' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      style={{ accentColor: '#ef4444', width: '14px', height: '14px' }}
+                                      onChange={(e) => {
+                                        const current = Array.isArray(template.distractorCategories) ? template.distractorCategories : [];
+                                        const updated = e.target.checked ? [...current, category] : current.filter(c => c !== category);
+                                        updateField('distractorCategories', updated);
+                                      }}
+                                    />
+                                    {category}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <input
+                              className={styles.input}
+                              placeholder="e.g. short_a_words, short_e_words (comma-separated)"
+                              value={Array.isArray(template.distractorCategories) ? template.distractorCategories.join(', ') : (template.distractorCategories || '')}
+                              onChange={(e) => updateField('distractorCategories', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                            />
+                          )}
+                        </div>
+
+                        {/* Option Mode & Display Toggles */}
+                        <div className={styles.formGroup}>
+                          <label htmlFor="tpl-option-mode">Option Mode (Label Format)</label>
+                          <select
+                            id="tpl-option-mode"
+                            className={styles.select}
+                            value={template.optionMode || 'full'}
+                            onChange={(e) => updateField('optionMode', e.target.value)}
+                          >
+                            <option value="full">full — show complete word/label</option>
+                            <option value="first_letter">first_letter — show only starting letter</option>
+                            <option value="ending">ending — show ending pattern</option>
+                            <option value="rime">rime — show rime/phoneme ending</option>
+                            <option value="middle">middle — show middle vowel only</option>
+                            <option value="onset">onset — show onset consonant only</option>
+                          </select>
+                        </div>
+
+                        <div className={styles.formGroup} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <label style={{ fontWeight: 700, fontSize: '13px', color: '#374151' }}>Display Toggles</label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#334155' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!template.hideOptionLabel}
+                              onChange={(e) => updateField('hideOptionLabel', e.target.checked)}
+                              style={{ accentColor: '#6366f1', width: '15px', height: '15px' }}
+                            />
+                            Hide option text labels (image-only cards)
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#334155' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!template.hideOptionImages}
+                              onChange={(e) => updateField('hideOptionImages', e.target.checked)}
+                              style={{ accentColor: '#6366f1', width: '15px', height: '15px' }}
+                            />
+                            Hide option images (text-label-only cards)
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#334155' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!template.playAudioOnReveal}
+                              onChange={(e) => updateField('playAudioOnReveal', e.target.checked)}
+                              style={{ accentColor: '#6366f1', width: '15px', height: '15px' }}
+                            />
+                            Auto-play audio on card reveal
+                          </label>
+                        </div>
+
+                        {/* Difficulty Rules */}
+                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ fontWeight: 700, fontSize: '13px', color: '#374151', marginBottom: '8px', display: 'block' }}>
+                            📊 Difficulty Rules
+                            <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b', marginLeft: '6px' }}>override option counts per difficulty level</span>
+                          </label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                            {['easy', 'medium', 'hard'].map(level => {
+                              const rules = template.difficultyRules?.[level] || {};
+                              const levelColors = { easy: { bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' }, medium: { bg: '#fffbeb', border: '#fcd34d', text: '#78350f' }, hard: { bg: '#fef2f2', border: '#fca5a5', text: '#7f1d1d' } };
+                              const c = levelColors[level];
+                              return (
+                                <div key={level} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: '10px', padding: '12px' }}>
+                                  <div style={{ fontWeight: 800, fontSize: '12px', color: c.text, marginBottom: '8px', textTransform: 'uppercase' }}>{level}</div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div>
+                                      <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Option Count</label>
+                                      <input
+                                        type="number" min="2" max="6"
+                                        className={styles.input}
+                                        style={{ padding: '4px 8px', fontSize: '13px' }}
+                                        value={rules.optionCount ?? ''}
+                                        placeholder="auto"
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                          const updated = { ...(template.difficultyRules || {}), [level]: { ...(template.difficultyRules?.[level] || {}), ...(val !== undefined ? { optionCount: val } : {}) } };
+                                          if (val === undefined) delete updated[level].optionCount;
+                                          updateField('difficultyRules', updated);
+                                        }}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Distractor Count</label>
+                                      <input
+                                        type="number" min="1" max="5"
+                                        className={styles.input}
+                                        style={{ padding: '4px 8px', fontSize: '13px' }}
+                                        value={rules.distractorCount ?? ''}
+                                        placeholder="auto"
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                          const updated = { ...(template.difficultyRules || {}), [level]: { ...(template.difficultyRules?.[level] || {}), ...(val !== undefined ? { distractorCount: val } : {}) } };
+                                          if (val === undefined) delete updated[level].distractorCount;
+                                          updateField('difficultyRules', updated);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
                       </div>
                     </div>
                   )}
@@ -6605,6 +6761,145 @@ export default function VisualTemplateBuilderPage() {
                   onChange={(e) => updateField('questionText', e.target.value)}
                 />
               </div>
+
+              {/* Prompt Parts Builder — for dynamic_pool templates */}
+              {template.type === 'dynamic_pool' && (
+                <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '14px', color: '#1e293b' }}>📝 Question Prompt Parts</div>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Build a multi-part prompt using text, images, and audio. Use tokens like <code style={{ background: '#e0e7ff', padding: '1px 5px', borderRadius: '4px', fontSize: '11px' }}>{'{{targetWord}}'}</code> <code style={{ background: '#e0e7ff', padding: '1px 5px', borderRadius: '4px', fontSize: '11px' }}>{'{{targetImage}}'}</code> <code style={{ background: '#e0e7ff', padding: '1px 5px', borderRadius: '4px', fontSize: '11px' }}>{'{{targetAudioUrl}}'}</code></div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = Array.isArray(template.parts) ? template.parts : [];
+                        updateField('parts', [...current, { type: 'text', content: '' }]);
+                      }}
+                      style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      + Add Part
+                    </button>
+                  </div>
+
+                  {(!Array.isArray(template.parts) || template.parts.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '13px', fontStyle: 'italic', border: '2px dashed #e2e8f0', borderRadius: '8px' }}>
+                      No prompt parts yet. Click "+ Add Part" to build a rich multi-part prompt.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {(template.parts || []).map((part, partIdx) => (
+                        <div key={partIdx} style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: '10px', alignItems: 'start', padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Type</label>
+                            <select
+                              className={styles.select}
+                              style={{ padding: '5px 8px', fontSize: '12px' }}
+                              value={part.type || 'text'}
+                              onChange={(e) => {
+                                const updated = [...(template.parts || [])];
+                                updated[partIdx] = { ...updated[partIdx], type: e.target.value };
+                                updateField('parts', updated);
+                              }}
+                            >
+                              <option value="text">text</option>
+                              <option value="image">image</option>
+                              <option value="audio">audio</option>
+                              <option value="token">token</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Content / Token</label>
+                            <input
+                              type="text"
+                              className={styles.input}
+                              style={{ fontSize: '13px' }}
+                              value={part.content || ''}
+                              placeholder={part.type === 'image' ? '{{targetImage}} or https://...' : part.type === 'audio' ? '{{targetAudioUrl}}' : part.type === 'token' ? '{{targetWord}}' : 'Which picture shows the word?'}
+                              onChange={(e) => {
+                                const updated = [...(template.parts || [])];
+                                updated[partIdx] = { ...updated[partIdx], content: e.target.value };
+                                updateField('parts', updated);
+                              }}
+                            />
+                             <div style={{ display: 'flex', gap: '14px', marginTop: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#0284c7', cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!part.showSpeaker || !!part.playLabelSound}
+                                  onChange={(e) => {
+                                    const updated = [...(template.parts || [])];
+                                    updated[partIdx] = { ...updated[partIdx], showSpeaker: e.target.checked, playLabelSound: e.target.checked };
+                                    updateField('parts', updated);
+                                  }}
+                                />
+                                🔊 Show Speaker Icon & Play Sound
+                              </label>
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#0284c7', cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!part.transparent}
+                                  onChange={(e) => {
+                                    const updated = [...(template.parts || [])];
+                                    updated[partIdx] = { ...updated[partIdx], transparent: e.target.checked };
+                                    updateField('parts', updated);
+                                  }}
+                                />
+                                ✨ Transparent Image Background
+                              </label>
+                              {(part.showSpeaker || part.playLabelSound || part.type === 'image' || part.type === 'audio') && (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Audio URL / Token:</label>
+                                  <input
+                                    type="text"
+                                    className={styles.input}
+                                    style={{ fontSize: '11.5px', padding: '3px 8px', width: '160px' }}
+                                    value={part.audioUrl || part.targetAudioUrl || part.spokenText || ''}
+                                    placeholder="{{targetAudioUrl}} or {{target_word}}"
+                                    onChange={(e) => {
+                                      const updated = [...(template.parts || [])];
+                                      updated[partIdx] = { 
+                                        ...updated[partIdx], 
+                                        audioUrl: e.target.value, 
+                                        targetAudioUrl: e.target.value,
+                                        spokenText: e.target.value 
+                                      };
+                                      updateField('parts', updated);
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            {part.type === 'text' && (
+                              <div style={{ display: 'flex', gap: '4px', marginTop: '5px', flexWrap: 'wrap' }}>
+                                {['{{targetWord}}', '{{middlePattern}}', '{{beginningPattern}}', '{{endingPattern}}'].map(tok => (
+                                  <button key={tok} type="button"
+                                    onClick={() => {
+                                      const updated = [...(template.parts || [])];
+                                      updated[partIdx] = { ...updated[partIdx], content: (updated[partIdx].content || '') + tok };
+                                      updateField('parts', updated);
+                                    }}
+                                    style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
+                                  >{tok}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = (template.parts || []).filter((_, i) => i !== partIdx);
+                              updateField('parts', updated);
+                            }}
+                            style={{ background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '6px', padding: '5px 10px', fontWeight: 800, fontSize: '14px', cursor: 'pointer', alignSelf: 'center' }}
+                          >✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               </div>
               )}
 
@@ -6727,7 +7022,9 @@ export default function VisualTemplateBuilderPage() {
                 >
                   <option value="mcq">Multiple Choice (MCQ)</option>
                   <option value="fillInTheBlank">Fill-In-The-Blank (FIB)</option>
-                  <option value="categorizationv2">Categorization / Drag & Drop</option>
+                  <option value="categorizationv2">Categorization / Drag & Drop (IXL 2-Column)</option>
+                  <option value="grid_fill">Grid Fill (2x2 Matrix Layout)</option>
+                  <option value="pick_from_sentence">Pick from Sentence / Select Token (Word/Letter Click)</option>
                   <option value="visual_choice">Visual Choice (Which shows N?)</option>
                   <option value="hotspot_select">Interactive Hotspot (Click Image)</option>
                 </select>

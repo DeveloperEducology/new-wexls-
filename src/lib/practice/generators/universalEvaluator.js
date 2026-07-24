@@ -294,7 +294,7 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     }
   }
 
-  if (template?.type === 'universal' || config.type === 'universal') {
+  if (template?.type === 'universal' || config.type === 'universal' || template?.generatorType === 'spreadsheet-grid' || config.generatorType === 'spreadsheet-grid' || template?.optionsType === 'sentence_ordering' || config.optionsType === 'sentence_ordering' || template?.type === 'sentence_ordering' || config.type === 'sentence_ordering') {
     return baseEvaluateTemplate(config, seed, difficultyContext);
   }
 
@@ -318,6 +318,17 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
           }
         }
       });
+      variables = varObj;
+    } else if (variables && typeof variables === 'object') {
+      const varObj = {};
+      for (const [name, v] of Object.entries(variables)) {
+        if (!v) continue;
+        if (v.type === 'computed' || v.formula) {
+          derivations[name] = v.formula;
+        } else {
+          varObj[name] = v;
+        }
+      }
       variables = varObj;
     }
 

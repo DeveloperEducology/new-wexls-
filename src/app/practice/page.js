@@ -1268,6 +1268,8 @@ function PracticePageContent() {
   const [practiceLevel, setPracticeLevel] = useState(1);
   const [levelStreak, setLevelStreak] = useState(0);
   const [levelModal, setLevelModal] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [copiedReport, setCopiedReport] = useState(false);
   const [lastResult, setLastResult] = useState('none');
   const [difficulty, setDifficulty] = useState(resolveSearchValue(searchParams, 'difficulty') || 'adaptive');
   // ── practiceMode & staticSkillIndex are derived from URL (not React state) ─
@@ -1815,22 +1817,33 @@ function PracticePageContent() {
     }
   }, [applyQuestionPayload, buildQuestionUrl, searchParams, activeProgressionDifficulty, activeSkillOption, logicType]);
 
-  // ── Static Mode: advance to the next skill in order ──────────────────────
-  const advanceStaticSkill = useCallback((direction = 'next') => {
-    const options = sourceConfig.options || [];
-    if (options.length === 0) return;
-    // Derive current index live from logicType — no separate state needed
-    const currentIdx = options.findIndex(o => o.value === logicType);
-    const base = currentIdx >= 0 ? currentIdx : 0;
-    const next = direction === 'next'
-      ? (base + 1) % options.length
-      : Math.max(0, base - 1);
-    const nextSkill = options[next];
-    if (nextSkill) {
-      setLogicType(nextSkill.value);
-      syncRoute(sourceKey, nextSkill.value);
+  // ── Static Mode: advance through questions by qn index in current skill ──
+  const advanceStaticQuestion = useCallback((direction = 'next') => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const currentQn = params.get('qn');
+    let nextIndex = 0;
+
+    if (currentQn !== null && currentQn !== '') {
+      if (!isNaN(Number(currentQn))) {
+        const curIdx = Number(currentQn);
+        nextIndex = direction === 'next' ? curIdx + 1 : Math.max(0, curIdx - 1);
+      } else {
+        const metaNext = question?.metadata?.nextQuestionId;
+        if (direction === 'next' && metaNext && metaNext !== 'end') {
+          params.set('qn', metaNext);
+          router.replace(`/practice?${params.toString()}`, { scroll: false });
+          return;
+        }
+        nextIndex = direction === 'next' ? 1 : 0;
+      }
+    } else {
+      nextIndex = direction === 'next' ? 1 : 0;
     }
-  }, [sourceConfig.options, sourceKey, logicType, syncRoute]);
+
+    params.set('qn', String(nextIndex));
+    router.replace(`/practice?${params.toString()}`, { scroll: false });
+  }, [router, question]);
 
   useEffect(() => {
     async function loadCurriculum() {
@@ -1992,6 +2005,16 @@ function PracticePageContent() {
       return;
     }
 
+    if (practiceMode === 'static' && (smartScore > 0 || correctStreak > 0)) {
+      fetchQuestion(false, {
+        correctStreak: correctStreak,
+        practiceLevel: practiceLevel,
+        levelStreak: levelStreak,
+        lastResult: lastResult,
+      });
+      return;
+    }
+
     setSmartScore(0);
     setCorrectStreak(0);
     setPracticeLevel(1);
@@ -2140,6 +2163,9 @@ function PracticePageContent() {
           smartScoreBefore: smartScore,
           startedAt: questionStartedAt,
           streakThreshold,
+          practiceMode: practiceMode,
+          mode: practiceMode,
+          isStatic: practiceMode === 'static' || question?.metadata?.isStatic || question?.isStatic,
         }),
       });
       if (response.ok) {
@@ -2177,7 +2203,9 @@ function PracticePageContent() {
     setCorrectStreak(nextCorrectStreak);
     setStreakThreshold(currentThreshold);
 
-    if (didLevelUp && !progressionConfig?.enabled) {
+    const isStaticMode = practiceMode === 'static' || question?.metadata?.isStatic || question?.isStatic || progressionConfig?.enabled === false;
+
+    if (!isStaticMode && didLevelUp && !progressionConfig?.enabled) {
       setPracticeLevel(nextPracticeLevel);
       setLevelStreak(finalLevelStreak);
       setLevelModal({
@@ -2190,8 +2218,8 @@ function PracticePageContent() {
         speakText(`Level ${nextPracticeLevel} unlocked.`, question?.voice || 'Puck');
       }
     } else {
-      setPracticeLevel(nextPracticeLevel);
-      setLevelStreak(finalLevelStreak);
+      setPracticeLevel(isStaticMode ? 1 : nextPracticeLevel);
+      setLevelStreak(isStaticMode ? 0 : finalLevelStreak);
     }
 
     setLastResult(canonicalCorrect ? 'correct' : 'incorrect');
@@ -2263,7 +2291,7 @@ function PracticePageContent() {
     if (practiceMode === 'static') {
       setAdaptiveBanner(null);
       window.setTimeout(() => {
-        advanceStaticSkill('next');
+        advanceStaticQuestion('next');
         setIsSubmitting(false);
         submittingRef.current = false;
         window.setTimeout(() => fetchQuestion(false, {
@@ -4278,28 +4306,27 @@ function PracticePageContent() {
                     </button>
                   </div>
                   {practiceMode === 'static' && (() => {
-                    const opts = sourceConfig.options || [];
-                    const idx = opts.findIndex(o => o.value === logicType);
-                    const currentIdx = idx >= 0 ? idx : 0;
+                    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+                    const qnVal = params.get('qn') || '0';
                     return (
                       <>
                         <div style={{ marginTop: 8, fontSize: 10, color: '#fb923c', fontWeight: 700 }}>
-                          Skill {currentIdx + 1}/{opts.length} — following order, no adaptive routing
+                          Static Question Index: #{qnVal} — following collection index order
                         </div>
                         <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
                           <button
                             type="button"
-                            onClick={() => { advanceStaticSkill('prev'); fetchQuestion(false); }}
+                            onClick={() => { advanceStaticQuestion('prev'); fetchQuestion(false); }}
                             style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
                           >
-                            ← Prev Skill
+                            ← Prev Qn
                           </button>
                           <button
                             type="button"
-                            onClick={() => { advanceStaticSkill('next'); fetchQuestion(false); }}
+                            onClick={() => { advanceStaticQuestion('next'); fetchQuestion(false); }}
                             style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
                           >
-                            Next Skill →
+                            Next Qn →
                           </button>
                         </div>
                       </>
@@ -4706,6 +4733,132 @@ function PracticePageContent() {
           onClose={() => handleToggleOverlay(toolId)}
         />
       ))}
+      {/* ── Floating Live Qn Report Button ── */}
+      <div style={{ position: 'fixed', bottom: 20, right: 70, zIndex: 9999 }}>
+        <button
+          type="button"
+          onClick={() => setShowReportModal(!showReportModal)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '8px 16px',
+            borderRadius: 999,
+            background: showReportModal ? '#1e293b' : 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
+            color: '#ffffff',
+            border: '2px solid #ffffff',
+            fontSize: 13,
+            fontWeight: 800,
+            cursor: 'pointer',
+            boxShadow: '0 8px 20px rgba(14, 165, 233, 0.35)',
+            transition: 'all 0.2s ease',
+          }}
+          title="Report / Inspect Live Question Details"
+        >
+          <span>🐛</span>
+          <span>{showReportModal ? 'Close Report' : 'Qn Info'}</span>
+        </button>
+
+        {showReportModal && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 50,
+              right: 0,
+              width: '340px',
+              maxWidth: '90vw',
+              background: '#ffffff',
+              borderRadius: 20,
+              border: '2px solid #38bdf8',
+              boxShadow: '0 20px 40px rgba(15, 23, 42, 0.25)',
+              padding: 16,
+              zIndex: 10000,
+              fontFamily: 'var(--font-outfit), sans-serif',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontWeight: 900, fontSize: 15, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>📋</span> Live Question Details
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                style={{ background: 'none', border: 0, fontSize: 16, cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, color: '#334155', maxHeight: 320, overflowY: 'auto', paddingRight: 4 }}>
+              <div>
+                <span style={{ fontWeight: 800, color: '#0ea5e9' }}>Question ID:</span>
+                <div style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '6px 8px', borderRadius: 6, wordBreak: 'break-all', marginTop: 2, fontSize: 11 }}>
+                  {question?.id || question?._id || 'N/A'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontWeight: 800, color: '#0ea5e9' }}>Question Text:</span>
+                <div style={{ fontWeight: 700, background: '#f8fafc', padding: '6px 8px', borderRadius: 6, marginTop: 2, color: '#0f172a' }}>
+                  {question?.questionText || '(None)'}
+                </div>
+              </div>
+
+              {(question?.parts || []).length > 0 ? (
+                <div>
+                  <span style={{ fontWeight: 800, color: '#0ea5e9' }}>Parts Content:</span>
+                  <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: 6, marginTop: 2, color: '#334155' }}>
+                    {(question?.parts || []).map(p => p.content || p.text || '').filter(Boolean).join(' | ')}
+                  </div>
+                </div>
+              ) : null}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 800, color: '#64748b' }}>Skill ID:</span>
+                  <div style={{ fontSize: 11, background: '#f1f5f9', padding: '4px 6px', borderRadius: 6, wordBreak: 'break-all', marginTop: 2 }}>
+                    {question?.metadata?.skillId || question?.skillId || urlSkill || 'N/A'}
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 800, color: '#64748b' }}>Engine:</span>
+                  <div style={{ fontSize: 11, background: '#f1f5f9', padding: '4px 6px', borderRadius: 6, wordBreak: 'break-all', marginTop: 2 }}>
+                    {question?.metadata?.templateId || question?.schema?.templateId || question?.generatorType || 'N/A'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const reportTxt = `Question ID: ${question?.id || question?._id || 'N/A'}\nQuestion Text: ${question?.questionText || ''}\nParts: ${(question?.parts || []).map(p => p.content || p.text || '').join(' | ')}\nSkill: ${question?.metadata?.skillId || question?.skillId || urlSkill || ''}`;
+                try {
+                  navigator.clipboard.writeText(reportTxt);
+                  setCopiedReport(true);
+                  setTimeout(() => setCopiedReport(false), 2000);
+                } catch (e) {}
+              }}
+              style={{
+                width: '100%',
+                marginTop: 12,
+                padding: '9px 0',
+                borderRadius: 10,
+                background: copiedReport ? '#22c55e' : '#0284c7',
+                color: '#ffffff',
+                border: 0,
+                fontWeight: 900,
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+              }}
+            >
+              {copiedReport ? '✓ Copied to Clipboard!' : '📋 Copy Qn Info to Clipboard'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {progressionStageModalEl}
     </>
   );

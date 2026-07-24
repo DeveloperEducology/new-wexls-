@@ -1,4 +1,5 @@
 import { validateInteractiveToolAnswer } from './interactiveToolEngines/validateInteractiveToolAnswer.js';
+import { validateQuestionAnswer } from './validation/index.js';
 
 function normalizeText(value) {
   return String(value ?? '').replace(/\s+/g, '').toLowerCase();
@@ -6,6 +7,45 @@ function normalizeText(value) {
 
 function normalizeLooseText(value) {
   return String(value ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function isMathEquationCorrect(actual, expected) {
+  const cleanActual = String(actual || '').replace(/\s+/g, '');
+  const cleanExpected = String(expected || '').replace(/\s+/g, '');
+  
+  if (cleanActual === cleanExpected) return true;
+  
+  if ((cleanActual.match(/=/g) || []).length !== 1 || (cleanExpected.match(/=/g) || []).length !== 1) {
+    return false;
+  }
+  if (/[^\d+=]/.test(cleanActual) || /[^\d+=]/.test(cleanExpected)) {
+    return false;
+  }
+  
+  const parseSide = (sideStr) => {
+    return sideStr.split('+').map(numStr => parseInt(numStr, 10)).filter(n => !isNaN(n));
+  };
+  
+  const [actLhs, actRhs] = cleanActual.split('=');
+  const [expLhs, expRhs] = cleanExpected.split('=');
+  
+  const actLhsNums = parseSide(actLhs);
+  const actRhsNums = parseSide(actRhs);
+  const expLhsNums = parseSide(expLhs);
+  const expRhsNums = parseSide(expRhs);
+  
+  const actLhsSum = actLhsNums.reduce((sum, n) => sum + n, 0);
+  const actRhsSum = actRhsNums.reduce((sum, n) => sum + n, 0);
+  const expLhsSum = expLhsNums.reduce((sum, n) => sum + n, 0);
+  const expRhsSum = expRhsNums.reduce((sum, n) => sum + n, 0);
+  
+  if (actLhsSum !== actRhsSum || expLhsSum !== expRhsSum) return false;
+  
+  const allActNums = [...actLhsNums, ...actRhsNums].sort((x, y) => x - y);
+  const allExpNums = [...expLhsNums, ...expRhsNums].sort((x, y) => x - y);
+  
+  if (allActNums.length !== allExpNums.length) return false;
+  return allActNums.every((val, idx) => val === allExpNums[idx]);
 }
 
 function parseMaybeJson(value, fallback = null) {
@@ -67,6 +107,14 @@ function getAnswerPrimitive(value) {
 
 function getSelectedOptionValue(question, userAnswer) {
   const options = Array.isArray(question?.options) ? question.options : [];
+  if (Array.isArray(userAnswer)) {
+    const labels = userAnswer.map((item) => {
+      const idx = getValidIndex(item, options.length);
+      if (idx !== null) return getOptionValue(options[idx]);
+      return String(item || '');
+    });
+    return labels.join('');
+  }
   const primitive = getAnswerPrimitive(userAnswer);
   const selectedIndex = getValidIndex(primitive, options.length);
   if (selectedIndex === null) return primitive;
@@ -143,6 +191,33 @@ function validateRule(rule, question, userAnswer) {
 
   if (hasUnresolvedPlaceholder(expectedRaw)) {
     return true;
+  }
+
+  if (isPickFromSentenceType(question)) {
+    return validatePickFromSentence(question, userAnswer);
+  }
+
+  const { type: qType, interaction: qInteraction } = getNormalizedTypeAndInteraction(question);
+  const isCategorizationQuestion = [
+    'categorization',
+    'categorizationv2',
+    'categorisation',
+    'categorisationv2',
+    'sorting',
+    'sort',
+    'drag_drop'
+  ].includes(qType) || [
+    'categorization',
+    'categorizationv2',
+    'categorisation',
+    'categorisationv2',
+    'sorting',
+    'sort',
+    'drag_drop'
+  ].includes(qInteraction);
+
+  if (isCategorizationQuestion && (typeof expectedRaw !== 'object' || expectedRaw === null)) {
+    return validateCategorizationDragDrop(question, userAnswer);
   }
 
   if (expectedRaw && typeof expectedRaw === 'object') {
@@ -226,7 +301,7 @@ function validateRule(rule, question, userAnswer) {
     return sortedCorrect.every((val, idx) => val === sortedSelected[idx]);
   }
 
-  return normalizeLooseText(answerValue) === normalizeLooseText(expectedRaw);
+  return normalizeText(answerValue) === normalizeText(expectedRaw);
 }
 
 function validateRules(question, userAnswer) {
@@ -312,9 +387,197 @@ function getExpectedOrderingAnswer(question) {
   }, {});
 }
 
-export function isAnswerCorrect(question, userAnswer) {
+function validateCategorizationDragDrop(question, userAnswer) {
+  if (!userAnswer || typeof userAnswer !== 'object' || Array.isArray(userAnswer)) return false;
+
+  // 1. If explicit answerKey or answer object exists
+  const answerKey = parseMaybeJson(question.answerKey ?? question.answer ?? question.correctAnswer, null);
+  if (answerKey && typeof answerKey === 'object' && !Array.isArray(answerKey)) {
+    const keys = Object.keys(answerKey);
+    if (keys.length > 0) {
+      return keys.every(key => normalizeText(userAnswer[key]) === normalizeText(answerKey[key]));
+    }
+  }
+
+  // 2. Validate using question.items target mapping
+  const items = question.items || question.parts?.find(p => p?.items)?.items || [];
+  if (Array.isArray(items) && items.length > 0) {
+    const itemTargetMap = new Map(items.map(item => [item.id, item.target || item.categoryId]));
+    const validItems = items.filter(i => itemTargetMap.get(i.id));
+    if (validItems.length > 0) {
+      return validItems.every(item => {
+        const expectedTarget = itemTargetMap.get(item.id);
+        const actualTarget = userAnswer[item.id];
+        return normalizeText(actualTarget) === normalizeText(expectedTarget);
+      });
+    }
+  }
+
+  // 3. Validate using question.options isCorrect (correct option -> category 0, distractor -> category 1)
+  const options = Array.isArray(question.options) ? question.options : [];
+  const categories = question.categories || question.parts?.find(p => p?.categories)?.categories || [
+    { id: 'cat_long_e', label: 'Long e' },
+    { id: 'cat_short_e', label: 'Short e' }
+  ];
+
+  if (options.length > 0 && categories.length >= 2) {
+    const targetCatCorrect = categories[0]?.id || 'cat_long_e';
+    const targetCatIncorrect = categories[1]?.id || 'cat_short_e';
+
+    return options.every((opt) => {
+      const optId = opt.id || opt.label;
+      const actualTarget = userAnswer[optId];
+      if (!actualTarget) return false;
+      const expectedTarget = opt.isCorrect ? targetCatCorrect : targetCatIncorrect;
+      return normalizeText(actualTarget) === normalizeText(expectedTarget);
+    });
+  }
+
+  return false;
+}
+
+function isPickFromSentenceType(question) {
   if (!question) return false;
   const { type, interaction } = getNormalizedTypeAndInteraction(question);
+  const targets = ['pick_from_sentence', 'select_from_sentence', 'token_select'];
+  if (targets.includes(type) || targets.includes(interaction)) return true;
+  const parts = Array.isArray(question.parts) ? question.parts : [];
+  return parts.some(p => p && (targets.includes(p.type) || Array.isArray(p.tokens)));
+}
+
+function validatePickFromSentence(question, userAnswer) {
+  if (!question || userAnswer === undefined || userAnswer === null) return false;
+
+  const parts = Array.isArray(question.parts) ? question.parts : [];
+  let tokenParts = parts.filter(p => p && (['pick_from_sentence', 'select_from_sentence', 'token_select'].includes(p.type) || Array.isArray(p.tokens)));
+  if (tokenParts.length === 0 && Array.isArray(question.tokens)) {
+    tokenParts = [question];
+  }
+
+  let selectedTokenIds = [];
+  if (userAnswer && typeof userAnswer === 'object' && !Array.isArray(userAnswer)) {
+    Object.values(userAnswer).forEach(val => {
+      if (typeof val === 'string') {
+        selectedTokenIds.push(...val.split('|').map(s => s.trim()).filter(Boolean));
+      } else if (Array.isArray(val)) {
+        selectedTokenIds.push(...val.map(s => String(s).trim()).filter(Boolean));
+      } else if (val !== undefined && val !== null) {
+        selectedTokenIds.push(String(val).trim());
+      }
+    });
+  } else if (typeof userAnswer === 'string') {
+    selectedTokenIds = userAnswer.split('|').map(s => s.trim()).filter(Boolean);
+  } else if (Array.isArray(userAnswer)) {
+    selectedTokenIds = userAnswer.map(s => String(s).trim()).filter(Boolean);
+  }
+
+  if (selectedTokenIds.length === 0) return false;
+
+  // 1. Check against part.tokens (isCorrect: true)
+  if (tokenParts.length > 0) {
+    for (const part of tokenParts) {
+      const tokens = Array.isArray(part.tokens) ? part.tokens : [];
+      if (tokens.length > 0) {
+        const correctTokens = tokens.filter(t => Boolean(t.isCorrect));
+        if (correctTokens.length > 0) {
+          const correctIds = new Set(correctTokens.map(t => String(t.id || '').trim()).filter(Boolean));
+          const correctTexts = new Set(correctTokens.map(t => normalizeText(t.text || t.display || t.content || t.label)).filter(Boolean));
+
+          const userIds = new Set();
+          const userTexts = new Set();
+
+          selectedTokenIds.forEach(sel => {
+            userIds.add(sel);
+            const matchingTok = tokens.find(t => String(t.id || '').trim() === sel || normalizeText(t.text || t.display || t.content || t.label) === normalizeText(sel));
+            if (matchingTok) {
+              if (matchingTok.id) userIds.add(String(matchingTok.id).trim());
+              const txt = matchingTok.text || matchingTok.display || matchingTok.content || matchingTok.label;
+              if (txt) userTexts.add(normalizeText(txt));
+            } else {
+              userTexts.add(normalizeText(sel));
+            }
+          });
+
+          let idMatch = false;
+          if (correctIds.size > 0 && correctIds.size === userIds.size) {
+            idMatch = [...correctIds].every(id => userIds.has(id));
+          }
+
+          let textMatch = false;
+          if (correctTexts.size > 0 && correctTexts.size === userTexts.size) {
+            textMatch = [...correctTexts].every(txt => userTexts.has(txt));
+          }
+
+          if (idMatch || textMatch) return true;
+        }
+      }
+    }
+  }
+
+  // 2. Check against question.correctAnswer / question.answer / question.correctAnswerText
+  const expectedRaw = question.answer ?? question.correctAnswer ?? question.correctAnswerText;
+  const expected = parseMaybeJson(expectedRaw, expectedRaw);
+
+  if (expected) {
+    let expectedSet = new Set();
+    if (typeof expected === 'object' && expected !== null && !Array.isArray(expected)) {
+      Object.values(expected).forEach(val => {
+        if (typeof val === 'string') {
+          val.split(/[|,]/).forEach(v => expectedSet.add(normalizeText(v)));
+        } else if (Array.isArray(val)) {
+          val.forEach(v => expectedSet.add(normalizeText(v)));
+        } else if (v !== undefined && v !== null) {
+          expectedSet.add(normalizeText(v));
+        }
+      });
+    } else if (typeof expected === 'string') {
+      expected.split(/[|,]/).forEach(v => expectedSet.add(normalizeText(v)));
+    } else if (Array.isArray(expected)) {
+      expected.forEach(v => expectedSet.add(normalizeText(v)));
+    }
+
+    if (expectedSet.size > 0) {
+      const userNormSet = new Set(selectedTokenIds.map(normalizeText));
+      if (expectedSet.size === userNormSet.size && [...expectedSet].every(item => userNormSet.has(item))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function isAnswerCorrect(question, userAnswer) {
+  if (!question) return false;
+
+  const isolatedResult = validateQuestionAnswer(question, userAnswer);
+  if (isolatedResult !== null) {
+    return isolatedResult;
+  }
+
+  const { type, interaction } = getNormalizedTypeAndInteraction(question);
+
+  const isCategorizationType = [
+    'categorization',
+    'categorizationv2',
+    'categorisation',
+    'categorisationv2',
+    'sorting',
+    'sort',
+    'drag_drop'
+  ].includes(type) || [
+    'categorization',
+    'categorizationv2',
+    'categorisation',
+    'categorisationv2',
+    'sorting',
+    'sort',
+    'drag_drop'
+  ].includes(interaction);
+
+  if (isCategorizationType && question.layoutMode !== 'ordering' && question.layoutMode !== 'word_completion' && question.layoutMode !== 'complete_words') {
+    return validateCategorizationDragDrop(question, userAnswer);
+  }
 
   const ruleResult = validateRules(question, userAnswer);
   if (ruleResult !== null) {
@@ -324,6 +587,11 @@ export function isAnswerCorrect(question, userAnswer) {
   if (type === 'sentence_ordering' || interaction === 'sentence_ordering') {
     const expected = String(question.correctAnswer || question.answer || '').trim().replace(/\s+/g, ' ');
     const actual = String(userAnswer || '').trim().replace(/\s+/g, ' ');
+    if (expected.includes('=') && expected.includes('+')) {
+      if (isMathEquationCorrect(actual, expected)) {
+        return true;
+      }
+    }
     return actual === expected;
   }
 
@@ -415,6 +683,8 @@ export function isAnswerCorrect(question, userAnswer) {
     const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
     return sortedCorrect.every((val, idx) => val === sortedSelected[idx]);
   }
+
+
 
   if (type === 'categorizationv2' && question.layoutMode === 'ordering') {
     const expectedOrderingAnswer = getExpectedOrderingAnswer(question);

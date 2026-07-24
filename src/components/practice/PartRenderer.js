@@ -97,10 +97,10 @@ function InlineMarkdown({ text, userAnswerLabel }) {
         return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />];
       }
 
-      // Match blank placeholders: '___' or '_' (not part of words, or standing alone) or '{{blank}}'
-      const blankSegments = subPiece.split(/(___|_|\{\{blank\}\})/g);
+      // Match blank placeholders: '_', '__', '___', '[]', '[[blank1]]', '{{blank}}'
+      const blankSegments = subPiece.split(/(_+|\[\]|\[\[blank\d*\]\]|\{\{blank\}\})/g);
       return blankSegments.map((segment, segIdx) => {
-        if (segment === '_' || segment === '___' || segment === '{{blank}}') {
+        if (/^(_+|\[\]|\[\[blank\d*\]\]|\{\{blank\}\})$/.test(segment)) {
           if (userAnswerLabel) {
             return (
               <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankFilled}>
@@ -110,7 +110,7 @@ function InlineMarkdown({ text, userAnswerLabel }) {
           } else {
             return (
               <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankEmpty}>
-                &nbsp;&nbsp;
+                &nbsp;&nbsp;&nbsp;&nbsp;
               </span>
             );
           }
@@ -142,29 +142,36 @@ function InlineMarkdown({ text, userAnswerLabel }) {
 
   return (
     <span style={{ whiteSpace: 'pre-line' }}>
-      {normalizedText.split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
+      {normalizedText.split(/(\*\*[^*]+\*\*|\[img:[^\]]+\]|!\[?[^\]()\s]*\]?(?:\(\(?https?:\/\/[^\s)]+\)?\)|https?:\/\/[^\s)]+|\{\{https?:\/\/[^\s}]+\}\}))/g).map((piece, index) => {
         const match = piece.match(/^\*\*([^*]+)\*\*$/);
         if (match) {
           return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
         }
         
-        const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
-        if (imgMatch) {
-          return (
-            <img
-              key={index}
-              src={imgMatch[1]}
-              alt="target word"
-              style={{
-                display: 'inline-block',
-                height: '1.6em',
-                verticalAlign: 'middle',
-                margin: '0 6px',
-                borderRadius: '4px',
-                objectFit: 'contain'
-              }}
-            />
-          );
+        const isImgPiece = piece.startsWith('[img:') || piece.startsWith('!') || piece.includes('https://') || piece.includes('http://');
+        if (isImgPiece) {
+          const urlMatch = piece.match(/https?:\/\/[^\s)\}\]]+/);
+          if (urlMatch) {
+            const cleanUrl = urlMatch[0].replace(/[)]+$/, '');
+            return (
+              <img
+                key={index}
+                src={cleanUrl}
+                alt="inline question image"
+                style={{
+                  display: 'inline-block',
+                  maxHeight: '120px',
+                  maxWidth: '100%',
+                  height: 'auto',
+                  verticalAlign: 'middle',
+                  margin: '6px 8px',
+                  borderRadius: '10px',
+                  objectFit: 'contain',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                }}
+              />
+            );
+          }
         }
         
         return (
@@ -343,6 +350,7 @@ function cleanSpeechText(value) {
 
 function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue, partIndex }) {
   const content = part.content || part.text || '';
+  if (!content.trim()) return null;
   const spokenRef = useRef(false);
   const shouldShowSpeaker = showSpeaker && part.showSpeaker !== false && !part.noSpeaker;
 
@@ -364,20 +372,33 @@ function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeake
     return cleanSpeechText(speakTextValue || content);
   }, [speakTextValue, content]);
 
-  const selectedIndex = useMemo(() => {
-    return typeof userAnswer === 'object'
-      ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
-      : Number(userAnswer);
-  }, [userAnswer]);
-
   const userAnswerLabel = useMemo(() => {
     if (userAnswer === null || userAnswer === undefined || userAnswer === '') return null;
-    if (Array.isArray(question?.options) && selectedIndex >= 0 && selectedIndex < question.options.length) {
-      const opt = question.options[selectedIndex];
-      return typeof opt === 'object' ? (opt.label ?? opt.text) : opt;
+    
+    const idx = typeof userAnswer === 'object'
+      ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
+      : Number(userAnswer);
+
+    if (Number.isFinite(idx) && Array.isArray(question?.options) && idx >= 0 && idx < question.options.length) {
+      const opt = question.options[idx];
+      return typeof opt === 'object' ? (opt.label ?? opt.text ?? opt.value) : opt;
     }
+
+    if (typeof userAnswer === 'string' && userAnswer.trim()) {
+      return userAnswer.trim();
+    }
+
+    if (typeof userAnswer === 'object') {
+      const val = userAnswer.ans || userAnswer.answer || Object.values(userAnswer)[0];
+      if (typeof val === 'string' && val.trim()) return val.trim();
+      if (Number.isFinite(Number(val)) && Array.isArray(question?.options)) {
+        const opt = question.options[Number(val)];
+        if (opt) return typeof opt === 'object' ? (opt.label ?? opt.text ?? opt.value) : opt;
+      }
+    }
+
     return null;
-  }, [userAnswer, question?.options, selectedIndex]);
+  }, [userAnswer, question?.options]);
 
   useEffect(() => {
     const shouldAutoplay = (isPreK || question?.layoutConfig?.audio === true) && question?.layoutConfig?.audio !== false;
@@ -735,35 +756,14 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   const isPreK = [routeSearch, questionTopic, questionGrade, questionSkillId].some(checkPreK);
 
   const src = part.imageUrl || part.src || part.content || null;
-  if (!src) {
-    return (
-      <div
-        style={{
-          width: inGroup ? '120px' : '100%',
-          height: inGroup ? '120px' : '150px',
-          border: '2px dashed #cbd5e1',
-          borderRadius: 12,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#94a3b8',
-          fontSize: 13,
-          fontWeight: 600,
-          background: '#f8fafc',
-          margin: '10px 0'
-        }}
-      >
-        📷 [Empty Image Part]
-      </div>
-    );
-  }
+  const isValidImgSrc = typeof src === 'string' && (src.startsWith('http') || src.startsWith('/') || src.startsWith('data:'));
+  if (!src || !isValidImgSrc) return null;
 
-  const isTransparent = src.match(/\.(png|svg|webp)($|\?)/i);
+  const isTransparent = part.transparent || part.isTransparent || part.background === 'transparent' || (typeof src === 'string' && src.match(/\.(png|svg|webp)($|\?)/i));
   const labelText = part.label || part.alt || '';
-  const spokenText = labelText || question?.soundText || 'Image';
-  const canPlaySound = part.playLabelSound && (spokenText || part.audioUrl);
-
-  const isDirectSelect = question?.directImageSelect || question?.interaction === 'direct_image_select';
+  const spokenText = part.spokenText || labelText || question?.soundText || question?.questionText || 'Image';
+  const isDirectSelect = Boolean(question?.directImageSelect || question?.interaction === 'direct_image_select');
+  const canPlaySound = Boolean(part.audioUrl || part.spokenText || part.playLabelSound || part.showSpeaker || (spokenText && !isDirectSelect));
   const isSelected = isDirectSelect && partIndex !== undefined && userAnswer !== null && Number(userAnswer) === partIndex;
 
   const handleImageClick = (e) => {
@@ -837,7 +837,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
       type="button"
       onClick={handleSpeakerClick}
       style={{
-        background: '#e0f2fe',
+        background: 'transparent',
         border: 'none',
         borderRadius: '50%',
         width: isPreK ? '40px' : '36px',
@@ -847,15 +847,14 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         justifyContent: 'center',
         cursor: 'pointer',
         color: '#0284c7',
-        boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
         transition: 'transform 0.2s ease, background 0.2s ease',
         flexShrink: 0,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = 'rgba(2, 132, 199, 0.1)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'transparent'; }}
       title="Play sound"
     >
-      <svg viewBox="0 0 24 24" width={isPreK ? "20" : "18"} height={isPreK ? "20" : "18"} fill="currentColor">
+      <svg viewBox="0 0 24 24" width={isPreK ? "24" : "20"} height={isPreK ? "24" : "20"} fill="currentColor">
         <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
       </svg>
     </button>
@@ -869,13 +868,13 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         display: 'flex', 
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: part.transparent ? 'transparent' : '#ffffff',
-        borderRadius: part.transparent ? undefined : 20,
-        border: part.transparent ? 'none' : cardBorder,
-        boxShadow: part.transparent ? 'none' : cardShadow,
-        padding: part.transparent ? '0' : '12px',
+        backgroundColor: isTransparent ? 'transparent' : '#ffffff',
+        borderRadius: isTransparent ? undefined : 20,
+        border: isTransparent ? 'none' : cardBorder,
+        boxShadow: isTransparent ? 'none' : cardShadow,
+        padding: isTransparent ? '0' : '12px',
         boxSizing: 'border-box',
-        aspectRatio: part.transparent ? 'auto' : (part.style?.height ? 'auto' : '1.15 / 1'),
+        aspectRatio: isTransparent ? 'auto' : (part.style?.height ? 'auto' : '1.15 / 1'),
         maxHeight: part.maxHeight ? (typeof part.maxHeight === 'number' ? `${part.maxHeight}px` : part.maxHeight) : undefined,
         transition: 'border 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
         ...(part.style?.height ? { height: part.style.height } : {}),

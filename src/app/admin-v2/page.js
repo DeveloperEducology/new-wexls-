@@ -12,6 +12,19 @@ export default function AdminV2Page() {
   const [editingId, setEditingId] = useState(null); // ID of the node currently being edited
   const [generatingStates, setGeneratingStates] = useState({});
 
+  // Option pool states
+  const [optionPools, setOptionPools] = useState([]);
+  const [selectedPoolId, setSelectedPoolId] = useState('');
+  const [selectedPoolDoc, setSelectedPoolDoc] = useState(null);
+  const [poolSearch, setPoolSearch] = useState('');
+  const [poolFetchError, setPoolFetchError] = useState(null);
+  const [jsonEditText, setJsonEditText] = useState('');
+  const [jsonEditError, setJsonEditError] = useState(null);
+  const [savePoolStatus, setSavePoolStatus] = useState(null);
+  const [activePoolExplorerTab, setActivePoolExplorerTab] = useState('json');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [jsonCopied, setJsonCopied] = useState(false);
+
   // School filter states
   const [filterGradeId, setFilterGradeId] = useState('');
   const [filterSubjectId, setFilterSubjectId] = useState('');
@@ -222,6 +235,102 @@ export default function AdminV2Page() {
       console.warn('Failed to load questions:', err);
     }
   };
+
+  const fetchOptionPools = async () => {
+    setLoading(true);
+    setPoolFetchError(null);
+    try {
+      const res = await fetch('/api/admin/vocabulary-pools');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.pools)) {
+        setOptionPools(data.pools);
+      } else {
+        setPoolFetchError(data.error || 'Failed to load option pools');
+      }
+    } catch (err) {
+      setPoolFetchError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSinglePool = async (poolId) => {
+    setLoading(true);
+    setPoolFetchError(null);
+    try {
+      const res = await fetch(`/api/admin/vocabulary-pools?poolId=${encodeURIComponent(poolId)}`);
+      const data = await res.json();
+      if (data.success && data.pool) {
+        setSelectedPoolDoc(data.pool);
+        setJsonEditText(JSON.stringify(data.pool, null, 2));
+        setJsonEditError(null);
+      } else {
+        setPoolFetchError(data.error || 'Failed to load single pool details');
+      }
+    } catch (err) {
+      setPoolFetchError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePool = async () => {
+    setSavePoolStatus(null);
+    setJsonEditError(null);
+    try {
+      const parsed = JSON.parse(jsonEditText);
+      if (!parsed.poolId) {
+        setJsonEditError('JSON must contain a "poolId" property.');
+        return;
+      }
+      if (!parsed.pools || typeof parsed.pools !== 'object' || Array.isArray(parsed.pools)) {
+        setJsonEditError('JSON must contain a "pools" object holding the categories.');
+        return;
+      }
+
+      setLoading(true);
+      const res = await fetch('/api/admin/vocabulary-pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavePoolStatus({ success: true, message: 'Vocabulary pool saved successfully!' });
+        fetchOptionPools();
+        fetchSinglePool(parsed.poolId);
+      } else {
+        setSavePoolStatus({ success: false, message: data.error || 'Failed to save pool' });
+      }
+    } catch (err) {
+      setJsonEditError(`Invalid JSON syntax: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(jsonEditText);
+    setJsonCopied(true);
+    setTimeout(() => {
+      setJsonCopied(false);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'option_pool') {
+      fetchOptionPools();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedPoolId) {
+      fetchSinglePool(selectedPoolId);
+    } else {
+      setSelectedPoolDoc(null);
+      setJsonEditText('');
+    }
+  }, [selectedPoolId]);
 
   useEffect(() => {
     fetchData();
@@ -1598,6 +1707,485 @@ export default function AdminV2Page() {
     }
   };
 
+  const renderOptionPoolsViewer = () => {
+    const filteredPools = optionPools.filter(p => 
+      p.poolId.toLowerCase().includes(poolSearch.toLowerCase())
+    );
+
+    return (
+      <div className="control-panel-grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', marginTop: '1.5rem' }}>
+        {/* Left Column: Pool List */}
+        <section className="panel-card" style={{ alignSelf: 'start', padding: '1.5rem', background: '#ffffff', borderRadius: '16px', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+          <h2 style={{
+            marginTop: 0,
+            fontSize: '1.4rem',
+            fontWeight: 900,
+            color: '#0f172a',
+            borderBottom: '2px solid #f1f5f9',
+            paddingBottom: '0.75rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span>📚 Option Pools</span>
+            <button
+              onClick={() => {
+                const newId = `new-pool-${Date.now()}`;
+                const newDoc = {
+                  poolId: newId,
+                  version: '1.0.0',
+                  status: 'draft',
+                  mode: 'identify_text',
+                  pools: {
+                    default_category: [
+                      { id: 'item_1', label: 'Item 1' }
+                    ]
+                  }
+                };
+                setSelectedPoolId(newId);
+                setSelectedPoolDoc(newDoc);
+                setJsonEditText(JSON.stringify(newDoc, null, 2));
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)'
+              }}
+            >
+              ➕ Create
+            </button>
+          </h2>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <input
+              type="text"
+              placeholder="Search pools by ID..."
+              value={poolSearch}
+              onChange={(e) => setPoolSearch(e.target.value)}
+              className="form-input-premium"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                fontSize: '13.5px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {poolFetchError && (
+            <div style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '8px', color: '#991b1b', fontSize: '13px', marginBottom: '1rem' }}>
+              ⚠️ {poolFetchError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
+            {filteredPools.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '13px' }}>
+                No pools found.
+              </div>
+            ) : (
+              filteredPools.map(p => {
+                const isSelected = p.poolId === selectedPoolId;
+                return (
+                  <div
+                    key={p.poolId}
+                    onClick={() => setSelectedPoolId(p.poolId)}
+                    style={{
+                      padding: '14px',
+                      background: isSelected ? '#eff6ff' : '#ffffff',
+                      border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                      boxShadow: isSelected ? '0 4px 12px rgba(59, 130, 246, 0.1)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '14.5px', color: '#1e293b', wordBreak: 'break-all' }}>{p.poolId}</strong>
+                      <span style={{
+                        fontSize: '11px',
+                        background: p.status === 'active' ? '#ecfdf5' : '#fef3c7',
+                        color: p.status === 'active' ? '#065f46' : '#92400e',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        fontWeight: 700
+                      }}>
+                        v{p.version || '1.0'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+                      Mode: <code style={{ background: '#f1f5f9', padding: '1px 4px', borderRadius: '4px' }}>{p.mode || 'identify_text'}</code>
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
+                      {Object.entries(p.categoryCounts || {}).map(([cat, count]) => (
+                        <span key={cat} style={{ fontSize: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 6px', borderRadius: '6px', color: '#475569' }}>
+                          {cat} ({count})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* Right Column: Pool Editor */}
+        <section className="panel-card" style={{ display: 'flex', flexDirection: 'column', minHeight: '600px', padding: '1.5rem', background: '#ffffff', borderRadius: '16px', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+          {selectedPoolDoc ? (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '2px solid #f1f5f9',
+                paddingBottom: '0.75rem',
+                marginBottom: '1.25rem'
+              }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 900, color: '#0f172a' }}>
+                    {selectedPoolDoc.poolId}
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Status: <strong style={{ color: selectedPoolDoc.status === 'active' ? '#10b981' : '#f59e0b' }}>{selectedPoolDoc.status || 'draft'}</strong>
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={handleSavePool}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                    }}
+                  >
+                    💾 Save Pool
+                  </button>
+                  <button
+                    onClick={() => setSelectedPoolId('')}
+                    style={{
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ❌ Close
+                  </button>
+                </div>
+              </div>
+
+              {savePoolStatus && (
+                <div style={{
+                  padding: '12px',
+                  background: savePoolStatus.success ? '#ecfdf5' : '#fef2f2',
+                  border: savePoolStatus.success ? '1px solid #a7f3d0' : '1px solid #fee2e2',
+                  borderRadius: '10px',
+                  color: savePoolStatus.success ? '#065f46' : '#991b1b',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  marginBottom: '1rem'
+                }}>
+                  {savePoolStatus.success ? '✅' : '⚠️'} {savePoolStatus.message}
+                </div>
+              )}
+
+              {/* Sub-tab Selection */}
+              <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '1.25rem' }}>
+                {[
+                  { id: 'json', label: '📝 JSON Editor' },
+                  { id: 'explorer', label: '🔍 Category Explorer' },
+                  { id: 'metadata', label: '⚙️ Quick Metadata' }
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setActivePoolExplorerTab(t.id);
+                      if (t.id === 'explorer' && !selectedCategory) {
+                        const cats = Object.keys(selectedPoolDoc.pools || {});
+                        if (cats.length > 0) setSelectedCategory(cats[0]);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: activePoolExplorerTab === t.id ? '#eff6ff' : 'transparent',
+                      color: activePoolExplorerTab === t.id ? '#2563eb' : '#64748b',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              {activePoolExplorerTab === 'json' && (
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Edit collection JSON data:</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleCopyJson}
+                        style={{ fontSize: '11px', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        {jsonCopied ? '✅ Copied!' : '📋 Copy JSON'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          try {
+                            const parsed = JSON.parse(jsonEditText);
+                            setJsonEditText(JSON.stringify(parsed, null, 2));
+                            setJsonEditError(null);
+                          } catch (err) {
+                            setJsonEditError(`Syntax Error: ${err.message}`);
+                          }
+                        }}
+                        style={{ fontSize: '11px', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        ✨ Format JSON
+                      </button>
+                    </div>
+                  </div>
+                  {jsonEditError && (
+                    <div style={{ padding: '10px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '8px', color: '#991b1b', fontSize: '12.5px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
+                      {jsonEditError}
+                    </div>
+                  )}
+                  <textarea
+                    value={jsonEditText}
+                    onChange={(e) => setJsonEditText(e.target.value)}
+                    style={{
+                      width: '100%',
+                      flex: 1,
+                      minHeight: '400px',
+                      fontFamily: 'monospace',
+                      fontSize: '13px',
+                      padding: '12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '10px',
+                      background: '#1e293b',
+                      color: '#f8fafc',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
+
+              {activePoolExplorerTab === 'explorer' && (
+                <div>
+                  {/* Category Selection Tabs */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '1.25rem' }}>
+                    {Object.keys(selectedPoolDoc.pools || {}).map(catName => (
+                      <button
+                        key={catName}
+                        onClick={() => setSelectedCategory(catName)}
+                        style={{
+                          padding: '6px 12px',
+                          background: selectedCategory === catName ? '#2563eb' : '#f1f5f9',
+                          color: selectedCategory === catName ? '#ffffff' : '#475569',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontWeight: 700,
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {catName} ({(selectedPoolDoc.pools[catName] || []).length})
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Category Items Viewer */}
+                  {selectedCategory && (
+                    <div>
+                      <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '14.5px', fontWeight: 800 }}>
+                        Category: <code style={{ color: '#2563eb' }}>{selectedCategory}</code>
+                      </h4>
+
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                        gap: '12px',
+                        maxHeight: '50vh',
+                        overflowY: 'auto',
+                        paddingRight: '4px'
+                      }}>
+                        {((selectedPoolDoc.pools && selectedPoolDoc.pools[selectedCategory]) || []).map((item, index) => (
+                          <div
+                            key={item.id || `item-${index}`}
+                            style={{
+                              padding: '12px',
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '10px',
+                              display: 'flex',
+                              gap: '10px',
+                              alignItems: 'center'
+                            }}
+                          >
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.label}
+                                style={{
+                                  width: '50px',
+                                  height: '50px',
+                                  borderRadius: '8px',
+                                  objectFit: 'contain',
+                                  border: '1px solid #f1f5f9',
+                                  background: '#f8fafc'
+                                }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '8px',
+                                border: '1px dashed #cbd5e1',
+                                background: '#f8fafc',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.25rem'
+                              }}>
+                                📝
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                              <strong style={{ fontSize: '13.5px', color: '#1e293b', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {item.label}
+                              </strong>
+                              <span style={{ fontSize: '10.5px', fontFamily: 'monospace', color: '#64748b' }}>
+                                ID: {item.id}
+                              </span>
+                              {item.ipa && (
+                                <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}>
+                                  /{item.ipa}/
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activePoolExplorerTab === 'metadata' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label className="form-label-premium" style={{ display: 'block', marginBottom: '6px' }}>Version</label>
+                      <input
+                        type="text"
+                        value={selectedPoolDoc.version || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedPoolDoc(prev => ({ ...prev, version: val }));
+                          setJsonEditText(prev => {
+                            try {
+                              const p = JSON.parse(prev);
+                              p.version = val;
+                              return JSON.stringify(p, null, 2);
+                            } catch (err) { return prev; }
+                          });
+                        }}
+                        className="form-input-premium"
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="form-label-premium" style={{ display: 'block', marginBottom: '6px' }}>Status</label>
+                      <select
+                        value={selectedPoolDoc.status || 'draft'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedPoolDoc(prev => ({ ...prev, status: val }));
+                          setJsonEditText(prev => {
+                            try {
+                              const p = JSON.parse(prev);
+                              p.status = val;
+                              return JSON.stringify(p, null, 2);
+                            } catch (err) { return prev; }
+                          });
+                        }}
+                        className="custom-select-control"
+                        style={{ width: '100%', boxSizing: 'border-box', background: '#ffffff', padding: '10px' }}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label-premium" style={{ display: 'block', marginBottom: '6px' }}>Active Mode</label>
+                    <select
+                      value={selectedPoolDoc.mode || 'identify_text'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedPoolDoc(prev => ({ ...prev, mode: val }));
+                        setJsonEditText(prev => {
+                          try {
+                            const p = JSON.parse(prev);
+                            p.mode = val;
+                            return JSON.stringify(p, null, 2);
+                          } catch (err) { return prev; }
+                        });
+                      }}
+                      className="custom-select-control"
+                      style={{ width: '100%', boxSizing: 'border-box', background: '#ffffff', padding: '10px' }}
+                    >
+                      <option value="identify_text">Identify Text (Phonics/Vocabulary)</option>
+                      <option value="identify_visual">Identify Visual (Match Image to text)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', color: '#94a3b8', flex: 1 }}>
+              <span style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</span>
+              <h3 style={{ margin: 0, color: '#64748b', fontSize: '15px', fontWeight: 700 }}>Select a Vocabulary Pool</h3>
+              <p style={{ margin: '4px 0 0 0', color: '#cbd5e1', fontSize: '12.5px', textAlign: 'center' }}>
+                Select one of the pools from the left column to view its JSON structure, category elements, and quick metadata config.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  };
+
   return (
     <div className="admin-page-body" style={{
       minHeight: '100vh',
@@ -2031,21 +2619,21 @@ export default function AdminV2Page() {
       {/* 3. Navigation Tab Bar */}
       <nav className="tab-track-container">
         {((adminMode === 'school' || adminMode === 'iit') 
-          ? ['grade', 'subject', 'unit', 'chapter', 'skill', 'question', 'questions_list']
-          : ['exam', 'section', 'topic', 'skill', 'question', 'questions_list']
+          ? ['grade', 'subject', 'unit', 'chapter', 'skill', 'question', 'questions_list', 'option_pool']
+          : ['exam', 'section', 'topic', 'skill', 'question', 'questions_list', 'option_pool']
         ).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`tab-item-btn ${activeTab === tab ? 'active' : ''} ${activeTab === tab ? ((adminMode === 'school' || adminMode === 'iit') ? (adminMode === 'iit' ? 'iit' : 'school') : 'exam') : ''}`}
           >
-            {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab === 'question' ? 'Authoring Center' : tab === 'questions_list' ? 'Questions Library' : tab + 's'}
+            {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab === 'question' ? 'Authoring Center' : tab === 'questions_list' ? 'Questions Library' : tab === 'option_pool' ? 'Option Pools' : tab + 's'}
           </button>
         ))}
       </nav>
 
       {/* 4. Glassmorphic Filters */}
-      {(adminMode === 'school' || adminMode === 'iit') && (
+      {(adminMode === 'school' || adminMode === 'iit') && activeTab !== 'option_pool' && (
         <div className="filter-glass-deck">
           <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             🔍 Filter:
@@ -2257,6 +2845,8 @@ export default function AdminV2Page() {
             }
           }}
         />
+      ) : activeTab === 'option_pool' ? (
+        renderOptionPoolsViewer()
       ) : (
         <div className="control-panel-grid">
         

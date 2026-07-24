@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <!-- Sky Background -->
+  <rect width="800" height="600" fill="#BAE6FD"/>
+  <circle cx="700" cy="100" r="45" fill="#FDE047" stroke="#1E293B" stroke-width="3"/>
+  
+  <!-- Clouds -->
+  <g fill="#FFFFFF" stroke="#1E293B" stroke-width="3">
+    <path d="M 120 120 A 25 25 0 0 1 160 100 A 30 30 0 0 1 210 110 A 20 20 0 0 1 230 130 A 20 20 0 0 1 210 150 L 120 150 Z" />
+    <path d="M 520 150 A 20 20 0 0 1 550 135 A 25 25 0 0 1 590 145 A 15 15 0 0 1 605 160 A 15 15 0 0 1 590 175 L 520 175 Z" />
+  </g>
+
+  <!-- Rolling Hills -->
+  <path d="M 0 420 Q 250 380 500 430 T 800 400 L 800 600 L 0 600 Z" fill="#86EFAC" stroke="#1E293B" stroke-width="4"/>
+  <path d="M 0 480 Q 400 450 800 500 L 800 600 L 0 600 Z" fill="#4ADE80" stroke="#1E293B" stroke-width="4"/>
+  
+  <!-- Pathway Walking Home -->
+  <path d="M 280 600 C 320 520, 360 460, 420 440 L 490 440 C 450 470, 420 530, 400 600 Z" fill="#FDE68A" stroke="#1E293B" stroke-width="4"/>
+
+  <!-- Houses in Distance -->
+  <g stroke="#1E293B" stroke-width="4" stroke-linejoin="round">
+    <rect x="580" y="340" width="90" height="70" fill="#F43F5E"/>
+    <polygon points="570,340 625,290 680,340" fill="#3B82F6"/>
+    <rect x="615" y="375" width="20" height="35" fill="#FEF08A"/>
+    
+    <rect x="680" y="360" width="70" height="55" fill="#FB923C"/>
+    <polygon points="670,360 715,320 760,360" fill="#A855F7"/>
+  </g>
+
+  <!-- Boy Character -->
+  <g stroke="#1E293B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Back Leg -->
+    <path d="M 340 390 L 320 450 L 300 450" fill="none" stroke-width="18" stroke="#1E293B"/>
+    <path d="M 340 390 L 320 450 L 300 450" fill="none" stroke-width="12" stroke="#FED7AA"/>
+    <ellipse cx="295" cy="452" rx="18" ry="10" fill="#3B82F6"/>
+
+    <!-- Front Leg -->
+    <path d="M 370 390 L 390 455 L 420 455" fill="none" stroke-width="18" stroke="#1E293B"/>
+    <path d="M 370 390 L 390 455 L 420 455" fill="none" stroke-width="12" stroke="#FED7AA"/>
+    <ellipse cx="420" cy="457" rx="18" ry="10" fill="#3B82F6"/>
+
+    <!-- Shorts -->
+    <path d="M 330 370 L 380 370 L 390 410 L 360 410 L 350 390 L 335 410 L 320 410 Z" fill="#60A5FA"/>
+
+    <!-- Shirt -->
+    <path d="M 330 310 Q 355 300 380 310 L 385 375 L 325 375 Z" fill="#FACC15"/>
+
+    <!-- Head & Neck -->
+    <rect x="345" y="295" width="18" height="20" fill="#FED7AA"/>
+    <circle cx="355" cy="265" r="35" fill="#FED7AA"/>
+
+    <!-- Hair -->
+    <path d="M 320 260 C 315 220, 360 215, 385 235 C 395 245, 390 265, 385 260 C 375 240, 350 235, 335 255 Z" fill="#78350F"/>
+
+    <!-- Face Details -->
+    <circle cx="370" cy="260" r="5" fill="#1E293B"/>
+    <circle cx="372" cy="258" r="1.5" fill="#FFFFFF"/>
+    <path d="M 365 278 Q 375 285 382 275" fill="none" stroke="#1E293B" stroke-width="3"/>
+    <ellipse cx="360" cy="272" rx="5" ry="3" fill="#FCA5A5" opacity="0.6"/>
+
+    <!-- Arm Holding Fishbowl -->
+    <path d="M 365 325 L 410 340 L 425 335" fill="none" stroke-width="12" stroke="#FED7AA"/>
+    <path d="M 365 310 L 385 315 L 380 335 L 360 330 Z" fill="#FACC15"/>
+
+    <!-- Fishbowl -->
+    <circle cx="450" cy="335" r="28" fill="#38BDF8" opacity="0.6"/>
+    <circle cx="450" cy="335" r="30" fill="none" stroke="#1E293B" stroke-width="4"/>
+    <path d="M 437 308 L 463 308" stroke="#1E293B" stroke-width="4"/>
+
+    <!-- Goldfish -->
+    <ellipse cx="448" cy="337" rx="10" ry="6" fill="#FB923C" stroke="#1E293B" stroke-width="2"/>
+    <polygon points="458,337 464,332 464,342" fill="#FB923C" stroke="#1E293B" stroke-width="2"/>
+    <circle cx="443" cy="335" r="1.5" fill="#1E293B"/>
+
+    <!-- Glass Reflection -->
+    <path d="M 430 325 A 22 22 0 0 1 445 312" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  </g>
+</svg>

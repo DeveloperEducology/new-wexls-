@@ -470,6 +470,32 @@ export default function TemplateMasterclass() {
     fetchExams();
   }, []);
 
+  // Autoload template from URL parameters on mount
+  useEffect(() => {
+    async function loadTemplateFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const urlId = params.get('id') || params.get('templateId');
+      if (urlId) {
+        try {
+          const res = await fetch('/api/admin/templates');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.dynamicTemplates)) {
+              const matched = data.dynamicTemplates.find(t => t.id === urlId || String(t._id) === urlId);
+              if (matched) {
+                loadTemplateData(matched);
+                setPublishStatus({ id: matched.id || urlId, mode: 'loaded' });
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load template from URL:', err);
+        }
+      }
+    }
+    loadTemplateFromUrl();
+  }, []);
+
   // Sync section and topic selections when exam changes
   useEffect(() => {
     if (exams.length === 0) return;

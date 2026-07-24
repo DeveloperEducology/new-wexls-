@@ -1,6 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import MCQActivity from './activities/mcq/MCQActivity';
+import TapToFillActivity from './activities/tap_to_fill/TapToFillActivity';
+import TokenSelectActivity from './activities/token_select/TokenSelectActivity';
 import MCQRenderer from './MCQRenderer';
 import FillInTheBlankRenderer from './FillInTheBlankRenderer';
 import PictographMCQRenderer from './PictographMCQRenderer';
@@ -60,14 +63,18 @@ const RENDERERS = {
   sorting: CategorizationRenderer,
   sort: CategorizationRenderer,
   matching: CategorizationRenderer,
-  visual_choice: MCQRenderer,
-  tap_to_fill: MCQRenderer,
-  tapToFill: MCQRenderer,
-  'tap-to-fill': MCQRenderer,
+  visual_choice: MCQActivity,
+  tap_to_fill: TapToFillActivity,
+  tapToFill: TapToFillActivity,
+  'tap-to-fill': TapToFillActivity,
   interactiveApplet: InteractiveAppletRenderer,
   interactiveapplet: InteractiveAppletRenderer,
   interactiveTool: InteractiveToolRenderer,
   interactivetool: InteractiveToolRenderer,
+  pick_from_sentence: TokenSelectActivity,
+  select_from_sentence: TokenSelectActivity,
+  token_select: TokenSelectActivity,
+  universal: UniversalActivityRenderer,
 };
 
 export default function QuestionRenderer({
@@ -81,7 +88,12 @@ export default function QuestionRenderer({
   const schemaEngine = typeof question?.interaction === 'object'
     ? question.interaction.engine || question.interaction.type
     : question?.interactionConfig?.engine || question?.schema?.interaction?.engine || question?.universalSchema?.interaction?.engine;
-  const usesUniversalSchema = Boolean(
+  const isTapToFillType = question?.type === 'tap_to_fill' ||
+    question?.optionsType === 'tap_to_fill' ||
+    schemaEngine === 'tap_to_fill' ||
+    question?.interaction === 'tap_to_fill';
+
+  const usesUniversalSchema = !isTapToFillType && Boolean(
     question?.schema
     || question?.universalSchema
     || question?.layoutConfig
@@ -123,11 +135,37 @@ export default function QuestionRenderer({
     );
   }
 
+  const isCategorizationInteraction = [
+    'categorization',
+    'categorizationv2',
+    'categorisation',
+    'categorisationv2',
+    'sorting',
+    'sort',
+    'drag_drop',
+    'category_sort',
+    'grid_fill'
+  ].includes(normalizedInteraction) || [
+    'categorization',
+    'categorizationv2',
+    'sorting',
+    'sort',
+    'drag_drop',
+    'grid_fill'
+  ].includes(schemaEngine) || [
+    'categorization',
+    'categorizationv2',
+    'sorting',
+    'sort',
+    'drag_drop',
+    'grid_fill'
+  ].includes(normalizedType);
+
   const Renderer = normalizedInteraction === 'pictograph_mcq'
     ? PictographMCQRenderer
     : normalizedInteraction === 'interactive_stickers'
     ? MCQRenderer
-    : (normalizedInteraction === 'categorization' || normalizedInteraction === 'categorizationv2')
+    : isCategorizationInteraction
     ? CategorizationRenderer
     : RENDERERS[schemaEngine] || RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
 

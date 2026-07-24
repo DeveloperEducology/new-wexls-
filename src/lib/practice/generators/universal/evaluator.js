@@ -175,6 +175,58 @@ function pickRandom(items, rng, fallback = '') {
   return items[Math.floor(rng() * items.length)];
 }
 
+function pickUnseenIndex(pool, templateVariables, options, rng) {
+  if (!Array.isArray(pool) || pool.length === 0) return 0;
+
+  const rawSeen = options?.seenItems
+    || options?.searchParams?.get?.('seenItems')
+    || options?.historyContext?.seenItems
+    || options?.template?._seenItemIds
+    || [];
+
+  const seenSet = new Set(
+    (Array.isArray(rawSeen) ? rawSeen : String(rawSeen).split(','))
+      .map(s => String(s).trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  if (seenSet.size === 0) {
+    return pickRandom(pool, rng);
+  }
+
+  let wordList = null;
+  if (Array.isArray(templateVariables)) {
+    const wordVar = templateVariables.find(v => {
+      const name = String(v?.name || v?.id || '').toLowerCase();
+      return name === 'target_word' || name === 'word' || name === 'result' || name === 'answer_letter';
+    });
+    if (wordVar?.formula) {
+      try {
+        const match = wordVar.formula.match(/^\[(.*)\]\[index\]$/s);
+        if (match) {
+          wordList = JSON.parse(`[${match[1]}]`);
+        }
+      } catch (e) {}
+    }
+  }
+
+  const unseenPool = pool.filter(idx => {
+    const idxStr = String(idx).toLowerCase();
+    if (seenSet.has(idxStr) || seenSet.has(`idx_${idxStr}`)) return false;
+    if (wordList && Array.isArray(wordList) && idx >= 0 && idx < wordList.length) {
+      const wordVal = String(wordList[idx]).toLowerCase();
+      if (seenSet.has(wordVal)) return false;
+    }
+    return true;
+  });
+
+  if (unseenPool.length > 0) {
+    return pickRandom(unseenPool, rng);
+  }
+
+  return pickRandom(pool, rng);
+}
+
 function pickRandomMany(items, count, rng) {
   if (!Array.isArray(items) || items.length === 0) return [];
   const desiredCount = Math.max(1, Number(count) || 1);
@@ -213,7 +265,15 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
   const sourceKey = variable?.source || variable?.sourceId;
   const sourceItems = sourceKey ? dataSourceMap[sourceKey] : null;
 
-  if (type === 'integer' || type === 'random_number') {
+  if (Array.isArray(variable?.values) && variable.values.length > 0 && type !== 'pool_selection') {
+    const idx = resolvedVariables.index !== undefined
+      ? Math.abs(Number(resolvedVariables.index)) % variable.values.length
+      : 0;
+    const rawVal = variable.values[idx];
+    return typeof rawVal === 'string' ? interpolateString(rawVal, resolvedVariables) : rawVal;
+  }
+
+  if (type === 'integer' || type === 'random_number' || type === 'random_int') {
     const minVal = resolveExpression(variable.min, resolvedVariables);
     const maxVal = resolveExpression(variable.max, resolvedVariables);
     const min = Math.min(minVal, maxVal);
@@ -384,11 +444,40 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       ...originalTemplate,
       questionText: originalTemplate.layout?.questionText || originalTemplate.questionText,
       optionsType: schemaInteraction.engine || schemaInteraction.type || originalTemplate.optionsType || 'mcq',
-      options: schemaInteraction.options || originalTemplate.options || [],
+      options: (Array.isArray(schemaInteraction.options) && schemaInteraction.options.length > 0) ? schemaInteraction.options : (originalTemplate.options || []),
       explanation: originalTemplate.feedback?.stepByStepExplanation 
         ? { sections: [{ type: 'text', content: originalTemplate.feedback.stepByStepExplanation }] }
         : originalTemplate.explanation,
     };
+  }
+
+  // Smart Level Clamping: If template does not have all levels (e.g. static template with only L1),
+  // clamp currentLevel to the available levels instead of scaling beyond existing questions.
+  const availableLevels = [];
+  if (Array.isArray(template.variables)) {
+    template.variables.forEach(v => {
+      const name = String(v?.name || v?.id || '');
+      const match = name.match(/^index_l(\d+)$/);
+      if (match && Array.isArray(v.values || v.value) && (v.values || v.value).length > 0) {
+        availableLevels.push(Number(match[1]));
+      }
+    });
+  } else if (template.variables && typeof template.variables === 'object') {
+    Object.keys(template.variables).forEach(name => {
+      const match = name.match(/^index_l(\d+)$/);
+      const v = template.variables[name];
+      if (match && Array.isArray(v?.values || v?.value) && (v.values || v.value).length > 0) {
+        availableLevels.push(Number(match[1]));
+      }
+    });
+  }
+
+  if (availableLevels.length > 0) {
+    if (!availableLevels.includes(currentLevel)) {
+      currentLevel = availableLevels.reduce((prev, curr) =>
+        Math.abs(curr - currentLevel) < Math.abs(prev - currentLevel) ? curr : prev
+      );
+    }
   }
 
   const rng = seededRandom(seed);
@@ -463,7 +552,45 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     for (const v of template.variables) {
       const varName = v?.name || v?.id;
       if (!varName) continue;
+
+      if (varName === 'index') {
+        let levelVarName = `index_l${currentLevel}`;
+        const foundLvlVar = template.variables.find(x => (x?.name || x?.id) === levelVarName);
+        const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
+        if (Array.isArray(levelPool) && levelPool.length > 0) {
+          resolvedVariables[varName] = pickUnseenIndex(levelPool, template.variables, difficultyContext, rng);
+          continue;
+        }
+        const selfPool = v.values || v.value;
+        if (Array.isArray(selfPool) && selfPool.length > 0) {
+          resolvedVariables[varName] = pickUnseenIndex(selfPool, template.variables, difficultyContext, rng);
+          continue;
+        }
+      }
+
       resolvedVariables[varName] = resolveVariableValue(v, resolvedVariables, dataSourceMap, rng);
+    }
+  } else if (template.variables && typeof template.variables === 'object') {
+    for (const [varName, v] of Object.entries(template.variables)) {
+      if (!v) continue;
+      const normalizedVar = { name: varName, ...v };
+
+      if (varName === 'index') {
+        let levelVarName = `index_l${currentLevel}`;
+        const foundLvlVar = template.variables[levelVarName];
+        const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
+        if (Array.isArray(levelPool) && levelPool.length > 0) {
+          resolvedVariables[varName] = pickUnseenIndex(levelPool, template.variables, difficultyContext, rng);
+          continue;
+        }
+        const selfPool = v.values || v.value;
+        if (Array.isArray(selfPool) && selfPool.length > 0) {
+          resolvedVariables[varName] = pickUnseenIndex(selfPool, template.variables, difficultyContext, rng);
+          continue;
+        }
+      }
+
+      resolvedVariables[varName] = resolveVariableValue(normalizedVar, resolvedVariables, dataSourceMap, rng);
     }
   }
 
@@ -761,30 +888,45 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         || interactionEngine === 'picturechoice'
         || interactionEngine === 'picture_choice';
 
-      const rawOptions = resolvedOptionsData.map(opt => {
-      const resolvedLabel = resolveLabelOrExpression(opt.label || opt.value, resolvedVariables);
-      const resolvedImageUrl = opt.imageUrl
-        ? resolveLabelOrExpression(opt.imageUrl, resolvedVariables)
-        : (isPictureChoice && isImageLikeUrl(resolvedLabel) ? resolvedLabel : undefined);
-      
-      let isCorrect = false;
-      if (typeof opt.isCorrect === 'boolean') {
-        isCorrect = opt.isCorrect;
-      } else if (typeof opt.isCorrect === 'string') {
-        const resolved = resolveExpression(opt.isCorrect, resolvedVariables);
-        isCorrect = resolved === true || resolved === 1 || String(resolved) === 'true';
-      }
-      
-      return {
-        label: isPictureChoice && resolvedImageUrl ? opt.alt || opt.text || `Option` : resolvedLabel,
-        ...(resolvedImageUrl ? { imageUrl: resolvedImageUrl } : {}),
-        audioUrl: opt.audioUrl ? resolveLabelOrExpression(opt.audioUrl, resolvedVariables) : undefined,
-        isCorrect,
-        misconception: opt.misconception ? resolveLabelOrExpression(opt.misconception, resolvedVariables) : undefined,
-        feedback: opt.feedback ? resolveLabelOrExpression(opt.feedback, resolvedVariables) : undefined,
-        remediationHint: opt.remediationHint ? resolveLabelOrExpression(opt.remediationHint, resolvedVariables) : undefined
-      };
-    });
+      const rawOptions = resolvedOptionsData.map((opt, optIdx) => {
+        const rawLabel = typeof opt === 'string' ? opt : (opt?.label || opt?.value || opt?.text || '');
+        const resolvedLabel = resolveLabelOrExpression(rawLabel, resolvedVariables);
+        console.log("DEBUG OPT:", { opt, rawLabel, resolvedLabel, option1: resolvedVariables.option1 });
+        const rawImageUrl = typeof opt === 'object' && opt ? opt.imageUrl : undefined;
+        const resolvedImageUrl = rawImageUrl
+          ? resolveLabelOrExpression(rawImageUrl, resolvedVariables)
+          : (isPictureChoice && isImageLikeUrl(resolvedLabel) ? resolvedLabel : undefined);
+        
+        let isCorrect = false;
+        if (typeof opt === 'object' && opt && typeof opt.isCorrect === 'boolean') {
+          isCorrect = opt.isCorrect;
+        } else if (typeof opt === 'object' && opt && typeof opt.isCorrect === 'string') {
+          const resolved = resolveExpression(opt.isCorrect, resolvedVariables);
+          isCorrect = resolved === true || resolved === 1 || String(resolved) === 'true';
+        } else {
+          const targetAns = resolvedVariables.correctAnswer || resolvedVariables.answer;
+          if (targetAns !== undefined && targetAns !== null) {
+            const ansList = Array.isArray(targetAns)
+              ? targetAns
+              : String(targetAns).split(',').map(s => s.trim()).filter(Boolean);
+            isCorrect = ansList.some(a => String(a).toLowerCase() === String(resolvedLabel).toLowerCase());
+          } else if (resolvedVariables.correct_index !== undefined) {
+            isCorrect = Number(resolvedVariables.correct_index) === optIdx;
+          } else if (resolvedVariables.correctIndex !== undefined) {
+            isCorrect = Number(resolvedVariables.correctIndex) === optIdx;
+          }
+        }
+        
+        return {
+          label: isPictureChoice && resolvedImageUrl ? (opt?.alt || opt?.text || `Option`) : resolvedLabel,
+          ...(resolvedImageUrl ? { imageUrl: resolvedImageUrl } : {}),
+          audioUrl: typeof opt === 'object' && opt?.audioUrl ? resolveLabelOrExpression(opt.audioUrl, resolvedVariables) : undefined,
+          isCorrect,
+          misconception: typeof opt === 'object' && opt?.misconception ? resolveLabelOrExpression(opt.misconception, resolvedVariables) : undefined,
+          feedback: typeof opt === 'object' && opt?.feedback ? resolveLabelOrExpression(opt.feedback, resolvedVariables) : undefined,
+          remediationHint: typeof opt === 'object' && opt?.remediationHint ? resolveLabelOrExpression(opt.remediationHint, resolvedVariables) : undefined
+        };
+      });
 
     const uniqueOptions = [];
     const seen = new Set();
@@ -796,7 +938,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       }
     }
 
-    const isMcqLike = !['hotspot_select', 'mcq_hotspot', 'sorting', 'matching', 'fill_blank', 'number_input'].includes(String(interactionEngine).toLowerCase());
+    const isMcqLike = !['hotspot_select', 'mcq_hotspot', 'sorting', 'matching', 'fill_blank', 'number_input', 'sentence_ordering', 'sentenceordering', 'ordering', 'categorization', 'categorizationv2'].includes(String(interactionEngine).toLowerCase());
 
     if (isMcqLike && uniqueOptions.length > 0) {
       const correctOptions = uniqueOptions.filter(o => o.isCorrect);
@@ -804,6 +946,8 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
 
       let targetOptionCount = 4;
       let isMultiSelectMode = false;
+
+      const isSpreadsheetGrid = template.generatorType === 'spreadsheet-grid' || template.config?.generatorType === 'spreadsheet-grid';
 
       if (currentLevel === 1) {
         targetOptionCount = 2;
@@ -813,7 +957,8 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         targetOptionCount = 4;
       } else if (currentLevel === 4) {
         targetOptionCount = 4;
-        isMultiSelectMode = true;
+        const isExplicitMsq = template.optionsType === 'msq' || template.optionsType === 'multi_select' || template.interaction?.engine === 'msq';
+        isMultiSelectMode = isSpreadsheetGrid ? isExplicitMsq : true;
       }
 
       let pickedCorrect = [];
@@ -840,10 +985,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         pickedCorrect = pickRandomMany(correctOptions, 1);
         pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
         
-        template.optionsType = 'mcq';
-        if (template.interaction) {
-          template.interaction.engine = 'mcq';
-          template.interaction.type = 'mcq';
+        if (template.optionsType !== 'tap_to_fill' && template.type !== 'tap_to_fill' && template.interaction?.engine !== 'tap_to_fill') {
+          template.optionsType = 'mcq';
+          if (template.interaction) {
+            template.interaction.engine = 'mcq';
+            template.interaction.type = 'mcq';
+          }
         }
       }
 
@@ -863,9 +1010,62 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
 
   // 4. Resolve Parts and Visual SVG outputs
   let hasClickToFill = false;
+  let rawParts = Array.isArray(template.parts) ? [...template.parts] : [];
+  
+  const interactionEngine = String(
+    template.interaction?.engine
+    || template.interaction?.type
+    || template.optionsType
+    || template.type
+    || ''
+  ).toLowerCase();
+
+  const isCategorizationEngine = ['categorization', 'categorizationv2', 'sorting', 'sort', 'categorysort'].includes(interactionEngine);
+  
+  if (isCategorizationEngine && !rawParts.some(p => p.type === 'categorization' || p.type === 'categorizationv2' || p.type === 'drag_drop')) {
+    const targetCats = template.targetCategories 
+      || template.dataSources?.find(ds => Array.isArray(ds.targetCategories))?.targetCategories 
+      || ['long_a', 'short_a'];
+    
+    const generatedCategories = targetCats.map(catKey => ({
+      id: `cat_${catKey}`,
+      label: String(catKey).replace(/_/g, ' ').replace(/^long/i, 'Long').replace(/^short/i, 'Short')
+    }));
+    
+    const generatedItems = [];
+    const answerKey = {};
+    const dsSource = template.dataSources?.[0]?.id || 'master';
+
+    targetCats.forEach(catKey => {
+      const catPool = dataSourceMap[`${dsSource}:${catKey}`] 
+        || dataSourceMap[catKey] 
+        || (Array.isArray(dataSourceMap[dsSource]) ? dataSourceMap[dsSource].filter(i => i.category === catKey) : []);
+      const picked = pickRandomMany(catPool, 2, rng);
+      picked.forEach((item, itemIdx) => {
+        const itemId = `item_${catKey}_${itemIdx}_${Math.floor(rng() * 1000)}`;
+        const labelVal = item.word || item.label || item.text || (typeof item === 'string' ? item : 'item');
+        generatedItems.push({
+          id: itemId,
+          label: labelVal,
+          imageUrl: item.imageUrl || undefined,
+          target: `cat_${catKey}`
+        });
+        answerKey[itemId] = `cat_${catKey}`;
+      });
+    });
+
+    rawParts.push({
+      type: 'categorizationv2',
+      layoutMode: 'category_sort',
+      categories: generatedCategories,
+      items: shuffle(generatedItems, rng),
+      answerKey
+    });
+  }
+
   let parts = [];
-  if (Array.isArray(template.parts)) {
-    parts = template.parts.map(part => {
+  if (rawParts.length > 0) {
+    parts = rawParts.map(part => {
       const resolvedPart = { ...part };
       
       if (typeof resolvedPart.content === 'string') {
@@ -882,9 +1082,19 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       }
       if (typeof resolvedPart.imageUrl === 'string') {
         resolvedPart.imageUrl = interpolateString(resolvedPart.imageUrl, resolvedVariables);
+      } else if (resolvedPart.type === 'image' && typeof resolvedPart.content === 'string') {
+        resolvedPart.imageUrl = interpolateString(resolvedPart.content, resolvedVariables);
       }
-      if (typeof resolvedPart.audioUrl === 'string') {
-        resolvedPart.audioUrl = interpolateString(resolvedPart.audioUrl, resolvedVariables);
+
+      const rawAudio = resolvedPart.audioUrl || resolvedPart.targetAudioUrl || resolvedPart.soundUrl;
+      if (typeof rawAudio === 'string') {
+        resolvedPart.audioUrl = interpolateString(rawAudio, resolvedVariables);
+      }
+
+      if (typeof resolvedPart.spokenText === 'string') {
+        resolvedPart.spokenText = interpolateString(resolvedPart.spokenText, resolvedVariables);
+      } else if (resolvedVariables.target_word || resolvedVariables.targetWord) {
+        resolvedPart.spokenText = resolvedVariables.target_word || resolvedVariables.targetWord;
       }
       
       if (Array.isArray(resolvedPart.categories)) {
@@ -1392,9 +1602,21 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   const visualPanels = parts.filter(p => p.type === 'visual_panel');
   const vcCorrectIndex = visualPanels.findIndex(p => p.isCorrect);
 
+  const rawInteractionEngine = typeof template.interaction === 'object' ? template.interaction?.engine : template.interaction;
+  const isOrdering = ['sentence_ordering', 'sentenceordering', 'ordering'].includes(String(template.optionsType || rawInteractionEngine || template.type || '').toLowerCase());
+
+  const resolvedItemId = resolvedVariables.target_word
+    || resolvedVariables.word
+    || resolvedVariables.Result
+    || resolvedVariables.answer_letter
+    || (resolvedVariables.index !== undefined ? `idx_${resolvedVariables.index}` : undefined);
+
   const questionPayload = {
-    type: isVisualChoice ? 'visual_choice' : (template.optionsType || 'mcq'),
-    interaction: template.optionsType || (isVisualChoice ? 'visual_choice' : 'mcq'),
+    itemId: resolvedItemId,
+    type: isOrdering ? 'sentence_ordering' : (isVisualChoice ? 'visual_choice' : (template.type || template.optionsType || 'mcq')),
+    interaction: template.interaction && typeof template.interaction === 'object'
+      ? template.interaction
+      : (isOrdering ? 'sentence_ordering' : (template.optionsType || (isVisualChoice ? 'visual_choice' : 'mcq'))),
     questionText,
     parts,
     soundUrl: template.soundUrl ? interpolateString(template.soundUrl, resolvedVariables) : undefined,
@@ -1435,6 +1657,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     adaptiveRules: template.adaptiveRules || undefined,
     schema: {
       templateId: template.id || template.templateId || template.templateInfo?.templateId,
+      generatorType: template.generatorType || template.config?.generatorType || undefined,
       subject: template.subject || template.templateInfo?.subject,
       topic: template.topic || template.templateInfo?.topic,
       grade: template.grade || template.templateInfo?.grade,
@@ -1499,6 +1722,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     questionPayload.answer = resolvedAnswer;
     questionPayload.correctAnswer = resolvedAnswer;
     questionPayload.correctAnswerText = typeof resolvedAnswer === 'object' ? JSON.stringify(resolvedAnswer) : String(resolvedAnswer);
+  }
+
+  const allCorrectOptionLabels = optionsList.filter(o => o.isCorrect).map(o => o.label).filter(Boolean);
+  if (allCorrectOptionLabels.length > 1) {
+    questionPayload.correctAnswer = allCorrectOptionLabels;
+    questionPayload.correctAnswerText = allCorrectOptionLabels.join(', ');
   }
 
   if (solutionSections.length > 0) {

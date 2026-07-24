@@ -301,8 +301,8 @@ export default function VocabularyPoolsPage() {
   };
 
   const filteredPools = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return pools.filter(p => p.poolId.toLowerCase().includes(q) || (p.subject || '').toLowerCase().includes(q) || (p.topic || '').toLowerCase().includes(q));
+    const q = (searchQuery || '').toLowerCase();
+    return (pools || []).filter(p => p && ((p.poolId || p.id || '').toLowerCase().includes(q) || (p.subject || '').toLowerCase().includes(q) || (p.topic || '').toLowerCase().includes(q)));
   }, [pools, searchQuery]);
 
   /* ── Tab button renderer ── */

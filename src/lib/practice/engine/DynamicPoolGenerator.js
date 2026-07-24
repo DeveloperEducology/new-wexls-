@@ -809,11 +809,11 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
     const rules = (poolDoc.difficultyRules && poolDoc.difficultyRules[resolvedDifficulty]) || 
                   (poolDoc.difficultyRules && poolDoc.difficultyRules.easy) || 
-                  { optionCount: baseIsMultiSelect ? 4 : 3, correctCount: baseIsMultiSelect ? 2 : 1, distractorCount: 2, distractorSimilarity: 'medium', showLabels: true };
+                  { correctCount: baseIsMultiSelect ? 2 : 1, distractorCount: 2, distractorSimilarity: 'medium', showLabels: true };
 
     const isMultiSelect = baseIsMultiSelect || rules.interaction === 'multi_select' || (rules.correctCount && rules.correctCount > 1);
 
-    const targetOptionCount = rules.optionCount || (isMultiSelect ? 4 : 3);
+    const targetOptionCount = rules.optionCount || params.optionCount || (isMultiSelect ? 4 : 3);
     const neededCorrectCount = isMultiSelect 
       ? Math.max(2, Math.min(rules.correctCount || 2, correctPool.length, targetOptionCount - 1)) 
       : 1;
@@ -844,12 +844,30 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
     // 4. Select distractors from distractor pool
     let selectedDistractors = [];
 
+    const isFirstLetterMode = poolDoc.optionMode === 'first_letter' || poolDoc.metadata?.optionMode === 'first_letter';
+    const targetFirstLetter = targetWord ? targetWord.trim().charAt(0).toLowerCase() : '';
+
+    // Filter distractor pool to exclude items starting with the same letter (if in first_letter mode)
+    let eligibleDistractors = distractorPool;
+    if (isFirstLetterMode) {
+      eligibleDistractors = distractorPool.filter(d => {
+        const dLetter = d.label ? d.label.trim().charAt(0).toLowerCase() : '';
+        return dLetter && dLetter !== targetFirstLetter;
+      });
+    }
+
     // Prioritize thematic distractors defined on any of the selected target options
+    const seenLetters = new Set([targetFirstLetter]);
     targetOptions.forEach(tOpt => {
       if (Array.isArray(tOpt.distractors) && tOpt.distractors.length > 0) {
         tOpt.distractors.forEach(lbl => {
-          const matched = distractorPool.find(d => d.label.toLowerCase().trim() === lbl.toLowerCase().trim());
+          const matched = eligibleDistractors.find(d => d.label.toLowerCase().trim() === lbl.toLowerCase().trim());
           if (matched && !selectedDistractors.some(sel => sel.id === matched.id)) {
+            if (isFirstLetterMode) {
+              const dLetter = matched.label.trim().charAt(0).toLowerCase();
+              if (seenLetters.has(dLetter)) return;
+              seenLetters.add(dLetter);
+            }
             selectedDistractors.push({ ...matched });
           }
         });
@@ -858,29 +876,62 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
     // Inject matching misconception distractor if student has a weakness
     if (targetWeakness) {
-      const remediationDistractor = distractorPool.find(
+      const remediationDistractor = eligibleDistractors.find(
         d => d.misconceptionType === targetWeakness && !selectedDistractors.some(sel => sel.id === d.id)
       );
       if (remediationDistractor) {
-        selectedDistractors.push({ ...remediationDistractor });
+        if (isFirstLetterMode) {
+          const dLetter = remediationDistractor.label.trim().charAt(0).toLowerCase();
+          if (!seenLetters.has(dLetter)) {
+            seenLetters.add(dLetter);
+            selectedDistractors.push({ ...remediationDistractor });
+          }
+        } else {
+          selectedDistractors.push({ ...remediationDistractor });
+        }
       }
     }
 
-    // Filter remaining candidates from distractorPool
-    let remainingCandidates = distractorPool.filter(
+    // Filter remaining candidates from eligibleDistractors
+    let remainingCandidates = eligibleDistractors.filter(
       d => !targetOptions.some(to => sameOption(to, d)) && !selectedDistractors.some(sel => sameOption(sel, d))
     );
 
     // Fallback: if we don't have enough distractors, pull candidates from correctPool
     if (remainingCandidates.length + selectedDistractors.length < neededDistractorCount) {
-      const extraCandidates = correctPool
+      let extraCandidates = correctPool
         .filter(c => !targetOptions.some(to => sameOption(to, c)) && !selectedDistractors.some(sel => sameOption(sel, c)))
-        .filter(c => !(targetProperty && targetValue && matchesPropertyFilter(c, targetProperty, targetValue)))
-        .map(c => ({
-          ...c,
-          isDistractorOnly: true // Treat as distractor for this dynamic variant
-        }));
-      remainingCandidates = [...remainingCandidates, ...extraCandidates];
+        .filter(c => !(targetProperty && targetValue && matchesPropertyFilter(c, targetProperty, targetValue)));
+      
+      if (isFirstLetterMode) {
+        extraCandidates = extraCandidates.filter(c => {
+          const dLetter = c.label ? c.label.trim().charAt(0).toLowerCase() : '';
+          return dLetter && !seenLetters.has(dLetter);
+        });
+      }
+
+      const mappedExtra = extraCandidates.map(c => ({
+        ...c,
+        isDistractorOnly: true // Treat as distractor for this dynamic variant
+      }));
+      remainingCandidates = [...remainingCandidates, ...mappedExtra];
+    }
+
+    // Alphabet fallback for first_letter mode if we still lack candidates
+    if (isFirstLetterMode && remainingCandidates.length + selectedDistractors.length < neededDistractorCount) {
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+      const unusedLetters = alphabet.filter(l => !seenLetters.has(l));
+      const neededCount = neededDistractorCount - (remainingCandidates.length + selectedDistractors.length);
+      const shuffledLetters = seededShuffle(unusedLetters, prng);
+      const extraLetters = shuffledLetters.slice(0, neededCount);
+      extraLetters.forEach(l => {
+        seenLetters.add(l);
+        remainingCandidates.push({
+          id: `letter_${l}`,
+          label: l,
+          role: 'distractor'
+        });
+      });
     }
 
     // Filter candidates by similarity if rule is active
@@ -903,7 +954,17 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
     const shuffledCandidates = seededShuffle(filteredCandidates, prng);
     const slotsNeeded = Math.max(0, neededDistractorCount - selectedDistractors.length);
-    const additionalDistractors = shuffledCandidates.slice(0, Math.min(slotsNeeded, shuffledCandidates.length));
+    const additionalDistractors = [];
+    shuffledCandidates.forEach(cand => {
+      if (additionalDistractors.length < slotsNeeded) {
+        if (isFirstLetterMode) {
+          const dLetter = cand.label ? cand.label.trim().charAt(0).toLowerCase() : '';
+          if (seenLetters.has(dLetter)) return;
+          seenLetters.add(dLetter);
+        }
+        additionalDistractors.push(cand);
+      }
+    });
     
     selectedDistractors = [...selectedDistractors, ...additionalDistractors];
 
@@ -917,6 +978,8 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
       return templateStr
         .replace(/\{\{target\}\}/g, targetWord)
         .replace(/\{\{targetWord\}\}/g, targetWord)
+        .replace(/\{\{targetFirstLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
+        .replace(/\{\{targetStartingLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
         .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
         .replace(/\{\{targetImage\}\}/g, targetImage)
         .replace(/\{\{voice\}\}/g, voice)
@@ -948,13 +1011,17 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
     const parts = (poolDoc.parts || defaultParts).map(part => {
       const newPart = { ...part };
       if (newPart.content) {
-        newPart.content = newPart.content
-          .replace(/\{\{questionText\}\}/g, questionText)
-          .replace(/\{\{target\}\}/g, targetWord)
-          .replace(/\{\{targetWord\}\}/g, targetWord)
-          .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
-          .replace(/\{\{targetImage\}\}/g, targetImage)
-          .replace(/\{\{targetCategory\}\}/g, resolvedTargetCategory || '');
+        newPart.content = interpolate(
+          newPart.content
+            .replace(/\{\{questionText\}\}/g, questionText)
+            .replace(/\{\{target\}\}/g, targetWord)
+            .replace(/\{\{targetWord\}\}/g, targetWord)
+            .replace(/\{\{targetFirstLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
+            .replace(/\{\{targetStartingLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
+            .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
+            .replace(/\{\{targetImage\}\}/g, targetImage)
+            .replace(/\{\{targetCategory\}\}/g, resolvedTargetCategory || '')
+        );
       }
       if (newPart.imageUrl) {
         newPart.imageUrl = newPart.imageUrl.replace(/\{\{targetImage\}\}/g, targetImage);
@@ -977,23 +1044,33 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
       ? configuredHideOptionLabel
       : rules.showLabels === false;
 
-    const options = activeOptions.map((opt, idx) => ({
-      id: opt.id || `opt_${idx}`,
-      label: hideLabels ? '' : opt.label,
-      audioUrl: opt.audioUrl && opt.assetStatus?.audio !== 'needs_review'
-        ? opt.audioUrl
-        : `/api/tts?voice=${voice}&text=${encodeURIComponent(opt.label)}`,
-      imageUrl: poolDoc.hideOptionImages || opt.assetStatus?.image === 'needs_review'
-        ? null
-        : (opt.imageUrl || null),
-      isCorrect: targetOptions.some(to => sameOption(to, opt)),
-      hideLabel: hasExplicitLabelDisplay ? hideLabels : (hideLabels || opt.hideLabel || false),
-      misconceptionType: opt.misconceptionType || null
-    }));
+    const options = activeOptions.map((opt, idx) => {
+      const isCorrect = targetOptions.some(to => sameOption(to, opt));
+      const rawLabel = opt.label || '';
+      const displayLabel = isFirstLetterMode 
+        ? (rawLabel.trim().charAt(0).toLowerCase())
+        : (hideLabels ? '' : rawLabel);
+
+      return {
+        id: opt.id || `opt_${idx}`,
+        label: displayLabel,
+        audioUrl: isFirstLetterMode
+          ? `/api/tts?voice=${voice}&text=${encodeURIComponent(displayLabel)}`
+          : (opt.audioUrl && opt.assetStatus?.audio !== 'needs_review'
+              ? opt.audioUrl
+              : `/api/tts?voice=${voice}&text=${encodeURIComponent(rawLabel)}`),
+        imageUrl: poolDoc.hideOptionImages || opt.assetStatus?.image === 'needs_review'
+          ? null
+          : (opt.imageUrl || null),
+        isCorrect,
+        hideLabel: hasExplicitLabelDisplay ? hideLabels : (hideLabels || opt.hideLabel || false),
+        misconceptionType: opt.misconceptionType || null
+      };
+    });
 
     const feedbackCorrect = poolDoc.feedback?.correct 
       ? interpolate(poolDoc.feedback.correct) 
-      : (isMultiSelect ? `Great! You selected all correct words.` : `Great! **${targetWord}** is correct.`);
+      : (isMultiSelect ? `Great! You selected all correct words.` : (isFirstLetterMode ? `Great! **${targetFirstLetter}** is correct.` : `Great! **${targetWord}** is correct.`));
 
     const feedbackIncorrect = poolDoc.feedback?.incorrect 
       ? interpolate(poolDoc.feedback.incorrect) 
@@ -1005,7 +1082,7 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
           ? interpolate(poolDoc.explanation)
           : (isMultiSelect
               ? `The correct words are: ${targetOptions.map(to => `**${to.label}**`).join(', ')}.`
-              : `The correct answer is **${targetWord}**.`));
+              : (isFirstLetterMode ? `The correct answer is **${targetFirstLetter}**.` : `The correct answer is **${targetWord}**.`)));
 
     const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
 
@@ -1084,30 +1161,82 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
   // Select distractors
   let distractorCandidates = [];
+  const isFirstLetterMode = poolDoc.optionMode === 'first_letter' || poolDoc.metadata?.optionMode === 'first_letter';
+  const targetFirstLetter = targetWord ? targetWord.trim().charAt(0).toLowerCase() : '';
+  const seenLetters = new Set([targetFirstLetter]);
+
   // Prioritize distractors from target options
   targetOptions.forEach(tOpt => {
     if (Array.isArray(tOpt.distractors) && tOpt.distractors.length > 0) {
       tOpt.distractors.forEach(d => {
         if (typeof d === 'string') {
           const matchedOpt = pool.find(p => p.label.toLowerCase().trim() === d.toLowerCase().trim());
-          if (matchedOpt && !distractorCandidates.some(dc => dc.label === matchedOpt.label)) {
-            distractorCandidates.push({ ...matchedOpt });
-          } else if (!distractorCandidates.some(dc => dc.label === d)) {
-            distractorCandidates.push({ label: d });
+          if (matchedOpt) {
+            const labelStr = matchedOpt.label || '';
+            const dLetter = labelStr.trim().charAt(0).toLowerCase();
+            if (isFirstLetterMode && seenLetters.has(dLetter)) return;
+            if (!distractorCandidates.some(dc => dc.label === labelStr)) {
+              if (isFirstLetterMode) seenLetters.add(dLetter);
+              distractorCandidates.push({ ...matchedOpt });
+            }
+          } else {
+            const dLetter = d.trim().charAt(0).toLowerCase();
+            if (isFirstLetterMode && seenLetters.has(dLetter)) return;
+            if (!distractorCandidates.some(dc => dc.label === d)) {
+              if (isFirstLetterMode) seenLetters.add(dLetter);
+              distractorCandidates.push({ label: d });
+            }
           }
-        } else if (!distractorCandidates.some(dc => dc.label === d.label)) {
-          distractorCandidates.push(d);
+        } else if (d && d.label) {
+          const dLetter = d.label.trim().charAt(0).toLowerCase();
+          if (isFirstLetterMode && seenLetters.has(dLetter)) return;
+          if (!distractorCandidates.some(dc => dc.label === d.label)) {
+            if (isFirstLetterMode) seenLetters.add(dLetter);
+            distractorCandidates.push(d);
+          }
         }
       });
     }
   });
 
   // If we don't have enough from targets' explicit distractors, pull the rest from pool
-  const otherCandidates = pool.filter(opt => !targetOptions.some(to => to.label === opt.label) && !distractorCandidates.some(dc => dc.label === opt.label));
+  let otherCandidates = pool.filter(opt => !targetOptions.some(to => to.label === opt.label) && !distractorCandidates.some(dc => dc.label === opt.label));
+  if (isFirstLetterMode) {
+    otherCandidates = otherCandidates.filter(opt => {
+      const dLetter = opt.label ? opt.label.trim().charAt(0).toLowerCase() : '';
+      return dLetter && !seenLetters.has(dLetter);
+    });
+  }
+
   const shuffledOther = seededShuffle(otherCandidates, prng);
-  distractorCandidates = [...distractorCandidates, ...shuffledOther];
+  shuffledOther.forEach(opt => {
+    if (isFirstLetterMode) {
+      const dLetter = opt.label ? opt.label.trim().charAt(0).toLowerCase() : '';
+      if (seenLetters.has(dLetter)) return;
+      seenLetters.add(dLetter);
+    }
+    distractorCandidates.push(opt);
+  });
 
   const neededDistractorCount = Math.max(1, targetOptionCount - neededCorrectCount);
+
+  // Alphabet fallback for first_letter mode if we still lack candidates
+  if (isFirstLetterMode && distractorCandidates.length < neededDistractorCount) {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    const unusedLetters = alphabet.filter(l => !seenLetters.has(l));
+    const neededCount = neededDistractorCount - distractorCandidates.length;
+    const shuffledLetters = seededShuffle(unusedLetters, prng);
+    const extraLetters = shuffledLetters.slice(0, neededCount);
+    extraLetters.forEach(l => {
+      seenLetters.add(l);
+      distractorCandidates.push({
+        id: `letter_${l}`,
+        label: l,
+        role: 'distractor'
+      });
+    });
+  }
+
   const selectedDistractors = distractorCandidates.slice(0, Math.min(neededDistractorCount, distractorCandidates.length));
 
   // Combine and shuffle
@@ -1119,6 +1248,8 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
     return templateStr
       .replace(/\{\{target\}\}/g, targetWord)
       .replace(/\{\{targetWord\}\}/g, targetWord)
+      .replace(/\{\{targetFirstLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
+      .replace(/\{\{targetStartingLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
       .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
       .replace(/\{\{targetImage\}\}/g, targetImage)
       .replace(/\{\{targetCategory\}\}/g, poolDoc.targetCategory || '');
@@ -1146,6 +1277,8 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
         .replace(/\{\{questionText\}\}/g, questionText)
         .replace(/\{\{target\}\}/g, targetWord)
         .replace(/\{\{targetWord\}\}/g, targetWord)
+        .replace(/\{\{targetFirstLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
+        .replace(/\{\{targetStartingLetter\}\}/g, targetWord ? targetWord.trim().charAt(0).toLowerCase() : '')
         .replace(/\{\{targetPrompt\}\}/g, targetPrompt)
         .replace(/\{\{targetImage\}\}/g, targetImage)
         .replace(/\{\{targetCategory\}\}/g, poolDoc.targetCategory || '');
@@ -1162,20 +1295,30 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
     return newPart;
   });
 
-  const options = activeOptions.map((opt, idx) => ({
-    id: `opt_${idx}`,
-    label: opt.label,
-    audioUrl: opt.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(opt.label)}`,
-    imageUrl: poolDoc.hideOptionImages ? null : (opt.imageUrl || null),
-    isCorrect: targetOptions.some(to => to.label === opt.label),
-    hideLabel: opt.hideLabel ?? poolDoc.hideOptionLabel ?? false
-  }));
+  const options = activeOptions.map((opt, idx) => {
+    const isCorrect = targetOptions.some(to => to.label === opt.label);
+    const rawLabel = opt.label || '';
+    const displayLabel = isFirstLetterMode 
+      ? (rawLabel.trim().charAt(0).toLowerCase())
+      : rawLabel;
+
+    return {
+      id: `opt_${idx}`,
+      label: displayLabel,
+      audioUrl: isFirstLetterMode
+        ? `/api/tts?voice=${voice}&text=${encodeURIComponent(displayLabel)}`
+        : (opt.audioUrl || `/api/tts?voice=${voice}&text=${encodeURIComponent(rawLabel)}`),
+      imageUrl: poolDoc.hideOptionImages ? null : (opt.imageUrl || null),
+      isCorrect,
+      hideLabel: opt.hideLabel ?? poolDoc.hideOptionLabel ?? false
+    };
+  });
 
   const explanation = poolDoc.explanation 
     ? interpolate(poolDoc.explanation)
     : (isMultiSelect
         ? `The correct words are: ${targetOptions.map(to => `**${to.label}**`).join(', ')}.`
-        : `The word you hear is **${targetWord}**.`);
+        : (isFirstLetterMode ? `The correct answer is **${targetFirstLetter}**.` : `The word you hear is **${targetWord}**.`));
 
   const skillId = poolDoc.skillId || poolDoc.metadata?.skillId;
 

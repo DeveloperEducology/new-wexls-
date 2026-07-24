@@ -40,33 +40,49 @@ function buildSkillFilter({ subject, topic, skill }) {
     );
   });
 
-  const escapedTopic = topic ? String(topic).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') : '';
-  return {
-    $and: [
-      {
-        $or: [
-          { subject },
-          { 'metadata.subject': subject },
-          { 'question.metadata.subject': subject },
-        ],
-      },
-      {
-        $or: [
-          { topic },
-          ...(escapedTopic ? [
-            { topic: { $regex: `^${escapedTopic}(?:-|$)` } },
-            { 'metadata.topic': { $regex: `^${escapedTopic}(?:-|$)` } },
-            { 'question.metadata.topic': { $regex: `^${escapedTopic}(?:-|$)` } }
-          ] : []),
-          { 'metadata.topic': topic },
-          { 'question.metadata.topic': topic },
-        ],
-      },
-      {
-        $or: skillOrConditions,
-      },
-    ],
-  };
+  const topicList = Array.isArray(topic) ? topic : [topic];
+  const topicOrConditions = [];
+  topicList.forEach(t => {
+    if (!t) return;
+    topicOrConditions.push(
+      { topic: t },
+      { 'metadata.topic': t },
+      { 'question.metadata.topic': t }
+    );
+    const escapedTopic = String(t).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    if (escapedTopic) {
+      topicOrConditions.push(
+        { topic: { $regex: `^${escapedTopic}(?:-|$)` } },
+        { 'metadata.topic': { $regex: `^${escapedTopic}(?:-|$)` } },
+        { 'question.metadata.topic': { $regex: `^${escapedTopic}(?:-|$)` } }
+      );
+    }
+  });
+
+  const filters = [
+    {
+      $or: [
+        { subject },
+        { 'metadata.subject': subject },
+        { 'question.metadata.subject': subject },
+      ],
+    },
+    {
+      $or: skillOrConditions,
+    },
+  ];
+
+  if (topicOrConditions.length > 0) {
+    filters.push({
+      $or: [
+        ...topicOrConditions,
+        { skillId: { $in: Array.isArray(skill) ? skill : [skill] } },
+        { 'metadata.skillId': { $in: Array.isArray(skill) ? skill : [skill] } }
+      ]
+    });
+  }
+
+  return { $and: filters };
 }
 
 function buildDifficultyFilter(difficulty) {
@@ -267,8 +283,13 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
         if (foundIndex !== -1) {
           index = foundIndex;
         } else {
-          index = parseInt(qn, 10);
-          if (isNaN(index)) index = 0;
+          const parsed = parseInt(qn, 10);
+          if (!isNaN(parsed)) {
+            // qn is 1-based (qn=1 -> candidates[0])
+            index = Math.max(0, parsed - 1);
+          } else {
+            index = 0;
+          }
         }
       } else {
         index = 0;
@@ -385,7 +406,7 @@ export async function findVocabularyPool(poolId) {
     const db = await getMongoDb();
     if (!db) return null;
     const collection = db.collection('vocabulary_pools');
-    const doc = await collection.findOne({ poolId });
+    const doc = await collection.findOne({ $or: [{ poolId }, { id: poolId }] });
     if (!doc) return null;
 
     // Cache the pool

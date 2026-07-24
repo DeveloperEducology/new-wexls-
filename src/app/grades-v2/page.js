@@ -174,10 +174,12 @@ function getMatchedTemplate(skill, templates, dynamicTemplates) {
     const interactionType = typeof rawInteraction === 'object' && rawInteraction !== null
       ? (rawInteraction.engine || JSON.stringify(rawInteraction))
       : (rawInteraction || tMatch.type || "parameterized");
+    const generatorType = tMatch.generatorType || tMatch.config?.generatorType || "parameterized";
     return {
       templateAdded: true,
       templateId: tMatch.id || String(tMatch._id),
       interactionType: interactionType,
+      generatorType: generatorType,
       status: tMatch.status === "active" ? "Verified & Active" : "Draft / In Review"
     };
   }
@@ -196,10 +198,12 @@ function getMatchedTemplate(skill, templates, dynamicTemplates) {
     const interactionType = typeof rawInteraction === 'object' && rawInteraction !== null
       ? (rawInteraction.engine || JSON.stringify(rawInteraction))
       : (rawInteraction || dtMatch.type || "dynamic");
+    const generatorType = dtMatch.generatorType || dtMatch.config?.generatorType || "dynamic";
     return {
       templateAdded: true,
       templateId: dtMatch.id || String(dtMatch._id),
       interactionType: interactionType,
+      generatorType: generatorType,
       status: dtMatch.status === "active" ? "Verified & Active" : "Draft / In Review"
     };
   }
@@ -208,6 +212,7 @@ function getMatchedTemplate(skill, templates, dynamicTemplates) {
     templateAdded: false,
     templateId: "-",
     interactionType: "-",
+    generatorType: "-",
     status: "Pending"
   };
 }
@@ -279,9 +284,27 @@ export default async function GradesV2Page({ searchParams }) {
   const db = await getMongoDb();
   let templates = [];
   let dynamicTemplates = [];
+  let questionCounts = {};
   if (db) {
     templates = await db.collection("templates").find({}).toArray();
     dynamicTemplates = await db.collection("dynamic_templates").find({}).toArray();
+    try {
+      const counts = await db.collection("questions").aggregate([
+        {
+          $group: {
+            _id: "$skillId",
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray();
+      counts.forEach(c => {
+        if (c._id) {
+          questionCounts[c._id] = c.count;
+        }
+      });
+    } catch (err) {
+      console.warn("Failed to aggregate question counts:", err);
+    }
   }
 
   // Get active subject node
@@ -301,6 +324,7 @@ export default async function GradesV2Page({ searchParams }) {
     gradeTopics.forEach(topic => {
       topic.skills.forEach(([code, title, skillId]) => {
         const matched = getMatchedTemplate({ id: skillId, title }, templates, dynamicTemplates);
+        const skillNode = skills.find(s => s.id === skillId);
         tableSkills.push({
           id: skillId,
           code: code,
@@ -312,6 +336,9 @@ export default async function GradesV2Page({ searchParams }) {
           templateAdded: matched.templateAdded,
           templateId: matched.templateId,
           interactionType: matched.interactionType,
+          generatorType: matched.generatorType,
+          isStatic: skillNode?.isStatic || skillNode?.static || false,
+          questionCount: questionCounts[skillId] || 0,
           status: matched.status
         });
       });
@@ -507,6 +534,76 @@ export default async function GradesV2Page({ searchParams }) {
                 )}
               </form>
 
+              {/* Stats Summary Bar */}
+              {(() => {
+                const totalSkills = tableSkills.length;
+                const linkedTemplates = tableSkills.filter(s => s.templateAdded).length;
+                const pendingTemplates = totalSkills - linkedTemplates;
+                const linkedPercentage = totalSkills > 0 ? Math.round((linkedTemplates / totalSkills) * 100) : 0;
+                
+                const staticSkills = tableSkills.filter(s => s.isStatic).length;
+                const totalStaticQuestions = tableSkills.reduce((acc, s) => acc + (s.questionCount || 0), 0);
+
+                return (
+                  <div style={{
+                    display: 'flex',
+                    gap: '24px',
+                    marginBottom: '24px',
+                    width: '100%',
+                    background: '#ffffff',
+                    padding: '20px 24px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #e2e8f0',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '130px' }}>
+                      <span style={{ fontSize: '1.8rem' }}>📊</span>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Skills</div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b' }}>{totalSkills}</div>
+                      </div>
+                    </div>
+                    <div style={{ width: '1.5px', height: '36px', background: '#e2e8f0' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '150px' }}>
+                      <span style={{ fontSize: '1.8rem' }}>📝</span>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Static Skills</div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0284c7' }}>{staticSkills} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>({totalStaticQuestions} qns)</span></div>
+                      </div>
+                    </div>
+                    <div style={{ width: '1.5px', height: '36px', background: '#e2e8f0' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '170px' }}>
+                      <span style={{ fontSize: '1.8rem' }}>✅</span>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Linked Templates</div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#10b981' }}>{linkedTemplates} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>({linkedPercentage}%)</span></div>
+                      </div>
+                    </div>
+                    <div style={{ width: '1.5px', height: '36px', background: '#e2e8f0' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '150px' }}>
+                      <span style={{ fontSize: '1.8rem' }}>⏳</span>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Need to Workout</div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ef4444' }}>{pendingTemplates}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Completion progress bar */}
+                    <div style={{ flex: 1, minWidth: '240px', marginLeft: 'auto' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: '800', color: '#475569', marginBottom: '6px' }}>
+                        <span>Completion Progress</span>
+                        <span style={{ color: '#4f46e5' }}>{linkedPercentage}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                        <div style={{ width: `${linkedPercentage}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Matched Skills Table */}
               <div style={{ overflowX: 'auto', width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 {filteredTableSkills.length === 0 ? (
@@ -520,8 +617,10 @@ export default async function GradesV2Page({ searchParams }) {
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155', width: '80px' }}>Code</th>
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155' }}>Chapter</th>
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155' }}>Skill Title</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155', width: '130px' }}>Practice Mode</th>
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155', width: '130px' }}>Template Added</th>
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155' }}>Template ID</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155' }}>Template Type</th>
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155' }}>Interaction Type</th>
                         <th style={{ padding: '12px 16px', fontWeight: '800', color: '#334155' }}>Testing Status</th>
                       </tr>
@@ -541,6 +640,40 @@ export default async function GradesV2Page({ searchParams }) {
                             </Link>
                           </td>
                           <td style={{ padding: '12px 16px' }}>
+                            {skill.isStatic ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  color: '#0369a1',
+                                  backgroundColor: '#e0f2fe',
+                                  display: 'inline-block',
+                                  width: 'fit-content'
+                                }}>
+                                  Static
+                                </span>
+                                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                                  {skill.questionCount} question{skill.questionCount === 1 ? '' : 's'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                color: '#6b21a8',
+                                backgroundColor: '#f3e8ff',
+                                display: 'inline-block',
+                                width: 'fit-content'
+                              }}>
+                                Dynamic
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
                             <span style={{
                               padding: '4px 8px',
                               borderRadius: '6px',
@@ -552,7 +685,38 @@ export default async function GradesV2Page({ searchParams }) {
                               {skill.templateAdded ? '✅ YES' : '❌ NO'}
                             </span>
                           </td>
-                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#0284c7' }}>{skill.templateId}</td>
+                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#0284c7' }}>
+                            {skill.templateAdded ? (
+                              <Link
+                                href={skill.generatorType === 'spreadsheet-grid'
+                                  ? `/template-generator-grid?id=${skill.templateId}`
+                                  : `/template-generator-v2?id=${skill.templateId}`}
+                                target="_blank"
+                                style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: 'bold' }}
+                                title="Click to open this template for editing"
+                              >
+                                {skill.templateId}
+                              </Link>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            {skill.templateAdded ? (
+                              <span style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                color: '#ffffff',
+                                backgroundColor: skill.generatorType === 'spreadsheet-grid' ? '#8b5cf6' : '#3b82f6'
+                              }}>
+                                {skill.generatorType === 'spreadsheet-grid' ? 'Spreadsheet (Grid)' : 'Standard/Form'}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
                           <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#64748b' }}>{skill.interactionType}</td>
                           <td style={{ padding: '12px 16px' }}>
                             <span style={{

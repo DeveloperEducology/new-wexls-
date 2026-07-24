@@ -416,36 +416,31 @@ export function generateAdditionFactQuestion(templateDoc, seed) {
       .replace('{s}', a > 1 ? 's' : '');
 
     const correctSentence = `${a} + ${b} = ${sumVal}`;
-
     const optionsList = shuffleArray([
-      { label: correctSentence, isCorrect: true },
-      { label: `${a} + ${b + 1} = ${sumVal + 1}`, isCorrect: false },
-      { label: `${a} - ${b} = ${Math.abs(a - b)}`, isCorrect: false },
-      { label: `${a + 1} + ${b} = ${sumVal + 1}`, isCorrect: false }
+      { label: String(a) },
+      { label: String(b) },
+      { label: String(sumVal) },
+      { label: '+' },
+      { label: '-' },
+      { label: '=' }
     ], rng);
 
     return {
-      type: 'mcq',
-      interaction: 'mcq',
-      questionText: 'Which addition sentence matches?',
+      type: 'sentence_ordering',
+      interaction: 'sentence_ordering',
+      copyMode: true,
+      questionText: 'Put the numbers and symbols in order to match the word problem.',
       parts: [
         {
           type: 'text',
           content: questionText,
           style: { fontSize: '18px', fontWeight: '500', color: '#1e293b', lineHeight: '1.6', marginBottom: '16px' }
-        },
-        {
-          type: 'text',
-          content: 'Which addition sentence matches?',
-          style: { fontSize: '16px', fontWeight: '800', color: '#475569', marginBottom: '24px' }
         }
       ],
-      options: optionsList.map(o => ({
-        id: o.label,
-        label: o.label,
-        isCorrect: o.isCorrect
+      options: optionsList.map((o, idx) => ({
+        id: `opt_${idx}`,
+        label: o.label
       })),
-      correctAnswerIndex: optionsList.findIndex(o => o.isCorrect),
       answer: correctSentence,
       correctAnswer: correctSentence,
       correctAnswerText: correctSentence,

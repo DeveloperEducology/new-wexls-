@@ -55,7 +55,8 @@ async function run() {
 
     for (const item of skillsList) {
       const templateId = item.templateId;
-      const isMCQ = ['make-number-addition-10', 'make-number-addition-20', 'addition-word-problems-10', 'addition-word-problems-18', 'addition-sentences-word-problems-10', 'addition-sentences-word-problems-18', 'addition-sentences-word-problems-20', 'addition-sentences-true-false'].includes(templateId);
+      const isSentenceOrdering = ['addition-sentences-word-problems-10', 'addition-sentences-word-problems-18', 'addition-sentences-word-problems-20'].includes(templateId);
+      const isMCQ = ['make-number-addition-10', 'make-number-addition-20', 'addition-word-problems-10', 'addition-word-problems-18', 'addition-sentences-true-false'].includes(templateId);
       
       const templateDoc = {
         id: templateId,
@@ -64,16 +65,24 @@ async function run() {
         subSkill: templateId.replace(/-/g, '_'),
         title: item.title,
         instruction: {
-          text: isMCQ ? 'Choose the correct answer.' : 'Add the numbers.',
+          text: isSentenceOrdering
+            ? 'Put the numbers and symbols in order to match the word problem.'
+            : isMCQ
+              ? 'Choose the correct answer.'
+              : 'Add the numbers.',
           audio: true
         },
-        interaction: {
-          engine: isMCQ ? 'mcq' : 'fill_blank',
-          inputMode: isMCQ ? 'choice' : 'text'
-        },
-        optionsType: isMCQ ? 'single_select' : 'fillInTheBlank',
+        interaction: isSentenceOrdering
+          ? { engine: 'sentence_ordering' }
+          : {
+              engine: isMCQ ? 'mcq' : 'fill_blank',
+              inputMode: isMCQ ? 'choice' : 'text'
+            },
+        optionsType: isSentenceOrdering ? 'sentence_ordering' : (isMCQ ? 'single_select' : 'fillInTheBlank'),
+        copyMode: isSentenceOrdering ? true : undefined,
+        metadata: isSentenceOrdering ? { copyMode: true, interaction: 'sentence_ordering' } : undefined,
         questionText: item.title,
-        validationRules: isMCQ ? [] : [
+        validationRules: (isMCQ || isSentenceOrdering) ? [] : [
           {
             type: 'exact_match',
             target: 'blank1',

@@ -46,7 +46,11 @@ export async function resolveStoredPracticePayload({
       if (question.poolId) {
         const poolDoc = await findVocabularyPool(question.poolId);
         if (poolDoc) {
-          question.pools = poolDoc.pools;
+          question.pools = poolDoc.pools || question.pools;
+          question.words = poolDoc.words || question.words;
+          question.categories = poolDoc.categories || question.categories;
+          question.options = poolDoc.options || question.options;
+          question.pool = poolDoc.pool || question.pool;
         }
       }
 

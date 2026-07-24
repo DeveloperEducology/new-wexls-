@@ -759,6 +759,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
   const [directImageSelect, setDirectImageSelect] = useState(false);
   const [hideOptionImages, setHideOptionImages] = useState(false);
   const [hideOptionLabel, setHideOptionLabel] = useState(false);
+  const [optionMode, setOptionMode] = useState('label');
   const [difficultyRules, setDifficultyRules] = useState({
     easy: { optionCount: 2, distractorSimilarity: 'low', showLabels: true },
     medium: { optionCount: 4, distractorSimilarity: 'medium', showLabels: true },
@@ -3305,6 +3306,38 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       timeEstimate: '30',
       sourceMapping: 'CCSS.ELA-LITERACY.L.1.1.J',
       teacherNotes: 'Interactive click-to-reorder sentence builder.'
+    },
+    {
+      name: 'Pick From Sentence / Select Token',
+      description: 'Click letters or words inside text to find vowels, consonants, or specific tokens',
+      type: 'pick_from_sentence',
+      subject: 'english',
+      topic: 'phonics',
+      skillId: 'vowels-consonants',
+      questionText: 'Pick the vowel.',
+      parts: [
+        {
+          type: 'text',
+          content: 'Pick the vowel.',
+          showSpeaker: true
+        },
+        {
+          type: 'pick_from_sentence',
+          sentence: 'u p',
+          tokens: [
+            { id: 't_u', text: 'u', isCorrect: true, selectable: true },
+            { id: 't_p', text: 'p', isCorrect: false, selectable: true }
+          ]
+        }
+      ],
+      correctAnswer: 'u',
+      explanation: '"u" is a vowel. "p" is a consonant.',
+      difficulty: 'beginner',
+      tags: 'phonics, vowels, pick-from-sentence, token-select',
+      estimatedGrade: 'UKG',
+      timeEstimate: '20',
+      sourceMapping: 'IXL.ENG.UKG.VOWEL.PICK',
+      teacherNotes: 'IXL-style interactive letter token selection.'
     }
   ];
 
@@ -4736,6 +4769,13 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     } else if (partType === 'audio') {
       newPart.audioUrl = '';
       newPart.label = '';
+    } else if (partType === 'pick_from_sentence') {
+      newPart.sentence = 'u p';
+      newPart.tokens = [
+        { id: 't_u', text: 'u', isCorrect: true, selectable: true },
+        { id: 't_p', text: 'p', isCorrect: false, selectable: true }
+      ];
+      newPart.answerKey = 'selectedTokens';
     }
     setParts([...parts, newPart]);
   };
@@ -4812,6 +4852,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     setDirectImageSelect(false);
     setHideOptionImages(false);
     setHideOptionLabel(false);
+    setOptionMode('label');
     setCategories([
       { id: 'cat_1', label: 'Category 1' },
       { id: 'cat_2', label: 'Category 2' }
@@ -4904,6 +4945,8 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     setImageRowGap(20);
     setDirectImageSelect(false);
     setHideOptionImages(false);
+    setHideOptionLabel(false);
+    setOptionMode('label');
     setCategories([]);
     setCategorizationItems([]);
     setFibAnswers({});
@@ -5319,6 +5362,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     setDirectImageSelect(Boolean(q.directImageSelect || q.interaction === 'direct_image_select' || q.metadata?.directImageSelect));
     setHideOptionImages(Boolean(q.hideOptionImages || q.metadata?.hideOptionImages));
     setHideOptionLabel(Boolean(q.hideOptionLabel || q.metadata?.hideOptionLabel));
+    setOptionMode(q.optionMode || q.metadata?.optionMode || 'label');
 
     // Extract parts or default to first question text part
     if (loadedParts.length > 0) {
@@ -6219,6 +6263,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
           hideItemLabels,
           hideOptionImages,
           hideOptionLabel,
+          optionMode,
           timestamp: Date.now()
         };
         localStorage.setItem('curriculum_authoring_draft', JSON.stringify(draft));
@@ -6235,7 +6280,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     options, correctAnswer, fibAnswers, teacherNotes, tags, estimatedGrade, timeEstimate,
     sourceMapping, poolId, targetCategory, targetKey, distractorCategories, targetProperty, targetValue, distractorProperty, distractorValue, parts, categories, categorizationItems,
     missingLetterMode, layoutMode, interaction, targets, backgroundImage, canvas, behavior, sourceTray,
-    cardStyle, hideItemLabels, hideOptionImages, hideOptionLabel
+    cardStyle, hideItemLabels, hideOptionImages, hideOptionLabel, optionMode
   ]);
 
   const handleLoadDraft = () => {
@@ -6333,6 +6378,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     setHideItemLabels(Boolean(draft.hideItemLabels));
     setHideOptionImages(Boolean(draft.hideOptionImages));
     setHideOptionLabel(Boolean(draft.hideOptionLabel));
+    setOptionMode(draft.optionMode || 'label');
       
       setIsDirty(true);
       setAutosaveStatus('● Draft restored');
@@ -8124,7 +8170,8 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       cardStyle: cardStyle || undefined,
       hideItemLabels: hideItemLabels || undefined,
       hideOptionImages: type === 'dynamic_pool' ? hideOptionImages : undefined,
-      hideOptionLabel: type === 'dynamic_pool' ? hideOptionLabel : undefined
+      hideOptionLabel: type === 'dynamic_pool' ? hideOptionLabel : undefined,
+      optionMode: type === 'dynamic_pool' ? optionMode : undefined
     };
   }, [
     type,
@@ -8153,6 +8200,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     directImageSelect,
     hideOptionImages,
     hideOptionLabel,
+    optionMode,
     difficultyRules,
     poolId,
     targetCategory,
@@ -10295,15 +10343,16 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                                               }}
                                             >
                                               🎵 Browse R2
-                                            </button>
-                                            <div className={styles.formGroup} style={{ flex: 1 }}>
-                                              <label style={{ fontSize: 11, fontWeight: 700 }}>Label (spoken/display)</label>
-                                              <input
-                                                type="text"
-                                                className={styles.formInput}
-                                                value={part.label || ''}
-                                                onChange={(e) => handleUpdatePartFields(realIdx, { label: e.target.value })}
-                                                placeholder="e.g. /æ/ as in cat"
+                                          🎵 Browse R2
+                                             </button>
+                                             <div className={styles.formGroup} style={{ flex: 1 }}>
+                                               <label style={{ fontSize: 11, fontWeight: 700 }}>Label (spoken/display)</label>
+                                               <input
+                                                 type="text"
+                                                 className={styles.formInput}
+                                                 value={part.label || ''}
+                                                 onChange={(e) => handleUpdatePartFields(realIdx, { label: e.target.value })}
+                                                 placeholder="e.g. /æ/ as in cat"
                                               />
                                             </div>
                                           </div>
@@ -10610,8 +10659,10 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                               <option value="fillInTheBlank">Fill-In-The-Blank (FIB)</option>
                               <option value="trueOrFalse">True / False</option>
                               <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
-                              <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
+                              <option value="categorizationv2">Categorization / Sorting (IXL 2-Column Drag-Drop)</option>
+                              <option value="grid_fill">Grid Fill (2x2 Matrix Layout)</option>
                               <option value="word_completion_pool">Word Completion / Phonics Fill (CatV2)</option>
+                              <option value="pick_from_sentence">Pick from Sentence / Select Token (Word/Letter Click)</option>
                             </select>
                           </div>
 
@@ -10656,7 +10707,8 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                                         <option value="choice">Multiple Choice (MCQ)</option>
                                         <option value="multi_select">Multi-Select MCQ</option>
                                         <option value="categorization">Categorization / Sorting (Konva Canvas)</option>
-                                        <option value="categorizationv2">Categorization / Sorting (HTML5 Drag-Drop)</option>
+                                        <option value="categorizationv2">Categorization / Sorting (IXL 2-Column Drag-Drop)</option>
+                                        <option value="grid_fill">Grid Fill (2x2 Matrix Layout)</option>
                                         <option value="word_completion">Word Completion / Phonics Fill</option>
                                         <option value="pick_from_sentence">Select Word in Sentence</option>
                                       </select>
@@ -10982,7 +11034,7 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                                     </>
                                   )}
                                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #99f6e4' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 320px) auto', gap: 10, alignItems: 'end' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
                                       <div>
                                         <label style={{ fontSize: 11, fontWeight: 650, color: '#0f766e', display: 'block', marginBottom: 4 }}>Option Display</label>
                                         <select
@@ -11001,6 +11053,21 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                                           <option value="image_only">Show images, hide labels</option>
                                           <option value="label_only">Hide images, show labels</option>
                                           <option value="audio_only">Hide images and labels (audio only)</option>
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <label style={{ fontSize: 11, fontWeight: 650, color: '#0f766e', display: 'block', marginBottom: 4 }}>Option Text Format</label>
+                                        <select
+                                          className={styles.formSelect}
+                                          value={optionMode}
+                                          onChange={(event) => {
+                                            setOptionMode(event.target.value);
+                                            setIsDirty(true);
+                                          }}
+                                          style={{ width: '100%', margin: 0 }}
+                                        >
+                                          <option value="label">Full Word / Label (e.g. "bus")</option>
+                                          <option value="first_letter">Starting Letter Only (e.g. "b")</option>
                                         </select>
                                       </div>
                                       <button

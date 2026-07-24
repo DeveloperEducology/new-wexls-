@@ -157,11 +157,12 @@ export function updateMasteryState(previousState, attempt) {
   const correctStreak = attempt.isCorrect ? Number(previous.correctStreak || 0) + 1 : 0;
   const wrongStreak = attempt.isCorrect ? 0 : Number(previous.wrongStreak || 0) + 1;
   const nextLevelStreak = attempt.isCorrect ? Number(previous.levelStreak || 0) + 1 : 0;
-  const didLevelUp = attempt.isCorrect && nextLevelStreak >= streakThreshold;
-  const practiceLevel = didLevelUp
+  const isStatic = attempt.isStatic || attempt.practiceMode === 'static' || attempt.mode === 'static' || attempt.question?.isStatic || attempt.question?.metadata?.isStatic;
+  const didLevelUp = !isStatic && attempt.isCorrect && nextLevelStreak >= streakThreshold;
+  const practiceLevel = isStatic ? 1 : (didLevelUp
     ? Math.min(Number(previous.practiceLevel || attempt.practiceLevel || 1) + 1, 4)
-    : Number(previous.practiceLevel || attempt.practiceLevel || 1);
-  const levelStreak = didLevelUp ? 0 : nextLevelStreak;
+    : Number(previous.practiceLevel || attempt.practiceLevel || 1));
+  const levelStreak = isStatic ? 0 : (didLevelUp ? 0 : nextLevelStreak);
   const attempts = Number(previous.attempts || 0) + 1;
   const sameSkillAttempts = Number(previous.sameSkillAttempts || 0) + 1;
   const fallbackDepth = Number(previous.fallbackDepth || 0);

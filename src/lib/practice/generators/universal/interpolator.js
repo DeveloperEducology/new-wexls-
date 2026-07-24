@@ -93,9 +93,10 @@ export function resolveLabelOrExpression(label, context) {
     }
   }
 
-  // If the string looks like a function call expression (contains parentheses),
-  // try evaluating it directly via resolveExpression.
-  // e.g. toWords(A) + ' minus ' + toWords(B) → "nine minus five"
+  if (!/[()+\-*/%]/.test(interpolated)) {
+    return interpolated;
+  }
+
   if (interpolated.includes('(') && interpolated.includes(')')) {
     try {
       const result = resolveExpression(interpolated, context);
@@ -117,7 +118,7 @@ export function resolveLabelOrExpression(label, context) {
       return parseFloat(interpolated);
     }
     const resolved = resolveExpression(interpolated, context);
-    if (resolved !== undefined && resolved !== interpolated) {
+    if (resolved !== undefined && resolved !== interpolated && resolved !== null) {
       return resolved;
     }
   }

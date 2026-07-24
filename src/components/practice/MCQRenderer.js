@@ -93,9 +93,19 @@ function responsivePx(value, minPx, fallbackMaxPx) {
   return `clamp(${minPx}px, ${Math.max(minPx, numeric * 0.16)}vw, ${numeric}px)`;
 }
 
-function InlineMarkdown({ text, userAnswerLabel }) {
+function InlineMarkdown({ text, userAnswerLabel, userAnswerLabels }) {
   const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
+  const normalizedText = sanitizedText
+    .replace(/\\n/g, '\n')
+    .replace(/\/n/g, '\n');
   
+  // Normalize answer labels into an array if available
+  const answersArray = Array.isArray(userAnswerLabels)
+    ? userAnswerLabels.map(s => String(s || '').trim()).filter(Boolean)
+    : (userAnswerLabel ? [String(userAnswerLabel).trim()] : []);
+
+  let globalBlankIndex = 0;
+
   const parseMathAndText = (str, keyPrefix) => {
     const subSegments = str.split(/(\$[^\$]+\$)/g);
     return subSegments.flatMap((subPiece, subIndex) => {
@@ -104,20 +114,23 @@ function InlineMarkdown({ text, userAnswerLabel }) {
         return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />];
       }
       
-      // Match blank placeholders: '___' or '_' (not part of words, or standing alone) or '{{blank}}'
-      const blankSegments = subPiece.split(/(___|_|\{\{blank\}\})/g);
+      // Match blank placeholders: '_', '__', '___', '[]', '[[blank1]]', '{{blank}}'
+      const blankSegments = subPiece.split(/(_+|\[\]|\[\[blank\d*\]\]|\{\{blank\}\})/g);
       return blankSegments.map((segment, segIdx) => {
-        if (segment === '_' || segment === '___' || segment === '{{blank}}') {
-          if (userAnswerLabel) {
+        if (/^(_+|\[\]|\[\[blank\d*\]\]|\{\{blank\}\})$/.test(segment)) {
+          const currentBlankIdx = globalBlankIndex++;
+          const filledVal = answersArray[currentBlankIdx];
+
+          if (filledVal) {
             return (
               <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankFilled}>
-                {userAnswerLabel}
+                {filledVal}
               </span>
             );
           } else {
             return (
               <span key={`${keyPrefix}-${subIndex}-${segIdx}`} className={styles.blankEmpty}>
-                &nbsp;&nbsp;
+                &nbsp;&nbsp;&nbsp;&nbsp;
               </span>
             );
           }
@@ -147,37 +160,63 @@ function InlineMarkdown({ text, userAnswerLabel }) {
     });
   };
 
-  return sanitizedText.split(/(\*\*[^*]+\*\*|\[img:[^\]]+\])/g).map((piece, index) => {
-    const match = piece.match(/^\*\*([^*]+)\*\*$/);
-    if (match) {
-      return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
-    }
-    
-    const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
-    if (imgMatch) {
-      return (
-        <img
-          key={index}
-          src={imgMatch[1]}
-          alt="target word"
-          style={{
-            display: 'inline-block',
-            height: '1.6em',
-            verticalAlign: 'middle',
-            margin: '0 6px',
-            borderRadius: '4px',
-            objectFit: 'contain'
-          }}
-        />
-      );
-    }
-    
-    return (
-      <span key={index}>
-        {parseMathAndText(piece, `text-${index}`)}
-      </span>
-    );
-  });
+  // Regex to detect inline images: ![alt](url) or [img:url] or ![alt]{{url}}
+  const imageRegex = /(!\[\s*[^\]]*\s*\]\(\s*[^)\s]+\s*\)|!\[\s*[^\]]*\s*\]\{\{\s*[^}\s]+\s*\}\}|\[img:[^\]]+\]|\*\*[^*]+\*\*)/g;
+
+  return (
+    <span style={{ whiteSpace: 'pre-line' }}>
+      {normalizedText.split(imageRegex).map((piece, index) => {
+        const match = piece.match(/^\*\*([^*]+)\*\*$/);
+        if (match) {
+          return <strong key={index}>{parseMathAndText(match[1], `bold-${index}`)}</strong>;
+        }
+        
+        const imgMatch = piece.match(/^\[img:([^\]]+)\]$/);
+        if (imgMatch) {
+          return (
+            <img
+              key={index}
+              src={imgMatch[1]}
+              alt="target word"
+              style={{
+                display: 'inline-block',
+                maxHeight: '160px',
+                verticalAlign: 'middle',
+                margin: '8px 6px',
+                borderRadius: '8px',
+                objectFit: 'contain'
+              }}
+            />
+          );
+        }
+
+        const mdImgMatch = piece.match(/^!\[\s*([^\]]*)\s*\]\(\s*([^)\s]+)\s*\)$/) || piece.match(/^!\[\s*([^\]]*)\s*\]\{\{\s*([^}\s]+)\s*\}\}$/);
+        if (mdImgMatch) {
+          return (
+            <img
+              key={index}
+              src={mdImgMatch[2]}
+              alt={mdImgMatch[1] || "inline image"}
+              style={{
+                display: 'inline-block',
+                maxHeight: '160px',
+                verticalAlign: 'middle',
+                margin: '8px 6px',
+                borderRadius: '8px',
+                objectFit: 'contain'
+              }}
+            />
+          );
+        }
+        
+        return (
+          <span key={index}>
+            {parseMathAndText(piece, `text-${index}`)}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 function getGridClassName(question, optionLayout) {
@@ -334,7 +373,7 @@ function Part({ part, inGroup = false }) {
             maxHeight: part.maxHeight || 280,
             objectFit: 'contain',
             borderRadius: (isTransparent || part.transparent) ? undefined : 18,
-            boxShadow: ((isPreK && isTransparent) || part.transparent) ? 'none' : '0 16px 36px rgba(15, 23, 42, 0.12)',
+            boxShadow: (isTransparent || part.transparent || part.isTransparent) ? 'none' : '0 16px 36px rgba(15, 23, 42, 0.12)',
           }}
         />
       </div>
@@ -497,6 +536,14 @@ export default function MCQRenderer({
     (typeof question.interaction === 'object'
       ? (question.interaction?.engine === 'msq' || question.interaction?.inputMode === 'multi-choice')
       : (question.interaction === 'msq' || question.interaction === 'multi-choice'));
+
+  const isTapToFill = question.type === 'tap_to_fill' ||
+    question.interaction === 'tap_to_fill' ||
+    question.optionsType === 'tap_to_fill' ||
+    (typeof question.interaction === 'object'
+      ? (question.interaction?.engine === 'tap_to_fill' || question.interaction?.type === 'tap_to_fill')
+      : (question.interaction === 'tap_to_fill'));
+
   const shouldAutoSubmit = Boolean(
     question?.metadata?.clickToSubmit ||
     question?.layoutConfig?.clickToSubmit ||
@@ -508,9 +555,9 @@ export default function MCQRenderer({
   }, [question.parts]);
 
   const selectedIndices = useMemo(() => {
-    if (!isMultiSelect) return [];
+    if (!isMultiSelect && !isTapToFill) return [];
     if (Array.isArray(userAnswer)) {
-      return userAnswer.map(Number);
+      return userAnswer.map(item => typeof item === 'object' ? Number(item?.selectedIndex ?? item?.index) : Number(item)).filter(Number.isFinite);
     } else if (userAnswer && typeof userAnswer === 'object') {
       if ('selectedIndex' in userAnswer || 'index' in userAnswer) {
         const val = Number(userAnswer.selectedIndex ?? userAnswer.index);
@@ -524,15 +571,81 @@ export default function MCQRenderer({
       return Number.isFinite(val) ? [val] : [];
     }
     return [];
-  }, [userAnswer, isMultiSelect]);
+  }, [userAnswer, isMultiSelect, isTapToFill]);
 
-  const hasSelection = userAnswer !== null && userAnswer !== undefined && userAnswer !== '';
-  const selectedIndex = typeof userAnswer === 'object'
-    ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
-    : Number(userAnswer);
-  const selectedOptionLabel = hasSelection && Array.isArray(question.options) && selectedIndex >= 0 && selectedIndex < question.options.length
-    ? getOptionLabel(question.options[selectedIndex], selectedIndex)
-    : null;
+  const selectedIndex = useMemo(() => {
+    if (userAnswer === null || userAnswer === undefined || userAnswer === '') return -1;
+    if (Array.isArray(userAnswer)) {
+      if (userAnswer.length === 0) return -1;
+      const first = userAnswer[0];
+      return typeof first === 'object' ? Number(first?.selectedIndex ?? first?.index ?? -1) : Number(first);
+    }
+    if (typeof userAnswer === 'object' && userAnswer !== null) {
+      return Number(userAnswer.selectedIndex ?? userAnswer.index ?? -1);
+    }
+    return Number(userAnswer);
+  }, [userAnswer]);
+
+  const selectedOptionLabel = useMemo(() => {
+    if (Number.isFinite(selectedIndex) && Array.isArray(question.options) && selectedIndex >= 0 && selectedIndex < question.options.length) {
+      return getOptionLabel(question.options[selectedIndex], selectedIndex);
+    }
+    if (typeof userAnswer === 'string' && userAnswer.trim() !== '') {
+      return userAnswer.trim();
+    }
+    return null;
+  }, [selectedIndex, question.options, userAnswer]);
+
+  const selectedOptionLabels = useMemo(() => {
+    if (Array.isArray(userAnswer)) {
+      return userAnswer.map(item => {
+        const idx = typeof item === 'object' ? Number(item?.selectedIndex ?? item?.index) : Number(item);
+        if (Number.isFinite(idx) && Array.isArray(question.options) && idx >= 0 && idx < question.options.length) {
+          return getOptionLabel(question.options[idx], idx);
+        }
+        return String(item || '');
+      }).filter(Boolean);
+    }
+    if (selectedOptionLabel) {
+      return [selectedOptionLabel];
+    }
+    return [];
+  }, [userAnswer, selectedOptionLabel, question.options]);
+
+  const handleSelectOptionIndex = (index) => {
+    if (isMultiSelect) {
+      const nextSelected = selectedIndices.includes(index)
+        ? selectedIndices.filter((i) => i !== index)
+        : [...selectedIndices, index].sort((a, b) => a - b);
+      onAnswer(nextSelected);
+    } else if (isTapToFill) {
+      const fullText = (question.questionText || '') + ' ' + (question.parts || []).map(p => p.content || p.text || '').join(' ');
+      const blanksCount = (fullText.match(/(_+|\[\]|\[\[blank\d*\]\]|\{\{blank\}\})/g) || []).length || 1;
+
+      if (blanksCount <= 1) {
+        onAnswer(index);
+        if (shouldAutoSubmit && onSubmit) {
+          onSubmit(index);
+        }
+      } else {
+        let currentArr = Array.isArray(userAnswer)
+          ? [...userAnswer]
+          : (userAnswer !== null && userAnswer !== undefined && userAnswer !== '' ? [userAnswer] : []);
+        
+        const nextSelected = [...currentArr, index];
+        onAnswer(nextSelected);
+
+        if (nextSelected.length >= blanksCount && onSubmit) {
+          onSubmit(nextSelected);
+        }
+      }
+    } else {
+      onAnswer(index);
+      if (shouldAutoSubmit && onSubmit) {
+        onSubmit(index);
+      }
+    }
+  };
   const optionLayout = getOptionLayout(question);
   const hasMedia = (question.options || []).some((option) => hasVisualContent(option));
   const gridClassName = getGridClassName(question, optionLayout);
@@ -1002,17 +1115,7 @@ export default function MCQRenderer({
                 type="button"
                 disabled={isAnswered}
                 onClick={() => {
-                  if (isMultiSelect) {
-                    const nextSelected = selectedIndices.includes(index)
-                      ? selectedIndices.filter((item) => item !== index)
-                      : [...selectedIndices, index].sort((a, b) => a - b);
-                    onAnswer(nextSelected);
-                  } else {
-                    onAnswer(index);
-                    if (shouldAutoSubmit && onSubmit) {
-                      onSubmit(index);
-                    }
-                  }
+                  handleSelectOptionIndex(index);
                   if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(value, question.voice || 'Puck', option?.audioUrl);
                   }
@@ -1071,17 +1174,7 @@ export default function MCQRenderer({
                 type="button"
                 disabled={isAnswered}
                 onClick={() => {
-                  if (isMultiSelect) {
-                    const nextSelected = selectedIndices.includes(index)
-                      ? selectedIndices.filter((i) => i !== index)
-                      : [...selectedIndices, index].sort((a, b) => a - b);
-                    onAnswer(nextSelected);
-                  } else {
-                    onAnswer(index);
-                    if (shouldAutoSubmit && onSubmit) {
-                      onSubmit(index);
-                    }
-                  }
+                  handleSelectOptionIndex(index);
                   if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                     speakText(value, question.voice || 'Puck', option?.audioUrl);
                   }
@@ -1241,17 +1334,7 @@ export default function MCQRenderer({
                     type="button"
                     disabled={isAnswered}
                     onClick={() => {
-                      if (isMultiSelect) {
-                        const nextSelected = selectedIndices.includes(index)
-                          ? selectedIndices.filter((i) => i !== index)
-                          : [...selectedIndices, index].sort((a, b) => a - b);
-                        onAnswer(nextSelected);
-                      } else {
-                        onAnswer(index);
-                        if (shouldAutoSubmit && onSubmit) {
-                          onSubmit(index);
-                        }
-                      }
+                      handleSelectOptionIndex(index);
                       if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
                         speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
                       }

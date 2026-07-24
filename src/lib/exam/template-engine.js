@@ -277,6 +277,11 @@ export function instantiateParameterized(template, count) {
         tags: tags || [topic],
         templateVariables: combo,
         status: 'active',
+        copyMode: !!(template.copyMode || config.copyMode || template.metadata?.copyMode),
+        metadata: {
+          ...(template.metadata || {}),
+          copyMode: !!(template.copyMode || config.copyMode || template.metadata?.copyMode),
+        }
       });
       continue;
     }

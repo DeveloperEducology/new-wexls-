@@ -17,6 +17,127 @@ export default function IllustrationPromptBuilderPage() {
   const [copied, setCopied] = useState(false);
   const [assembledPrompt, setAssembledPrompt] = useState('');
 
+  // Vertex AI image generation and DB saving states
+  const [quality, setQuality] = useState('standard'); // 'low', 'standard', 'ultra'
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [generatedBase64, setGeneratedBase64] = useState('');
+  const [originalBase64, setOriginalBase64] = useState('');
+  const [removeBackground, setRemoveBackground] = useState(true);
+  const [assetUrl, setAssetUrl] = useState('');
+  const [assetName, setAssetName] = useState('smiling_boy_curly_red_hair');
+  const [savedAsset, setSavedAsset] = useState(null);
+
+  // Auto-generate clean asset name whenever subject changes
+  useEffect(() => {
+    const clean = subject.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').slice(0, 32);
+    setAssetName(clean || 'clipart');
+  }, [subject]);
+
+  const transparentizeImage = (base64Str) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${base64Str}`;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        
+        // Scan pixels. If R, G, B are all > 240, make it transparent
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i+1];
+          const b = data[i+2];
+          
+          if (r > 240 && g > 240 && b > 240) {
+            data[i+3] = 0; // Alpha = 0
+          }
+        }
+        
+        ctx.putImageData(imgData, 0, 0);
+        const dataUrl = canvas.toDataURL('image/png');
+        resolve(dataUrl.replace(/^data:image\/png;base64,/, ''));
+      };
+    });
+  };
+
+  useEffect(() => {
+    if (!originalBase64) {
+      setGeneratedBase64('');
+      return;
+    }
+    if (removeBackground) {
+      transparentizeImage(originalBase64).then(processed => {
+        setGeneratedBase64(processed);
+      });
+    } else {
+      setGeneratedBase64(originalBase64);
+    }
+  }, [removeBackground, originalBase64]);
+
+  const handleGenerateImage = async () => {
+    if (loading) return;
+    setLoading(true);
+    setGeneratedBase64('');
+    setOriginalBase64('');
+    setAssetUrl('');
+    setSavedAsset(null);
+
+    try {
+      const res = await fetch('/api/admin/generate-clipart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', prompt: assembledPrompt, quality }),
+      });
+      const data = await res.json();
+      if (data.success && data.base64Image) {
+        setOriginalBase64(data.base64Image);
+      } else {
+        alert('Error generating image: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Failed to generate image: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!generatedBase64 || saving) return;
+    setSaving(true);
+
+    try {
+      const res = await fetch('/api/admin/generate-clipart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save',
+          prompt: assembledPrompt,
+          base64Image: generatedBase64,
+          name: assetName || 'clipart',
+          category: selectedTemplate,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAssetUrl(data.url);
+        setSavedAsset(data.asset);
+        alert('Successfully saved image to database!');
+      } else {
+        alert('Error saving image: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Failed to save image: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Handle Preset Examples
   const presets = {
     two_pans: {
@@ -125,7 +246,11 @@ export default function IllustrationPromptBuilderPage() {
         `Flat 2D vector clipart of ${subject} ${action}, ${style}, ${color}, friendly child illustration style, ${background}, high resolution, vector illustration`
       );
     }
-  }, [subject, action, style, color, background, selectedTemplate]);
+    // Reset generation state on parameters change
+    setGeneratedBase64('');
+    setAssetUrl('');
+    setSavedAsset(null);
+  }, [subject, action, style, color, background, selectedTemplate, quality]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(assembledPrompt);
@@ -357,6 +482,37 @@ export default function IllustrationPromptBuilderPage() {
                 <option value="pure white background">Isolated White (#ffffff)</option>
               </select>
             </div>
+
+            {/* Quality & Cost (INR) Selector */}
+            <div className={styles.formGroup}>
+              <label htmlFor="quality">Image Quality & Cost (INR)</label>
+              <select
+                id="quality"
+                className={styles.select}
+                value={quality}
+                onChange={(e) => setQuality(e.target.value)}
+              >
+                <option value="low">⚡ Low / Fast (Cost: ~₹1.67 INR / image)</option>
+                <option value="standard">✨ Standard (Cost: ~₹2.50 INR / image)</option>
+                <option value="ultra">🌟 Ultra / High (Cost: ~₹5.00 INR / image)</option>
+              </select>
+            </div>
+
+            {/* Transparent Background Option */}
+            <div className={styles.formGroup} style={{ background: '#eff6ff', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #bfdbfe', marginTop: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem', fontWeight: 800, color: '#1e40af', cursor: 'pointer', margin: 0, userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={removeBackground}
+                  onChange={(e) => setRemoveBackground(e.target.checked)}
+                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+                ✨ Transparent background (Removes white)
+              </label>
+              <span style={{ fontSize: '0.75rem', color: '#1e3a8a', display: 'block', marginTop: '4px', fontWeight: 500 }}>
+                💡 Tip: Use "Isolated White" background for best results.
+              </span>
+            </div>
           </div>
 
           {/* Right Panel: Output & Visual Mockup */}
@@ -381,6 +537,24 @@ export default function IllustrationPromptBuilderPage() {
               </button>
             </div>
 
+            {/* Generate Image Button */}
+            <button
+              type="button"
+              className={styles.generateBtn}
+              onClick={handleGenerateImage}
+              disabled={loading || !assembledPrompt.trim()}
+            >
+              {loading ? (
+                <>
+                  <span className={styles.spinner} style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span> Generating illustration... (takes ~15s)
+                </>
+              ) : (
+                <>
+                  <span>✨</span> Generate Illustration (Vertex AI)
+                </>
+              )}
+            </button>
+
             {/* Live Visual Clipart Mockup Preview */}
             <h3 className={styles.sectionTitle} style={{ marginTop: '32px' }}>
               <span>🎨</span> Stylized Clipart Mockup
@@ -393,16 +567,64 @@ export default function IllustrationPromptBuilderPage() {
                   border: '3px solid #1e293b'
                 }}
               >
-                {getPreviewIcon()}
-                <span className={styles.previewLabel}>Clipart Preview</span>
+                {generatedBase64 ? (
+                  <img
+                    src={`data:image/png;base64,${generatedBase64}`}
+                    alt="Generated Illustration Preview"
+                    className={styles.previewImage}
+                  />
+                ) : (
+                  getPreviewIcon()
+                )}
+                <span className={styles.previewLabel}>
+                  {generatedBase64 ? 'Generated Asset' : 'Clipart Preview'}
+                </span>
               </div>
+              
+              {/* Save Section */}
+              {generatedBase64 && (
+                <div className={styles.saveSection}>
+                  <div className={styles.formGroup} style={{ marginBottom: '12px', width: '100%', textAlign: 'left' }}>
+                    <label htmlFor="saveName" style={{ fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                      Asset File Name
+                    </label>
+                    <input
+                      id="saveName"
+                      type="text"
+                      className={styles.input}
+                      value={assetName}
+                      onChange={(e) => setAssetName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))}
+                      placeholder="e.g. happy_cat"
+                      style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                      disabled={saving || !!assetUrl}
+                    />
+                  </div>
+                  {assetUrl ? (
+                    <div className={styles.saveStatus}>
+                      🎉 Saved successfully! URL: <a href={assetUrl} target="_blank" rel="noreferrer" style={{ color: '#059669', textDecoration: 'underline' }}>{assetUrl}</a>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.saveBtn}
+                      onClick={handleSaveImage}
+                      disabled={saving || !generatedBase64}
+                    >
+                      {saving ? '💾 Saving to Assets DB...' : '💾 Save to Database / Assets'}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <span className={styles.paletteBadge}>Style: Flat Vector</span>
                 <span className={styles.paletteBadge}>Outlines: Dark Cartoon</span>
                 <span className={styles.paletteBadge}>Faces: Friendly Dot-Eyes</span>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0', maxWidth: '340px' }}>
-                This is a visual preview mock of how your character will be positioned on the chosen background. Use the copied prompt inside Midjourney, DALL-E 3, or your asset generation pipeline to generate the asset.
+                {generatedBase64 
+                  ? 'Your custom vector clipart has been generated successfully using Google Imagen 3! Set a file name and click "Save to Database / Assets" to register the file.'
+                  : 'This is a visual preview mock of how your character will be positioned on the chosen background. Click "Generate Illustration" to generate the asset using Google Vertex AI.'}
               </p>
             </div>
           </div>

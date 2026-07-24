@@ -455,7 +455,7 @@ export async function GET(request) {
       if (resolvedSubject && resolvedTopic && skill) {
         questionDoc = await findStoredPracticeQuestion({
           subject: resolvedSubject,
-          topic: resolvedTopic,
+          topic: [resolvedTopic, skillNode?.chapterId].filter(Boolean),
           skill,
           qn: qnId,
           isStatic: true
@@ -622,6 +622,7 @@ export async function GET(request) {
   const isStaticSkill = skillNode?.isStatic === true || 
                         skillNode?.metadata?.isStatic === true || 
                         skillNode?.static === true ||
+                        skillNode?.progressionConfig?.enabled === false ||
                         searchParams.get('mode') === 'static' ||
                         searchParams.get('isStatic') === 'true';
 
@@ -663,7 +664,7 @@ export async function GET(request) {
 
       const storedPayload = await resolveStoredPracticePayload({
         subject: resolvedSubject,
-        topic: resolvedTopic,
+        topic: [resolvedTopic, skillNode?.chapterId].filter(Boolean),
         skill: skillQueryList,
         difficulty,
         seed,

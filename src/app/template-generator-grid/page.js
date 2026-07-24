@@ -45,6 +45,65 @@ const DEFAULT_ROWS = [
 
 const GRID_PRESETS = [
   {
+    id: 'tap-to-fill-preposition',
+    name: '✏️ English: Tap-to-Fill Preposition Sentence (Location Words)',
+    title: 'Choose the best location word to match the picture',
+    targetCollection: 'dynamic_templates',
+    subject: 'english',
+    topic: 'grammar',
+    grade: '5',
+    questionMode: 'tap_to_fill',
+    optionsType: 'tap_to_fill',
+    type: 'tap_to_fill',
+    columns: ['target_word', 'target_image', 'target_audio', 'Result', 'distractor_1', 'distractor_2', 'distractor_3'],
+    rows: [
+      {
+        target_word: 'The man and woman are _ the trees.',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/1784611241481-The-man-and-woman-are-next-the-trees-.jpg',
+        target_audio: 'The man and woman are next to the trees.',
+        Result: 'next to',
+        distractor_1: 'inside',
+        distractor_2: 'under',
+        distractor_3: 'above'
+      },
+      {
+        target_word: 'The cat is _ the bed.',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/1784611445918-cat-under-bed.jpg',
+        target_audio: 'The cat is under the bed.',
+        Result: 'under',
+        distractor_1: 'on',
+        distractor_2: 'behind',
+        distractor_3: 'between'
+      },
+      {
+        target_word: 'The ball is _ the box.',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/1784611468494-ball-inside-box.jpg',
+        target_audio: 'The ball is inside the box.',
+        Result: 'inside',
+        distractor_1: 'over',
+        distractor_2: 'next to',
+        distractor_3: 'behind'
+      },
+      {
+        target_word: 'The picture is _ the wall.',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/1784611649657-picture-on-the-wall.jpg',
+        target_audio: 'The picture is on the wall.',
+        Result: 'on',
+        distractor_1: 'under',
+        distractor_2: 'in',
+        distractor_3: 'behind'
+      }
+    ],
+    blueprint: 'Complete the sentence to match the picture:\n{{target_word}}',
+    solution: 'The correct preposition for this sentence is **{{Result}}**.',
+    optionsBinding: [
+      { column: 'Result', isCorrect: true },
+      { column: 'distractor_1', isCorrect: false },
+      { column: 'distractor_2', isCorrect: false },
+      { column: 'distractor_3', isCorrect: false }
+    ]
+  },
+  {
     id: 'prime-factorisation',
     name: '🔢 Prime Factorization (Curriculum Default)',
     title: 'Prime Factorization Grid Template',
@@ -495,6 +554,106 @@ const GRID_PRESETS = [
       { column: 'Opt2_word', imageColumn: 'Opt2_image', isCorrect: false },
       { column: 'Opt3_word', imageColumn: 'Opt3_image', isCorrect: false }
     ]
+  },
+  {
+    id: 'english-listen-and-spell',
+    name: '✏️ English: Listen to Word & Spell (Tap-to-Fill)',
+    title: 'Listen to the Word and Spell It',
+    targetCollection: 'dynamic_templates',
+    subject: 'english',
+    topic: 'ukg-english-reading-foundations',
+    grade: 'UKG',
+    optionsType: 'tap_to_fill',
+    columns: ['target_word', 'target_image', 'target_audio', 'Result', 'distractor_1', 'distractor_2', 'distractor_3'],
+    rows: [
+      {
+        _level: 'l1',
+        target_word: 'pig',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/pig.png',
+        target_audio: '/api/tts?voice=Puck&text=pig',
+        Result: 'pig',
+        distractor_1: 'p',
+        distractor_2: 'i',
+        distractor_3: 'g'
+      },
+      {
+        _level: 'l2',
+        target_word: 'cat',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780142885298-cat.png',
+        target_audio: '/api/tts?voice=Puck&text=cat',
+        Result: 'cat',
+        distractor_1: 'c',
+        distractor_2: 'a',
+        distractor_3: 't'
+      },
+      {
+        _level: 'l3',
+        target_word: 'pen',
+        target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/pen.png',
+        target_audio: '/api/tts?voice=Puck&text=pen',
+        Result: 'pen',
+        distractor_1: 'p',
+        distractor_2: 'e',
+        distractor_3: 'n'
+      }
+    ],
+    blueprint: 'Listen to the word. Then, spell it.\n\n![{{target_word}}]({{target_image}})\n\n_ _ _',
+    solution: 'Listen to the word **{{target_word}}**. Tap the letters to spell **{{target_word}}**.',
+    optionsBinding: [
+      { column: 'distractor_1', isCorrect: true },
+      { column: 'distractor_2', isCorrect: true },
+      { column: 'distractor_3', isCorrect: true }
+    ]
+  },
+  {
+    id: 'english-listen-and-spell-30',
+    name: '🧩 English: Listen & Spell 30 Words (Sentence Ordering Grid)',
+    title: 'Listen to the Word and Spell It (30 Words Grid)',
+    targetCollection: 'dynamic_templates',
+    subject: 'english',
+    topic: 'ukg-english-reading-foundations',
+    grade: 'UKG',
+    optionsType: 'sentence_ordering',
+    columns: ['target_word', 'target_image', 'target_audio', 'Result', 'distractor_1', 'distractor_2', 'distractor_3'],
+    rows: [
+      { _level: 'l1', target_word: 'pig', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/pig.png', target_audio: '/api/tts?voice=Puck&text=pig', Result: 'pig', distractor_1: 'p', distractor_2: 'i', distractor_3: 'g' },
+      { _level: 'l1', target_word: 'cat', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780142885298-cat.png', target_audio: '/api/tts?voice=Puck&text=cat', Result: 'cat', distractor_1: 'c', distractor_2: 'a', distractor_3: 't' },
+      { _level: 'l1', target_word: 'pen', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/pen.png', target_audio: '/api/tts?voice=Puck&text=pen', Result: 'pen', distractor_1: 'p', distractor_2: 'e', distractor_3: 'n' },
+      { _level: 'l1', target_word: 'pop', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/1780138957805-balon-pop.png', target_audio: '/api/tts?voice=Puck&text=pop', Result: 'pop', distractor_1: 'p', distractor_2: 'o', distractor_3: 'p' },
+      { _level: 'l1', target_word: 'sun', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/sun.png', target_audio: '/api/tts?voice=Puck&text=sun', Result: 'sun', distractor_1: 's', distractor_2: 'u', distractor_3: 'n' },
+      { _level: 'l1', target_word: 'dog', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/dog.png', target_audio: '/api/tts?voice=Puck&text=dog', Result: 'dog', distractor_1: 'd', distractor_2: 'o', distractor_3: 'g' },
+      { _level: 'l1', target_word: 'bus', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/bus.png', target_audio: '/api/tts?voice=Puck&text=bus', Result: 'bus', distractor_1: 'b', distractor_2: 'u', distractor_3: 's' },
+      { _level: 'l1', target_word: 'cup', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/cup.png', target_audio: '/api/tts?voice=Puck&text=cup', Result: 'cup', distractor_1: 'c', distractor_2: 'u', distractor_3: 'p' },
+      { _level: 'l1', target_word: 'hat', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/hat.png', target_audio: '/api/tts?voice=Puck&text=hat', Result: 'hat', distractor_1: 'h', distractor_2: 'a', distractor_3: 't' },
+      { _level: 'l1', target_word: 'mat', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/mat.png', target_audio: '/api/tts?voice=Puck&text=mat', Result: 'mat', distractor_1: 'm', distractor_2: 'a', distractor_3: 't' },
+      { _level: 'l2', target_word: 'bed', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/bed.png', target_audio: '/api/tts?voice=Puck&text=bed', Result: 'bed', distractor_1: 'b', distractor_2: 'e', distractor_3: 'd' },
+      { _level: 'l2', target_word: 'red', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/red.png', target_audio: '/api/tts?voice=Puck&text=red', Result: 'red', distractor_1: 'r', distractor_2: 'e', distractor_3: 'd' },
+      { _level: 'l2', target_word: 'net', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/net.png', target_audio: '/api/tts?voice=Puck&text=net', Result: 'net', distractor_1: 'n', distractor_2: 'e', distractor_3: 't' },
+      { _level: 'l2', target_word: 'pin', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/pin.png', target_audio: '/api/tts?voice=Puck&text=pin', Result: 'pin', distractor_1: 'p', distractor_2: 'i', distractor_3: 'n' },
+      { _level: 'l2', target_word: 'fin', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/fin.png', target_audio: '/api/tts?voice=Puck&text=fin', Result: 'fin', distractor_1: 'f', distractor_2: 'i', distractor_3: 'n' },
+      { _level: 'l2', target_word: 'box', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/box.png', target_audio: '/api/tts?voice=Puck&text=box', Result: 'box', distractor_1: 'b', distractor_2: 'o', distractor_3: 'x' },
+      { _level: 'l2', target_word: 'fox', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/fox.png', target_audio: '/api/tts?voice=Puck&text=fox', Result: 'fox', distractor_1: 'f', distractor_2: 'o', distractor_3: 'x' },
+      { _level: 'l2', target_word: 'top', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/top.png', target_audio: '/api/tts?voice=Puck&text=top', Result: 'top', distractor_1: 't', distractor_2: 'o', distractor_3: 'p' },
+      { _level: 'l2', target_word: 'log', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/log.png', target_audio: '/api/tts?voice=Puck&text=log', Result: 'log', distractor_1: 'l', distractor_2: 'o', distractor_3: 'g' },
+      { _level: 'l2', target_word: 'bug', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/bug.png', target_audio: '/api/tts?voice=Puck&text=bug', Result: 'bug', distractor_1: 'b', distractor_2: 'u', distractor_3: 'g' },
+      { _level: 'l3', target_word: 'mug', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/mug.png', target_audio: '/api/tts?voice=Puck&text=mug', Result: 'mug', distractor_1: 'm', distractor_2: 'u', distractor_3: 'g' },
+      { _level: 'l3', target_word: 'tub', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/tub.png', target_audio: '/api/tts?voice=Puck&text=tub', Result: 'tub', distractor_1: 't', distractor_2: 'u', distractor_3: 'b' },
+      { _level: 'l3', target_word: 'bag', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/bag.png', target_audio: '/api/tts?voice=Puck&text=bag', Result: 'bag', distractor_1: 'b', distractor_2: 'a', distractor_3: 'g' },
+      { _level: 'l3', target_word: 'cap', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/cap.png', target_audio: '/api/tts?voice=Puck&text=cap', Result: 'cap', distractor_1: 'c', distractor_2: 'a', distractor_3: 'p' },
+      { _level: 'l3', target_word: 'map', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/map.png', target_audio: '/api/tts?voice=Puck&text=map', Result: 'map', distractor_1: 'm', distractor_2: 'a', distractor_3: 'p' },
+      { _level: 'l3', target_word: 'tap', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/tap.png', target_audio: '/api/tts?voice=Puck&text=tap', Result: 'tap', distractor_1: 't', distractor_2: 'a', distractor_3: 'p' },
+      { _level: 'l3', target_word: 'jet', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/jet.png', target_audio: '/api/tts?voice=Puck&text=jet', Result: 'jet', distractor_1: 'j', distractor_2: 'e', distractor_3: 't' },
+      { _level: 'l3', target_word: 'wet', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/wet.png', target_audio: '/api/tts?voice=Puck&text=wet', Result: 'wet', distractor_1: 'w', distractor_2: 'e', distractor_3: 't' },
+      { _level: 'l3', target_word: 'zip', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/zip.png', target_audio: '/api/tts?voice=Puck&text=zip', Result: 'zip', distractor_1: 'z', distractor_2: 'i', distractor_3: 'p' },
+      { _level: 'l3', target_word: 'mop', target_image: 'https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/mop.png', target_audio: '/api/tts?voice=Puck&text=mop', Result: 'mop', distractor_1: 'm', distractor_2: 'o', distractor_3: 'p' }
+    ],
+    blueprint: 'Listen to the word. Then, spell it.',
+    solution: 'Listen to the word **{{target_word}}**. Arrange the letters to spell **{{target_word}}**.',
+    optionsBinding: [
+      { column: 'distractor_1', isCorrect: true },
+      { column: 'distractor_2', isCorrect: true },
+      { column: 'distractor_3', isCorrect: true }
+    ]
   }
 ];
 
@@ -538,6 +697,10 @@ export default function SpreadsheetTemplateCreator() {
   const [jnvstSection, setJnvstSection] = useState('arithmetic');
   const [jnvstTopic, setJnvstTopic] = useState('simplification');
   const [jnvstDifficulty, setJnvstDifficulty] = useState(0.5);
+
+  const [imageHasAudio, setImageHasAudio] = useState(false);
+  const [imageIsTransparent, setImageIsTransparent] = useState(false);
+  const [customPartsText, setCustomPartsText] = useState('');
 
   // AI Generation state
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
@@ -902,36 +1065,38 @@ export default function SpreadsheetTemplateCreator() {
 
     updatedRows.forEach((row) => {
       audioCols.forEach(audioCol => {
-        // Only generate if the audio cell is empty
-        if (!row[audioCol]) {
-          let textCol = null;
-          const prefix = audioCol.replace(/_audio$/, '');
-          
-          // Try to find matching text column
-          const candidates = [`${prefix}_word`, `${prefix}_label`, `${prefix}_option`, prefix, 'word', 'label'];
-          for (const cand of candidates) {
-            if (columns.includes(cand) && row[cand]) {
-              textCol = cand;
-              break;
-            }
+        let textCol = null;
+        const prefix = audioCol.replace(/_audio$/, '');
+        
+        // Try to find matching text column
+        const candidates = [`${prefix}_word`, `${prefix}_label`, `${prefix}_option`, prefix, 'word', 'label'];
+        for (const cand of candidates) {
+          if (columns.includes(cand) && row[cand]) {
+            textCol = cand;
+            break;
           }
+        }
 
-          if (textCol) {
-            const textValue = String(row[textCol] || '').trim();
-            if (textValue && !textValue.startsWith('http') && !textValue.startsWith('![')) {
-              const voice = 'Puck';
-              const ttsUrl = `/api/tts?voice=${voice}&text=${encodeURIComponent(textValue)}`;
-              
-              row[audioCol] = ttsUrl;
+        if (textCol) {
+          const textValue = String(row[textCol] || '').trim();
+          if (textValue && !textValue.startsWith('http') && !textValue.startsWith('![')) {
+            const voice = 'Puck';
+            const expectedTtsUrl = `/api/tts?voice=${voice}&text=${encodeURIComponent(textValue)}`;
+            
+            // Check if we need to set/update or if we just want to warm the cache
+            const isDifferent = row[audioCol] !== expectedTtsUrl;
+            
+            if (isDifferent || !row[audioCol]) {
+              row[audioCol] = expectedTtsUrl;
               count++;
-
-              // Warm server-side cache
-              warmPromises.push(
-                fetch(ttsUrl)
-                  .then(res => res.ok ? res.json() : null)
-                  .catch(() => null)
-              );
             }
+            
+            // Always warm cache for the expected URL
+            warmPromises.push(
+              fetch(expectedTtsUrl)
+                .then(res => res.ok ? res.json() : null)
+                .catch(() => null)
+            );
           }
         }
       });
@@ -942,14 +1107,93 @@ export default function SpreadsheetTemplateCreator() {
     if (count > 0) {
       try {
         await Promise.all(warmPromises);
-        alert(`🪄 Successfully generated & pre-cached ${count} audio cell(s)!`);
+        alert(`🪄 Successfully generated & pre-cached ${count} audio cell(s) (Warmed up ${warmPromises.length} total cache entries)!`);
       } catch (err) {
         alert(`🪄 Generated ${count} audio paths! Warming cache completed in background.`);
       }
+    } else if (warmPromises.length > 0) {
+      try {
+        await Promise.all(warmPromises);
+        alert(`🪄 All ${warmPromises.length} audio cache entries warmed up successfully!`);
+      } catch (err) {
+        alert(`🪄 Warming completed in background.`);
+      }
     } else {
-      alert("No empty audio cells with matching text fields were found.");
+      alert("No audio cells with matching text fields were found.");
     }
     setWarmingTts(false);
+  };
+
+  // Auto-clean grid helper: replaces '---' placeholders with real words/values and fixes option bindings
+  const handleAutoCleanGrid = () => {
+    let fixedCount = 0;
+    const cleanWordFromUrl = (url) => {
+      if (!url || typeof url !== 'string') return '';
+      if (url.includes('text=')) {
+        try {
+          const text = new URL(url, 'http://localhost').searchParams.get('text');
+          if (text) return text.trim();
+        } catch (e) {}
+      }
+      const filename = url.split('/').pop().split('?')[0];
+      const nameWithoutExt = filename.replace(/\.(png|jpg|jpeg|webp|svg|gif)$/i, '');
+      const parts = nameWithoutExt.split('-');
+      const clean = parts[parts.length - 1].replace(/[^a-zA-Z]/g, '');
+      return clean.length >= 2 ? clean : nameWithoutExt;
+    };
+
+    const sampleWords = ['cat', 'pen', 'pig', 'dog', 'sun', 'bat', 'cup', 'hen', 'fan', 'pin'];
+    const sampleDistractors = ['c', 'a', 't', 'p', 'e', 'n', 'i', 'g', 'b', 'o'];
+
+    const updatedRows = rows.map((row, idx) => {
+      const newRow = { ...row };
+      const wordCol = columns.find(c => ['target_word', 'word', 'text'].includes(c));
+      const imageCol = columns.find(c => c.toLowerCase().includes('image'));
+      const audioCol = columns.find(c => c.toLowerCase().includes('audio'));
+      const resultCol = columns.find(c => ['Result', 'Result_word', 'correct_letter'].includes(c));
+
+      // 1. Clean target_word
+      let wordVal = wordCol ? String(newRow[wordCol] || '').trim() : '';
+      if (!wordVal || wordVal === '---' || wordVal === 'n/a') {
+        const fromImg = imageCol ? cleanWordFromUrl(newRow[imageCol]) : '';
+        const fromAud = audioCol ? cleanWordFromUrl(newRow[audioCol]) : '';
+        wordVal = fromImg || fromAud || sampleWords[idx % sampleWords.length];
+        if (wordCol) {
+          newRow[wordCol] = wordVal;
+          fixedCount++;
+        }
+      }
+
+      // 2. Clean Result
+      if (resultCol) {
+        let resVal = String(newRow[resultCol] || '').trim();
+        if (!resVal || resVal === '---' || resVal === 'n/a') {
+          // If result should be first letter (e.g. 'c' for 'cat') or full word
+          newRow[resultCol] = wordVal ? wordVal : sampleWords[idx % sampleWords.length];
+          fixedCount++;
+        }
+      }
+
+      // 3. Clean Distractors
+      columns.filter(c => c.toLowerCase().includes('distractor')).forEach((distCol, dIdx) => {
+        let dVal = String(newRow[distCol] || '').trim();
+        if (!dVal || dVal === '---' || dVal === 'n/a') {
+          newRow[distCol] = sampleDistractors[(idx + dIdx * 2 + 1) % sampleDistractors.length];
+          fixedCount++;
+        }
+      });
+
+      return newRow;
+    });
+
+    // 4. Clean Blueprint if it repeats variables erroneously (e.g. "[Result] [Result] [Result].")
+    if (blueprint.includes('[Result] [Result]') || blueprint.includes('{{Result}} {{Result}}')) {
+      setBlueprint('Listen to the word. Then, spell it.');
+      fixedCount++;
+    }
+
+    setRows(updatedRows);
+    alert(`✨ Cleaned and fixed ${fixedCount} placeholder/cell value(s)!`);
   };
 
   // Cycle difficulty level for a row
@@ -1000,6 +1244,95 @@ export default function SpreadsheetTemplateCreator() {
     return result;
   };
 
+  const getEvaluatedParts = () => {
+    const imageCol = columns.find(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('clipart'));
+    const audioCol = columns.find(c => c.toLowerCase().includes('audio') || c.toLowerCase().includes('sound'));
+    const patternCol = columns.find(c => c.toLowerCase().includes('pattern'));
+    const wordCol = columns.find(c => c.toLowerCase() === 'word' || c.toLowerCase() === 'text');
+
+    let partsSource = [];
+    if (customPartsText && customPartsText.trim() !== '') {
+      try {
+        partsSource = JSON.parse(customPartsText);
+        if (!Array.isArray(partsSource)) partsSource = [];
+      } catch (e) {
+        console.warn('Preview parts JSON parse failed:', e);
+      }
+    }
+
+    if (partsSource.length === 0) {
+      if (rawLoadedJson?.parts && !imageCol) {
+        partsSource.push(...rawLoadedJson.parts);
+      } else {
+        // 1. Audio part
+        if (audioCol && !imageHasAudio) {
+          partsSource.push({
+            type: 'audio',
+            content: `[${audioCol}]`,
+            label: wordCol ? `[${wordCol}]` : ''
+          });
+        }
+
+        // 2. Blueprint instruction text
+        if (blueprint) {
+          partsSource.push({
+            type: 'text',
+            content: blueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]')
+          });
+        }
+
+        // 3. Image
+        if (imageCol) {
+          const imgPart = {
+            type: 'image',
+            content: `[${imageCol}]`,
+            label: wordCol ? `[${wordCol}]` : ''
+          };
+          if (imageIsTransparent) imgPart.transparent = true;
+          if (imageHasAudio && audioCol) {
+            imgPart.playLabelSound = true;
+            imgPart.audioUrl = `[${audioCol}]`;
+          }
+          partsSource.push(imgPart);
+        }
+
+        // 4. Pattern
+        if (patternCol) {
+          partsSource.push({
+            type: 'text',
+            content: `[${patternCol}]`
+          });
+        }
+      }
+    }
+
+    if (partsSource.length === 0) return null;
+
+    const currentRow = rows[activeRowIndex] || {};
+    return partsSource.map(part => {
+      let content = part.content || '';
+      let label = part.label || '';
+      let audioUrl = part.audioUrl || '';
+      
+      // Substitute placeholders like [col] or {{col}}
+      columns.forEach(col => {
+        const val = currentRow[col] !== undefined ? String(currentRow[col]) : '';
+        const regex1 = new RegExp(`\\[${col}\\]`, 'g');
+        const regex2 = new RegExp(`\\{\\{\\s*${col}\\s*\\}\\}`, 'g');
+        content = content.replace(regex1, val).replace(regex2, val);
+        label = label.replace(regex1, val).replace(regex2, val);
+        audioUrl = audioUrl.replace(regex1, val).replace(regex2, val);
+      });
+      
+      return {
+        ...part,
+        content,
+        label,
+        audioUrl
+      };
+    });
+  };
+
   const renderEvaluatedText = (templateText) => {
     return renderMathText(getEvaluatedText(templateText));
   };
@@ -1048,7 +1381,7 @@ export default function SpreadsheetTemplateCreator() {
                 return (
                   <img
                     key={`${index}-${sIdx}`}
-                    src={match[2]}
+                    src={match[2] || null}
                     alt={match[1]}
                     style={{
                       maxWidth: '120px',
@@ -1160,7 +1493,8 @@ export default function SpreadsheetTemplateCreator() {
         return item;
       });
       const correctOptions = optionsBinding.filter(o => o.isCorrect);
-      const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
+      const isSentenceOrdering = questionMode === 'sentence_ordering';
+      const isMSQ = (questionMode === 'msq' || correctOptions.length > 1) && !isSentenceOrdering;
       const isTapToFill = questionMode === 'tap_to_fill';
       const isCategorizationV2 = questionMode === 'categorizationv2' || questionMode === 'categorisationv2';
 
@@ -1198,8 +1532,8 @@ export default function SpreadsheetTemplateCreator() {
             clickToSubmit: false
           },
           interaction: {
-            engine: isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq')),
-            inputMode: isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice'))
+            engine: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
+            inputMode: isSentenceOrdering ? 'ordering' : (isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')))
           },
           variables: compiledVariables,
           derivations: compiledDerivations,
@@ -1245,10 +1579,71 @@ export default function SpreadsheetTemplateCreator() {
       });
 
       const correctOptions = optionsBinding.filter(o => o.isCorrect);
-      const isMSQ = questionMode === 'msq' || correctOptions.length > 1;
+      const isSentenceOrdering = questionMode === 'sentence_ordering';
+      const isMSQ = (questionMode === 'msq' || correctOptions.length > 1) && !isSentenceOrdering;
       const isTapToFill = questionMode === 'tap_to_fill';
       const isCategorizationV2 = questionMode === 'categorizationv2' || questionMode === 'categorisationv2';
       const correctOpt = correctOptions[0];
+
+      // Auto-detect special columns
+      const imageCol = columns.find(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('clipart'));
+      const audioCol = columns.find(c => c.toLowerCase().includes('audio') || c.toLowerCase().includes('sound'));
+      const patternCol = columns.find(c => c.toLowerCase().includes('pattern'));
+      const wordCol = columns.find(c => c.toLowerCase() === 'word' || c.toLowerCase() === 'text');
+
+      let compiledParts = [];
+      if (customPartsText && customPartsText.trim() !== '') {
+        try {
+          compiledParts = JSON.parse(customPartsText);
+          if (!Array.isArray(compiledParts)) {
+            compiledParts = [];
+          }
+        } catch (e) {
+          console.warn('Custom parts JSON parse failed:', e);
+        }
+      }
+
+      if (compiledParts.length === 0 && imageCol) {
+        // 1. Audio part (if not attached to image)
+        if (audioCol && !imageHasAudio) {
+          compiledParts.push({
+            type: 'audio',
+            content: `[${audioCol}]`,
+            label: wordCol ? `[${wordCol}]` : ''
+          });
+        }
+
+        // 2. Main Question Instruction Text
+        if (cleanBlueprint) {
+          compiledParts.push({
+            type: 'text',
+            content: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]')
+          });
+        }
+
+        // 3. Image Part
+        const imgPart = {
+          type: 'image',
+          content: `[${imageCol}]`,
+          label: wordCol ? `[${wordCol}]` : ''
+        };
+        if (imageIsTransparent) {
+          imgPart.transparent = true;
+        }
+        if (imageHasAudio && audioCol) {
+          imgPart.playLabelSound = true;
+          imgPart.audioUrl = `[${audioCol}]`;
+        }
+        compiledParts.push(imgPart);
+
+        // 4. Pattern Text Part
+        if (patternCol) {
+          compiledParts.push({
+            type: 'text',
+            content: `[${patternCol}]`
+          });
+        }
+      }
 
       const compiledJson = {
         id: templateId,
@@ -1257,10 +1652,11 @@ export default function SpreadsheetTemplateCreator() {
         topic: topic,
         grade: grade,
         generatorType: 'spreadsheet-grid',
-        optionsType: isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq')),
+        optionsType: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
+        type: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
         interaction: {
-          engine: isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq')),
-          inputMode: isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice'))
+          engine: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
+          inputMode: isSentenceOrdering ? 'ordering' : (isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')))
         },
         questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
         explanation: {
@@ -1270,23 +1666,33 @@ export default function SpreadsheetTemplateCreator() {
           }]
         },
         options: optionsList,
-        validationRules: isMSQ
+        validationRules: isSentenceOrdering
           ? [{
-              type: 'all_correct',
-              target: 'answer',
-              values: correctOptions.map(o => `[${o.column}]`)
-            }]
-          : [{
               type: 'exact_match',
               target: 'answer',
-              value: correctOpt ? `[${correctOpt.column}]` : ''
-            }],
+              value: '[Result]'
+            }]
+          : (isMSQ
+            ? [{
+                type: 'all_correct',
+                target: 'answer',
+                values: correctOptions.map(o => `[${o.column}]`)
+              }]
+            : [{
+                type: 'exact_match',
+                target: 'answer',
+                value: correctOpt ? `[${correctOpt.column}]` : ''
+              }]),
         variables: compiledVariables
       };
 
+      if (compiledParts.length > 0) {
+        compiledJson.parts = compiledParts;
+      }
+
       setJsonText(JSON.stringify(compiledJson, null, 2));
     }
-  }, [columns, rows, blueprint, solution, optionsBinding, questionMode, title, subject, topic, grade, targetCollection, selectedExamId, jnvstSection, jnvstTopic, jnvstDifficulty, customTemplateId]);
+  }, [columns, rows, blueprint, solution, optionsBinding, questionMode, title, subject, topic, grade, targetCollection, selectedExamId, jnvstSection, jnvstTopic, jnvstDifficulty, customTemplateId, imageHasAudio, imageIsTransparent, customPartsText]);
 
   const fetchExistingTemplates = async () => {
     setLoadingExisting(true);
@@ -1326,6 +1732,18 @@ export default function SpreadsheetTemplateCreator() {
     fetchExistingTemplates();
   }, []);
 
+  useEffect(() => {
+    if (existingTemplates.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get('id') || params.get('templateId');
+    if (urlId) {
+      const matched = existingTemplates.find(t => t.id === urlId || String(t._id) === urlId);
+      if (matched) {
+        loadTemplateIntoEditor(matched);
+      }
+    }
+  }, [existingTemplates]);
+
   const loadTemplateIntoEditor = (tpl) => {
     try {
       setPublishError(null);
@@ -1362,6 +1780,25 @@ export default function SpreadsheetTemplateCreator() {
             }
           }
         });
+      } else if (vars && typeof vars === 'object' && !config.derivations && Object.values(vars).some(v => v && v.formula)) {
+        // Curriculum Mode stored as object JSON load
+        const idxVar = vars.index;
+        if (idxVar && Array.isArray(idxVar.values)) {
+          size = idxVar.values.length;
+        }
+        for (const [name, v] of Object.entries(vars)) {
+          if (name !== 'index' && v && v.formula) {
+            const arrMatch = v.formula.match(/^(\[.*?\])\[index\]$/);
+            if (arrMatch) {
+              try {
+                colData[name] = JSON.parse(arrMatch[1]);
+              } catch (parseErr) {
+                console.warn(`Failed to parse array formula for column ${name}:`, parseErr);
+                setPublishError(`⚠️ Column array formula parse error for "${name}": ${parseErr.message}`);
+              }
+            }
+          }
+        }
       } else {
         // JNVST Mode JSON load
         if (Array.isArray(vars.index)) {
@@ -1431,6 +1868,23 @@ export default function SpreadsheetTemplateCreator() {
       sTemplate = sTemplate.replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}');
       setBlueprint(qTemplate);
       setSolution(sTemplate);
+
+      const parts = tpl.parts || config.parts;
+      if (Array.isArray(parts)) {
+        setCustomPartsText(JSON.stringify(parts, null, 2));
+        const imgPart = parts.find(p => p.type === 'image');
+        if (imgPart) {
+          setImageHasAudio(!!imgPart.playLabelSound);
+          setImageIsTransparent(!!imgPart.transparent);
+        } else {
+          setImageHasAudio(false);
+          setImageIsTransparent(false);
+        }
+      } else {
+        setCustomPartsText('');
+        setImageHasAudio(false);
+        setImageIsTransparent(false);
+      }
 
       const rawOpts = config.options || tpl.options;
       if (Array.isArray(rawOpts)) {
@@ -1533,6 +1987,23 @@ export default function SpreadsheetTemplateCreator() {
       sTemplate = sTemplate.replace(/\[([a-zA-Z0-9_]+)\]/g, '{{$1}}');
       setBlueprint(qTemplate);
       setSolution(sTemplate);
+
+      const parts = parsed.parts || config.parts;
+      if (Array.isArray(parts)) {
+        setCustomPartsText(JSON.stringify(parts, null, 2));
+        const imgPart = parts.find(p => p.type === 'image');
+        if (imgPart) {
+          setImageHasAudio(!!imgPart.playLabelSound);
+          setImageIsTransparent(!!imgPart.transparent);
+        } else {
+          setImageHasAudio(false);
+          setImageIsTransparent(false);
+        }
+      } else {
+        setCustomPartsText('');
+        setImageHasAudio(false);
+        setImageIsTransparent(false);
+      }
 
       const rawOpts = config.options || parsed.options;
       if (Array.isArray(rawOpts)) {
@@ -2135,6 +2606,9 @@ export default function SpreadsheetTemplateCreator() {
                       setRows(preset.rows);
                       setBlueprint(preset.blueprint);
                       setSolution(preset.solution);
+                      if (preset.questionMode || preset.optionsType) {
+                        setQuestionMode(preset.questionMode || preset.optionsType);
+                      }
                       setOptionsBinding(preset.optionsBinding);
                       setActiveRowIndex(0);
                     }
@@ -2517,6 +2991,7 @@ export default function SpreadsheetTemplateCreator() {
                                   className="spreadsheet-input"
                                   value={row[col] || ''}
                                   onChange={(e) => handleCellChange(rIdx, col, e.target.value)}
+                                  title={row[col] || ''}
                                 />
                               </div>
                               {hasAudioBtn && (
@@ -2598,7 +3073,7 @@ export default function SpreadsheetTemplateCreator() {
                                   }}
                                 >
                                   <img
-                                    src={row[col]}
+                                    src={row[col] || null}
                                     alt="Preview"
                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                   />
@@ -2621,7 +3096,7 @@ export default function SpreadsheetTemplateCreator() {
                                     }}
                                   >
                                     <img
-                                      src={row[col]}
+                                      src={row[col] || null}
                                       alt="Large Preview"
                                       style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
                                     />
@@ -2653,7 +3128,14 @@ export default function SpreadsheetTemplateCreator() {
               >
                 {warmingTts ? '⏳ Generating TTS...' : '🪄 Auto-Generate & Warm TTS Audios'}
               </button>
-              <button className="grid-btn-secondary" onClick={() => setRows([rows[0]])}>🧹 Clear rows</button>
+              <button
+                className="grid-btn-secondary"
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#fff', border: 'none' }}
+                onClick={handleAutoCleanGrid}
+              >
+                🧹 Auto-Clean & Fix "---" Cells
+              </button>
+              <button className="grid-btn-secondary" onClick={() => setRows([rows[0]])}>Clear rows</button>
             </div>
 
             {/* Level distribution stats bar */}
@@ -2704,6 +3186,28 @@ export default function SpreadsheetTemplateCreator() {
                 />
               </div>
 
+              {/* Image Clipart Options */}
+              <div style={{ display: 'flex', gap: '24px', background: '#eff6ff', padding: '12px 18px', borderRadius: '12px', border: '1.5px solid #bfdbfe', flexWrap: 'wrap', marginTop: '-4px', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={imageHasAudio}
+                    onChange={(e) => setImageHasAudio(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  🔊 Attach Audio Speaker to Clipart
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={imageIsTransparent}
+                    onChange={(e) => setImageIsTransparent(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  ✨ Transparent Clipart Background
+                </label>
+              </div>
+
               <div>
                 <label className="mc-dev-label">Step-by-Step Solution Template</label>
                 <textarea
@@ -2714,6 +3218,17 @@ export default function SpreadsheetTemplateCreator() {
                   onChange={(e) => setSolution(e.target.value)}
                   onFocus={(e) => setActiveField({ label: 'Solution Steps', element: e.target, onChange: setSolution })}
                   placeholder="Step 1: Divide by 2..."
+                />
+              </div>
+
+              <div>
+                <label className="mc-dev-label">Custom Parts Template JSON (Optional)</label>
+                <textarea
+                  className="grid-textarea"
+                  style={{ minHeight: '120px', fontFamily: 'Courier, monospace', fontSize: '0.8rem' }}
+                  value={customPartsText}
+                  onChange={(e) => setCustomPartsText(e.target.value)}
+                  placeholder='e.g. [{"type": "audio", "content": "[word_audio]"}, {"type": "text", "content": "[word_pattern]"}]'
                 />
               </div>
             </div>
@@ -2728,7 +3243,7 @@ export default function SpreadsheetTemplateCreator() {
             <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', alignItems: 'center' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question Type:</span>
               <div style={{ display: 'flex', background: '#0f172a', borderRadius: '10px', border: '1.5px solid #334155', overflow: 'hidden' }}>
-                {[['mcq', '🔘 MCQ', 'Single correct answer'], ['msq', '☑️ MSQ', 'Multiple correct answers'], ['tap_to_fill', '✏️ Tap-to-Fill', 'Student taps option into a blank']].map(([mode, label, hint]) => (
+                {[['mcq', '🔘 MCQ', 'Single correct answer'], ['msq', '☑️ MSQ', 'Multiple correct answers'], ['tap_to_fill', '✏️ Tap-to-Fill', 'Student taps option into a blank'], ['sentence_ordering', '🧩 Sentence / Word Ordering', 'Student arranges scrambled words or letters']].map(([mode, label, hint]) => (
                   <button
                     key={mode}
                     title={hint}
@@ -2749,7 +3264,7 @@ export default function SpreadsheetTemplateCreator() {
                       border: 'none',
                       cursor: 'pointer',
                       background: questionMode === mode
-                        ? (mode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : mode === 'tap_to_fill' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#10b981,#059669)')
+                        ? (mode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : mode === 'tap_to_fill' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : mode === 'sentence_ordering' ? 'linear-gradient(135deg,#2563eb,#1d4ed8)' : 'linear-gradient(135deg,#10b981,#059669)')
                         : 'transparent',
                       color: questionMode === mode ? '#fff' : '#64748b',
                       transition: 'all 0.18s ease'
@@ -2759,13 +3274,13 @@ export default function SpreadsheetTemplateCreator() {
               </div>
               <span style={{
                 fontSize: '11px',
-                color: questionMode === 'msq' ? '#a78bfa' : (questionMode === 'tap_to_fill' ? '#f59e0b' : (questionMode.includes('categor') ? '#38bdf8' : '#34d399')),
-                background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : (questionMode === 'tap_to_fill' ? 'rgba(245,158,11,0.12)' : (questionMode.includes('categor') ? 'rgba(56,189,248,0.12)' : 'rgba(16,185,129,0.12)')),
+                color: questionMode === 'msq' ? '#a78bfa' : (questionMode === 'tap_to_fill' ? '#f59e0b' : (questionMode === 'sentence_ordering' ? '#60a5fa' : (questionMode.includes('categor') ? '#38bdf8' : '#34d399'))),
+                background: questionMode === 'msq' ? 'rgba(124,58,237,0.12)' : (questionMode === 'tap_to_fill' ? 'rgba(245,158,11,0.12)' : (questionMode === 'sentence_ordering' ? 'rgba(37,99,235,0.12)' : (questionMode.includes('categor') ? 'rgba(56,189,248,0.12)' : 'rgba(16,185,129,0.12)'))),
                 padding: '3px 10px',
                 borderRadius: '999px',
                 fontWeight: 600
               }}>
-                {questionMode === 'msq' ? 'Students select all that apply' : questionMode === 'tap_to_fill' ? 'Student taps an option to fill the blank' : (questionMode.includes('categor') ? 'Students drag items to category targets' : 'Students pick one answer')}
+                {questionMode === 'msq' ? 'Students select all that apply' : questionMode === 'tap_to_fill' ? 'Student taps an option to fill the blank' : (questionMode === 'sentence_ordering' ? 'Students arrange scrambled words/letters' : (questionMode.includes('categor') ? 'Students drag items to category targets' : 'Students pick one answer'))}
               </span>
             </div>
 
@@ -2781,9 +3296,9 @@ export default function SpreadsheetTemplateCreator() {
                 }}>
                   {/* Correct toggle */}
                   <button
-                    title={questionMode === 'msq' ? 'Toggle correct answer' : 'Set as the single correct answer'}
+                    title={questionMode === 'msq' || questionMode === 'tap_to_fill' ? 'Toggle correct option' : 'Set as the single correct answer'}
                     onClick={() => {
-                      if (questionMode === 'msq') {
+                      if (questionMode === 'msq' || questionMode === 'tap_to_fill') {
                         // Toggle this option's correctness freely
                         const copy = optionsBinding.map((o, i) => i === idx ? { ...o, isCorrect: !o.isCorrect } : o);
                         setOptionsBinding(copy);
@@ -2796,19 +3311,19 @@ export default function SpreadsheetTemplateCreator() {
                     style={{
                       width: '36px', height: '36px', borderRadius: '8px', border: 'none', cursor: 'pointer', flexShrink: 0,
                       background: opt.isCorrect
-                        ? (questionMode === 'msq' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#10b981,#059669)')
+                        ? (questionMode === 'msq' || questionMode === 'tap_to_fill' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#10b981,#059669)')
                         : '#1e293b',
                       color: opt.isCorrect ? '#fff' : '#475569',
                       fontSize: '16px', transition: 'all 0.15s ease',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}
                   >
-                    {opt.isCorrect ? (questionMode === 'msq' ? '☑️' : '✅') : '⬜'}
+                    {opt.isCorrect ? (questionMode === 'msq' || questionMode === 'tap_to_fill' ? '☑️' : '✅') : '⬜'}
                   </button>
 
                   {/* Label */}
-                  <span style={{ fontSize: '11px', width: '100px', fontWeight: 700, color: opt.isCorrect ? (questionMode === 'msq' ? '#a78bfa' : '#10b981') : '#64748b', flexShrink: 0 }}>
-                    {opt.isCorrect ? (questionMode === 'msq' ? `✓ Correct ${idx + 1}` : '✅ Correct') : `○ Option ${idx + 1}`}
+                  <span style={{ fontSize: '11px', width: '100px', fontWeight: 700, color: opt.isCorrect ? (questionMode === 'msq' || questionMode === 'tap_to_fill' ? '#a78bfa' : '#10b981') : '#64748b', flexShrink: 0 }}>
+                    {opt.isCorrect ? (questionMode === 'msq' || questionMode === 'tap_to_fill' ? `✓ Target ${idx + 1}` : '✅ Correct') : `○ Option ${idx + 1}`}
                   </span>
 
                    {/* Column picker (Label) */}
@@ -3053,62 +3568,184 @@ export default function SpreadsheetTemplateCreator() {
               </button>
             </div>
 
-            {/* Render Blueprint text */}
-            <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line' }}>
-              {renderEvaluatedText(blueprint)}
-            </div>
-
-            {/* Render MCQ Option choices */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
-              {optionsBinding.map((opt, idx) => {
-                const row = rows[activeRowIndex] || {};
-                const cellVal = row[opt.column] || `{{${opt.column || 'Select Column'}}}`;
-                const imageVal = opt.imageColumn ? row[opt.imageColumn] : null;
-                const audioVal = opt.audioColumn ? row[opt.audioColumn] : null;
+            {/* Render evaluated parts if present, otherwise fallback to blueprint */}
+            {(() => {
+              const evaluatedParts = getEvaluatedParts();
+              if (evaluatedParts) {
                 return (
-                  <div key={idx} style={{
-                    background: '#f8fafc',
-                    border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #cbd5e1',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    fontSize: '0.88rem',
-                    color: '#1e293b',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '8px'
-                  }}>
-                    {imageVal && (
-                      <img
-                        src={imageVal}
-                        alt="Option visual"
-                        style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1', alignSelf: 'center', marginBottom: '4px' }}
-                      />
-                    )}
-                    <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {audioVal && (
-                          <button
-                            title="Play option audio sound"
-                            onClick={() => {
-                              try {
-                                const audio = new Audio(audioVal);
-                                audio.play();
-                              } catch (e) {
-                                console.warn('Failed to play preview audio:', e);
-                              }
-                            }}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#2563eb', padding: 0 }}
-                          >🔊</button>
-                        )}
-                        <span>{renderMathText(cellVal)}</span>
-                      </div>
-                      {opt.isCorrect && <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.78rem' }}>CORRECT ANSWER</span>}
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1.5px solid #e2e8f0' }}>
+                    {evaluatedParts.map((part, pIdx) => {
+                      if (part.type === 'audio') {
+                        return (
+                          <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              onClick={() => {
+                                try {
+                                  const audio = new Audio(part.content);
+                                  audio.play();
+                                } catch (e) {
+                                  console.warn('Failed to play preview audio:', e);
+                                }
+                              }}
+                              style={{ background: '#2563eb', border: 'none', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
+                            >
+                              🔊
+                            </button>
+                            {part.label && <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#475569' }}>{part.label}</span>}
+                          </div>
+                        );
+                      }
+                      if (part.type === 'image') {
+                        return (
+                          <div key={pIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', margin: '8px 0' }}>
+                            <img
+                              src={part.content || null}
+                              alt={part.label || "Preview Image"}
+                              style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                            />
+                            {part.label && <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{part.label}</span>}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={pIdx} style={{ fontSize: '1.02rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line', fontWeight: part.type === 'text' && part.content.startsWith('_') ? 'bold' : 'normal' }}>
+                          {renderMathText(part.content)}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              })}
-            </div>
+              }
+              
+              return (
+                <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line' }}>
+                  {renderEvaluatedText(blueprint)}
+                </div>
+              );
+            })()}
+
+            {/* Render MCQ Option choices / Ordering Tiles */}
+            {questionMode === 'sentence_ordering' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginTop: '20px', width: '100%' }}>
+                {/* Empty Drop Slots */}
+                <div style={{
+                  display: 'flex',
+                  justify: 'center',
+                  gap: '12px',
+                  padding: '16px',
+                  width: '100%',
+                  borderRadius: '16px',
+                  border: '2px dashed #93c5fd',
+                  background: '#eff6ff'
+                }}>
+                  {optionsBinding.map((_, sIdx) => (
+                    <div key={`slot-${sIdx}`} style={{
+                      width: '48px',
+                      height: '54px',
+                      borderRadius: '12px',
+                      border: '2px dashed #60a5fa',
+                      background: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#94a3b8',
+                      fontSize: '20px',
+                      fontWeight: 'bold'
+                    }}>
+                      _
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pool Tray Tiles */}
+                <div style={{
+                  display: 'flex',
+                  justify: 'center',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  padding: '14px',
+                  width: '100%',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  background: '#f8fafc'
+                }}>
+                  {optionsBinding.map((opt, idx) => {
+                    const row = rows[activeRowIndex] || {};
+                    const cellVal = row[opt.column] || `[${opt.column || '?'}]`;
+                    return (
+                      <div key={idx} style={{
+                        width: '48px',
+                        height: '54px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '22px',
+                        fontWeight: 'bold',
+                        boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                        border: '2px solid #60a5fa',
+                        cursor: 'pointer'
+                      }}>
+                        {cellVal}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
+                {optionsBinding.map((opt, idx) => {
+                  const row = rows[activeRowIndex] || {};
+                  const cellVal = row[opt.column] || `{{${opt.column || 'Select Column'}}}`;
+                  const imageVal = opt.imageColumn ? row[opt.imageColumn] : null;
+                  const audioVal = opt.audioColumn ? row[opt.audioColumn] : null;
+                  return (
+                    <div key={idx} style={{
+                      background: '#f8fafc',
+                      border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #cbd5e1',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      fontSize: '0.88rem',
+                      color: '#1e293b',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '8px'
+                    }}>
+                      {imageVal && (
+                        <img
+                          src={imageVal || null}
+                          alt="Option visual"
+                          style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1', alignSelf: 'center', marginBottom: '4px' }}
+                        />
+                      )}
+                      <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {audioVal && (
+                            <button
+                              title="Play option audio sound"
+                              onClick={() => {
+                                try {
+                                  const audio = new Audio(audioVal);
+                                  audio.play();
+                                } catch (e) {
+                                  console.warn('Failed to play preview audio:', e);
+                                }
+                              }}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#2563eb', padding: 0 }}
+                            >🔊</button>
+                          )}
+                          <span>{renderMathText(cellVal)}</span>
+                        </div>
+                        {opt.isCorrect && <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.78rem' }}>CORRECT ANSWER</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Render Explanation Solution */}
             {solution.trim() && (
@@ -3325,7 +3962,7 @@ export default function SpreadsheetTemplateCreator() {
                                 >
                                   <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
                                     <img
-                                      src={imgUrl}
+                                      src={imgUrl || null}
                                       alt="Gallery Clipart"
                                       style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }}
                                     />
@@ -3498,7 +4135,7 @@ export default function SpreadsheetTemplateCreator() {
                             >
                               <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                                 <img
-                                  src={item.thumbnail || item.image}
+                                  src={item.thumbnail || item.image || null}
                                   alt=""
                                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }}
                                   loading="lazy"

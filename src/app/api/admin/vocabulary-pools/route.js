@@ -99,10 +99,15 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const { poolId } = body;
-    const pools = body.pools || body.categories;
+    let pools = body.pools || body.categories;
+
+    if (!pools && (Array.isArray(body.candidates) || Array.isArray(body.words))) {
+      pools = { words: body.candidates || body.words };
+      body.pools = pools;
+    }
 
     if (!poolId || !pools || typeof pools !== 'object' || Array.isArray(pools)) {
-      return NextResponse.json({ success: false, error: 'Missing poolId or pools/categories' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Missing poolId or pools/categories/candidates' }, { status: 400 });
     }
     const invalidCategory = Object.entries(pools).find(([, items]) => !Array.isArray(items));
     if (invalidCategory) {

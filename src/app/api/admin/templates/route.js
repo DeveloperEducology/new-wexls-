@@ -122,7 +122,8 @@ export function validateTemplateSchema(template) {
   // If it's parameterized, do deep structural check
   if (type === 'parameterized') {
     const questionTemplate = config.questionTemplate || config.questionText;
-    if (!questionTemplate || typeof questionTemplate !== 'string' || questionTemplate.trim() === '') {
+    const hasParts = Array.isArray(config.parts) && config.parts.length > 0;
+    if (!hasParts && (!questionTemplate || typeof questionTemplate !== 'string' || questionTemplate.trim() === '')) {
       return 'Question template (questionTemplate / questionText) is required';
     }
 

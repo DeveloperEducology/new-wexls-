@@ -1525,8 +1525,9 @@ function CategorySortLayout({
     const showCompactImage = Boolean(item.imageUrl || item.svg || toolSvg || contentIsSvg);
     const mediaCard = Boolean(item.imageUrl || item.svg || toolSvg || contentIsSvg);
     const transparentImageCard = isV2 && isTransparentImageStyle(item);
+    const cardLabelText = String(item.content || item.label || item.word || item.text || item.id || '').trim();
     // If content is SVG, hide the text label (there's nothing else to show)
-    const showImageLabel = !contentIsSvg && item.content && item.content.trim() && !shouldHideImageLabel(item);
+    const showImageLabel = !contentIsSvg && cardLabelText && !shouldHideImageLabel(item);
     const inlineSvg = item.svg || toolSvg
       ? cleanSvgContent(item.svg || toolSvg)
       : (item.imageUrl && isInlineSvg(item.imageUrl)
@@ -1630,7 +1631,7 @@ function CategorySortLayout({
             ) : item.imageUrl ? (
               <img
                 src={item.imageUrl}
-                alt={item.content || item.id}
+                alt={cardLabelText || item.id}
                 draggable="false"
                 style={{
                   maxWidth: item.imageWidth ? `${item.imageWidth}px` : '100%',
@@ -1661,12 +1662,14 @@ function CategorySortLayout({
                 flexShrink: 0,
               }}
             >
-              {item.content}
+              <InlineMarkdown text={cardLabelText} />
             </span>
           )}
         </>
       ) : (
-        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1.2, fontWeight: 900, color: '#0f172a', whiteSpace: isMath(item) ? 'nowrap' : 'normal' }}><InlineMarkdown text={item.content} /></span>
+        <span style={{ padding: isV2 ? '4px 10px' : '8px 12px', textAlign: 'center', fontSize: isV2 ? 18 : 22, lineHeight: 1.2, fontWeight: 900, color: '#0f172a', whiteSpace: isMath(item) ? 'nowrap' : 'normal' }}>
+          <InlineMarkdown text={cardLabelText} />
+        </span>
       )}
     </div>
   );
@@ -1702,16 +1705,101 @@ function CategorySortLayout({
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {isRemoval ? renderRemovalMode() : (isCopiable || hasGridCategories || isCubeTrain) ? renderCopyMode() : (
+      {isRemoval ? renderRemovalMode() : ((isCopiable || hasGridCategories || isCubeTrain) && !isV2) ? renderCopyMode() : (
       <>
-      <div className="categories-grid-container" style={{ gap: 16 }}>
+      {/* 1. Items Pool Area (Top - Above Category Buckets like IXL) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, paddingLeft: 8 }}>
+        <button
+          type="button"
+          onClick={() => {
+            const activeUnplaced = sourceSlots.map(id => itemById.get(id)).filter(Boolean);
+            const textToSpeak = activeUnplaced.map(i => i.label || i.content).filter(Boolean).join(', ');
+            if (textToSpeak) speakText(textToSpeak);
+          }}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#0284c7',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            flexShrink: 0
+          }}
+          title="Listen to items to sort"
+        >
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+          </svg>
+        </button>
+
+        <div
+          data-zone-id="pool"
+          data-source-tray="true"
+          data-zone-grid
+          onClick={(event) => {
+            if (isV2 && selectedItemId && zones[selectedItemId] && !isAnswered) {
+              const sourceSlot = event.target.closest?.('[data-source-slot-index]');
+              const sourceSlotIndex = sourceSlot ? Number(sourceSlot.dataset.sourceSlotIndex) : undefined;
+              placeItemWithRealCardAnimation(selectedItemId, null, { sourceSlotIndex });
+            }
+          }}
+          onDragEnter={() => setActiveDropZone('pool')}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setActiveDropZone(null);
+          }}
+          onDrop={(event) => handleDrop(event, null)}
+          style={{
+            padding: 0,
+            border: 'none',
+            borderRadius: 0,
+            background: 'transparent',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 16,
+            alignItems: 'center',
+            minHeight: responsiveSourceSlotHeight,
+            width: '100%',
+            boxSizing: 'border-box'
+          }}
+        >
+          {sourceSlots.map((itemId, index) => {
+            const item = itemId && !zones[itemId] ? itemById.get(itemId) : null;
+            return (
+              <div
+                key={`source-slot-${index}`}
+                data-source-slot-index={index}
+                style={{
+                  width: responsiveGridCardWidth,
+                  height: responsiveSourceSlotHeight,
+                  flex: `0 0 ${responsiveGridCardWidth}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {item
+                  ? renderCard(item, 'pool')
+                  : renderPlaceholder(`pool-slot-${index}`, activeDropZone === 'pool' ? 'Release back' : '')}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Category Buckets Area (Bottom - Side by Side 2 Columns like IXL) */}
+      <div className="categories-grid-container" style={{ gap: 20 }}>
         {categories.map((category) => {
           const placedItems = items.filter((item) => zones[item.id] === category.id);
           const rowCount = Math.max(1, Math.ceil(placedItems.length / 3));
           const tallestPlacedItem = placedItems.length
             ? Math.max(...placedItems.map(itemCardHeight))
             : sourceSlotHeight;
-          const minHeight = 66 + rowCount * tallestPlacedItem + Math.max(0, rowCount - 1) * 12;
 
           return (
           <div
@@ -1733,10 +1821,10 @@ function CategorySortLayout({
             }}
             onDrop={(event) => handleDrop(event, category.id)}
             style={{
-              minHeight,
+              minHeight: '220px',
               padding: '14px 16px',
-              border: `2px solid ${activeDropZone === category.id || (isV2 && selectedItemId) ? '#2563eb' : '#5cc4ed'}`,
-              borderRadius: 10,
+              border: `2px solid ${activeDropZone === category.id || (isV2 && selectedItemId) ? '#2563eb' : '#38bdf8'}`,
+              borderRadius: 8,
               background: '#ffffff',
               boxShadow: 'none',
               display: 'flex',
@@ -1748,48 +1836,46 @@ function CategorySortLayout({
               boxSizing: 'border-box',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '2px solid rgba(92, 196, 237, 0.45)', paddingBottom: 10, color: '#4b5563', fontWeight: 900, fontSize: 18, width: '100%' }}>
-              <button
-                type="button"
-                onClick={() => speakText(category.label)}
-                style={{
-                  background: '#e0f2fe',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '30px',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#0284c7',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
-                  transition: 'transform 0.2s ease, background 0.2s ease',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = '#bae6fd'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#e0f2fe'; }}
-                title="Read category name out loud"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                </svg>
-              </button>
-              <span style={{ flexGrow: 1 }}><InlineMarkdown text={category.label} /></span>
-              {(category.prefillImageUrl || category.imageUrl) && (
-                <img
-                  src={category.prefillImageUrl || category.imageUrl}
-                  alt=""
-                  style={{
-                    height: '36px',
-                    maxWidth: '80px',
-                    objectFit: 'contain',
-                    borderRadius: '4px',
-                    flexShrink: 0
-                  }}
-                />
-              )}
-            </div>
+            {(() => {
+              const cleanCategoryLabel = String(category.label || '').replace(/_/g, ' ');
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderBottom: '2px solid #38bdf8', paddingBottom: 10, marginBottom: 12, color: '#1e293b', fontWeight: 800, fontSize: 20, width: '100%' }}>
+                  <button
+                    type="button"
+                    onClick={() => speakText(cleanCategoryLabel)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#0284c7',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                      flexShrink: 0
+                    }}
+                    title="Read category name out loud"
+                  >
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                  </button>
+                  <span style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b' }}><InlineMarkdown text={cleanCategoryLabel} /></span>
+                  {(category.prefillImageUrl || category.imageUrl) && (
+                    <img
+                      src={category.prefillImageUrl || category.imageUrl}
+                      alt=""
+                      style={{
+                        height: '36px',
+                        maxWidth: '80px',
+                        objectFit: 'contain',
+                        marginLeft: 'auto'
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })()}
             <div
               data-zone-grid
               style={{
@@ -1803,74 +1889,18 @@ function CategorySortLayout({
                 width: '100%',
               }}
             >
-              {placedItems.map((item) => renderCard(item, category.id))}
+              {placedItems.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'center' }}>
+                  {renderCard(item, category.id)}
+                </div>
+              ))}
+              {placedItems.length === 0 ? (
+                <div style={{ width: '100%', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {renderPlaceholder(category.id, activeDropZone === category.id ? 'Drop here' : '')}
+                </div>
+              ) : null}
             </div>
           </div>
-          );
-        })}
-      </div>
-
-      <div
-        data-zone-id="pool"
-          data-source-tray="true"
-          data-zone-grid
-        onClick={(event) => {
-          if (isV2 && selectedItemId && zones[selectedItemId] && !isAnswered) {
-            const sourceSlot = event.target.closest?.('[data-source-slot-index]');
-            const sourceSlotIndex = sourceSlot ? Number(sourceSlot.dataset.sourceSlotIndex) : undefined;
-            placeItemWithRealCardAnimation(selectedItemId, null, { sourceSlotIndex });
-          }
-        }}
-        onDragEnter={() => setActiveDropZone('pool')}
-        onDragOver={(event) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-        }}
-        onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) setActiveDropZone(null);
-        }}
-        onDrop={(event) => handleDrop(event, null)}
-        style={{
-          padding: 0,
-          border: 'none',
-          borderRadius: 0,
-          background: 'transparent',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: responsiveSourceSlotHeight,
-          overflowX: 'visible',
-          overflowY: 'visible',
-          WebkitOverflowScrolling: 'touch',
-          scrollSnapType: 'none',
-          transition: 'border-color 120ms ease',
-          width: '100%',
-          boxSizing: 'border-box',
-          padding: '8px 0',
-        }}
-      >
-        {sourceSlots.map((itemId, index) => {
-          const item = itemId && !zones[itemId] ? itemById.get(itemId) : null;
-          return (
-            <div
-              key={`source-slot-${index}`}
-              data-source-slot-index={index}
-              style={{
-                width: responsiveGridCardWidth,
-                height: responsiveSourceSlotHeight,
-                flex: `0 0 ${responsiveGridCardWidth}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                scrollSnapAlign: 'center',
-              }}
-            >
-              {item
-                ? renderCard(item, 'pool')
-                : renderPlaceholder(`pool-slot-${index}`, activeDropZone === 'pool' ? 'Release back' : '')}
-            </div>
           );
         })}
       </div>
@@ -1906,9 +1936,10 @@ function CategorySortLayout({
           display: grid;
           width: 100%;
           max-width: 100%;
-          grid-template-columns: ${shouldStackVertically ? '1fr' : `repeat(${Math.max(categories.length, 1)}, minmax(260px, 1fr))`};
+          grid-template-columns: ${categories.length === 2 ? 'repeat(2, 1fr)' : (shouldStackVertically ? '1fr' : `repeat(${Math.max(categories.length, 1)}, minmax(240px, 1fr))`)} ;
+          gap: 20px;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 640px) {
           .categories-grid-container {
             grid-template-columns: 1fr;
           }
@@ -1927,20 +1958,44 @@ export default function CatV2HtmlRenderer({
   isAnswered,
 }) {
   const categories = useMemo(() => {
-    const rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.categories || [];
+    let rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.categories;
+    if (!rawCategories || rawCategories.length === 0) {
+      if (Array.isArray(question.targetCategories) && question.targetCategories.length > 0) {
+        rawCategories = question.targetCategories.map(c => ({ id: `cat_${c}`, label: String(c).replace(/_/g, ' ') }));
+      } else {
+        rawCategories = [{ id: 'cat_long_e', label: 'Long e' }, { id: 'cat_short_e', label: 'Short e' }];
+      }
+    }
     return rawCategories.map((cat) => {
       if (typeof cat === 'string') {
-        return { id: cat, label: cat };
+        return { id: cat, label: String(cat).replace(/_/g, ' ') };
       }
-      return cat;
+      return { ...cat, label: String(cat.label || cat.id || '').replace(/_/g, ' ') };
     });
-  }, [question.categories, question.parts]);
+  }, [question.categories, question.parts, question.targetCategories]);
 
   const items = useMemo(() => {
-    return question.items || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.items || [];
-  }, [question.items, question.parts]);
-  const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2';
-  const layoutMode = question.layoutMode || question.metadata?.layoutMode || question.htmlLayout || 'category_sort';
+    let rawItems = question.items || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.items;
+    if (!rawItems || rawItems.length === 0) {
+      if (Array.isArray(question.options) && question.options.length > 0) {
+        rawItems = question.options.map((opt, idx) => ({
+          id: opt.id || `opt_${idx}`,
+          label: opt.label || opt.text || String(opt),
+          imageUrl: opt.imageUrl || undefined,
+          audioUrl: opt.audioUrl || undefined,
+          target: opt.isCorrect ? (categories[0]?.id || 'cat_long_e') : (categories[1]?.id || 'cat_short_e')
+        }));
+      } else {
+        rawItems = [];
+      }
+    }
+    return rawItems;
+  }, [question.items, question.parts, question.options, categories]);
+  const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2' || question.type === 'grid_fill';
+  const rawLayoutMode = question.layoutMode || question.metadata?.layoutMode || question.htmlLayout || (question.type === 'grid_fill' ? 'grid_fill' : 'category_sort');
+  const isGridTable = categories.some(c => c.isGrid === true || (Number(c.rows) > 0 && Number(c.columns) > 1));
+  const allowGridFill = Boolean(question.enableGridFill || question.allowGridFill || question.type === 'grid_fill' || question.optionsType === 'grid_fill' || isGridTable);
+  const layoutMode = (rawLayoutMode === 'grid_fill' || rawLayoutMode === 'table_fill') && allowGridFill ? 'grid_fill' : ((rawLayoutMode === 'grid_fill' || rawLayoutMode === 'table_fill') ? 'category_sort' : rawLayoutMode);
   const isWordCompletion = layoutMode === 'word_completion' || layoutMode === 'complete_words';
   const cardStyle = question.cardStyle || question.behavior?.cardStyle || question.itemCardStyle || question.imageCardStyle || question.cardVariant;
   const hideItemLabels = Boolean(question.hideItemLabels || question.behavior?.hideItemLabels);
@@ -2054,7 +2109,7 @@ export default function CatV2HtmlRenderer({
             hideItemLabels={hideItemLabels}
             isCopiable={Boolean(question.isCopiable)}
             isRemoval={Boolean(question.isRemoval)}
-            isV2={useHtmlRenderer || isMobile}
+            isV2={true}
             userAnswer={userAnswer}
             onAnswer={onAnswer}
             isAnswered={isAnswered}
