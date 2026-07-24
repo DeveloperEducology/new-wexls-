@@ -175,7 +175,7 @@ export default function StoryReaderPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #fef3c7 0%, #e0f2fe 100%)',
+      background: 'linear-gradient(180deg, #fef9c3 0%, #fff7ed 100%)',
       fontFamily: 'var(--font-outfit), "Outfit", "Inter", sans-serif',
       color: '#1e293b',
       display: 'flex',
@@ -187,8 +187,9 @@ export default function StoryReaderPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#ffffff',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
+        background: '#fffdf5',
+        borderBottom: '1px solid #fde68a',
+        boxShadow: '0 4px 20px rgba(217, 119, 6, 0.08)'
       }}>
         <Link href="/stories" style={{
           display: 'flex',
@@ -207,12 +208,12 @@ export default function StoryReaderPage() {
         </h1>
 
         <div style={{
-          background: '#f1f5f9',
+          background: '#fef3c7',
           padding: '6px 14px',
           borderRadius: '20px',
           fontSize: '13px',
-          fontWeight: 700,
-          color: '#475569'
+          fontWeight: 800,
+          color: '#92400e'
         }}>
           Page {showQuiz ? 'Quiz' : `${currentPageIndex + 1} of ${story.pages.length}`}
         </div>
@@ -231,19 +232,19 @@ export default function StoryReaderPage() {
       }}>
         {!showQuiz ? (
           <div style={{
-            background: '#ffffff',
+            background: '#fffdf0',
             borderRadius: '28px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
+            boxShadow: '0 20px 50px rgba(217, 119, 6, 0.12)',
             overflow: 'hidden',
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            border: '2px solid rgba(226, 232, 240, 0.8)'
+            border: '2px solid #fde68a'
           }}>
             {/* Story Page Image */}
             <div style={{
               height: '340px',
-              background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+              background: 'linear-gradient(135deg, #fef9c3, #fef3c7)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -288,8 +289,8 @@ export default function StoryReaderPage() {
 
             {/* Narration Bar & Controls */}
             <div style={{
-              padding: '24px 32px',
-              background: '#ffffff',
+              padding: '28px 36px',
+              background: '#fffdf5',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px'
