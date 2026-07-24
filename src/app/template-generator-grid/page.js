@@ -703,6 +703,7 @@ export default function SpreadsheetTemplateCreator() {
   const [customPartsText, setCustomPartsText] = useState('');
 
   // AI Generation state
+  const [showSidebar, setShowSidebar] = useState(true);
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
   const [aiSkillDesc, setAiSkillDesc] = useState('');
   const [aiQuestion, setAiQuestion] = useState('');
@@ -2305,9 +2306,18 @@ export default function SpreadsheetTemplateCreator() {
           display: grid;
           grid-template-columns: 1fr 400px;
           min-height: calc(100vh - 64px);
+          transition: all 0.2s ease;
+        }
+        .grid-workspace.has-sidebar {
+          grid-template-columns: 320px 1fr 400px;
+        }
+        @media (max-width: 1200px) {
+          .grid-workspace.has-sidebar {
+            grid-template-columns: 280px 1fr 360px;
+          }
         }
         @media (max-width: 1024px) {
-          .grid-workspace {
+          .grid-workspace, .grid-workspace.has-sidebar {
             grid-template-columns: 1fr;
           }
         }
@@ -2556,7 +2566,26 @@ export default function SpreadsheetTemplateCreator() {
           🟢 KlassChamp Spreadsheet Editor
           <span>Grid Mode v1.0</span>
         </Link>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setShowSidebar(prev => !prev)}
+            style={{
+              background: showSidebar ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#ffffff',
+              color: showSidebar ? '#ffffff' : '#2563eb',
+              border: '1.5px solid #2563eb',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              fontWeight: 800,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            📂 Class & Subject Catalog ({existingTemplates.length})
+          </button>
           <Link href="/template-generator-v2" className="grid-shuffle-btn" style={{ textDecoration: 'none' }}>
             🔙 Back to IDE
           </Link>
@@ -2564,7 +2593,16 @@ export default function SpreadsheetTemplateCreator() {
       </div>
 
       {/* Main Workspace */}
-      <div className="grid-workspace">
+      <div className={`grid-workspace ${showSidebar ? 'has-sidebar' : ''}`}>
+        
+        {showSidebar && (
+          <TemplateSidebar
+            templates={existingTemplates}
+            onSelectTemplate={(tpl) => loadTemplateIntoEditor(tpl)}
+            onClose={() => setShowSidebar(false)}
+            activeTemplateId={customTemplateId || title}
+          />
+        )}
         
         {/* Left Side: Column Editor Workspace */}
         <div className="grid-editor-panel">
@@ -4183,5 +4221,292 @@ export default function SpreadsheetTemplateCreator() {
       )}
 
     </div>
+  );
+}
+
+function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemplateId }) {
+  const [search, setSearch] = useState('');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('All');
+  const [expandedGrades, setExpandedGrades] = useState({});
+
+  const getGradeCategory = (g) => {
+    const grade = String(g || '').toLowerCase().trim();
+    if (grade.includes('lkg') || grade.includes('pre-k') || grade.includes('nursery')) return 'Pre-K / LKG';
+    if (grade.includes('ukg')) return 'Grade UKG';
+    if (grade === '1' || grade.includes('grade 1') || grade.includes('grade-1')) return 'Class 1';
+    if (grade === '2' || grade.includes('grade 2') || grade.includes('grade-2')) return 'Class 2';
+    if (grade === '3' || grade.includes('grade 3') || grade.includes('grade-3')) return 'Class 3';
+    if (grade === '4' || grade.includes('grade 4') || grade.includes('grade-4')) return 'Class 4';
+    if (grade === '5' || grade.includes('grade 5') || grade.includes('grade-5')) return 'Class 5';
+    return 'General / Unassigned';
+  };
+
+  const getSubjectCategory = (s) => {
+    const sub = String(s || '').toLowerCase().trim();
+    if (sub.includes('eng')) return 'English';
+    if (sub.includes('math')) return 'Maths';
+    if (sub.includes('sci')) return 'Science';
+    return 'General';
+  };
+
+  const filteredTemplates = templates.filter(t => {
+    const config = t.config || t;
+    const title = config.title || t.title || t.name || t.id || '';
+    const topic = config.topic || t.topic || '';
+    const subject = config.subject || t.subject || '';
+    const skillId = config.skillId || t.skillId || '';
+
+    const matchesSearch = !search.trim() ||
+      title.toLowerCase().includes(search.toLowerCase()) ||
+      topic.toLowerCase().includes(search.toLowerCase()) ||
+      subject.toLowerCase().includes(search.toLowerCase()) ||
+      skillId.toLowerCase().includes(search.toLowerCase());
+
+    const normSub = getSubjectCategory(subject);
+    const matchesSubject = selectedSubjectFilter === 'All' || normSub === selectedSubjectFilter;
+
+    return matchesSearch && matchesSubject;
+  });
+
+  const categorized = React.useMemo(() => {
+    const map = {};
+    const gradeOrder = ['Pre-K / LKG', 'Grade UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'General / Unassigned'];
+    gradeOrder.forEach(g => { map[g] = {}; });
+
+    filteredTemplates.forEach(t => {
+      const config = t.config || t;
+      const gradeCat = getGradeCategory(config.grade || t.grade);
+      const subCat = getSubjectCategory(config.subject || t.subject);
+
+      if (!map[gradeCat]) map[gradeCat] = {};
+      if (!map[gradeCat][subCat]) map[gradeCat][subCat] = [];
+
+      map[gradeCat][subCat].push(t);
+    });
+
+    return map;
+  }, [filteredTemplates]);
+
+  const toggleGrade = (g) => {
+    setExpandedGrades(prev => ({ ...prev, [g]: prev[g] === undefined ? false : !prev[g] }));
+  };
+
+  useEffect(() => {
+    if (search.trim()) {
+      const allExpanded = {};
+      Object.keys(categorized).forEach(g => { allExpanded[g] = true; });
+      setExpandedGrades(allExpanded);
+    }
+  }, [search, categorized]);
+
+  return (
+    <aside style={{
+      width: '320px',
+      background: '#ffffff',
+      borderRight: '1.5px solid #cbd5e1',
+      display: 'flex',
+      flexDirection: 'column',
+      height: 'calc(100vh - 64px)',
+      position: 'sticky',
+      top: '64px',
+      boxShadow: '4px 0 20px rgba(148, 163, 184, 0.08)',
+      zIndex: 20
+    }}>
+      <div style={{
+        padding: '14px 16px',
+        borderBottom: '1.5px solid #e2e8f0',
+        background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '18px' }}>📚</span>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#1e3a8a' }}>
+              Class & Subject Catalog
+            </h3>
+            <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700' }}>
+              {filteredTemplates.length} Templates
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#64748b',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '800'
+          }}
+          title="Close Sidebar"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid #f1f5f9' }}>
+        <input
+          type="text"
+          placeholder="🔍 Search class, subject, topic..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            border: '1.5px solid #cbd5e1',
+            fontSize: '12px',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      <div style={{
+        padding: '8px 14px',
+        display: 'flex',
+        gap: '6px',
+        borderBottom: '1px solid #f1f5f9',
+        overflowX: 'auto'
+      }}>
+        {['All', 'English', 'Maths', 'Science'].map(sub => (
+          <button
+            key={sub}
+            onClick={() => setSelectedSubjectFilter(sub)}
+            style={{
+              padding: '3px 9px',
+              borderRadius: '14px',
+              fontSize: '11px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              background: selectedSubjectFilter === sub ? '#2563eb' : '#f1f5f9',
+              color: selectedSubjectFilter === sub ? '#ffffff' : '#475569'
+            }}
+          >
+            {sub}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
+        {Object.entries(categorized).map(([gradeName, subjectsMap]) => {
+          const totalInGrade = Object.values(subjectsMap).reduce((acc, arr) => acc + arr.length, 0);
+          if (totalInGrade === 0) return null;
+
+          const isExpanded = expandedGrades[gradeName] !== false;
+
+          return (
+            <div key={gradeName} style={{ marginBottom: '10px' }}>
+              <button
+                onClick={() => toggleGrade(gradeName)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  justify: 'space-between',
+                  alignItems: 'center',
+                  padding: '7px 10px',
+                  borderRadius: '8px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  fontWeight: '800',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <span>{isExpanded ? '📂' : '📁'} {gradeName}</span>
+                <span style={{
+                  background: '#e2e8f0',
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  fontSize: '10px',
+                  color: '#475569'
+                }}>
+                  {totalInGrade}
+                </span>
+              </button>
+
+              {isExpanded && (
+                <div style={{ paddingLeft: '6px', marginTop: '6px' }}>
+                  {Object.entries(subjectsMap).map(([subName, items]) => {
+                    if (items.length === 0) return null;
+
+                    return (
+                      <div key={subName} style={{ marginBottom: '8px' }}>
+                        <div style={{
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          color: subName === 'English' ? '#2563eb' : subName === 'Maths' ? '#059669' : '#7c3aed',
+                          padding: '3px 4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {subName === 'English' ? '📘' : subName === 'Maths' ? '🔢' : '🔬'} {subName} ({items.length})
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '4px' }}>
+                          {items.map(tpl => {
+                            const config = tpl.config || tpl;
+                            const tTitle = config.title || tpl.name || tpl.id || 'Untitled Template';
+                            const tId = tpl.id || String(tpl._id);
+                            const isSelected = activeTemplateId === tId || activeTemplateId === tTitle;
+
+                            return (
+                              <div
+                                key={tId}
+                                onClick={() => onSelectTemplate(tpl)}
+                                style={{
+                                  padding: '7px 9px',
+                                  borderRadius: '8px',
+                                  border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                                  background: isSelected ? '#eff6ff' : '#ffffff',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#1e293b', lineHeight: 1.35 }}>
+                                  {tTitle}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
+                                  <span style={{
+                                    fontSize: '9px',
+                                    fontWeight: '800',
+                                    padding: '2px 5px',
+                                    borderRadius: '4px',
+                                    background: subName === 'English' ? '#dbeafe' : '#d1fae5',
+                                    color: subName === 'English' ? '#1e40af' : '#065f46'
+                                  }}>
+                                    {subName}
+                                  </span>
+
+                                  {config.topic && (
+                                    <span style={{ fontSize: '9px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {config.topic}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </aside>
   );
 }
