@@ -290,7 +290,7 @@ export default function StoryReaderPage() {
             {/* Narration Bar & Controls */}
             <div style={{
               padding: '28px 36px',
-              background: '#fffdf5',
+              background: '#fefce8',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px'
