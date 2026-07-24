@@ -1207,16 +1207,107 @@ export default function SpreadsheetTemplateCreator() {
     }));
   };
 
-  // Delete Row
-  const handleDeleteRow = (idx) => {
-    if (rows.length <= 1) {
-      alert('You must have at least one row!');
-      return;
+  // CSV Importer logic
+  const parseCSVText = (text) => {
+    const lines = [];
+    let row = [];
+    let inQuotes = false;
+    let currentVal = '';
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentVal += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(currentVal.trim());
+        currentVal = '';
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') i++;
+        row.push(currentVal.trim());
+        if (row.some(cell => cell.length > 0)) {
+          lines.push(row);
+        }
+        row = [];
+        currentVal = '';
+      } else {
+        currentVal += char;
+      }
     }
-    setRows(prev => prev.filter((_, i) => i !== idx));
-    if (activeRowIndex >= rows.length - 1) {
-      setActiveRowIndex(0);
+
+    if (currentVal || row.length > 0) {
+      row.push(currentVal.trim());
+      if (row.some(cell => cell.length > 0)) {
+        lines.push(row);
+      }
     }
+
+    return lines;
+  };
+
+  const handleCSVUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result;
+        if (typeof text !== 'string') return;
+
+        const parsedLines = parseCSVText(text);
+        if (parsedLines.length < 2) {
+          alert('⚠️ CSV file must contain at least 1 header row and 1 data row.');
+          return;
+        }
+
+        const headerRow = parsedLines[0].map(h => h.trim().replace(/[^a-zA-Z0-9_]+/g, '_'));
+        const validCols = headerRow.filter(h => h.length > 0);
+
+        if (validCols.length === 0) {
+          alert('⚠️ No valid column headers found in CSV.');
+          return;
+        }
+
+        const dataRows = parsedLines.slice(1).map(line => {
+          const rowObj = {};
+          validCols.forEach((col, idx) => {
+            rowObj[col] = line[idx] !== undefined ? line[idx] : '';
+          });
+          return rowObj;
+        });
+
+        setColumns(validCols);
+        setRows(dataRows);
+        setActiveRowIndex(0);
+
+        const resCol = validCols.find(c => c.toLowerCase().includes('result') || c.toLowerCase().includes('correct') || c.toLowerCase().includes('opt1'));
+        const disCols = validCols.filter(c => c !== resCol && (c.toLowerCase().includes('distractor') || c.toLowerCase().includes('opt')));
+
+        if (resCol) {
+          const newBindings = [{ column: resCol, isCorrect: true }];
+          disCols.forEach(c => newBindings.push({ column: c, isCorrect: false }));
+          setOptionsBinding(newBindings);
+        }
+
+        const cleanTitle = file.name.replace(/\.csv$/i, '').replace(/[-_]+/g, ' ');
+        if (!title || title.includes('Template') || title.includes('Prime')) {
+          setTitle(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
+        }
+
+        alert(`✅ Successfully imported ${dataRows.length} rows & ${validCols.length} columns from "${file.name}"!`);
+      } catch (err) {
+        alert(`❌ CSV Parse Error: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   // Shuffle Simulator
@@ -2913,15 +3004,33 @@ export default function SpreadsheetTemplateCreator() {
             <p className="grid-card-desc">Define columns as placeholder variables, and fill out rows with parallel values. commas in cells are supported as plain text.</p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
                   className="grid-input"
-                  style={{ maxWidth: '240px' }}
+                  style={{ maxWidth: '220px' }}
                   value={newColumnName}
                   onChange={(e) => setNewColumnName(e.target.value)}
                   placeholder="e.g. synonym or fruit_count"
                 />
                 <button className="grid-btn-secondary" onClick={handleAddColumn}>➕ Add Column</button>
+                <label className="grid-btn-secondary" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+                }}>
+                  📥 Import CSV
+                  <input
+                    type="file"
+                    accept=".csv"
+                    style={{ display: 'none' }}
+                    onChange={handleCSVUpload}
+                  />
+                </label>
               </div>
               <label style={{
                 display: 'flex',
