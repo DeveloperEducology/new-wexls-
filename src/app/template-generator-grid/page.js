@@ -1346,6 +1346,38 @@ export default function SpreadsheetTemplateCreator() {
     document.body.removeChild(link);
   };
 
+  const handleExportCSV = () => {
+    if (columns.length === 0 || rows.length === 0) {
+      alert('⚠️ No spreadsheet data to export.');
+      return;
+    }
+
+    const escapeCell = (val) => {
+      if (val === undefined || val === null) return '';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const headerLine = columns.map(escapeCell).join(',');
+    const dataLines = rows.map(r => columns.map(col => escapeCell(r[col])).join(','));
+    const csvContent = [headerLine, ...dataLines].join('\n');
+
+    const cleanName = (title || customTemplateId || 'spreadsheet_template').toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+    const filename = `${cleanName}.csv`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Shuffle Simulator
   const handleShuffle = () => {
     setShuffleClass('shuffling');
@@ -3081,6 +3113,23 @@ export default function SpreadsheetTemplateCreator() {
                   }}
                 >
                   📄 Sample CSVs
+                </button>
+                <button
+                  type="button"
+                  className="grid-btn-secondary"
+                  onClick={handleExportCSV}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#3b82f6',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+                  }}
+                >
+                  📤 Export CSV
                 </button>
               </div>
               <label style={{
