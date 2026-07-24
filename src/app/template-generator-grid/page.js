@@ -704,6 +704,7 @@ export default function SpreadsheetTemplateCreator() {
 
   // AI Generation state
   const [showSidebar, setShowSidebar] = useState(true);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
   const [aiSkillDesc, setAiSkillDesc] = useState('');
   const [aiQuestion, setAiQuestion] = useState('');
@@ -1308,6 +1309,41 @@ export default function SpreadsheetTemplateCreator() {
     };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  const downloadSampleCSV = (sampleType) => {
+    let content = '';
+    let filename = 'sample_template.csv';
+
+    if (sampleType === 'phonics') {
+      filename = 'phonics_blend_template.csv';
+      content = `target_word,target_image,target_audio,Result_word,Distractor1_word,Distractor2_word\n` +
+        `drop,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/drop.jpg,/api/tts?text=drop,dr,tr,cr\n` +
+        `star,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/star.jpg,/api/tts?text=star,st,sp,sk\n` +
+        `frog,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/frog.jpg,/api/tts?text=frog,fr,fl,fg\n` +
+        `ship,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/ship.jpg,/api/tts?text=ship,sh,ch,th`;
+    } else if (sampleType === 'math') {
+      filename = 'math_addition_template.csv';
+      content = `num1,num2,Result,Distractor1,Distractor2,Distractor3\n` +
+        `3,4,7,6,8,5\n` +
+        `5,5,10,9,11,12\n` +
+        `8,2,10,12,7,9\n` +
+        `6,7,13,12,14,11`;
+    } else {
+      filename = 'vocab_image_match.csv';
+      content = `word,Opt1_word,Opt1_image,Opt2_word,Opt2_image,Opt3_word,Opt3_image\n` +
+        `apple,apple,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/apple.jpg,dog,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/dog.jpg,cup,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/cup.jpg\n` +
+        `cat,cat,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/cat.jpg,pen,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/pen.jpg,sun,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/sun.jpg`;
+    }
+
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Shuffle Simulator
@@ -3031,6 +3067,21 @@ export default function SpreadsheetTemplateCreator() {
                     onChange={handleCSVUpload}
                   />
                 </label>
+                <button
+                  type="button"
+                  className="grid-btn-secondary"
+                  onClick={() => setIsCsvModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#334155'
+                  }}
+                >
+                  📄 Sample CSVs
+                </button>
               </div>
               <label style={{
                 display: 'flex',
@@ -4324,6 +4375,111 @@ export default function SpreadsheetTemplateCreator() {
                   })()}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sample CSV Templates Modal */}
+      {isCsvModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '680px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '28px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                  📄 Sample CSV Blueprints
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: '#64748b' }}>
+                  Download pre-formatted CSV blueprints to import directly into the spreadsheet grid editor.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCsvModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Sample 1: Phonics & Initial Blends */}
+              <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1e3a8a' }}>
+                    🔤 Phonics & Consonant Blends (Word, Image, Audio, Options)
+                  </span>
+                  <button
+                    onClick={() => downloadSampleCSV('phonics')}
+                    style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    ⬇️ Download CSV
+                  </button>
+                </div>
+                <pre style={{ background: '#0f172a', color: '#38bdf8', padding: '10px', borderRadius: '8px', fontSize: '0.75rem', overflowX: 'auto', margin: 0 }}>
+{`target_word,target_image,target_audio,Result_word,Distractor1_word,Distractor2_word
+drop,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/drop.jpg,/api/tts?text=drop,dr,tr,cr
+star,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/star.jpg,/api/tts?text=star,st,sp,sk`}
+                </pre>
+              </div>
+
+              {/* Sample 2: Math Addition Facts */}
+              <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#065f46' }}>
+                    🔢 Math Addition Facts (num1, num2, Result, Distractors)
+                  </span>
+                  <button
+                    onClick={() => downloadSampleCSV('math')}
+                    style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    ⬇️ Download CSV
+                  </button>
+                </div>
+                <pre style={{ background: '#0f172a', color: '#34d399', padding: '10px', borderRadius: '8px', fontSize: '0.75rem', overflowX: 'auto', margin: 0 }}>
+{`num1,num2,Result,Distractor1,Distractor2,Distractor3
+3,4,7,6,8,5
+5,5,10,9,11,12`}
+                </pre>
+              </div>
+
+              {/* Sample 3: Vocabulary Image Choice */}
+              <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#6b21a8' }}>
+                    📖 Vocabulary Word to Image Identification
+                  </span>
+                  <button
+                    onClick={() => downloadSampleCSV('vocab')}
+                    style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    ⬇️ Download CSV
+                  </button>
+                </div>
+                <pre style={{ background: '#0f172a', color: '#c084fc', padding: '10px', borderRadius: '8px', fontSize: '0.75rem', overflowX: 'auto', margin: 0 }}>
+{`word,Opt1_word,Opt1_image,Opt2_word,Opt2_image,Opt3_word,Opt3_image
+apple,apple,https://.../apple.jpg,dog,https://.../dog.jpg,cup,https://.../cup.jpg
+cat,cat,https://.../cat.jpg,pen,https://.../pen.jpg,sun,https://.../sun.jpg`}
+                </pre>
+              </div>
             </div>
           </div>
         </div>
