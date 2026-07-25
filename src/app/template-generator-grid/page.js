@@ -714,6 +714,7 @@ export default function SpreadsheetTemplateCreator() {
   // AI & Importer state
   const [showSidebar, setShowSidebar] = useState(true);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [rawCsvInputText, setRawCsvInputText] = useState('');
   const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
   const [googleSheetTab, setGoogleSheetTab] = useState('read'); // 'read' | 'push'
   const [googleSheetInput, setGoogleSheetInput] = useState('');
@@ -4854,13 +4855,13 @@ export default function SpreadsheetTemplateCreator() {
         </div>
       )}
 
-      {/* Sample CSV Templates Modal */}
+      {/* Import CSV & Paste Raw Data Modal */}
       {isCsvModalOpen && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          backdropFilter: 'blur(4px)',
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(6px)',
           zIndex: 999,
           display: 'flex',
           alignItems: 'center',
@@ -4868,93 +4869,138 @@ export default function SpreadsheetTemplateCreator() {
           padding: '20px'
         }}>
           <div style={{
-            background: '#ffffff',
+            background: '#0f172a',
+            border: '1.5px solid #334155',
             borderRadius: '20px',
             width: '100%',
-            maxWidth: '680px',
+            maxWidth: '720px',
             maxHeight: '90vh',
             overflowY: 'auto',
             padding: '28px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            color: '#f8fafc'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                  📄 Sample CSV Blueprints
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>
+                  📥 Import & Paste CSV Data
                 </h3>
-                <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: '#64748b' }}>
-                  Download pre-formatted CSV blueprints to import directly into the spreadsheet grid editor.
+                <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: '#94a3b8' }}>
+                  Paste raw CSV / TSV text directly or upload a .csv file from your computer.
                 </p>
               </div>
               <button
                 onClick={() => setIsCsvModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Sample 1: Phonics & Initial Blends */}
-              <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', background: '#f8fafc' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1e3a8a' }}>
-                    🔤 Phonics & Consonant Blends (Word, Image, Audio, Options)
-                  </span>
-                  <button
-                    onClick={() => downloadSampleCSV('phonics')}
-                    style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
-                  >
-                    ⬇️ Download CSV
-                  </button>
-                </div>
-                <pre style={{ background: '#0f172a', color: '#38bdf8', padding: '10px', borderRadius: '8px', fontSize: '0.75rem', overflowX: 'auto', margin: 0 }}>
-{`target_word,target_image,target_audio,Result_word,Distractor1_word,Distractor2_word
-drop,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/drop.jpg,/api/tts?text=drop,dr,tr,cr
-star,https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/star.jpg,/api/tts?text=star,st,sp,sk`}
-                </pre>
-              </div>
+            {/* Paste Raw CSV Area */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
+                📋 Option 1: Paste Raw CSV / TSV Text
+              </label>
+              <textarea
+                style={{
+                  width: '100%',
+                  minHeight: '180px',
+                  background: '#020617',
+                  color: '#f8fafc',
+                  border: '1.5px solid #334155',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  fontFamily: 'Courier, monospace',
+                  fontSize: '0.82rem',
+                  lineHeight: 1.4
+                }}
+                value={rawCsvInputText}
+                onChange={(e) => setRawCsvInputText(e.target.value)}
+                placeholder={`id,target_word,target_audio,target_image,Result,distractor_1,explanation
+K1_PHON_001,"apple","audio_apple_v1","placeholder_apple_img","a","m","The word apple begins with short 'a'..."
+K1_PHON_002,"bear","audio_bear_v1","placeholder_bear_img","b","s","The word bear begins with..."`}
+              />
 
-              {/* Sample 2: Math Addition Facts */}
-              <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', background: '#f8fafc' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#065f46' }}>
-                    🔢 Math Addition Facts (num1, num2, Result, Distractors)
-                  </span>
-                  <button
-                    onClick={() => downloadSampleCSV('math')}
-                    style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
-                  >
-                    ⬇️ Download CSV
-                  </button>
-                </div>
-                <pre style={{ background: '#0f172a', color: '#34d399', padding: '10px', borderRadius: '8px', fontSize: '0.75rem', overflowX: 'auto', margin: 0 }}>
-{`num1,num2,Result,Distractor1,Distractor2,Distractor3
-3,4,7,6,8,5
-5,5,10,9,11,12`}
-                </pre>
-              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!rawCsvInputText || !rawCsvInputText.trim()) {
+                      alert('Please paste CSV text first!');
+                      return;
+                    }
+                    const { columns: parsedCols, rows: parsedRows } = parseCsvText(rawCsvInputText);
+                    if (!parsedCols || parsedCols.length === 0 || !parsedRows || parsedRows.length === 0) {
+                      alert('⚠️ No valid columns or rows found in pasted CSV text.');
+                      return;
+                    }
 
-              {/* Sample 3: Vocabulary Image Choice */}
-              <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', background: '#f8fafc' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#6b21a8' }}>
-                    📖 Vocabulary Word to Image Identification
-                  </span>
-                  <button
-                    onClick={() => downloadSampleCSV('vocab')}
-                    style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
-                  >
-                    ⬇️ Download CSV
-                  </button>
-                </div>
-                <pre style={{ background: '#0f172a', color: '#c084fc', padding: '10px', borderRadius: '8px', fontSize: '0.75rem', overflowX: 'auto', margin: 0 }}>
-{`word,Opt1_word,Opt1_image,Opt2_word,Opt2_image,Opt3_word,Opt3_image
-apple,apple,https://.../apple.jpg,dog,https://.../dog.jpg,cup,https://.../cup.jpg
-cat,cat,https://.../cat.jpg,pen,https://.../pen.jpg,sun,https://.../sun.jpg`}
-                </pre>
+                    setColumns(parsedCols);
+                    setRows(parsedRows);
+                    setActiveRowIndex(0);
+
+                    const resCol = parsedCols.find(c => c.toLowerCase().includes('result') || c.toLowerCase().includes('correct') || c.toLowerCase().includes('answer'));
+                    const disCols = parsedCols.filter(c => c !== resCol && (c.toLowerCase().includes('distractor') || c.toLowerCase().includes('opt') || c.toLowerCase().includes('wrong')));
+
+                    if (resCol) {
+                      const newBindings = [{ column: resCol, isCorrect: true, misconception: '' }];
+                      disCols.forEach(c => newBindings.push({ column: c, isCorrect: false, misconception: '' }));
+                      setOptionsBinding(newBindings);
+                    }
+
+                    setIsCsvModalOpen(false);
+                    setRawCsvInputText('');
+                    alert(`✅ Successfully parsed & loaded ${parsedRows.length} rows and ${parsedCols.length} columns into spreadsheet grid!`);
+                  }}
+                  style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  ⚡ Parse & Load into Spreadsheet Grid
+                </button>
               </div>
             </div>
+
+            {/* File Upload Option */}
+            <div style={{ padding: '16px', background: '#1e293b', borderRadius: '12px', border: '1px border #334155', marginBottom: '20px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>
+                📁 Option 2: Upload .CSV File from Computer
+              </div>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => {
+                  handleCSVUpload(e);
+                  setIsCsvModalOpen(false);
+                }}
+                style={{ color: '#94a3b8', fontSize: '12px' }}
+              />
+            </div>
+
+            {/* Blueprints Accordion */}
+            <details style={{ background: '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: '12px', color: '#94a3b8' }}>
+                📄 View Sample CSV Blueprints
+              </summary>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                <div style={{ border: '1px solid #334155', borderRadius: '8px', padding: '12px', background: '#0f172a' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#38bdf8' }}>
+                      🔤 Phonics & Consonant Blends
+                    </span>
+                    <button
+                      onClick={() => downloadSampleCSV('phonics')}
+                      style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}
+                    >
+                      ⬇️ Download Sample
+                    </button>
+                  </div>
+                  <pre style={{ background: '#020617', color: '#38bdf8', padding: '8px', borderRadius: '6px', fontSize: '0.72rem', overflowX: 'auto', margin: 0 }}>
+{`target_word,target_image,target_audio,Result_word,Distractor1_word
+drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
+                  </pre>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       )}
