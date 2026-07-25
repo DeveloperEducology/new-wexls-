@@ -80,9 +80,21 @@ function playBlob(blob, text, plainText) {
 
 export function speakText(text, voice = 'Puck', audioUrl = null) {
   if (!text) return;
+
+  // Extract embedded audio URL from text string if present
+  let targetAudioUrl = audioUrl;
+  let cleanTextStr = String(text);
+
+  const urlMatch = cleanTextStr.match(/(https?:\/\/[^\s]+(?:\.mp3|\.wav|\.ogg|\.m4a)|\/api\/tts\?[^\s]+)/i);
+  if (urlMatch) {
+    if (!targetAudioUrl) {
+      targetAudioUrl = urlMatch[0];
+    }
+    cleanTextStr = cleanTextStr.replace(urlMatch[0], '').replace(/\\n/g, ' ').replace(/\/n/g, ' ').trim();
+  }
   
   // Clean text from structural symbols to prevent weird speaking patterns
-  const plainText = String(text)
+  const plainText = cleanTextStr
     .replace(/\$\$/g, '')
     .replace(/\$/g, '')
     .replace(/\*\*/g, '')
@@ -95,7 +107,7 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
   // --- Direct audio URL path (pre-baked R2 assets) ---
   // NEVER toggle: always stop whatever is playing and restart.
   // This ensures a single tap always produces audio — no double-click needed.
-  if (audioUrl) {
+  if (targetAudioUrl) {
     // Tear down any existing playback cleanly
     if (abortController) {
       abortController.abort();
@@ -109,44 +121,44 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-    activeText = text;
+    activeText = plainText || text;
 
-    const isPhonics = (typeof window !== 'undefined' && window.location.href.includes('phonics')) ||
-                      audioUrl.includes('audio/phonics/');
     try {
       const audio = new Audio();
       activeAudio = audio;
 
+      const triggerFallback = () => {
+        if (activeAudio === audio) activeAudio = null;
+        if (activeText === (plainText || text)) activeText = null;
+        if (plainText) {
+          const fallbackTtsUrl = `/api/tts?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(plainText)}`;
+          const fallbackAudio = new Audio(fallbackTtsUrl);
+          fallbackAudio.play().catch(err => console.warn('[TTS] Fallback playback error:', err));
+        }
+      };
+
       audio.addEventListener('ended', () => {
-        if (activeText === text) {
+        if (activeText === (plainText || text)) {
           activeText = null;
           activeAudio = null;
         }
       });
 
       audio.addEventListener('error', (e) => {
-        console.warn('[TTS] Pre-baked audio URL error:', e, audioUrl);
-        if (activeAudio === audio) activeAudio = null;
-        if (activeText === text) {
-          activeText = null;
-          // Fail silently since fallback / dynamic server TTS is disabled
-        }
+        console.warn('[TTS] Pre-baked audio URL error, triggering dynamic TTS fallback:', e, targetAudioUrl);
+        triggerFallback();
       });
 
       // Set src AFTER attaching listeners, then load() forces the browser
       // to decode from the start (important for replaying the same URL).
-      audio.src = audioUrl;
+      audio.src = targetAudioUrl;
       audio.load();
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
-          console.warn('[TTS] audio.play() rejected:', err, audioUrl);
-          if (activeAudio === audio) activeAudio = null;
-          if (activeText === text) {
-            activeText = null;
-            // Fail silently since fallback / dynamic server TTS is disabled
-          }
+          console.warn('[TTS] audio.play() rejected, triggering dynamic TTS fallback:', err, targetAudioUrl);
+          triggerFallback();
         });
       }
       return;
