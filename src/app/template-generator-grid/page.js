@@ -714,6 +714,9 @@ export default function SpreadsheetTemplateCreator() {
   const [pushingToGoogleSheet, setPushingToGoogleSheet] = useState(false);
   const [googleSheetPushSuccess, setGoogleSheetPushSuccess] = useState(null);
   const [fetchingImages, setFetchingImages] = useState(false);
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
+  const [targetTextColForAudio, setTargetTextColForAudio] = useState('');
+  const [selectedAudioVoice, setSelectedAudioVoice] = useState('Puck');
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
   const [aiSkillDesc, setAiSkillDesc] = useState('');
   const [aiQuestion, setAiQuestion] = useState('');
@@ -1062,12 +1065,78 @@ export default function SpreadsheetTemplateCreator() {
     }
   };
 
+  const handleGenerateAudioForSpecificColumn = (textColName, voiceName = 'Puck') => {
+    if (!textColName) return;
+
+    setWarmingTts(true);
+
+    const prefix = textColName.toLowerCase().replace(/_*(word|item|phoneme|label|text|sound)$/i, '');
+    const audioColName = `${prefix}_audio`;
+
+    // Ensure audio column exists in columns
+    let currentCols = [...columns];
+    if (!currentCols.includes(audioColName)) {
+      const idx = currentCols.indexOf(textColName);
+      if (idx !== -1) {
+        currentCols.splice(idx + 1, 0, audioColName);
+      } else {
+        currentCols.push(audioColName);
+      }
+      setColumns(currentCols);
+    }
+
+    const updatedRows = [...rows];
+    let count = 0;
+    const warmPromises = [];
+
+    updatedRows.forEach(row => {
+      const textVal = String(row[textColName] || '').trim();
+      if (textVal && !textVal.startsWith('http') && !textVal.startsWith('![')) {
+        const expectedUrl = `/api/tts?voice=${voiceName}&text=${encodeURIComponent(textVal)}`;
+        row[audioColName] = expectedUrl;
+        count++;
+
+        warmPromises.push(
+          fetch(expectedUrl)
+            .then(res => res.ok ? res.json() : null)
+            .catch(() => null)
+        );
+      }
+    });
+
+    setRows(updatedRows);
+    setIsAudioModalOpen(false);
+    setWarmingTts(false);
+
+    alert(`🔊 Generated ${count} audio URLs for column "${textColName}" into "${audioColName}" using voice ${voiceName}!`);
+  };
+
   const handleAutoGenerateTTS = async () => {
     setWarmingTts(true);
-    // Find all audio columns
-    const audioCols = columns.filter(col => col.endsWith('_audio') || col === 'audio');
+    let audioCols = columns.filter(col => col.endsWith('_audio') || col === 'audio');
+
+    // Auto-create audio column if none exists yet
     if (audioCols.length === 0) {
-      alert("No audio columns found! Create a column ending in '_audio' (e.g. Result_audio) to use this tool.");
+      const textColCand = columns.find(c => ['target_phoneme', 'phoneme', 'target_word', 'correct_item', 'word', 'character_name', 'target_sound', 'text'].includes(c.toLowerCase())) || columns[0];
+      if (textColCand) {
+        const prefix = textColCand.toLowerCase().replace(/_*(word|item|phoneme|label|text|sound)$/i, '');
+        const newAudioCol = `${prefix}_audio`;
+        if (!columns.includes(newAudioCol)) {
+          const idx = columns.indexOf(textColCand);
+          const newCols = [...columns];
+          if (idx !== -1) {
+            newCols.splice(idx + 1, 0, newAudioCol);
+          } else {
+            newCols.push(newAudioCol);
+          }
+          setColumns(newCols);
+          audioCols = [newAudioCol];
+        }
+      }
+    }
+
+    if (audioCols.length === 0) {
+      alert("No text or audio columns found in spreadsheet.");
       setWarmingTts(false);
       return;
     }
@@ -1844,6 +1913,41 @@ export default function SpreadsheetTemplateCreator() {
             })}
           </span>
         );
+      }
+      // Audio URL detection (e.g. /api/tts?voice=Puck&text=s or .mp3/.wav)
+      if (typeof part === 'string' && (part.includes('/api/tts') || part.includes('.mp3') || part.includes('.wav'))) {
+        const audioUrlMatch = part.match(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/i);
+        if (audioUrlMatch) {
+          const audioUrl = audioUrlMatch[0];
+          const textBeforeAfter = part.split(audioUrl);
+          return (
+            <span key={index} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              {textBeforeAfter[0] && <span>{textBeforeAfter[0]}</span>}
+              <button
+                type="button"
+                onClick={() => playAudio(audioUrl)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                  margin: '4px 0'
+                }}
+              >
+                🔊 Listen Sound
+              </button>
+              {textBeforeAfter[1] && <span>{textBeforeAfter[1]}</span>}
+            </span>
+          );
+        }
       }
       return <span key={index}>{part}</span>;
     });
@@ -3680,6 +3784,17 @@ export default function SpreadsheetTemplateCreator() {
               </button>
               <button
                 className="grid-btn-secondary"
+                style={{ background: '#0284c7', color: '#fff', border: 'none', fontWeight: 700 }}
+                onClick={() => {
+                  const defaultCol = columns.find(c => ['target_phoneme', 'phoneme', 'target_word', 'correct_item', 'word', 'character_name', 'distractor_1'].includes(c.toLowerCase())) || columns[0] || '';
+                  setTargetTextColForAudio(defaultCol);
+                  setIsAudioModalOpen(true);
+                }}
+              >
+                🔊 Generate Audio for Selected Column
+              </button>
+              <button
+                className="grid-btn-secondary"
                 style={{ background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', color: '#fff', border: 'none', fontWeight: 800 }}
                 onClick={handleAutoFetchImages}
                 disabled={fetchingImages}
@@ -5053,6 +5168,113 @@ cat,cat,https://.../cat.jpg,pen,https://.../pen.jpg,sun,https://.../sun.jpg`}
                 </form>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Selected Column TTS Generator Modal */}
+      {isAudioModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '520px',
+            padding: '28px',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.8rem' }}>🔊</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+                    Generate Audio for Selected Column
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 700 }}>
+                    Instant TTS Audio URL Generator
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAudioModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.5, marginBottom: '20px' }}>
+              Select any text column (e.g. <strong>target_phoneme</strong>, <strong>character_name</strong>, <strong>distractor_1</strong>) to auto-generate TTS audio URLs for all 15+ rows!
+            </p>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleGenerateAudioForSpecificColumn(targetTextColForAudio, selectedAudioVoice); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="mc-dev-label" style={{ display: 'block', marginBottom: '6px' }}>
+                  Select Text Column to Generate Audio For
+                </label>
+                <select
+                  className="grid-select"
+                  value={targetTextColForAudio}
+                  onChange={(e) => setTargetTextColForAudio(e.target.value)}
+                  style={{ fontSize: '0.88rem', padding: '10px' }}
+                >
+                  {columns.map((col, idx) => (
+                    <option key={col + '-' + idx} value={col}>
+                      {col} {col.endsWith('_audio') ? ' (Audio Column)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mc-dev-label" style={{ display: 'block', marginBottom: '6px' }}>
+                  Select Voice Accent / Character
+                </label>
+                <select
+                  className="grid-select"
+                  value={selectedAudioVoice}
+                  onChange={(e) => setSelectedAudioVoice(e.target.value)}
+                  style={{ fontSize: '0.88rem', padding: '10px' }}
+                >
+                  <option value="Puck">👦 Puck (Playful English Kid Voice)</option>
+                  <option value="Fenrir">🧔 Fenrir (Deep Clear Expressive)</option>
+                  <option value="Aoede">👩 Aoede (Warm Clear Female Teacher)</option>
+                  <option value="Kore">👧 Kore (Gentle Friendly Female)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAudioModalOpen(false)}
+                  className="grid-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="grid-btn-primary"
+                  disabled={!targetTextColForAudio}
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff',
+                    padding: '10px 24px'
+                  }}
+                >
+                  ⚡ Generate Audio for "{targetTextColForAudio}"
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
