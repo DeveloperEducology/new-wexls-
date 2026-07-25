@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
+import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 
 const DEFAULT_COLUMNS = ['number_to_factor', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'];
 
@@ -1158,26 +1160,18 @@ export default function SpreadsheetTemplateCreator() {
     const updatedRows = [...rows.map(r => ({ ...r }))];
     let count = 0;
 
-    for (let rIdx = 0; rIdx < updatedRows.length; rIdx++) {
-      const row = updatedRows[rIdx];
-
-      for (const audioCol of audioCols) {
+    // Collect tasks
+    const tasks = [];
+    updatedRows.forEach((row) => {
+      audioCols.forEach(audioCol => {
         let textCol = null;
-        
-        // Try to find matching text column
         const prefix = audioCol.toLowerCase().replace(/_audio$/, '');
-        
         let foundCol = columns.find(c => {
           const lc = c.toLowerCase();
           return lc !== audioCol.toLowerCase() && (
-            lc === prefix ||
-            lc === `${prefix}_phoneme` ||
-            lc === `${prefix}_word` ||
-            lc === `${prefix}_item` ||
-            lc === `${prefix}_label` ||
-            lc === `${prefix}_text` ||
-            lc === `${prefix}_sound` ||
-            lc.startsWith(prefix)
+            lc === prefix || lc === `${prefix}_phoneme` || lc === `${prefix}_word` ||
+            lc === `${prefix}_item` || lc === `${prefix}_label` || lc === `${prefix}_text` ||
+            lc === `${prefix}_sound` || lc.startsWith(prefix)
           );
         });
 
@@ -1195,34 +1189,39 @@ export default function SpreadsheetTemplateCreator() {
             const voice = 'Puck';
             const currentAudioCell = String(row[audioCol] || '');
             const needsR2Resolution = !currentAudioCell || currentAudioCell.startsWith('/api/tts') || !currentAudioCell.startsWith('http');
-
             if (needsR2Resolution) {
-              try {
-                const res = await fetch('/api/admin/resolve-audio', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ text: textValue, voice, generate: true })
-                });
-                if (res.ok) {
-                  const data = await res.json();
-                  if (data.success && data.audioUrl) {
-                    row[audioCol] = data.audioUrl;
-                    count++;
-                    continue;
-                  }
-                }
-              } catch (e) {
-                console.warn('R2 resolve-audio error, fallback to TTS route:', e);
-              }
+              tasks.push({ row, audioCol, textValue, voice });
             }
-
-            // Fallback to route URL
-            const expectedTtsUrl = `/api/tts?voice=${voice}&text=${encodeURIComponent(textValue)}`;
-            row[audioCol] = expectedTtsUrl;
-            count++;
           }
         }
-      }
+      });
+    });
+
+    // Execute in parallel batches of 5
+    const chunkSize = 5;
+    for (let i = 0; i < tasks.length; i += chunkSize) {
+      const batch = tasks.slice(i, i + chunkSize);
+      await Promise.all(batch.map(async (task) => {
+        try {
+          const res = await fetch('/api/admin/resolve-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: task.textValue, voice: task.voice, generate: true })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.audioUrl) {
+              task.row[task.audioCol] = data.audioUrl;
+              count++;
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('R2 resolve-audio error, fallback to TTS route:', e);
+        }
+        task.row[task.audioCol] = `/api/tts?voice=${task.voice}&text=${encodeURIComponent(task.textValue)}`;
+        count++;
+      }));
     }
 
     setRows(updatedRows);
@@ -3909,208 +3908,13 @@ export default function SpreadsheetTemplateCreator() {
                 />
               </div>
 
-              {/* Custom Parts Builder Section */}
-              <div style={{ marginTop: '20px', padding: '16px', background: '#0f172a', borderRadius: '12px', border: '1.5px solid #1e293b' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                  <div>
-                    <label className="mc-dev-label" style={{ color: '#f8fafc', fontSize: '13px', margin: 0 }}>
-                      🧩 Question Prompt Parts Array Builder
-                    </label>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
-                      Manually add or order text, audio, and image parts in sequence.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const audioCol = columns.find(c => c.toLowerCase().includes('audio') || c.toLowerCase().includes('sound'));
-                        const newParts = [
-                          { type: 'text', content: 'Click on the button. Then, answer the question.' },
-                          { type: 'audio', content: audioCol ? `[${audioCol}]` : '[target_audio]' }
-                        ];
-                        setCustomPartsText(JSON.stringify(newParts, null, 2));
-                      }}
-                      style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                    >
-                      ✨ Auto-Build Audio+Text
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsPartsRawJsonMode(!isPartsRawJsonMode)}
-                      style={{ background: '#334155', color: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      {isPartsRawJsonMode ? '🎨 Visual Builder' : '💻 Raw JSON'}
-                    </button>
-                  </div>
-                </div>
-
-                {isPartsRawJsonMode ? (
-                  <textarea
-                    className="grid-textarea"
-                    style={{ minHeight: '130px', fontFamily: 'Courier, monospace', fontSize: '0.8rem', background: '#020617', color: '#38bdf8' }}
-                    value={customPartsText}
-                    onChange={(e) => setCustomPartsText(e.target.value)}
-                    placeholder='e.g. [{"type": "text", "content": "Instruction..."}, {"type": "audio", "content": "[target_audio]"}]'
-                  />
-                ) : (
-                  <div>
-                    {/* Part Cards List */}
-                    {(() => {
-                      let currentArr = [];
-                      try {
-                        currentArr = customPartsText ? JSON.parse(customPartsText) : [];
-                        if (!Array.isArray(currentArr)) currentArr = [];
-                      } catch (e) {
-                        currentArr = [];
-                      }
-
-                      const updateArr = (nextArr) => {
-                        setCustomPartsText(nextArr.length > 0 ? JSON.stringify(nextArr, null, 2) : '');
-                      };
-
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {currentArr.length === 0 && (
-                            <div style={{ padding: '14px', background: '#1e293b', borderRadius: '8px', border: '1px dashed #475569', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
-                              No custom parts set yet. Click below to add Text, Audio, or Image parts to your prompt!
-                            </div>
-                          )}
-
-                          {currentArr.map((p, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155', flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '11px', fontWeight: 900, color: p.type === 'audio' ? '#38bdf8' : (p.type === 'image' ? '#a855f7' : '#f59e0b'), background: '#0f172a', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                                #{idx + 1} {p.type || 'text'}
-                              </span>
-
-                              {/* Type dropdown */}
-                              <select
-                                value={p.type || 'text'}
-                                onChange={(e) => {
-                                  const copy = [...currentArr];
-                                  copy[idx] = { ...copy[idx], type: e.target.value };
-                                  updateArr(copy);
-                                }}
-                                style={{ background: '#0f172a', color: '#f8fafc', border: '1px solid #475569', borderRadius: '6px', padding: '4px 8px', fontSize: '12px', fontWeight: 700 }}
-                              >
-                                <option value="text">📝 Text</option>
-                                <option value="audio">🔊 Audio</option>
-                                <option value="image">🖼️ Image</option>
-                                <option value="play_sound_card">🎵 Play Sound Card</option>
-                              </select>
-
-                              {/* Content input */}
-                              <input
-                                type="text"
-                                value={p.content || ''}
-                                onChange={(e) => {
-                                  const copy = [...currentArr];
-                                  copy[idx] = { ...copy[idx], content: e.target.value };
-                                  updateArr(copy);
-                                }}
-                                placeholder={p.type === 'audio' ? '[target_audio]' : (p.type === 'image' ? '[qn_image]' : 'Part text content...')}
-                                style={{ flex: 1, minWidth: '180px', background: '#0f172a', color: '#f8fafc', border: '1px solid #475569', borderRadius: '6px', padding: '4px 10px', fontSize: '12px' }}
-                              />
-
-                              {/* Column picker helper */}
-                              <select
-                                onChange={(e) => {
-                                  if (!e.target.value) return;
-                                  const copy = [...currentArr];
-                                  copy[idx] = { ...copy[idx], content: `[${e.target.value}]` };
-                                  updateArr(copy);
-                                  e.target.value = '';
-                                }}
-                                style={{ background: '#020617', color: '#94a3b8', border: '1px solid #334155', borderRadius: '6px', padding: '4px 6px', fontSize: '11px' }}
-                              >
-                                <option value="">Insert Col...</option>
-                                {columns.map(c => <option key={c} value={c}>[{c}]</option>)}
-                              </select>
-
-                              {/* Reorder and Delete buttons */}
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                {idx > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const copy = [...currentArr];
-                                      const temp = copy[idx - 1];
-                                      copy[idx - 1] = copy[idx];
-                                      copy[idx] = temp;
-                                      updateArr(copy);
-                                    }}
-                                    style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 7px', cursor: 'pointer', fontSize: '11px' }}
-                                  >
-                                    ↑
-                                  </button>
-                                )}
-                                {idx < currentArr.length - 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const copy = [...currentArr];
-                                      const temp = copy[idx + 1];
-                                      copy[idx + 1] = copy[idx];
-                                      copy[idx] = temp;
-                                      updateArr(copy);
-                                    }}
-                                    style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 7px', cursor: 'pointer', fontSize: '11px' }}
-                                  >
-                                    ↓
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const copy = currentArr.filter((_, i) => i !== idx);
-                                    updateArr(copy);
-                                  }}
-                                  style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: 800 }}
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Add New Part Buttons */}
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updateArr([...currentArr, { type: 'text', content: 'Click on the button. Then, answer the question.' }]);
-                              }}
-                              style={{ background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                            >
-                              ➕ Add Text Part
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const audioCol = columns.find(c => c.toLowerCase().includes('audio') || c.toLowerCase().includes('sound'));
-                                updateArr([...currentArr, { type: 'audio', content: audioCol ? `[${audioCol}]` : '[target_audio]' }]);
-                              }}
-                              style={{ background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                            >
-                              ➕ Add Audio Part
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const imageCol = columns.find(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('clipart'));
-                                updateArr([...currentArr, { type: 'image', content: imageCol ? `[${imageCol}]` : '[qn_image]' }]);
-                              }}
-                              style={{ background: '#9333ea', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                            >
-                              ➕ Add Image Part
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
+              <PartsArrayBuilder
+                customPartsText={customPartsText}
+                setCustomPartsText={setCustomPartsText}
+                isPartsRawJsonMode={isPartsRawJsonMode}
+                setIsPartsRawJsonMode={setIsPartsRawJsonMode}
+                columns={columns}
+              />
             </div>
           </div>
 
