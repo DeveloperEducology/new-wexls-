@@ -123,51 +123,61 @@ export function speakText(text, voice = 'Puck', audioUrl = null) {
     }
     activeText = plainText || text;
 
-    try {
-      const audio = new Audio();
-      activeAudio = audio;
-
-      const triggerFallback = () => {
-        if (activeAudio === audio) activeAudio = null;
-        if (activeText === (plainText || text)) activeText = null;
-        if (plainText) {
-          const fallbackTtsUrl = `/api/tts?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(plainText)}`;
-          const fallbackAudio = new Audio(fallbackTtsUrl);
-          fallbackAudio.play().catch(err => console.warn('[TTS] Fallback playback error:', err));
-        }
-      };
-
-      audio.addEventListener('ended', () => {
-        if (activeText === (plainText || text)) {
-          activeText = null;
-          activeAudio = null;
-        }
-      });
-
-      audio.addEventListener('error', (e) => {
-        console.warn('[TTS] Pre-baked audio URL error, triggering dynamic TTS fallback:', e, targetAudioUrl);
-        triggerFallback();
-      });
-
-      // Set src AFTER attaching listeners, then load() forces the browser
-      // to decode from the start (important for replaying the same URL).
-      audio.src = targetAudioUrl;
-      audio.load();
-
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn('[TTS] audio.play() rejected, triggering dynamic TTS fallback:', err, targetAudioUrl);
-          triggerFallback();
-        });
-      }
-      return;
-    } catch (err) {
-      console.warn('[TTS] Audio init exception:', err);
-      activeAudio = null;
-      activeText = null;
+    // Check blob cache first for instant playback
+    if (blobCache.has(targetAudioUrl)) {
+      const cachedBlob = blobCache.get(targetAudioUrl);
+      playBlob(cachedBlob, text, plainText);
       return;
     }
+
+    // Fetch Blob cross-origin to ensure 100% browser audio compatibility for .wav / .mp3 on R2
+    fetch(targetAudioUrl)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then(blob => {
+        blobCache.set(targetAudioUrl, blob);
+        playBlob(blob, text, plainText);
+      })
+      .catch(err => {
+        console.warn('[TTS] R2 blob fetch error, attempting direct HTML5 audio play:', err, targetAudioUrl);
+        
+        try {
+          const audio = new Audio();
+          audio.crossOrigin = 'anonymous';
+          activeAudio = audio;
+
+          audio.addEventListener('ended', () => {
+            if (activeText === (plainText || text)) {
+              activeText = null;
+              activeAudio = null;
+            }
+          });
+
+          audio.addEventListener('error', (e) => {
+            console.warn('[TTS] Direct audio play error, falling back to dynamic TTS:', e);
+            if (plainText) {
+              const fallbackTtsUrl = `/api/tts?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(plainText)}`;
+              new Audio(fallbackTtsUrl).play().catch(er => console.warn(er));
+            }
+          });
+
+          audio.src = targetAudioUrl;
+          audio.load();
+          audio.play().catch(err2 => {
+            console.warn('[TTS] Direct audio play rejected, falling back to dynamic TTS:', err2);
+            if (plainText) {
+              const fallbackTtsUrl = `/api/tts?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(plainText)}`;
+              new Audio(fallbackTtsUrl).play().catch(er => console.warn(er));
+            }
+          });
+        } catch (e) {
+          console.warn('[TTS] Audio init exception:', e);
+        }
+      });
+
+    return;
   }
 
   // --- TTS text path ---
