@@ -1079,15 +1079,30 @@ export default function SpreadsheetTemplateCreator() {
     updatedRows.forEach((row) => {
       audioCols.forEach(audioCol => {
         let textCol = null;
-        const prefix = audioCol.replace(/_audio$/, '');
         
         // Try to find matching text column
-        const candidates = [`${prefix}_word`, `${prefix}_label`, `${prefix}_option`, prefix, 'word', 'label'];
-        for (const cand of candidates) {
-          if (columns.includes(cand) && row[cand]) {
-            textCol = cand;
-            break;
-          }
+        const prefix = audioCol.toLowerCase().replace(/_audio$/, '');
+        
+        let foundCol = columns.find(c => {
+          const lc = c.toLowerCase();
+          return lc !== audioCol.toLowerCase() && (
+            lc === prefix ||
+            lc === `${prefix}_phoneme` ||
+            lc === `${prefix}_word` ||
+            lc === `${prefix}_item` ||
+            lc === `${prefix}_label` ||
+            lc === `${prefix}_text` ||
+            lc === `${prefix}_sound` ||
+            lc.startsWith(prefix)
+          );
+        });
+
+        if (!foundCol) {
+          foundCol = columns.find(c => ['target_phoneme', 'phoneme', 'target_word', 'correct_item', 'word', 'label', 'text', 'character_name'].includes(c.toLowerCase()));
+        }
+
+        if (foundCol && row[foundCol]) {
+          textCol = foundCol;
         }
 
         if (textCol) {
