@@ -1192,23 +1192,27 @@ export default function SpreadsheetTemplateCreator() {
           const textValue = String(row[textCol] || '').trim();
           if (textValue && !textValue.startsWith('http') && !textValue.startsWith('![')) {
             const voice = 'Puck';
-            
-            try {
-              const res = await fetch('/api/admin/resolve-audio', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: textValue, voice, generate: true })
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.audioUrl) {
-                  row[audioCol] = data.audioUrl;
-                  count++;
-                  continue;
+            const currentAudioCell = String(row[audioCol] || '');
+            const needsR2Resolution = !currentAudioCell || currentAudioCell.startsWith('/api/tts') || !currentAudioCell.startsWith('http');
+
+            if (needsR2Resolution) {
+              try {
+                const res = await fetch('/api/admin/resolve-audio', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ text: textValue, voice, generate: true })
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.success && data.audioUrl) {
+                    row[audioCol] = data.audioUrl;
+                    count++;
+                    continue;
+                  }
                 }
+              } catch (e) {
+                console.warn('R2 resolve-audio error, fallback to TTS route:', e);
               }
-            } catch (e) {
-              console.warn('R2 resolve-audio error, fallback to TTS route:', e);
             }
 
             // Fallback to route URL
