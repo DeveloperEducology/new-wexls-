@@ -707,6 +707,9 @@ export default function SpreadsheetTemplateCreator() {
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
   const [googleSheetTab, setGoogleSheetTab] = useState('read'); // 'read' | 'push'
+  const [googleSheetInput, setGoogleSheetInput] = useState('');
+  const [fetchingGoogleSheet, setFetchingGoogleSheet] = useState(false);
+  const [googleSheetError, setGoogleSheetError] = useState(null);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [pushingToGoogleSheet, setPushingToGoogleSheet] = useState(false);
   const [googleSheetPushSuccess, setGoogleSheetPushSuccess] = useState(null);
