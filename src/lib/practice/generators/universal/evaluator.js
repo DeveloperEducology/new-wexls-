@@ -1070,6 +1070,11 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       
       if (typeof resolvedPart.content === 'string') {
         resolvedPart.content = interpolateString(resolvedPart.content, resolvedVariables);
+        const trimmed = resolvedPart.content.trim();
+        if (trimmed.startsWith('/api/tts') || trimmed.endsWith('.mp3') || trimmed.endsWith('.wav')) {
+          resolvedPart.type = 'audio';
+          resolvedPart.audioUrl = trimmed;
+        }
       }
       if (typeof resolvedPart.prompt === 'string') {
         resolvedPart.prompt = interpolateString(resolvedPart.prompt, resolvedVariables);
@@ -1617,7 +1622,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     interaction: template.interaction && typeof template.interaction === 'object'
       ? template.interaction
       : (isOrdering ? 'sentence_ordering' : (template.optionsType || (isVisualChoice ? 'visual_choice' : 'mcq'))),
-    questionText,
+    questionText: String(questionText || '')
+      .replace(/(\\n|\/n|\n)\s*(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
+      .replace(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
+      .replace(/\\n/g, '\n')
+      .replace(/\/n/g, '\n')
+      .trim(),
     parts,
     soundUrl: template.soundUrl ? interpolateString(template.soundUrl, resolvedVariables) : undefined,
     soundText: template.soundText ? interpolateString(template.soundText, resolvedVariables) : undefined,
