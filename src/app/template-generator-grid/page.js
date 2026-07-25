@@ -706,9 +706,10 @@ export default function SpreadsheetTemplateCreator() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
-  const [googleSheetInput, setGoogleSheetInput] = useState('');
-  const [fetchingGoogleSheet, setFetchingGoogleSheet] = useState(false);
-  const [googleSheetError, setGoogleSheetError] = useState(null);
+  const [googleSheetTab, setGoogleSheetTab] = useState('read'); // 'read' | 'push'
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [pushingToGoogleSheet, setPushingToGoogleSheet] = useState(false);
+  const [googleSheetPushSuccess, setGoogleSheetPushSuccess] = useState(null);
   const [fetchingImages, setFetchingImages] = useState(false);
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
   const [aiSkillDesc, setAiSkillDesc] = useState('');
@@ -720,6 +721,8 @@ export default function SpreadsheetTemplateCreator() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedWebhook = localStorage.getItem('google_sheet_webhook_url');
+      if (savedWebhook) setWebhookUrl(savedWebhook);
       const stored = localStorage.getItem('import_spreadsheet_rows');
       if (stored) {
         try {
@@ -1441,6 +1444,45 @@ export default function SpreadsheetTemplateCreator() {
       setGoogleSheetError(err.message);
     } finally {
       setFetchingGoogleSheet(false);
+    }
+  };
+
+  const handlePushToGoogleSheet = async (e) => {
+    if (e) e.preventDefault();
+    const cleanUrl = webhookUrl.trim();
+    if (!cleanUrl) {
+      setGoogleSheetError('Please enter your Google Apps Script Webhook URL.');
+      return;
+    }
+
+    setPushingToGoogleSheet(true);
+    setGoogleSheetError(null);
+    setGoogleSheetPushSuccess(null);
+
+    try {
+      localStorage.setItem('google_sheet_webhook_url', cleanUrl);
+
+      const res = await fetch('/api/admin/push-google-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          webhookUrl: cleanUrl,
+          columns,
+          rows
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to push updates to Google Sheet.');
+      }
+
+      setGoogleSheetPushSuccess(`✅ Live Google Sheet updated successfully! Pushed ${rows.length} rows & ${columns.length} columns with all updated image & audio URLs.`);
+    } catch (err) {
+      setGoogleSheetError(err.message);
+    } finally {
+      setPushingToGoogleSheet(false);
     }
   };
 
@@ -4763,7 +4805,7 @@ cat,cat,https://.../cat.jpg,pen,https://.../pen.jpg,sun,https://.../sun.jpg`}
         </div>
       )}
 
-      {/* Direct Google Sheets Sync Modal */}
+      {/* Direct Google Sheets Sync & Save Modal */}
       {isGoogleSheetModalOpen && (
         <div style={{
           position: 'fixed',
@@ -4780,87 +4822,197 @@ cat,cat,https://.../cat.jpg,pen,https://.../pen.jpg,sun,https://.../sun.jpg`}
             background: '#ffffff',
             borderRadius: '20px',
             width: '100%',
-            maxWidth: '600px',
+            maxWidth: '640px',
             padding: '28px',
-            boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '1.8rem' }}>📊</span>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                    Sync Direct from Google Sheets
+                    Google Sheets 2-Way Integration
                   </h3>
                   <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 700 }}>
-                    Instant Live 1-Click Import
+                    Live Import & Write-Back Sync
                   </span>
                 </div>
               </div>
               <button
-                onClick={() => setIsGoogleSheetModalOpen(false)}
+                onClick={() => { setIsGoogleSheetModalOpen(false); setGoogleSheetError(null); setGoogleSheetPushSuccess(null); }}
                 style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
               >
                 ✕
               </button>
             </div>
 
-            <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.5, marginBottom: '20px' }}>
-              Paste your <strong>Google Sheet Link or Sheet ID</strong>. Make sure your Google Sheet sharing is set to <strong>"Anyone with the link can view"</strong>.
-            </p>
-
-            <form onSubmit={handleFetchGoogleSheet} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label className="mc-dev-label" style={{ display: 'block', marginBottom: '6px' }}>
-                  Google Sheet Link / ID
-                </label>
-                <input
-                  className="grid-input"
-                  placeholder="e.g. https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit"
-                  value={googleSheetInput}
-                  onChange={(e) => setGoogleSheetInput(e.target.value)}
-                  style={{ fontSize: '0.88rem', padding: '12px' }}
-                  disabled={fetchingGoogleSheet}
-                />
-              </div>
-
-              {googleSheetError && (
-                <div style={{
-                  padding: '12px 14px',
+            {/* Modal Tabs */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', borderBottom: '1.5px solid #e2e8f0', paddingBottom: '10px' }}>
+              <button
+                type="button"
+                onClick={() => { setGoogleSheetTab('read'); setGoogleSheetError(null); setGoogleSheetPushSuccess(null); }}
+                style={{
+                  padding: '8px 16px',
                   borderRadius: '10px',
-                  background: '#fef2f2',
-                  border: '1px solid #fca5a5',
-                  color: '#991b1b',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  lineHeight: 1.4
-                }}>
-                  ⚠️ {googleSheetError}
-                </div>
-              )}
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: googleSheetTab === 'read' ? '#eff6ff' : 'transparent',
+                  color: googleSheetTab === 'read' ? '#2563eb' : '#64748b'
+                }}
+              >
+                📥 Read / Import from Google Sheet
+              </button>
+              <button
+                type="button"
+                onClick={() => { setGoogleSheetTab('push'); setGoogleSheetError(null); setGoogleSheetPushSuccess(null); }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: googleSheetTab === 'push' ? '#ecfdf5' : 'transparent',
+                  color: googleSheetTab === 'push' ? '#059669' : '#64748b'
+                }}
+              >
+                💾 Live Save / Write-Back to Google Sheet
+              </button>
+            </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsGoogleSheetModalOpen(false)}
-                  className="grid-btn-secondary"
-                  disabled={fetchingGoogleSheet}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="grid-btn-primary"
-                  disabled={fetchingGoogleSheet || !googleSheetInput.trim()}
-                  style={{
-                    background: fetchingGoogleSheet ? '#64748b' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                    color: '#ffffff',
-                    padding: '10px 24px'
-                  }}
-                >
-                  {fetchingGoogleSheet ? '⏳ Syncing Google Sheet...' : '⚡ Sync & Load Table'}
-                </button>
+            {googleSheetTab === 'read' && (
+              <div>
+                <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.5, marginBottom: '16px' }}>
+                  Paste your <strong>Google Sheet Link or Sheet ID</strong>. Make sure your Google Sheet sharing is set to <strong>"Anyone with the link can view"</strong>.
+                </p>
+
+                <form onSubmit={handleFetchGoogleSheet} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label className="mc-dev-label" style={{ display: 'block', marginBottom: '6px' }}>
+                      Google Sheet Link / ID
+                    </label>
+                    <input
+                      className="grid-input"
+                      placeholder="e.g. https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit"
+                      value={googleSheetInput}
+                      onChange={(e) => setGoogleSheetInput(e.target.value)}
+                      style={{ fontSize: '0.88rem', padding: '12px' }}
+                      disabled={fetchingGoogleSheet}
+                    />
+                  </div>
+
+                  {googleSheetError && (
+                    <div style={{ padding: '12px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '0.82rem', fontWeight: 600 }}>
+                      ⚠️ {googleSheetError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsGoogleSheetModalOpen(false)}
+                      className="grid-btn-secondary"
+                      disabled={fetchingGoogleSheet}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="grid-btn-primary"
+                      disabled={fetchingGoogleSheet || !googleSheetInput.trim()}
+                      style={{ background: fetchingGoogleSheet ? '#64748b' : 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#ffffff', padding: '10px 24px' }}
+                    >
+                      {fetchingGoogleSheet ? '⏳ Syncing Google Sheet...' : '⚡ Sync & Load Table'}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
+
+            {googleSheetTab === 'push' && (
+              <div>
+                <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
+                  Overwrites your live Google Sheet with all updated <strong>R2 Image URLs</strong> and <strong>TTS Audio URLs</strong> using a Google Apps Script Webhook.
+                </p>
+
+                <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '14px', background: '#f8fafc', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#1e3a8a' }}>
+                      📋 Quick 10-Second Setup: Apps Script Webhook Code
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const scriptCode = `function doPost(e) {\n  try {\n    var data = JSON.parse(e.postData.contents);\n    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n    sheet.clear();\n    if (data.columns && data.columns.length > 0) { sheet.appendRow(data.columns); }\n    if (data.rows && data.rows.length > 0) {\n      data.rows.forEach(function(rowObj) {\n        var rowValues = data.columns.map(function(col) { return rowObj[col] !== undefined ? rowObj[col] : ''; });\n        sheet.appendRow(rowValues);\n      });\n    }\n    return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);\n  } catch (err) {\n    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() })).setMimeType(ContentService.MimeType.JSON);\n  }\n}`;
+                        navigator.clipboard.writeText(scriptCode);
+                        alert('📋 Apps Script Code copied to clipboard!');
+                      }}
+                      style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      📋 Copy Code
+                    </button>
+                  </div>
+                  <ol style={{ margin: 0, paddingLeft: '18px', fontSize: '0.78rem', color: '#334155', lineHeight: 1.5 }}>
+                    <li>In Google Sheets, go to <strong>Extensions ➔ Apps Script</strong>.</li>
+                    <li>Paste the copied code and click <strong>Save</strong>.</li>
+                    <li>Click <strong>Deploy ➔ New Deployment ➔ Select type: Web app</strong>.</li>
+                    <li>Set <em>"Who has access"</em> to <strong>"Anyone"</strong> and click <strong>Deploy</strong>.</li>
+                    <li>Copy the resulting Web app URL and paste it below!</li>
+                  </ol>
+                </div>
+
+                <form onSubmit={handlePushToGoogleSheet} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label className="mc-dev-label" style={{ display: 'block', marginBottom: '6px' }}>
+                      Apps Script Webhook URL
+                    </label>
+                    <input
+                      className="grid-input"
+                      placeholder="https://script.google.com/macros/s/AKfycbx.../exec"
+                      value={webhookUrl}
+                      onChange={(e) => setWebhookUrl(e.target.value)}
+                      style={{ fontSize: '0.85rem', padding: '10px' }}
+                      disabled={pushingToGoogleSheet}
+                    />
+                  </div>
+
+                  {googleSheetError && (
+                    <div style={{ padding: '12px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '0.82rem', fontWeight: 600 }}>
+                      ⚠️ {googleSheetError}
+                    </div>
+                  )}
+
+                  {googleSheetPushSuccess && (
+                    <div style={{ padding: '12px 14px', borderRadius: '10px', background: '#ecfdf5', border: '1px solid #6ee7b7', color: '#065f46', fontSize: '0.82rem', fontWeight: 700 }}>
+                      {googleSheetPushSuccess}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsGoogleSheetModalOpen(false)}
+                      className="grid-btn-secondary"
+                      disabled={pushingToGoogleSheet}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="submit"
+                      className="grid-btn-primary"
+                      disabled={pushingToGoogleSheet || !webhookUrl.trim()}
+                      style={{ background: pushingToGoogleSheet ? '#64748b' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#ffffff', padding: '10px 24px' }}
+                    >
+                      {pushingToGoogleSheet ? '⏳ Saving Back to Google Sheet...' : '💾 Save Back to Live Google Sheet'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}
