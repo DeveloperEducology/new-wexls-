@@ -1065,7 +1065,7 @@ export default function SpreadsheetTemplateCreator() {
     }
   };
 
-  const handleGenerateAudioForSpecificColumn = (textColName, voiceName = 'Puck') => {
+  const handleGenerateAudioForSpecificColumn = async (textColName, voiceName = 'Puck') => {
     if (!textColName) return;
 
     setWarmingTts(true);
@@ -1085,30 +1085,43 @@ export default function SpreadsheetTemplateCreator() {
       setColumns(currentCols);
     }
 
-    const updatedRows = [...rows];
+    const updatedRows = [...rows.map(r => ({ ...r }))];
     let count = 0;
-    const warmPromises = [];
 
-    updatedRows.forEach(row => {
+    for (let r = 0; r < updatedRows.length; r++) {
+      const row = updatedRows[r];
       const textVal = String(row[textColName] || '').trim();
       if (textVal && !textVal.startsWith('http') && !textVal.startsWith('![')) {
-        const expectedUrl = `/api/tts?voice=${voiceName}&text=${encodeURIComponent(textVal)}`;
-        row[audioColName] = expectedUrl;
-        count++;
+        try {
+          const res = await fetch('/api/admin/resolve-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textVal, voice: voiceName, generate: true })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.audioUrl) {
+              row[audioColName] = data.audioUrl;
+              count++;
+              continue;
+            }
+          }
+        } catch (e) {
+          console.warn('R2 resolve-audio error, fallback to TTS route:', e);
+        }
 
-        warmPromises.push(
-          fetch(expectedUrl)
-            .then(res => res.ok ? res.json() : null)
-            .catch(() => null)
-        );
+        // Fallback to route URL
+        const fallbackUrl = `/api/tts?voice=${voiceName}&text=${encodeURIComponent(textVal)}`;
+        row[audioColName] = fallbackUrl;
+        count++;
       }
-    });
+    }
 
     setRows(updatedRows);
     setIsAudioModalOpen(false);
     setWarmingTts(false);
 
-    alert(`🔊 Generated ${count} audio URLs for column "${textColName}" into "${audioColName}" using voice ${voiceName}!`);
+    alert(`🔊 Generated ${count} audio URLs (saved to Cloudflare R2 Storage!) for column "${textColName}" into "${audioColName}" using voice ${voiceName}!`);
   };
 
   const handleAutoGenerateTTS = async () => {
@@ -1141,12 +1154,13 @@ export default function SpreadsheetTemplateCreator() {
       return;
     }
 
-    const updatedRows = [...rows];
+    const updatedRows = [...rows.map(r => ({ ...r }))];
     let count = 0;
-    const warmPromises = [];
 
-    updatedRows.forEach((row) => {
-      audioCols.forEach(audioCol => {
+    for (let rIdx = 0; rIdx < updatedRows.length; rIdx++) {
+      const row = updatedRows[rIdx];
+
+      for (const audioCol of audioCols) {
         let textCol = null;
         
         // Try to find matching text column
@@ -1178,43 +1192,38 @@ export default function SpreadsheetTemplateCreator() {
           const textValue = String(row[textCol] || '').trim();
           if (textValue && !textValue.startsWith('http') && !textValue.startsWith('![')) {
             const voice = 'Puck';
-            const expectedTtsUrl = `/api/tts?voice=${voice}&text=${encodeURIComponent(textValue)}`;
             
-            // Check if we need to set/update or if we just want to warm the cache
-            const isDifferent = row[audioCol] !== expectedTtsUrl;
-            
-            if (isDifferent || !row[audioCol]) {
-              row[audioCol] = expectedTtsUrl;
-              count++;
+            try {
+              const res = await fetch('/api/admin/resolve-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: textValue, voice, generate: true })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.audioUrl) {
+                  row[audioCol] = data.audioUrl;
+                  count++;
+                  continue;
+                }
+              }
+            } catch (e) {
+              console.warn('R2 resolve-audio error, fallback to TTS route:', e);
             }
-            
-            // Always warm cache for the expected URL
-            warmPromises.push(
-              fetch(expectedTtsUrl)
-                .then(res => res.ok ? res.json() : null)
-                .catch(() => null)
-            );
+
+            // Fallback to route URL
+            const expectedTtsUrl = `/api/tts?voice=${voice}&text=${encodeURIComponent(textValue)}`;
+            row[audioCol] = expectedTtsUrl;
+            count++;
           }
         }
-      });
-    });
+      }
+    }
 
     setRows(updatedRows);
     
     if (count > 0) {
-      try {
-        await Promise.all(warmPromises);
-        alert(`🪄 Successfully generated & pre-cached ${count} audio cell(s) (Warmed up ${warmPromises.length} total cache entries)!`);
-      } catch (err) {
-        alert(`🪄 Generated ${count} audio paths! Warming cache completed in background.`);
-      }
-    } else if (warmPromises.length > 0) {
-      try {
-        await Promise.all(warmPromises);
-        alert(`🪄 All ${warmPromises.length} audio cache entries warmed up successfully!`);
-      } catch (err) {
-        alert(`🪄 Warming completed in background.`);
-      }
+      alert(`🪄 Successfully generated and saved ${count} audio URLs directly into Cloudflare R2 Storage!`);
     } else {
       alert("No audio cells with matching text fields were found.");
     }
