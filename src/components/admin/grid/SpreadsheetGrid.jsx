@@ -18,8 +18,30 @@ export default function SpreadsheetGrid({
   activeRowIndex,
   setActiveRowIndex,
   onAutoTTS,
-  warmingTts
+  warmingTts,
+  canUndo,
+  canRedo,
+  undo,
+  redo,
+  selectedVoice = 'Puck',
+  setSelectedVoice
 }) {
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          if (canRedo && redo) redo();
+        } else {
+          if (canUndo && undo) undo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        if (canRedo && redo) redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, undo, redo]);
+
   const handleAddColumn = () => {
     const name = prompt("Enter new column header name:");
     if (name && name.trim()) {
@@ -52,10 +74,47 @@ export default function SpreadsheetGrid({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h3 className="grid-card-title" style={{ margin: 0 }}>📊 Step 1: Spreadsheet Data Grid</h3>
-          <p className="grid-card-desc" style={{ margin: '2px 0 0 0' }}>Add rows, columns, and edit values directly. Click row level badge to change difficulty.</p>
+          <p className="grid-card-desc" style={{ margin: '2px 0 0 0' }}>Add rows, columns, and edit values directly. Press Ctrl+Z to Undo, Ctrl+Y to Redo.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Undo / Redo Buttons */}
+          <div style={{ display: 'flex', gap: '4px', marginRight: '6px' }}>
+            <button
+              type="button"
+              disabled={!canUndo}
+              onClick={undo}
+              title="Undo (Ctrl+Z)"
+              style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: 700, cursor: canUndo ? 'pointer' : 'not-allowed', opacity: canUndo ? 1 : 0.4 }}
+            >
+              ↩️ Undo
+            </button>
+            <button
+              type="button"
+              disabled={!canRedo}
+              onClick={redo}
+              title="Redo (Ctrl+Y)"
+              style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: 700, cursor: canRedo ? 'pointer' : 'not-allowed', opacity: canRedo ? 1 : 0.4 }}
+            >
+              ↪️ Redo
+            </button>
+          </div>
+
+          {/* Voice Selector */}
+          {setSelectedVoice && (
+            <select
+              value={selectedVoice}
+              onChange={(e) => setSelectedVoice(e.target.value)}
+              style={{ background: '#0f172a', color: '#38bdf8', border: '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: 800 }}
+            >
+              <option value="Puck">🗣️ Voice: Puck (Child)</option>
+              <option value="Fenrir">🗣️ Voice: Fenrir (Deep Male)</option>
+              <option value="Kore">🗣️ Voice: Kore (Female)</option>
+              <option value="Aoede">🗣️ Voice: Aoede (Soft Female)</option>
+              <option value="Charon">🗣️ Voice: Charon (Authoritative)</option>
+            </select>
+          )}
+
           <button
             type="button"
             onClick={onAutoTTS}

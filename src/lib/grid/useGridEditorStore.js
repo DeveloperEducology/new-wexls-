@@ -71,11 +71,47 @@ export function useGridEditorStore() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [pushingToGoogleSheet, setPushingToGoogleSheet] = useState(false);
 
+  // Multi-Voice state
+  const [selectedVoice, setSelectedVoice] = useState('Puck');
+
+  // History Undo/Redo state
+  const [history, setHistory] = useState([{ columns: DEFAULT_COLUMNS, rows: DEFAULT_ROWS }]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const pushHistory = useCallback((newCols, newRows) => {
+    setHistory(prev => {
+      const sliced = prev.slice(0, historyIndex + 1);
+      return [...sliced, { columns: newCols, rows: newRows }];
+    });
+    setHistoryIndex(prev => prev + 1);
+  }, [historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const targetIdx = historyIndex - 1;
+      const snapshot = history[targetIdx];
+      setColumns(snapshot.columns);
+      setRows(snapshot.rows);
+      setHistoryIndex(targetIdx);
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const targetIdx = historyIndex + 1;
+      const snapshot = history[targetIdx];
+      setColumns(snapshot.columns);
+      setRows(snapshot.rows);
+      setHistoryIndex(targetIdx);
+    }
+  }, [history, historyIndex]);
+
   const setGridData = useCallback((newColumns, newRows) => {
     setColumns(newColumns);
     setRows(newRows);
     setActiveRowIndex(0);
-  }, []);
+    pushHistory(newColumns, newRows);
+  }, [pushHistory]);
 
   return {
     // Metadata
@@ -95,6 +131,16 @@ export function useGridEditorStore() {
     rows, setRows,
     activeRowIndex, setActiveRowIndex,
     setGridData,
+    pushHistory,
+
+    // Undo / Redo
+    canUndo: historyIndex > 0,
+    canRedo: historyIndex < history.length - 1,
+    undo,
+    redo,
+
+    // Multi-Voice
+    selectedVoice, setSelectedVoice,
 
     // Prompt & Parts
     blueprint, setBlueprint,

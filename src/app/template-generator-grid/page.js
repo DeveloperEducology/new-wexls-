@@ -4,8 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import GridHeaderBar from '@/components/admin/grid/GridHeaderBar';
+import SpreadsheetGrid from '@/components/admin/grid/SpreadsheetGrid';
+import OptionBindingEditor from '@/components/admin/grid/OptionBindingEditor';
+import LiveRowSimulator from '@/components/admin/grid/LiveRowSimulator';
 import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
+import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
 
 const DEFAULT_COLUMNS = ['number_to_factor', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'];
 
