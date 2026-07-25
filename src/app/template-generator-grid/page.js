@@ -2587,16 +2587,96 @@ export default function SpreadsheetTemplateCreator() {
     setPublishing(true);
     setPublishError(null);
     setPublishStatus(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     try {
-      const parsed = JSON.parse(jsonText);
+      let parsed = null;
+
+      // 1. Try parsing current jsonText
+      if (jsonText && jsonText.trim()) {
+        try {
+          parsed = JSON.parse(jsonText);
+        } catch (e) {
+          console.warn('jsonText parse failed in handlePublish:', e);
+        }
+      }
+
+      // 2. Fallback to rawLoadedJson if available
+      if (!parsed && rawLoadedJson) {
+        parsed = rawLoadedJson;
+      }
+
+      // 3. Fallback to building JSON directly from current state
+      if (!parsed) {
+        const cleanBlueprint = (blueprint || '').trim();
+        const cleanSolution = (solution || '').trim();
+
+        const correctOptions = optionsBinding.filter(o => o.isCorrect);
+        const correctOpt = correctOptions[0];
+
+        const optionsList = optionsBinding.map(opt => ({
+          label: `[${opt.column}]`,
+          ...(opt.imageCol ? { image: `[${opt.imageCol}]` } : {}),
+          ...(opt.audioCol ? { audio: `[${opt.audioCol}]` } : {}),
+          misconception: opt.misconception || ''
+        }));
+
+        const parallelVariables = {};
+        columns.forEach(col => {
+          parallelVariables[col] = rows.map(r => {
+            const cell = String(r[col] || '').trim();
+            return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
+          });
+        });
+
+        const templateId = loadedTemplateId || (customTemplateId && customTemplateId.trim() ? customTemplateId.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-') : (title ? title.toLowerCase().replace(/[^a-z0-9-_]+/g, '-') : 'custom-grid-template'));
+
+        parsed = {
+          id: templateId,
+          title: title || 'Custom Grid Template',
+          subject: subject,
+          topic: topic,
+          grade: grade,
+          generatorType: 'spreadsheet-grid',
+          optionsType: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
+          type: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
+          interaction: {
+            engine: isSentenceOrdering ? 'sentence_ordering' : (isCategorizationV2 ? questionMode : (isTapToFill ? 'tap_to_fill' : (isMSQ ? 'msq' : 'mcq'))),
+            inputMode: isSentenceOrdering ? 'ordering' : (isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')))
+          },
+          questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
+          explanation: {
+            sections: [{
+              type: 'text',
+              content: cleanSolution.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]')
+            }]
+          },
+          options: optionsList,
+          validationRules: isMSQ
+            ? [{ type: 'all_correct', target: 'answer', values: correctOptions.map(o => `[${o.column}]`) }]
+            : [{ type: 'exact_match', target: 'answer', value: correctOpt ? `[${correctOpt.column}]` : '' }],
+          variables: Object.entries(parallelVariables).map(([name, items]) => ({
+            name,
+            type: 'pool_selection',
+            items
+          }))
+        };
+      }
+
+      if (!parsed || !parsed.id) {
+        throw new Error('Template ID is missing. Please set a Title or Template ID first.');
+      }
+
       const templateId = parsed.id || parsed._id;
 
-      // Duplicate ID validation warning
+      // Duplicate ID validation warning (non-blocking for loaded template)
       const isDuplicate = existingTemplates.some(t => t.id === templateId || t._id === templateId);
       if (isDuplicate && templateId !== loadedTemplateId) {
-        const proceed = window.confirm(`⚠️ WARNING: A template with ID "${templateId}" already exists. Publishing will overwrite the existing template in the database. Do you want to proceed?`);
+        const proceed = window.confirm(`⚠️ WARNING: A template with ID "${templateId}" already exists. Overwrite?`);
         if (!proceed) {
           setPublishing(false);
+          clearTimeout(timeoutId);
           return;
         }
       }
@@ -2605,49 +2685,67 @@ export default function SpreadsheetTemplateCreator() {
         template: parsed,
         linkToQuestionId: linkToQuestionId
       };
+
       const res = await fetch('/api/admin/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (data.success) {
         setPublishStatus({ id: parsed.id || data.id, mode: 'saved' });
-        // Refresh the local templates list automatically on publish success
         fetchExistingTemplates();
+        alert(`✅ Template "${parsed.id || data.id}" published live successfully!`);
       } else {
         setPublishError(data.error || 'Failed to save template to database.');
       }
     } catch (err) {
-      setPublishError(err.message || 'API call failed.');
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        setPublishError('⏳ Request timed out. Please verify database connection and retry.');
+      } else {
+        setPublishError(err.message || 'API call failed.');
+      }
     } finally {
       setPublishing(false);
     }
   };
 
   // Publish the raw loaded JSON directly — bypasses the grid compiler entirely.
-  // Use this when the template uses [bracket] placeholders or a custom variables structure.
   const handlePublishRaw = async () => {
     if (!rawLoadedJson) return;
     setPublishingRaw(true);
     setPublishError(null);
     setPublishStatus(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     try {
       const payload = { template: rawLoadedJson, linkToQuestionId };
       const res = await fetch('/api/admin/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (data.success) {
         setPublishStatus({ id: rawLoadedJson.id || data.id || 'saved', mode: 'raw' });
         setSaveRowsStatus({ ok: true, msg: `✅ Raw JSON saved → "${rawLoadedJson.id || 'template'}"` });
+        alert(`✅ Raw Template "${rawLoadedJson.id}" published live successfully!`);
       } else {
         setPublishError(data.error || 'Failed to save raw template.');
       }
     } catch (err) {
-      setPublishError(err.message || 'API call failed.');
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        setPublishError('⏳ Save raw template timed out. Retry.');
+      } else {
+        setPublishError(err.message || 'API call failed.');
+      }
     } finally {
       setPublishingRaw(false);
     }
