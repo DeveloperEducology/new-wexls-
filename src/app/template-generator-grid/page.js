@@ -10,6 +10,7 @@ import OptionBindingEditor from '@/components/admin/grid/OptionBindingEditor';
 import LiveRowSimulator from '@/components/admin/grid/LiveRowSimulator';
 import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
+import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
 
 const DEFAULT_COLUMNS = ['number_to_factor', 'Result', 'Distractor1', 'Distractor2', 'Distractor3'];
@@ -1375,49 +1376,31 @@ export default function SpreadsheetTemplateCreator() {
         const text = event.target?.result;
         if (typeof text !== 'string') return;
 
-        const parsedLines = parseCSVText(text);
-        if (parsedLines.length < 2) {
-          alert('⚠️ CSV file must contain at least 1 header row and 1 data row.');
+        const { columns: parsedCols, rows: parsedRows } = parseCsvText(text);
+        if (!parsedCols || parsedCols.length === 0 || !parsedRows || parsedRows.length === 0) {
+          alert('⚠️ CSV file must contain valid headers and at least 1 row of data.');
           return;
         }
 
-        const headerRow = parsedLines[0].map(h => h.trim().replace(/[^a-zA-Z0-9_]+/g, '_'));
-        const validCols = headerRow.filter(h => h.length > 0);
-
-        if (validCols.length === 0) {
-          alert('⚠️ No valid column headers found in CSV.');
-          return;
-        }
-
-        const dataRows = parsedLines.slice(1).map(line => {
-          const rowObj = {};
-          validCols.forEach((col, idx) => {
-            rowObj[col] = line[idx] !== undefined ? line[idx] : '';
-          });
-          return rowObj;
-        });
-
-        setColumns(validCols);
-        setRows(dataRows);
+        setColumns(parsedCols);
+        setRows(parsedRows);
         setActiveRowIndex(0);
 
-        const resCol = validCols.find(c => c.toLowerCase().includes('result') || c.toLowerCase().includes('correct') || c.toLowerCase().includes('opt1'));
-        const disCols = validCols.filter(c => c !== resCol && (c.toLowerCase().includes('distractor') || c.toLowerCase().includes('opt')));
+        const resCol = parsedCols.find(c => c.toLowerCase().includes('result') || c.toLowerCase().includes('correct') || c.toLowerCase().includes('answer'));
+        const disCols = parsedCols.filter(c => c !== resCol && (c.toLowerCase().includes('distractor') || c.toLowerCase().includes('opt') || c.toLowerCase().includes('wrong')));
 
         if (resCol) {
-          const newBindings = [{ column: resCol, isCorrect: true }];
-          disCols.forEach(c => newBindings.push({ column: c, isCorrect: false }));
+          const newBindings = [{ column: resCol, isCorrect: true, misconception: '' }];
+          disCols.forEach(c => newBindings.push({ column: c, isCorrect: false, misconception: '' }));
           setOptionsBinding(newBindings);
         }
 
         const cleanTitle = file.name.replace(/\.csv$/i, '').replace(/[-_]+/g, ' ');
-        if (!title || title.includes('Template') || title.includes('Prime')) {
-          setTitle(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
-        }
+        setTitle(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
 
-        alert(`✅ Successfully imported ${dataRows.length} rows & ${validCols.length} columns from "${file.name}"!`);
+        alert(`✅ Successfully imported ${parsedRows.length} rows & ${parsedCols.length} columns from "${file.name}"!`);
       } catch (err) {
-        alert(`❌ CSV Parse Error: ${err.message}`);
+        alert(`❌ CSV Import Error: ${err.message}`);
       }
     };
     reader.readAsText(file);
