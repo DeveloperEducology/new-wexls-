@@ -702,9 +702,13 @@ export default function SpreadsheetTemplateCreator() {
   const [imageIsTransparent, setImageIsTransparent] = useState(false);
   const [customPartsText, setCustomPartsText] = useState('');
 
-  // AI Generation state
+  // AI & Importer state
   const [showSidebar, setShowSidebar] = useState(true);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
+  const [googleSheetInput, setGoogleSheetInput] = useState('');
+  const [fetchingGoogleSheet, setFetchingGoogleSheet] = useState(false);
+  const [googleSheetError, setGoogleSheetError] = useState(null);
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
   const [aiSkillDesc, setAiSkillDesc] = useState('');
   const [aiQuestion, setAiQuestion] = useState('');
@@ -1376,6 +1380,67 @@ export default function SpreadsheetTemplateCreator() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleFetchGoogleSheet = async (e) => {
+    if (e) e.preventDefault();
+    if (!googleSheetInput.trim()) return;
+
+    setFetchingGoogleSheet(true);
+    setGoogleSheetError(null);
+
+    try {
+      const res = await fetch('/api/admin/fetch-google-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: googleSheetInput.trim() })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to fetch Google Sheet');
+      }
+
+      const parsedLines = parseCSVText(data.csvText);
+      if (parsedLines.length < 2) {
+        throw new Error('Google Sheet must contain at least 1 header row and 1 data row.');
+      }
+
+      const headerRow = parsedLines[0].map(h => h.trim().replace(/[^a-zA-Z0-9_]+/g, '_'));
+      const validCols = headerRow.filter(h => h.length > 0);
+
+      if (validCols.length === 0) {
+        throw new Error('No valid column headers found in Google Sheet.');
+      }
+
+      const dataRows = parsedLines.slice(1).map(line => {
+        const rowObj = {};
+        validCols.forEach((col, idx) => {
+          rowObj[col] = line[idx] !== undefined ? line[idx] : '';
+        });
+        return rowObj;
+      });
+
+      setColumns(validCols);
+      setRows(dataRows);
+      setActiveRowIndex(0);
+
+      const resCol = validCols.find(c => c.toLowerCase().includes('result') || c.toLowerCase().includes('correct') || c.toLowerCase().includes('opt1'));
+      const disCols = validCols.filter(c => c !== resCol && (c.toLowerCase().includes('distractor') || c.toLowerCase().includes('opt')));
+
+      if (resCol) {
+        const newBindings = [{ column: resCol, isCorrect: true }];
+        disCols.forEach(c => newBindings.push({ column: c, isCorrect: false }));
+        setOptionsBinding(newBindings);
+      }
+
+      setIsGoogleSheetModalOpen(false);
+      alert(`🎉 Successfully synced & loaded ${dataRows.length} rows & ${validCols.length} columns from Google Sheet!`);
+    } catch (err) {
+      setGoogleSheetError(err.message);
+    } finally {
+      setFetchingGoogleSheet(false);
+    }
   };
 
   // Shuffle Simulator
@@ -3117,6 +3182,23 @@ export default function SpreadsheetTemplateCreator() {
                 <button
                   type="button"
                   className="grid-btn-secondary"
+                  onClick={() => setIsGoogleSheetModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 800,
+                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)'
+                  }}
+                >
+                  📊 Sync Google Sheet
+                </button>
+                <button
+                  type="button"
+                  className="grid-btn-secondary"
                   onClick={handleExportCSV}
                   style={{
                     display: 'inline-flex',
@@ -4530,6 +4612,108 @@ cat,cat,https://.../cat.jpg,pen,https://.../pen.jpg,sun,https://.../sun.jpg`}
                 </pre>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Google Sheets Sync Modal */}
+      {isGoogleSheetModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '600px',
+            padding: '28px',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.8rem' }}>📊</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+                    Sync Direct from Google Sheets
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 700 }}>
+                    Instant Live 1-Click Import
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsGoogleSheetModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.5, marginBottom: '20px' }}>
+              Paste your <strong>Google Sheet Link or Sheet ID</strong>. Make sure your Google Sheet sharing is set to <strong>"Anyone with the link can view"</strong>.
+            </p>
+
+            <form onSubmit={handleFetchGoogleSheet} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="mc-dev-label" style={{ display: 'block', marginBottom: '6px' }}>
+                  Google Sheet Link / ID
+                </label>
+                <input
+                  className="grid-input"
+                  placeholder="e.g. https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit"
+                  value={googleSheetInput}
+                  onChange={(e) => setGoogleSheetInput(e.target.value)}
+                  style={{ fontSize: '0.88rem', padding: '12px' }}
+                  disabled={fetchingGoogleSheet}
+                />
+              </div>
+
+              {googleSheetError && (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  background: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  color: '#991b1b',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4
+                }}>
+                  ⚠️ {googleSheetError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsGoogleSheetModalOpen(false)}
+                  className="grid-btn-secondary"
+                  disabled={fetchingGoogleSheet}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="grid-btn-primary"
+                  disabled={fetchingGoogleSheet || !googleSheetInput.trim()}
+                  style={{
+                    background: fetchingGoogleSheet ? '#64748b' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    color: '#ffffff',
+                    padding: '10px 24px'
+                  }}
+                >
+                  {fetchingGoogleSheet ? '⏳ Syncing Google Sheet...' : '⚡ Sync & Load Table'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
