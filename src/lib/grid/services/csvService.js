@@ -4,8 +4,12 @@
 
 export function parseCsvText(csvText) {
   if (!csvText || !csvText.trim()) return { columns: [], rows: [] };
-  const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+  
+  const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length === 0) return { columns: [], rows: [] };
+
+  const firstLine = lines[0];
+  const delimiter = (firstLine.includes('\t') && !firstLine.includes(',')) ? '\t' : ',';
 
   const parseLine = (line) => {
     const result = [];
@@ -20,7 +24,7 @@ export function parseCsvText(csvText) {
         } else {
           inQuotes = !inQuotes;
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if ((char === delimiter || (delimiter === ',' && char === '\t')) && !inQuotes) {
         result.push(current.trim());
         current = '';
       } else {
@@ -31,16 +35,29 @@ export function parseCsvText(csvText) {
     return result;
   };
 
-  const headers = parseLine(lines[0]);
+  // Find actual header line
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 3); i++) {
+    const parsed = parseLine(lines[i]).filter(Boolean);
+    if (parsed.some(h => h.toLowerCase().includes('target') || h.toLowerCase().includes('result') || h.toLowerCase().includes('word'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const rawHeaders = parseLine(lines[headerIdx]);
+  const headers = rawHeaders.filter(h => h && h.trim() !== '');
   const rows = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseLine(lines[i]);
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    const values = parseLine(line);
+    if (values[0] === 'id' && values[1] && (values[1].includes('target') || values[1].includes('word'))) continue;
+
     const rowObj = { _level: 'l1' };
     headers.forEach((h, idx) => {
-      if (h) {
-        rowObj[h] = values[idx] !== undefined ? values[idx] : '';
-      }
+      rowObj[h] = values[idx] !== undefined ? values[idx] : '';
     });
     rows.push(rowObj);
   }
