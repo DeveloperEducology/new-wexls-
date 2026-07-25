@@ -703,7 +703,7 @@ export default function MCQRenderer({
     .map(part => (part.content || part.text || '').trim())
     .filter(Boolean)
     .join(' ');
-  const cleanString = (str) => String(str || '').replace(/\s+/g, ' ').trim();
+  const cleanString = (str) => String(str || '').replace(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '').replace(/\s+/g, ' ').trim();
   const hideHeader = question.questionText && (
     (isPreK && routeSearch.includes('theme=montessori')) ||
     cleanString(firstPartText) === cleanString(question.questionText) ||
