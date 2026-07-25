@@ -1553,9 +1553,31 @@ export default function SpreadsheetTemplateCreator() {
               searchWord = cleanWordStr(rawVal);
             }
             if (!searchWord) {
-              const wordCol = columns.find(c => ['target_word', 'word', 'text', 'target'].includes(c));
-              if (wordCol && row[wordCol]) {
-                searchWord = cleanWordStr(row[wordCol]);
+              // 1. Try to find column with matching prefix (e.g. distractor_image -> distractor_item or distractor_word)
+              const prefix = imgCol.toLowerCase().replace(/_*(image|img|pic)$/i, '');
+              if (prefix) {
+                const matchingCol = columns.find(c => {
+                  const lc = c.toLowerCase();
+                  return lc !== imgCol.toLowerCase() && (
+                    lc === prefix ||
+                    lc === `${prefix}_item` ||
+                    lc === `${prefix}_word` ||
+                    lc === `${prefix}_text` ||
+                    lc.startsWith(prefix)
+                  );
+                });
+
+                if (matchingCol && row[matchingCol]) {
+                  searchWord = cleanWordStr(row[matchingCol]);
+                }
+              }
+
+              // 2. Fallback to general word columns (correct_item, target_word, word, text, character_name)
+              if (!searchWord) {
+                const wordCol = columns.find(c => ['correct_item', 'target_word', 'word', 'text', 'target', 'character_name'].includes(c));
+                if (wordCol && row[wordCol]) {
+                  searchWord = cleanWordStr(row[wordCol]);
+                }
               }
             }
 
