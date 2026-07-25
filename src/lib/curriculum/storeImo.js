@@ -17,23 +17,27 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '');
 }
 
+const createdImoIndexes = new Set();
+
 export async function getImoCollection(type) {
   const db = await getMongoDb();
   if (!db) throw new Error('Database connection failed.');
   const collectionName = COLLECTION_MAP[type];
   if (!collectionName) throw new Error(`Unknown IMO curriculum type: ${type}`);
   const collection = db.collection(collectionName);
-
-  // Ensure indexes
-  await collection.createIndex({ id: 1 }, { unique: true });
-  if (type === 'unit') {
-    await collection.createIndex({ subjectId: 1 });
-  } else if (type === 'chapter') {
-    await collection.createIndex({ unitId: 1, gradeId: 1 });
-  } else if (type === 'skill') {
-    await collection.createIndex({ chapterId: 1 });
+  
+  if (!createdImoIndexes.has(type)) {
+    createdImoIndexes.add(type);
+    collection.createIndex({ id: 1 }, { unique: true }).catch(console.warn);
+    if (type === 'unit') {
+      collection.createIndex({ subjectId: 1 }).catch(console.warn);
+    } else if (type === 'chapter') {
+      collection.createIndex({ unitId: 1, gradeId: 1 }).catch(console.warn);
+    } else if (type === 'skill') {
+      collection.createIndex({ chapterId: 1 }).catch(console.warn);
+    }
   }
-
+  
   return collection;
 }
 

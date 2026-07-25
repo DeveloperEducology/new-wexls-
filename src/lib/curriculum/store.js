@@ -87,13 +87,18 @@ function normalizeNode(input = {}, existing = {}) {
   });
 }
 
+let isV1IndexCreated = false;
+
 async function getCollection() {
   const db = await getMongoDb();
   if (!db) throw new Error('Database connection failed. Set MONGODB_URI first.');
   const collection = db.collection(COLLECTION_NAME);
-  await collection.createIndex({ id: 1 }, { unique: true });
-  await collection.createIndex({ subjectId: 1, topicId: 1, chapterId: 1, type: 1 });
-  await collection.createIndex({ parentId: 1, order: 1 });
+  if (!isV1IndexCreated) {
+    isV1IndexCreated = true;
+    collection.createIndex({ id: 1 }, { unique: true }).catch(console.warn);
+    collection.createIndex({ subjectId: 1, topicId: 1, chapterId: 1, type: 1 }).catch(console.warn);
+    collection.createIndex({ parentId: 1, order: 1 }).catch(console.warn);
+  }
   return collection;
 }
 

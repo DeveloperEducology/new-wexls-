@@ -20,6 +20,8 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '');
 }
 
+const createdV2Indexes = new Set();
+
 export async function getV2Collection(type) {
   const db = await getMongoDb();
   if (!db) throw new Error('Database connection failed.');
@@ -27,14 +29,16 @@ export async function getV2Collection(type) {
   if (!collectionName) throw new Error(`Unknown v2 curriculum type: ${type}`);
   const collection = db.collection(collectionName);
   
-  // Ensure indexes
-  await collection.createIndex({ id: 1 }, { unique: true });
-  if (type === 'unit') {
-    await collection.createIndex({ subjectId: 1 });
-  } else if (type === 'chapter') {
-    await collection.createIndex({ unitId: 1, gradeId: 1 });
-  } else if (type === 'skill') {
-    await collection.createIndex({ chapterId: 1 });
+  if (!createdV2Indexes.has(type)) {
+    createdV2Indexes.add(type);
+    collection.createIndex({ id: 1 }, { unique: true }).catch(console.warn);
+    if (type === 'unit') {
+      collection.createIndex({ subjectId: 1 }).catch(console.warn);
+    } else if (type === 'chapter') {
+      collection.createIndex({ unitId: 1, gradeId: 1 }).catch(console.warn);
+    } else if (type === 'skill') {
+      collection.createIndex({ chapterId: 1 }).catch(console.warn);
+    }
   }
   
   return collection;
