@@ -103,6 +103,14 @@ export default function MascotGuide({ questionText, isCorrect, isAnswered, trigg
     }
   };
 
+  const displayQuestionText = useMemo(() => {
+    if (!questionText) return "Let's read this question.";
+    return String(questionText)
+      .replace(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
+      .replace(/\\n/g, '\n')
+      .trim();
+  }, [questionText]);
+
   return (
     <div className={styles.mascotGuideContainer}>
       <div style={{ position: 'relative' }}>
@@ -162,7 +170,7 @@ export default function MascotGuide({ questionText, isCorrect, isAnswered, trigg
             </button>
           </div>
           <div className={styles.mascotSpeechText} style={{ marginTop: 6 }}>
-            {questionText || "Let's read this question."}
+            {displayQuestionText}
           </div>
         </div>
       </div>

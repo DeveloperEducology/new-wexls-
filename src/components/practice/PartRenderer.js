@@ -394,6 +394,45 @@ function cleanSpeechText(value) {
 function TextPart({ part, question, userAnswer, onAnswer, isAnswered, showSpeaker, speakTextValue, partIndex }) {
   const content = part.content || part.text || '';
   if (!content.trim()) return null;
+
+  // Audio URL part rendering (e.g. /api/tts?voice=Puck&text=b)
+  const trimmedText = content.trim();
+  if (trimmedText.startsWith('/api/tts') || trimmedText.endsWith('.mp3') || trimmedText.endsWith('.wav')) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '14px 0', width: '100%' }}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            try {
+              speakText(trimmedText, question?.voice || 'Puck', trimmedText);
+            } catch (err) {
+              new Audio(trimmedText).play().catch(e => console.error(e));
+            }
+          }}
+          className="speech-btn-pulse"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '24px',
+            padding: '10px 22px',
+            fontSize: '1rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            boxShadow: '0 6px 18px rgba(2, 132, 199, 0.35)',
+            transition: 'transform 0.15s ease'
+          }}
+        >
+          🔊 Listen Sound
+        </button>
+      </div>
+    );
+  }
+
   const spokenRef = useRef(false);
   const shouldShowSpeaker = showSpeaker && part.showSpeaker !== false && !part.noSpeaker;
 
