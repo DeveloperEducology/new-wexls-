@@ -709,6 +709,7 @@ export default function SpreadsheetTemplateCreator() {
   const [googleSheetInput, setGoogleSheetInput] = useState('');
   const [fetchingGoogleSheet, setFetchingGoogleSheet] = useState(false);
   const [googleSheetError, setGoogleSheetError] = useState(null);
+  const [fetchingImages, setFetchingImages] = useState(false);
   const [aiMode, setAiMode] = useState('skill'); // 'skill' | 'question'
   const [aiSkillDesc, setAiSkillDesc] = useState('');
   const [aiQuestion, setAiQuestion] = useState('');
@@ -1440,6 +1441,144 @@ export default function SpreadsheetTemplateCreator() {
       setGoogleSheetError(err.message);
     } finally {
       setFetchingGoogleSheet(false);
+    }
+  };
+
+  // Bulk Auto-Fetch & Fill Images from R2 Gallery or DuckDuckGo Web Search
+  const handleAutoFetchImages = async () => {
+    setFetchingImages(true);
+    let filledCount = 0;
+
+    try {
+      // 1. Fetch R2 gallery images list
+      let galleryImages = [];
+      try {
+        const res = await fetch('/api/admin/list-images');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.images && Array.isArray(data.images)) {
+            galleryImages = data.images;
+          }
+        }
+      } catch (galleryErr) {
+        console.warn('Gallery list-images failed, fallback to DuckDuckGo:', galleryErr);
+      }
+
+      // Build gallery map by cleaned filename/key
+      const galleryMap = new Map();
+      galleryImages.forEach(img => {
+        const key = img.key || '';
+        const filename = key.split('/').pop().split('.')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
+        if (filename && !galleryMap.has(filename)) {
+          galleryMap.set(filename, img.url);
+        }
+      });
+
+      // Helper to clean word
+      const cleanWordStr = (str) => {
+        if (!str || typeof str !== 'string') return '';
+        let clean = str.replace(/\[Image:\s*([^\]]+)\]/i, '$1').replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').toLowerCase().trim();
+        return clean;
+      };
+
+      // Identify image columns
+      const imageCols = columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic'));
+      if (imageCols.length === 0) {
+        alert('⚠️ No image columns found in spreadsheet (e.g. target_image, Result_image).');
+        setFetchingImages(false);
+        return;
+      }
+
+      // Clone rows
+      const updatedRows = [...rows.map(r => ({ ...r }))];
+
+      for (let rIdx = 0; rIdx < updatedRows.length; rIdx++) {
+        const row = updatedRows[rIdx];
+
+        for (const imgCol of imageCols) {
+          const rawVal = String(row[imgCol] || '').trim();
+
+          // Needs auto-fill if empty, text prompt like [Image: X], or non-URL
+          const needsFetch = !rawVal || rawVal === '---' || rawVal.startsWith('[Image') || (!rawVal.startsWith('http://') && !rawVal.startsWith('https://'));
+
+          if (needsFetch) {
+            // Find target word to search
+            let searchWord = '';
+            if (rawVal.startsWith('[Image:')) {
+              searchWord = cleanWordStr(rawVal);
+            }
+            if (!searchWord) {
+              const wordCol = columns.find(c => ['target_word', 'word', 'text', 'target'].includes(c));
+              if (wordCol && row[wordCol]) {
+                searchWord = cleanWordStr(row[wordCol]);
+              }
+            }
+
+            if (!searchWord) continue;
+
+            // Step A: Check R2 Gallery first
+            const cleanKey = searchWord.replace(/[^a-z0-9]+/g, '');
+            if (galleryMap.has(cleanKey)) {
+              row[imgCol] = galleryMap.get(cleanKey);
+              filledCount++;
+              continue;
+            }
+
+            // Step B: DuckDuckGo Web Search Fallback
+            try {
+              const ddgRes = await fetch(`/api/admin/search-web-images?q=${encodeURIComponent(searchWord)}`);
+              if (ddgRes.ok) {
+                const ddgData = await ddgRes.json();
+                const results = ddgData.results || ddgData.images || [];
+
+                if (results.length > 0) {
+                  const bestMatch = results[0];
+                  const rawWebUrl = bestMatch.image || bestMatch.thumbnail;
+
+                  if (rawWebUrl) {
+                    // Step C: Save remote web image to R2 storage for permanent reliability
+                    try {
+                      const saveRes = await fetch('/api/admin/fetch-url-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: rawWebUrl, folder: 'images/lkg', customName: searchWord })
+                      });
+                      if (saveRes.ok) {
+                        const saveData = await saveRes.json();
+                        if (saveData.r2Url) {
+                          row[imgCol] = saveData.r2Url;
+                          filledCount++;
+                          continue;
+                        }
+                      }
+                    } catch (saveErr) {
+                      console.warn('Failed to save to R2, using direct web URL:', saveErr);
+                    }
+
+                    // Direct Web URL fallback
+                    row[imgCol] = rawWebUrl;
+                    filledCount++;
+                  }
+                }
+              }
+            } catch (ddgErr) {
+              console.warn(`DuckDuckGo image search failed for "${searchWord}":`, ddgErr);
+            }
+          }
+        }
+      }
+
+      setRows(updatedRows);
+
+      if (filledCount > 0) {
+        alert(`🖼️ Done! Auto-fetched & filled ${filledCount} image(s) from Gallery & DuckDuckGo!`);
+      } else {
+        alert('ℹ️ All image cells are already filled with valid URLs!');
+      }
+    } catch (err) {
+      alert(`⚠️ Auto-Fetch Images error: ${err.message}`);
+    } finally {
+      setFetchingImages(false);
     }
   };
 
@@ -3456,6 +3595,14 @@ export default function SpreadsheetTemplateCreator() {
                 disabled={warmingTts}
               >
                 {warmingTts ? '⏳ Generating TTS...' : '🪄 Auto-Generate & Warm TTS Audios'}
+              </button>
+              <button
+                className="grid-btn-secondary"
+                style={{ background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', color: '#fff', border: 'none', fontWeight: 800 }}
+                onClick={handleAutoFetchImages}
+                disabled={fetchingImages}
+              >
+                {fetchingImages ? '⏳ Auto-Fetching Images...' : '🖼️ Auto-Fetch Images (Gallery & DDG)'}
               </button>
               <button
                 className="grid-btn-secondary"
