@@ -1,0 +1,189 @@
+'use client';
+
+import React from 'react';
+
+const LEVEL_CONFIG = {
+  l1: { label: 'L1', long: 'Easy',      emoji: '🟢', color: '#10b981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.25)', pill: '#064e3b' },
+  l2: { label: 'L2', long: 'Medium',    emoji: '🟠', color: '#f59e0b', bg: 'rgba(245,158,11,0.07)',  border: 'rgba(245,158,11,0.25)',  pill: '#78350f' },
+  l3: { label: 'L3', long: 'Hard',      emoji: '🔴', color: '#ef4444', bg: 'rgba(239,68,68,0.07)',   border: 'rgba(239,68,68,0.25)',   pill: '#7f1d1d' },
+  l4: { label: 'L4', long: 'Challenge', emoji: '🔥', color: '#8b5cf6', bg: 'rgba(139,92,246,0.07)', border: 'rgba(139,92,246,0.25)', pill: '#4c1d95' },
+};
+const LEVEL_CYCLE = ['l1', 'l2', 'l3', 'l4'];
+
+export default function SpreadsheetGrid({
+  columns,
+  setColumns,
+  rows,
+  setRows,
+  activeRowIndex,
+  setActiveRowIndex,
+  onAutoTTS,
+  warmingTts
+}) {
+  const handleAddColumn = () => {
+    const name = prompt("Enter new column header name:");
+    if (name && name.trim()) {
+      const cleanName = name.trim();
+      if (!columns.includes(cleanName)) {
+        setColumns([...columns, cleanName]);
+        setRows(rows.map(r => ({ ...r, [cleanName]: '' })));
+      }
+    }
+  };
+
+  const handleAddRow = () => {
+    const lastLevel = rows.length > 0 ? (rows[rows.length - 1]._level || 'l1') : 'l1';
+    const newRow = { _level: lastLevel };
+    columns.forEach(c => { newRow[c] = ''; });
+    setRows([...rows, newRow]);
+    setActiveRowIndex(rows.length);
+  };
+
+  const handleLevelCycle = (rIdx) => {
+    const copy = [...rows];
+    const curr = copy[rIdx]._level || 'l1';
+    const nextIdx = (LEVEL_CYCLE.indexOf(curr) + 1) % LEVEL_CYCLE.length;
+    copy[rIdx] = { ...copy[rIdx], _level: LEVEL_CYCLE[nextIdx] };
+    setRows(copy);
+  };
+
+  return (
+    <div className="grid-card">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <h3 className="grid-card-title" style={{ margin: 0 }}>📊 Step 1: Spreadsheet Data Grid</h3>
+          <p className="grid-card-desc" style={{ margin: '2px 0 0 0' }}>Add rows, columns, and edit values directly. Click row level badge to change difficulty.</p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={onAutoTTS}
+            disabled={warmingTts}
+            style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            {warmingTts ? '⏳ Resolving R2 Audios...' : '🪄 Auto-Generate & Warm TTS Audios'}
+          </button>
+          <button
+            type="button"
+            onClick={handleAddColumn}
+            style={{ background: '#334155', color: '#f8fafc', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            ➕ Add Column
+          </button>
+          <button
+            type="button"
+            onClick={handleAddRow}
+            style={{ background: '#10b981', color: '#0f172a', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            ➕ Add Row
+          </button>
+        </div>
+      </div>
+
+      {/* Spreadsheet Table */}
+      <div style={{ overflowX: 'auto', border: '1px solid #334155', borderRadius: '10px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <thead>
+            <tr style={{ background: '#0f172a', borderBottom: '1px solid #334155' }}>
+              <th style={{ padding: '10px', width: '50px', textAlign: 'center', color: '#94a3b8' }}>#</th>
+              <th style={{ padding: '10px', width: '70px', textAlign: 'center', color: '#94a3b8' }}>Level</th>
+              {columns.map(col => (
+                <th key={col} style={{ padding: '10px 12px', textAlign: 'left', color: '#f8fafc', fontWeight: 700 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                    <span>{col}</span>
+                    {columns.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Delete column "${col}"?`)) {
+                            setColumns(columns.filter(c => c !== col));
+                            setRows(rows.map(r => {
+                              const copy = { ...r };
+                              delete copy[col];
+                              return copy;
+                            }));
+                          }
+                        }}
+                        style={{ background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '11px' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </th>
+              ))}
+              <th style={{ padding: '10px', width: '40px' }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rIdx) => {
+              const lvl = LEVEL_CONFIG[row._level || 'l1'] || LEVEL_CONFIG.l1;
+              const isActive = rIdx === activeRowIndex;
+              return (
+                <tr
+                  key={rIdx}
+                  onClick={() => setActiveRowIndex(rIdx)}
+                  style={{
+                    background: isActive ? 'rgba(56, 189, 248, 0.08)' : (rIdx % 2 === 0 ? '#1e293b' : '#0f172a'),
+                    borderBottom: '1px solid #1e293b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <td style={{ padding: '8px', textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>
+                    {rIdx + 1}
+                  </td>
+                  <td style={{ padding: '8px', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLevelCycle(rIdx);
+                      }}
+                      title="Click to cycle difficulty level"
+                      style={{ background: lvl.pill, color: '#fff', border: `1px solid ${lvl.border}`, borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      {lvl.emoji} {lvl.label}
+                    </button>
+                  </td>
+                  {columns.map(col => (
+                    <td key={col} style={{ padding: '6px 10px' }}>
+                      <input
+                        type="text"
+                        value={row[col] !== undefined ? String(row[col]) : ''}
+                        onChange={(e) => {
+                          const copy = [...rows];
+                          copy[rIdx] = { ...copy[rIdx], [col]: e.target.value };
+                          setRows(copy);
+                        }}
+                        style={{ width: '100%', background: 'transparent', border: '1px solid transparent', color: '#f8fafc', fontSize: '12px', padding: '4px 6px', borderRadius: '4px' }}
+                      />
+                    </td>
+                  ))}
+                  <td style={{ padding: '8px', textAlign: 'center' }}>
+                    {rows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete row ${rIdx + 1}?`)) {
+                            const copy = rows.filter((_, i) => i !== rIdx);
+                            setRows(copy);
+                            setActiveRowIndex(Math.max(0, activeRowIndex - 1));
+                          }
+                        }}
+                        style={{ background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
