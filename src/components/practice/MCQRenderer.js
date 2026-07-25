@@ -136,6 +136,49 @@ function InlineMarkdown({ text, userAnswerLabel, userAnswerLabels }) {
           }
         }
         
+        if (segment.includes('/api/tts') || segment.includes('.mp3') || segment.includes('.wav')) {
+          const audioUrlMatch = segment.match(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/i);
+          if (audioUrlMatch) {
+            const audioUrl = audioUrlMatch[0];
+            const parts = segment.split(audioUrl);
+            return (
+              <span key={`${keyPrefix}-${subIndex}-${segIdx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', verticalAlign: 'middle', margin: '4px 0' }}>
+                {parts[0] && <span>{parseHTMLToJSX(parts[0].replace(/^#{1,4}\s*/, ''))}</span>}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    try {
+                      speakText(audioUrl, 'Puck', audioUrl);
+                    } catch (err) {
+                      new Audio(audioUrl).play().catch(e => console.error(e));
+                    }
+                  }}
+                  className="speech-btn-pulse"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '6px 14px',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                    transition: 'transform 0.15s ease'
+                  }}
+                >
+                  🔊 Listen Sound
+                </button>
+                {parts[1] && <span>{parseHTMLToJSX(parts[1].replace(/^#{1,4}\s*/, ''))}</span>}
+              </span>
+            );
+          }
+        }
+        
         if (segment.includes('<svg')) {
           const svgParts = segment.split(/(<svg[\s\S]*?<\/svg>)/g);
           return (
