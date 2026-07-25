@@ -1748,7 +1748,7 @@ export default function SpreadsheetTemplateCreator() {
   const getEvaluatedText = (templateText) => {
     if (!templateText) return '';
     const currentRow = rows[activeRowIndex] || {};
-    let result = templateText;
+    let result = String(templateText).replace(/\\n/g, '\n').replace(/\/n/g, '\n');
 
     columns.forEach(col => {
       const val = currentRow[col] !== undefined ? String(currentRow[col]) : '';
@@ -1854,8 +1854,9 @@ export default function SpreadsheetTemplateCreator() {
 
   const renderMathText = (text) => {
     if (!text) return '';
+    const cleanedText = String(text).replace(/\\n/g, '\n').replace(/\/n/g, '\n');
     const regex = /(\\\[[\s\S]*?\\\]|\\\(.*?\\\)|\\\$[^$]*?\\\$|\$[^\$]+\$)/g;
-    const parts = String(text).split(regex);
+    const parts = cleanedText.split(regex);
 
     return parts.map((part, index) => {
       if (part.startsWith('\\[') && part.endsWith('\\]')) {
