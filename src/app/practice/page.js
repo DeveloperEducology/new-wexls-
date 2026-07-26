@@ -584,6 +584,20 @@ const SOURCE_CONFIGS = {
       { label: 'Responsive Layouts', text: 'Sentence, pronoun, and noun options adapt.' },
     ],
   },
+  'ukg-english-reading': {
+    label: 'UKG English Reading',
+    api: '/api/practice',
+    badge: 'ENG',
+    description: 'UKG English phonics, letter-sound associations, and reading foundations.',
+    defaultLogicType: 'ukg-eng-let-sound-start-letter',
+    subject: 'english',
+    topic: 'ukg-english-reading-foundations',
+    options: [], // populated dynamically from DB curriculum
+    tips: [
+      { label: 'Phonics-first', text: 'Questions use images and audio to teach letter-sound associations.' },
+      { label: 'UKG level', text: 'Covers letter recognition, beginning sounds, ending sounds, and word-picture matching.' },
+    ],
+  },
   testing: {
     label: 'Testing Practice',
     api: '/api/practice',
@@ -725,6 +739,7 @@ function sourceFromSubjectTopic(subject, topic, fallback) {
   if (subject === 'science' && normTopic === 'solar-system') return 'solar-system';
   if (subject === 'english' && normTopic === 'grammar') return 'english-grammar';
   if (subject === 'english' && (normTopic === 'lkg' || normTopic === 'english-lkg')) return 'english-lkg';
+  if (subject === 'english' && normTopic === 'ukg-english-reading-foundations') return 'ukg-english-reading';
   return topic; // return the topic ID for db fetched topics
 }
 
@@ -1890,6 +1905,7 @@ function PracticePageContent() {
             else if (tTopic === 'subtraction') targetKey = 'subtraction';
             else if (tTopic === 'division') targetKey = 'division';
             else if (tTopic === 'probability') targetKey = 'probability';
+            else if (tTopic === 'ukg-english-reading-foundations' || t.subject === 'english') targetKey = 'ukg-english-reading';
             
             if (targetKey) {
               if (!loadedConfigs[targetKey]) {
@@ -1897,7 +1913,10 @@ function PracticePageContent() {
                   api: '/api/practice',
                   subject: t.subject || 'math',
                   topic: tTopic,
-                  options: []
+                  options: [],
+                  tips: [
+                    { label: 'Dynamic Generator', text: 'Questions generated in real-time from custom templates.' }
+                  ]
                 };
               }
               if (!loadedConfigs[targetKey].options) {
@@ -3568,7 +3587,7 @@ function PracticePageContent() {
             Architecture
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {sourceConfig.tips.map((item) => (
+            {(sourceConfig.tips || []).map((item) => (
               <div key={item.label} style={{ background: '#ffffff', padding: 12, borderRadius: 12, color: '#155e75' }}>
                 <div style={{ fontSize: 12, fontWeight: 900 }}>{item.label}</div>
                 <div style={{ fontSize: 12, fontWeight: 650, lineHeight: 1.45 }}>{item.text}</div>

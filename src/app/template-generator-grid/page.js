@@ -24,6 +24,27 @@ const LEVEL_CONFIG = {
 };
 const LEVEL_CYCLE = ['l1', 'l2', 'l3', 'l4'];
 
+function extractArrayFromFormula(formulaStr) {
+  if (!formulaStr || typeof formulaStr !== 'string') return null;
+  const trimmed = formulaStr.trim();
+  const suffix = '[index]';
+  if (trimmed.endsWith(suffix)) {
+    const rawArray = trimmed.slice(0, -suffix.length).trim();
+    if (rawArray.startsWith('[') && rawArray.endsWith(']')) {
+      try {
+        return JSON.parse(rawArray);
+      } catch (e) {
+        try {
+          return new Function(`return ${rawArray}`)();
+        } catch (e2) {
+          console.warn('extractArrayFromFormula parse error:', e2);
+        }
+      }
+    }
+  }
+  return null;
+}
+
 const DEFAULT_ROWS = [
   {
     _level: 'l1',
@@ -708,6 +729,7 @@ export default function SpreadsheetTemplateCreator() {
 
   const [imageHasAudio, setImageHasAudio] = useState(false);
   const [imageIsTransparent, setImageIsTransparent] = useState(false);
+  const [includeQuestionImage, setIncludeQuestionImage] = useState(false);
   const [customPartsText, setCustomPartsText] = useState('');
   const [isPartsRawJsonMode, setIsPartsRawJsonMode] = useState(false);
 
@@ -1608,7 +1630,14 @@ export default function SpreadsheetTemplateCreator() {
       // Helper to clean word
       const cleanWordStr = (str) => {
         if (!str || typeof str !== 'string') return '';
-        let clean = str.replace(/\[Image:\s*([^\]]+)\]/i, '$1').replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').toLowerCase().trim();
+        let clean = str
+          .replace(/^placeholder_/i, '')
+          .replace(/_img$/i, '')
+          .replace(/_image$/i, '')
+          .replace(/\[Image:\s*([^\]]+)\]/i, '$1')
+          .replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '')
+          .toLowerCase()
+          .trim();
         return clean;
       };
 
@@ -1635,35 +1664,46 @@ export default function SpreadsheetTemplateCreator() {
           if (needsFetch) {
             // Find target word to search
             let searchWord = '';
-            if (rawVal.startsWith('[Image:')) {
+            // 0. If cell contains placeholder text like placeholder_apple_img or [Image: apple]
+            if (rawVal && (rawVal.startsWith('[Image') || rawVal.startsWith('placeholder'))) {
               searchWord = cleanWordStr(rawVal);
             }
+
+            // 1. Swap image/img/pic in imgCol with word/item/text (e.g. correct_image_1 -> correct_word_1)
             if (!searchWord) {
-              // 1. Try to find column with matching prefix (e.g. distractor_image -> distractor_item or distractor_word)
-              const prefix = imgCol.toLowerCase().replace(/_*(image|img|pic)$/i, '');
-              if (prefix) {
-                const matchingCol = columns.find(c => {
-                  const lc = c.toLowerCase();
-                  return lc !== imgCol.toLowerCase() && (
-                    lc === prefix ||
-                    lc === `${prefix}_item` ||
-                    lc === `${prefix}_word` ||
-                    lc === `${prefix}_text` ||
-                    lc.startsWith(prefix)
-                  );
-                });
-
-                if (matchingCol && row[matchingCol]) {
-                  searchWord = cleanWordStr(row[matchingCol]);
-                }
+              const swappedWordCol = columns.find(c => {
+                const lc = c.toLowerCase();
+                const colBase = imgCol.toLowerCase();
+                const swappedWord = colBase.replace(/image|img|pic/gi, 'word');
+                const swappedItem = colBase.replace(/image|img|pic/gi, 'item');
+                const swappedText = colBase.replace(/image|img|pic/gi, 'text');
+                return lc !== colBase && (lc === swappedWord || lc === swappedItem || lc === swappedText);
+              });
+              if (swappedWordCol && row[swappedWordCol]) {
+                searchWord = cleanWordStr(row[swappedWordCol]);
               }
+            }
 
-              // 2. Fallback to general word columns (correct_item, target_word, word, text, character_name)
-              if (!searchWord) {
-                const wordCol = columns.find(c => ['correct_item', 'target_word', 'word', 'text', 'target', 'character_name'].includes(c));
-                if (wordCol && row[wordCol]) {
-                  searchWord = cleanWordStr(row[wordCol]);
-                }
+            // 2. Prefix matching fallback
+            if (!searchWord) {
+              const numMatch = imgCol.match(/\d+/);
+              const numStr = numMatch ? numMatch[0] : '';
+              const matchingCol = columns.find(c => {
+                const lc = c.toLowerCase();
+                if (lc === imgCol.toLowerCase()) return false;
+                if (numStr && !lc.includes(numStr)) return false;
+                return lc.includes('word') || lc.includes('item') || lc.includes('text');
+              });
+              if (matchingCol && row[matchingCol]) {
+                searchWord = cleanWordStr(row[matchingCol]);
+              }
+            }
+
+            // 3. Fallback to general word columns
+            if (!searchWord) {
+              const wordCol = columns.find(c => ['correct_item', 'target_word', 'word', 'text', 'target', 'character_name'].includes(c));
+              if (wordCol && row[wordCol]) {
+                searchWord = cleanWordStr(row[wordCol]);
               }
             }
 
@@ -1777,6 +1817,10 @@ export default function SpreadsheetTemplateCreator() {
       }
     }
 
+    if (!includeQuestionImage) {
+      partsSource = partsSource.filter(p => p?.type !== 'image');
+    }
+
     if (partsSource.length === 0) {
       if (rawLoadedJson?.parts && !imageCol) {
         partsSource.push(...rawLoadedJson.parts);
@@ -1799,7 +1843,7 @@ export default function SpreadsheetTemplateCreator() {
         }
 
         // 3. Image
-        if (imageCol) {
+        if (imageCol && includeQuestionImage) {
           const imgPart = {
             type: 'image',
             content: `[${imageCol}]`,
@@ -2107,7 +2151,7 @@ export default function SpreadsheetTemplateCreator() {
         { name: 'index_l4', type: 'array', values: indexL4.length > 0 ? indexL4 : indicesPool },
       ];
 
-      dataColumns.forEach(col => {
+      dataColumns.filter(c => c !== 'questionLevel').forEach(col => {
         compiledVariables.push({
           name: col,
           type: 'expression',
@@ -2151,13 +2195,24 @@ export default function SpreadsheetTemplateCreator() {
           if (!Array.isArray(compiledParts)) {
             compiledParts = [];
           }
+          if (!includeQuestionImage) {
+            compiledParts = compiledParts.filter(p => p?.type !== 'image');
+          }
         } catch (e) {
           console.warn('Custom parts JSON parse failed:', e);
         }
       }
 
-      if (compiledParts.length === 0 && imageCol) {
-        // 1. Audio part (if not attached to image)
+      if (compiledParts.length === 0) {
+        // 1. Main Question Instruction Text FIRST
+        if (cleanBlueprint) {
+          compiledParts.push({
+            type: 'text',
+            content: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]')
+          });
+        }
+
+        // 2. Audio part
         if (audioCol && !imageHasAudio) {
           compiledParts.push({
             type: 'audio',
@@ -2166,28 +2221,22 @@ export default function SpreadsheetTemplateCreator() {
           });
         }
 
-        // 2. Main Question Instruction Text
-        if (cleanBlueprint) {
-          compiledParts.push({
-            type: 'text',
-            content: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]')
-          });
-        }
-
         // 3. Image Part
-        const imgPart = {
-          type: 'image',
-          content: `[${imageCol}]`,
-          label: wordCol ? `[${wordCol}]` : ''
-        };
-        if (imageIsTransparent) {
-          imgPart.transparent = true;
+        if (imageCol && includeQuestionImage) {
+          const imgPart = {
+            type: 'image',
+            content: `[${imageCol}]`,
+            label: wordCol ? `[${wordCol}]` : ''
+          };
+          if (imageIsTransparent) {
+            imgPart.transparent = true;
+          }
+          if (imageHasAudio && audioCol) {
+            imgPart.playLabelSound = true;
+            imgPart.audioUrl = `[${audioCol}]`;
+          }
+          compiledParts.push(imgPart);
         }
-        if (imageHasAudio && audioCol) {
-          imgPart.playLabelSound = true;
-          imgPart.audioUrl = `[${audioCol}]`;
-        }
-        compiledParts.push(imgPart);
 
         // 4. Pattern Text Part
         if (patternCol) {
@@ -2322,14 +2371,9 @@ export default function SpreadsheetTemplateCreator() {
         }
         vars.forEach(v => {
           if (v.name !== 'index' && v.formula) {
-            const arrMatch = v.formula.match(/^(\[.*?\])\[index\]$/);
-            if (arrMatch) {
-              try {
-                colData[v.name] = JSON.parse(arrMatch[1]);
-              } catch (parseErr) {
-                console.warn(`Failed to parse array formula for column ${v.name}:`, parseErr);
-                setPublishError(`⚠️ Column array formula parse error for "${v.name}": ${parseErr.message}`);
-              }
+            const arr = extractArrayFromFormula(v.formula);
+            if (arr) {
+              colData[v.name] = arr;
             }
           }
         });
@@ -2341,14 +2385,9 @@ export default function SpreadsheetTemplateCreator() {
         }
         for (const [name, v] of Object.entries(vars)) {
           if (name !== 'index' && v && v.formula) {
-            const arrMatch = v.formula.match(/^(\[.*?\])\[index\]$/);
-            if (arrMatch) {
-              try {
-                colData[name] = JSON.parse(arrMatch[1]);
-              } catch (parseErr) {
-                console.warn(`Failed to parse array formula for column ${name}:`, parseErr);
-                setPublishError(`⚠️ Column array formula parse error for "${name}": ${parseErr.message}`);
-              }
+            const arr = extractArrayFromFormula(v.formula);
+            if (arr) {
+              colData[name] = arr;
             }
           }
         }
@@ -2359,14 +2398,9 @@ export default function SpreadsheetTemplateCreator() {
         }
         const derivations = config.derivations || {};
         Object.keys(derivations).forEach(k => {
-          const arrMatch = derivations[k].match(/^(\[.*?\])\[index\]$/);
-          if (arrMatch) {
-            try {
-              colData[k] = JSON.parse(arrMatch[1]);
-            } catch (parseErr) {
-              console.warn(`Failed to parse derivation formula for column ${k}:`, parseErr);
-              setPublishError(`⚠️ Column array formula parse error for "${k}": ${parseErr.message}`);
-            }
+          const arr = extractArrayFromFormula(derivations[k]);
+          if (arr) {
+            colData[k] = arr;
           }
         });
       }
@@ -2488,14 +2522,9 @@ export default function SpreadsheetTemplateCreator() {
         }
         vars.forEach(v => {
           if (v.name !== 'index' && v.formula) {
-            const arrMatch = v.formula.match(/^(\[.*?\])\[index\]$/);
-            if (arrMatch) {
-              try {
-                colData[v.name] = JSON.parse(arrMatch[1]);
-              } catch (parseErr) {
-                console.warn(`Failed to parse array formula for column ${v.name}:`, parseErr);
-                setPublishError(`⚠️ Column array formula parse error for "${v.name}": ${parseErr.message}`);
-              }
+            const arr = extractArrayFromFormula(v.formula);
+            if (arr) {
+              colData[v.name] = arr;
             }
           }
         });
@@ -2506,14 +2535,9 @@ export default function SpreadsheetTemplateCreator() {
         }
         const derivations = config.derivations || {};
         Object.keys(derivations).forEach(k => {
-          const arrMatch = derivations[k].match(/^(\[.*?\])\[index\]$/);
-          if (arrMatch) {
-            try {
-              colData[k] = JSON.parse(arrMatch[1]);
-            } catch (parseErr) {
-              console.warn(`Failed to parse derivation formula for column ${k}:`, parseErr);
-              setPublishError(`⚠️ Column array formula parse error for "${k}": ${parseErr.message}`);
-            }
+          const arr = extractArrayFromFormula(derivations[k]);
+          if (arr) {
+            colData[k] = arr;
           }
         });
       }
@@ -3727,7 +3751,8 @@ export default function SpreadsheetTemplateCreator() {
                         </td>
                         {columns.filter(c => c !== '_level').map(col => {
                           const hasAudioBtn = isAudioUrl(row[col]);
-                          const hasImageBtn = col.endsWith('_image') || col === 'image';
+                          const colLower = col.toLowerCase();
+                          const hasImageBtn = colLower.includes('image') || colLower.includes('img') || colLower.includes('pic');
                           const hasPreviewThumb = isImageUrl(row[col]);
 
                           let paddingRight = 4;
@@ -3965,6 +3990,15 @@ export default function SpreadsheetTemplateCreator() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"
+                    checked={includeQuestionImage}
+                    onChange={(e) => setIncludeQuestionImage(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  🖼️ Show Image in Question Prompt
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
                     checked={imageHasAudio}
                     onChange={(e) => setImageHasAudio(e.target.checked)}
                     style={{ cursor: 'pointer', width: '16px', height: '16px' }}
@@ -4053,6 +4087,47 @@ export default function SpreadsheetTemplateCreator() {
               }}>
                 {questionMode === 'msq' ? 'Students select all that apply' : questionMode === 'tap_to_fill' ? 'Student taps an option to fill the blank' : (questionMode === 'sentence_ordering' ? 'Students arrange scrambled words/letters' : (questionMode.includes('categor') ? 'Students drag items to category targets' : 'Students pick one answer'))}
               </span>
+            </div>
+
+            {/* Quick Auto-Pair Images helper button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 8px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Define text label and optional image/audio for each option:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = optionsBinding.map(opt => {
+                    const colName = String(opt.column || '').toLowerCase();
+                    let matchedImgCol = undefined;
+                    if (colName.includes('distractor') || colName.includes('opt')) {
+                      const numMatch = colName.match(/\d+/);
+                      const numStr = numMatch ? numMatch[0] : '';
+                      matchedImgCol = columns.find(c => {
+                        const cLower = c.toLowerCase();
+                        return cLower.includes('image') && (cLower.includes('distractor') || (numStr && cLower.includes(numStr)));
+                      });
+                    } else if (colName.includes('correct') || colName.includes('result') || colName.includes('target') || colName.includes('word')) {
+                      matchedImgCol = columns.find(c => {
+                        const cLower = c.toLowerCase();
+                        return cLower.includes('image') && (cLower.includes('correct') || cLower.includes('target') || cLower.includes('result'));
+                      });
+                    }
+                    return matchedImgCol ? { ...opt, imageColumn: matchedImgCol } : opt;
+                  });
+                  setOptionsBinding(next);
+                }}
+                style={{
+                  background: 'rgba(56,189,248,0.12)',
+                  border: '1px solid rgba(56,189,248,0.3)',
+                  color: '#38bdf8',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ⚡ Auto-Pair Image Columns
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

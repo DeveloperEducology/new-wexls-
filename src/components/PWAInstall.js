@@ -8,11 +8,21 @@ export default function PWAInstall() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // 0. Register Service Worker
+    // 0. Register Service Worker only in production to prevent localhost dev timeouts
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((reg) => console.log('ServiceWorker registered with scope:', reg.scope))
-        .catch((err) => console.error('ServiceWorker registration failed:', err));
+      const isDev = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+      if (isDev) {
+        // Unregister any active dev service workers to keep dev server fast & prevent HMR timeouts
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
+        }).catch(() => {});
+      } else {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('ServiceWorker registered with scope:', reg.scope))
+          .catch((err) => console.error('ServiceWorker registration failed:', err));
+      }
     }
 
     // 1. Check if already installed / running in standalone mode

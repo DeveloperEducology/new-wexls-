@@ -568,6 +568,11 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         }
       }
 
+      if (/^index_l\d+$/.test(varName)) {
+        resolvedVariables[varName] = resolvedVariables['index'];
+        continue;
+      }
+
       resolvedVariables[varName] = resolveVariableValue(v, resolvedVariables, dataSourceMap, rng);
     }
   } else if (template.variables && typeof template.variables === 'object') {
@@ -588,6 +593,11 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
           resolvedVariables[varName] = pickUnseenIndex(selfPool, template.variables, difficultyContext, rng);
           continue;
         }
+      }
+
+      if (/^index_l\d+$/.test(varName)) {
+        resolvedVariables[varName] = resolvedVariables['index'];
+        continue;
       }
 
       resolvedVariables[varName] = resolveVariableValue(normalizedVar, resolvedVariables, dataSourceMap, rng);
@@ -947,18 +957,28 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       let targetOptionCount = 4;
       let isMultiSelectMode = false;
 
-      const isSpreadsheetGrid = template.generatorType === 'spreadsheet-grid' || template.config?.generatorType === 'spreadsheet-grid';
+      const isExplicitMsq = template.optionsType === 'msq' ||
+        template.optionsType === 'multi_select' ||
+        template.type === 'msq' ||
+        template.type === 'multi_select' ||
+        template.interaction?.engine === 'msq' ||
+        template.interaction?.engine === 'multi_select' ||
+        template.interaction?.inputMode === 'multi-choice';
+
+      if (isExplicitMsq) {
+        isMultiSelectMode = true;
+      } else if (currentLevel === 4) {
+        isMultiSelectMode = true;
+      }
 
       if (currentLevel === 1) {
-        targetOptionCount = 2;
+        targetOptionCount = 3;
       } else if (currentLevel === 2) {
         targetOptionCount = 3;
       } else if (currentLevel === 3) {
         targetOptionCount = 4;
       } else if (currentLevel === 4) {
         targetOptionCount = 4;
-        const isExplicitMsq = template.optionsType === 'msq' || template.optionsType === 'multi_select' || template.interaction?.engine === 'msq';
-        isMultiSelectMode = isSpreadsheetGrid ? isExplicitMsq : true;
       }
 
       let pickedCorrect = [];
@@ -969,7 +989,15 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         return shuffled.slice(0, count);
       };
 
-      if (isMultiSelectMode) {
+      if (isExplicitMsq) {
+        pickedCorrect = correctOptions;
+        pickedIncorrect = pickRandomMany(incorrectOptions, Math.max(1, targetOptionCount - pickedCorrect.length));
+        template.optionsType = 'msq';
+        if (template.interaction) {
+          template.interaction.engine = 'msq';
+          template.interaction.inputMode = 'multi-choice';
+        }
+      } else if (isMultiSelectMode) {
         // Level 4: Show multiple correct options if available, up to 2, or at least 1
         const targetCorrectCount = Math.min(correctOptions.length, 2);
         pickedCorrect = pickRandomMany(correctOptions, targetCorrectCount > 0 ? targetCorrectCount : 1);

@@ -25,7 +25,15 @@ export async function findDynamicTemplateById(templateId) {
     if (!db) return null;
 
     const collection = db.collection(DEFAULT_COLLECTION);
-    const doc = await collection.findOne({ id: templateId });
+    const idsToTry = [templateId];
+    if (typeof templateId === 'string') {
+      if (templateId.startsWith('ukg-english-')) {
+        idsToTry.push(templateId.replace(/^ukg-english-/, ''));
+      } else {
+        idsToTry.push(`ukg-english-${templateId}`);
+      }
+    }
+    const doc = await collection.findOne({ id: { $in: idsToTry } });
     if (!doc) return null;
 
     // Remove mongo fields

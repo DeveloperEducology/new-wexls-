@@ -12,9 +12,9 @@ export function interpolateString(str, context) {
   });
 
   // If the string is exactly a single placeholder, return the resolved value directly to preserve types (objects, arrays)
-  const exactMatch = str.trim().match(/^\[([A-Za-z0-9_]+)\]$/);
+  const exactMatch = str.trim().match(/^\[([^\]]+)\]$/);
   if (exactMatch) {
-    const varName = exactMatch[1];
+    const varName = exactMatch[1].trim();
     if (context[varName] !== undefined) {
       return context[varName];
     }
@@ -91,6 +91,10 @@ export function resolveLabelOrExpression(label, context) {
         }
       }
     }
+  }
+
+  if (context && context[interpolated] !== undefined) {
+    return context[interpolated];
   }
 
   if (!/[()+\-*/%]/.test(interpolated)) {

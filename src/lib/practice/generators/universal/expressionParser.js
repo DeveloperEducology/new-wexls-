@@ -223,8 +223,10 @@ export function resolveExpression(expr, context) {
   const hasOperators = /[\+\-\*\/\%\(\)]/.test(String(expr));
   const hasComparisons = /[=\!<>\?:]/.test(String(expr));
 
-  // Try custom safe parser first if it is a simple math formula without conditionals/strings
-  if (hasOperators && !hasComparisons && !String(expr).includes('draw')) {
+  // Try custom safe parser first only for plain numeric math. Array/string
+  // formulas can contain "/" or parentheses in text and must go to JS eval.
+  const isPlainMathExpression = /^[\d\s+\-*/%().]+$/.test(String(expr));
+  if (hasOperators && !hasComparisons && !String(expr).includes('draw') && isPlainMathExpression) {
     // Replace variables by their value from context
     let evaluated = String(expr).replace(/[a-zA-Z_]+/g, (token) => {
       if (context[token] !== undefined) {

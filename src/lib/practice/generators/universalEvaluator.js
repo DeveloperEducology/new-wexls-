@@ -247,9 +247,9 @@ function seededShuffle(arr, rng) {
 }
 
 export function evaluateTemplate(template, seed, difficultyContext = null) {
-  let config = template?.config || template || {};
-  if (config.config && (!config.variables || Array.isArray(config.variables))) {
-    config = { ...config, ...config.config };
+  let config = template;
+  if (template?.config) {
+    config = { ...template, ...template.config };
   }
 
   let currentLevel = 3; // default fallback
@@ -604,9 +604,15 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
             isCorrect = false;
           }
         }
+        let label = fillTemplate(String(opt.label ?? opt.value ?? opt.text ?? ''), ctx);
+        let imageUrl = opt.imageUrl ? fillTemplate(opt.imageUrl, ctx) : undefined;
+        if (label.startsWith('http://') || label.startsWith('https://')) {
+          if (!imageUrl) imageUrl = label;
+          label = getCleanNameFromUrl(label) || '';
+        }
         return {
-          label: fillTemplate(String(opt.label ?? opt.value ?? opt.text ?? ''), ctx),
-          imageUrl: opt.imageUrl ? fillTemplate(opt.imageUrl, ctx) : undefined,
+          label,
+          imageUrl,
           audioUrl: opt.audioUrl ? fillTemplate(opt.audioUrl, ctx) : undefined,
           isCorrect,
           misconception: opt.misconception ? fillTemplate(opt.misconception, ctx) : undefined,
@@ -668,7 +674,10 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
 
       let targetOptionCount = 4;
 
-      const isExplicitMsq = resolvedInteractionEngine === 'msq' || config.optionsType === 'msq';
+      const isExplicitMsq = resolvedInteractionEngine === 'msq' ||
+        config.optionsType === 'msq' ||
+        config.type === 'msq' ||
+        (typeof config.interaction === 'object' && (config.interaction?.engine === 'msq' || config.interaction?.inputMode === 'multi-choice'));
       if (isExplicitMsq) {
         isMultiSelectMode = true;
       } else if (currentLevel === 4) {
@@ -935,12 +944,12 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
           result.answer = answer;
         }
       }
-    } else if (isMultiSelectMode) {
-      result.type = 'multi_select';
-      result.interaction = 'multi_select';
+    } else if (isMultiSelectMode || isExplicitMsq) {
+      result.type = 'msq';
+      result.interaction = { engine: 'msq', inputMode: 'multi-choice', type: 'msq' };
     } else {
       result.type = 'mcq';
-      result.interaction = 'mcq';
+      result.interaction = { engine: 'mcq', inputMode: 'choice', type: 'mcq' };
     }
 
     return result;

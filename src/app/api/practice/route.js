@@ -1394,6 +1394,49 @@ export async function GET(request) {
       }, { subject, topic, skill }));
     }
 
+    if (isEnglishTopic || subject === 'english') {
+      const { findDynamicTemplateById } = await import('../../../lib/practice/questionBank/dynamicTemplatesRepository.js');
+      const templateDoc = await findDynamicTemplateById(resolvedTemplateId);
+      if (templateDoc) {
+        const resolvedTemplateDoc = await resolveTemplatePools(templateDoc);
+        const rawQuestion = await evaluateUniversalOrPoolTemplate({
+          resolvedTemplateDoc,
+          seed,
+          difficulty,
+          searchParams,
+          grade: templateDoc.grade || 'ukg'
+        });
+        const question = {
+          ...rawQuestion,
+          id: `universal-template-${resolvedTemplateId}-${seed}`,
+          metadata: {
+            subject: templateDoc.subject || resolvedSubject || 'english',
+            topic: templateDoc.topic || resolvedTopic || 'ukg-english-reading-foundations',
+            skillId: resolvedSkillId,
+            templateId: resolvedTemplateId,
+            engine: 'universal-template',
+            grade: templateDoc.grade || 'ukg',
+            seed
+          }
+        };
+
+        return respond(withCompetency({
+          success: true,
+          question,
+          seed,
+          template: {
+            logicType: resolvedTemplateId,
+            templateId: resolvedTemplateId,
+            engine: 'universal-template'
+          }
+        }, { subject, topic, skill }));
+      }
+      return NextResponse.json(
+        { success: false, error: `No question generator or template found for English skill: ${resolvedSkillId}` },
+        { status: 404 }
+      );
+    }
+
     const question = generateAdditionTopicQuestion(config);
     const template = createAdditionTopicTemplate(resolvedTemplateId);
 
