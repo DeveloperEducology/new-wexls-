@@ -4287,7 +4287,7 @@ export default function SpreadsheetTemplateCreator() {
                           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px', background: '#1e293b' }}>
                             {(sec.type === 'text' || sec.type === 'key_idea') && (
                               <div>
-                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Text (markdown, use {{column}} vars)</div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Text (markdown, use {'{{column}}'} vars)</div>
                                 <textarea value={sec.content} onChange={e => updateExplanationSection(idx, 'content', e.target.value)}
                                   style={{ width: '100%', minHeight: '70px', background: '#0f172a', color: '#f1f5f9', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '13px', fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
                                   placeholder={sec.type === 'key_idea' ? 'Some words tell you what a person does. These words are called **verbs**.' : 'Add explanation text here...'} />
@@ -4295,7 +4295,7 @@ export default function SpreadsheetTemplateCreator() {
                             )}
                             {(sec.type === 'key_idea' || sec.type === 'solution_image') && (
                               <div>
-                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Image URL (or {{column}} variable with URL)</div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Image URL (or {'{{column}}'} variable with URL)</div>
                                 <input value={sec.imageUrl} onChange={e => updateExplanationSection(idx, 'imageUrl', e.target.value)}
                                   style={{ width: '100%', background: '#0f172a', color: '#f1f5f9', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '13px', boxSizing: 'border-box' }}
                                   placeholder="https://example.com/image.png or {{image_url}}" />
