@@ -552,6 +552,36 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     }
   }
 
+  const resolveIndexVariable = (pool) => {
+    if (!Array.isArray(pool) || pool.length === 0) return 0;
+
+    const searchParams = difficultyContext?.searchParams;
+    const qnParam = searchParams?.get?.('qn') || difficultyContext?.qn;
+    const isOrderedMode = Boolean(
+      template?.isSequential === true ||
+      template?.isOrdered === true ||
+      template?.preserveOptionOrder === true ||
+      template?.metadata?.isSequential === true ||
+      template?.metadata?.isOrdered === true ||
+      template?.metadata?.preserveOptionOrder === true ||
+      searchParams?.get?.('mode') === 'static' ||
+      searchParams?.get?.('iit') === 'true' ||
+      searchParams?.get?.('isSequential') === 'true' ||
+      searchParams?.get?.('isOrdered') === 'true'
+    );
+
+    if (qnParam !== undefined && qnParam !== null && qnParam !== '') {
+      const parsed = parseInt(qnParam, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        return pool[(parsed - 1) % pool.length];
+      }
+    } else if (isOrderedMode) {
+      return pool[0];
+    }
+
+    return pickUnseenIndex(pool, template.variables, difficultyContext, rng);
+  };
+
   // 1. Evaluate variables sequentially
   if (Array.isArray(template.variables)) {
     for (const v of template.variables) {
@@ -563,12 +593,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         const foundLvlVar = template.variables.find(x => (x?.name || x?.id) === levelVarName);
         const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
         if (Array.isArray(levelPool) && levelPool.length > 0) {
-          resolvedVariables[varName] = pickUnseenIndex(levelPool, template.variables, difficultyContext, rng);
+          resolvedVariables[varName] = resolveIndexVariable(levelPool);
           continue;
         }
         const selfPool = v.values || v.value;
         if (Array.isArray(selfPool) && selfPool.length > 0) {
-          resolvedVariables[varName] = pickUnseenIndex(selfPool, template.variables, difficultyContext, rng);
+          resolvedVariables[varName] = resolveIndexVariable(selfPool);
           continue;
         }
       }
@@ -590,12 +620,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         const foundLvlVar = template.variables[levelVarName];
         const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
         if (Array.isArray(levelPool) && levelPool.length > 0) {
-          resolvedVariables[varName] = pickUnseenIndex(levelPool, template.variables, difficultyContext, rng);
+          resolvedVariables[varName] = resolveIndexVariable(levelPool);
           continue;
         }
         const selfPool = v.values || v.value;
         if (Array.isArray(selfPool) && selfPool.length > 0) {
-          resolvedVariables[varName] = pickUnseenIndex(selfPool, template.variables, difficultyContext, rng);
+          resolvedVariables[varName] = resolveIndexVariable(selfPool);
           continue;
         }
       }
