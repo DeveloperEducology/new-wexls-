@@ -4555,7 +4555,18 @@ export default function SpreadsheetTemplateCreator() {
                 </div>
               </div>
             )}
-                    {/* Render evaluated parts if present, otherwise fallback to blueprint */}
+          </div>
+        </div>
+
+        {/* Right Side: Sticky Simulator Preview panel */}
+          <div className="grid-preview-panel">
+            <div className="grid-preview-box">
+              <div className="grid-preview-header">
+                <span className="grid-preview-header-title">Live Row Simulator (Active: Row {activeRowIndex + 1})</span>
+                <button className={`grid-shuffle-btn ${shuffleClass}`} onClick={handleShuffle}>
+                  🎲 Shuffle Row
+                </button>
+              </div>
             {(() => {
               const evaluatedParts = getEvaluatedParts();
               if (evaluatedParts) {
