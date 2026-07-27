@@ -206,16 +206,14 @@ export function resolveExpression(expr, context) {
 
   let cleanedExpr = String(expr);
   if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
-    cleanedExpr = cleanedExpr.replace(/(?<![A-Za-z0-9_\]\)])\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
+    // Replace standalone [varName] placeholders with context values, leaving array literals like ["a", "b"][index] intact
+    cleanedExpr = cleanedExpr.replace(/(?<![A-Za-z0-9_\]\)"'])\[([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (match, name) => {
       const trimmed = name.trim();
-      if (context[trimmed] !== undefined) {
-        return context[trimmed];
+      if (context && context[trimmed] !== undefined) {
+        const val = context[trimmed];
+        return typeof val === 'string' ? JSON.stringify(val) : val;
       }
-      try {
-        return new Function('ctx', `with(ctx) { return ${trimmed}; }`)(context);
-      } catch {
-        return `[${trimmed}]`;
-      }
+      return match;
     });
   }
   expr = cleanedExpr;

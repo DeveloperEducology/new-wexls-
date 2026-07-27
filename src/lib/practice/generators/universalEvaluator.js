@@ -958,16 +958,18 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
       const categories = [];
       const items = [];
       let catIdx = 1;
-      while (ctx[`category_${catIdx}`] || ctx[`category_${String.fromCharCode(96 + catIdx)}`]) {
-        const catKey = ctx[`category_${catIdx}`] ? `category_${catIdx}` : `category_${String.fromCharCode(96 + catIdx)}`;
-        const catLabel = String(ctx[catKey]).trim();
+      while (ctx[`category_${catIdx}`] !== undefined || ctx[`category_${String.fromCharCode(96 + catIdx)}`] !== undefined) {
+        const catKey = ctx[`category_${catIdx}`] !== undefined ? `category_${catIdx}` : `category_${String.fromCharCode(96 + catIdx)}`;
+        const catLabel = String(ctx[catKey] ?? '').trim();
         const catId = `cat_${catIdx}`;
-        categories.push({ id: catId, label: catLabel });
+        if (catLabel) {
+          categories.push({ id: catId, label: catLabel });
+        }
         
         Object.keys(ctx).forEach(key => {
           if (key.startsWith(`item_${catIdx}`) || key.startsWith(`item_${String.fromCharCode(96 + catIdx)}`)) {
             const itemVal = ctx[key];
-            if (itemVal && String(itemVal).trim()) {
+            if (itemVal !== undefined && itemVal !== null && String(itemVal).trim() !== '') {
               items.push({
                 id: `item_${key}_${hashSeed(String(itemVal))}`,
                 label: String(itemVal).trim(),
