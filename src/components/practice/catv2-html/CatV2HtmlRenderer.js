@@ -1960,7 +1960,16 @@ export default function CatV2HtmlRenderer({
   const categories = useMemo(() => {
     let rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.categories;
     if (!rawCategories || rawCategories.length === 0) {
-      if (Array.isArray(question.targetCategories) && question.targetCategories.length > 0) {
+      const vars = question.schema?.variables || question.variables || {};
+      const dynCats = [];
+      let catIdx = 1;
+      while (vars[`category_${catIdx}`]) {
+        dynCats.push({ id: `cat_${catIdx}`, label: String(vars[`category_${catIdx}`]).trim() });
+        catIdx++;
+      }
+      if (dynCats.length > 0) {
+        rawCategories = dynCats;
+      } else if (Array.isArray(question.targetCategories) && question.targetCategories.length > 0) {
         rawCategories = question.targetCategories.map(c => ({ id: `cat_${c}`, label: String(c).replace(/_/g, ' ') }));
       } else {
         rawCategories = [{ id: 'cat_long_e', label: 'Long e' }, { id: 'cat_short_e', label: 'Short e' }];
@@ -1972,12 +1981,32 @@ export default function CatV2HtmlRenderer({
       }
       return { ...cat, label: String(cat.label || cat.id || '').replace(/_/g, ' ') };
     });
-  }, [question.categories, question.parts, question.targetCategories]);
+  }, [question.categories, question.parts, question.targetCategories, question.schema, question.variables]);
 
   const items = useMemo(() => {
     let rawItems = question.items || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.items;
     if (!rawItems || rawItems.length === 0) {
-      if (Array.isArray(question.options) && question.options.length > 0) {
+      const vars = question.schema?.variables || question.variables || {};
+      const dynItems = [];
+      categories.forEach((cat, idx) => {
+        const catIdx = idx + 1;
+        Object.keys(vars).forEach(key => {
+          if (key.startsWith(`item_${catIdx}`)) {
+            const itemVal = vars[key];
+            if (itemVal && String(itemVal).trim()) {
+              dynItems.push({
+                id: `item_${key}`,
+                label: String(itemVal).trim(),
+                content: String(itemVal).trim(),
+                target: cat.id
+              });
+            }
+          }
+        });
+      });
+      if (dynItems.length > 0) {
+        rawItems = dynItems;
+      } else if (Array.isArray(question.options) && question.options.length > 0) {
         rawItems = question.options.map((opt, idx) => ({
           id: opt.id || `opt_${idx}`,
           label: opt.label || opt.text || String(opt),
@@ -1990,7 +2019,7 @@ export default function CatV2HtmlRenderer({
       }
     }
     return rawItems;
-  }, [question.items, question.parts, question.options, categories]);
+  }, [question.items, question.parts, question.options, categories, question.schema, question.variables]);
   const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2' || question.type === 'grid_fill';
   const rawLayoutMode = question.layoutMode || question.metadata?.layoutMode || question.htmlLayout || (question.type === 'grid_fill' ? 'grid_fill' : 'category_sort');
   const isGridTable = categories.some(c => c.isGrid === true || (Number(c.rows) > 0 && Number(c.columns) > 1));

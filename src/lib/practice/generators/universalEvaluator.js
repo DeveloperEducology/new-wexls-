@@ -949,15 +949,52 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     } else if (['sentence_ordering', 'ordering'].includes(interactionEngine)) {
       result.type = 'sentence_ordering';
       result.interaction = { engine: 'sentence_ordering', type: 'sentence_ordering' };
+      if (ctx.jumbled_sentence) result.jumbledSentence = ctx.jumbled_sentence;
+      if (ctx.correct_sentence) result.correctSentence = ctx.correct_sentence;
     } else if (['categorizationv2', 'categorisationv2', 'sorting', 'categorySort'].includes(interactionEngine)) {
       result.type = 'categorizationv2';
       result.interaction = { engine: 'categorizationv2', type: 'categorizationv2' };
+      
+      const categories = [];
+      const items = [];
+      let catIdx = 1;
+      while (ctx[`category_${catIdx}`] || ctx[`category_${String.fromCharCode(96 + catIdx)}`]) {
+        const catKey = ctx[`category_${catIdx}`] ? `category_${catIdx}` : `category_${String.fromCharCode(96 + catIdx)}`;
+        const catLabel = String(ctx[catKey]).trim();
+        const catId = `cat_${catIdx}`;
+        categories.push({ id: catId, label: catLabel });
+        
+        Object.keys(ctx).forEach(key => {
+          if (key.startsWith(`item_${catIdx}`) || key.startsWith(`item_${String.fromCharCode(96 + catIdx)}`)) {
+            const itemVal = ctx[key];
+            if (itemVal && String(itemVal).trim()) {
+              items.push({
+                id: `item_${key}_${hashSeed(String(itemVal))}`,
+                label: String(itemVal).trim(),
+                content: String(itemVal).trim(),
+                target: catId
+              });
+            }
+          }
+        });
+        catIdx++;
+      }
+      
+      if (categories.length > 0) {
+        result.categories = categories;
+        result.items = items;
+      }
     } else if (['tap_to_fill', 'tapToFill', 'tap-to-fill'].includes(interactionEngine)) {
       result.type = 'tap_to_fill';
       result.interaction = { engine: 'tap_to_fill', type: 'tap_to_fill' };
+      if (ctx.given_prompt) result.givenPrompt = ctx.given_prompt;
+      if (ctx.target_word) result.targetWord = ctx.target_word;
+      if (ctx.missing_letter) result.missingLetter = ctx.missing_letter;
     } else if (['token_select', 'pick_from_sentence'].includes(interactionEngine)) {
       result.type = 'token_select';
       result.interaction = { engine: 'token_select', type: 'token_select' };
+      if (ctx.sentence_text) result.sentenceText = ctx.sentence_text;
+      if (ctx.target_word) result.targetWord = ctx.target_word;
     } else if (['visual_choice'].includes(interactionEngine)) {
       result.type = 'visual_choice';
       result.interaction = { engine: 'visual_choice', type: 'visual_choice' };
