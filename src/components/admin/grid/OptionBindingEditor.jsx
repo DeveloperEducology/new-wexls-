@@ -11,14 +11,18 @@ export default function OptionBindingEditor({
   imageHasAudio,
   setImageHasAudio,
   imageIsTransparent,
-  setImageIsTransparent
+  setImageIsTransparent,
+  preserveOptionOrder,
+  setPreserveOptionOrder,
+  isSequential,
+  setIsSequential
 }) {
   const imageCol = columns.find(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('clipart'));
 
   return (
     <div className="grid-card" style={{ marginTop: '20px' }}>
-      <h3 className="grid-card-title">📝 Step 3: Map Answer Choices to Columns</h3>
-      <p className="grid-card-desc">Assign correct answers and distractor options directly to columns in your spreadsheet.</p>
+      <h3 className="grid-card-title">📝 Step 3: Map Answer Choices & Question Ordering</h3>
+      <p className="grid-card-desc">Assign correct answers, distractor options, and index-wise ordering preferences.</p>
 
       {/* MCQ / MSQ / Mode toggle */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -60,27 +64,46 @@ export default function OptionBindingEditor({
         </div>
       </div>
 
-      {/* Image Audio / Transparency Toggles */}
-      {imageCol && (
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '18px', padding: '10px 14px', background: '#0f172a', borderRadius: '8px', border: '1px solid #1e293b', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f1f5f9', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={imageHasAudio}
-              onChange={(e) => setImageHasAudio(e.target.checked)}
-            />
-            🔊 Play audio on image tap
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f1f5f9', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={imageIsTransparent}
-              onChange={(e) => setImageIsTransparent(e.target.checked)}
-            />
-            ✨ Transparent clipart image background
-          </label>
-        </div>
-      )}
+      {/* Option & Question Ordering & Image Toggles */}
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '18px', padding: '12px 16px', background: '#0f172a', borderRadius: '8px', border: '1.5px solid #334155', flexWrap: 'wrap', alignItems: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f8fafc', fontWeight: 700, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={Boolean(preserveOptionOrder)}
+            onChange={(e) => setPreserveOptionOrder?.(e.target.checked)}
+          />
+          🔢 Keep options index-wise (No random option shuffle)
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f8fafc', fontWeight: 700, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={Boolean(isSequential)}
+            onChange={(e) => setIsSequential?.(e.target.checked)}
+          />
+          🔄 Keep questions index-wise (Sequential row-by-row)
+        </label>
+
+        {imageCol && (
+          <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f1f5f9', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={imageHasAudio}
+                onChange={(e) => setImageHasAudio(e.target.checked)}
+              />
+              🔊 Play audio on image tap
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f1f5f9', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={imageIsTransparent}
+                onChange={(e) => setImageIsTransparent(e.target.checked)}
+              />
+              ✨ Transparent clipart image background
+            </label>
+          </>
+        )}
+      </div>
 
       {/* Option Binding Rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -794,6 +794,8 @@ export default function SpreadsheetTemplateCreator() {
   const [imageHasAudio, setImageHasAudio] = useState(false);
   const [imageIsTransparent, setImageIsTransparent] = useState(false);
   const [includeQuestionImage, setIncludeQuestionImage] = useState(false);
+  const [preserveOptionOrder, setPreserveOptionOrder] = useState(false);
+  const [isSequential, setIsSequential] = useState(false);
   const [customPartsText, setCustomPartsText] = useState('');
   const [isPartsRawJsonMode, setIsPartsRawJsonMode] = useState(false);
 
@@ -2790,10 +2792,12 @@ export default function SpreadsheetTemplateCreator() {
           setImageIsTransparent(false);
         }
       } else {
-        setCustomPartsText('');
         setImageHasAudio(false);
         setImageIsTransparent(false);
       }
+
+      setPreserveOptionOrder(Boolean(parsed.preserveOptionOrder || parsed.shuffleOptions === false || config.preserveOptionOrder || config.shuffleOptions === false));
+      setIsSequential(Boolean(parsed.isSequential || parsed.isOrdered || config.isSequential || config.isOrdered));
 
       const rawOpts = config.options || parsed.options;
       if (Array.isArray(rawOpts)) {
@@ -2888,6 +2892,10 @@ export default function SpreadsheetTemplateCreator() {
           validationRules: isMSQ
             ? [{ type: 'all_correct', target: 'answer', values: correctOptions.map(o => `[${o.column}]`) }]
             : [{ type: 'exact_match', target: 'answer', value: correctOpt ? `[${correctOpt.column}]` : '' }],
+          preserveOptionOrder: preserveOptionOrder,
+          shuffleOptions: !preserveOptionOrder,
+          isSequential: isSequential,
+          isOrdered: isSequential,
           variables: Object.entries(parallelVariables).map(([name, items]) => ({
             name,
             type: 'pool_selection',
@@ -4209,8 +4217,28 @@ export default function SpreadsheetTemplateCreator() {
                 />
               </div>
 
-              {/* Image Clipart Options */}
-              <div style={{ display: 'flex', gap: '24px', background: '#eff6ff', padding: '12px 18px', borderRadius: '12px', border: '1.5px solid #bfdbfe', flexWrap: 'wrap', marginTop: '-4px', marginBottom: '4px' }}>
+              {/* Question & Option Ordering + Image Clipart Options */}
+              <div style={{ display: 'flex', gap: '20px', background: '#eff6ff', padding: '12px 18px', borderRadius: '12px', border: '1.5px solid #bfdbfe', flexWrap: 'wrap', marginTop: '-4px', marginBottom: '4px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={preserveOptionOrder}
+                    onChange={(e) => setPreserveOptionOrder(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  🔢 Keep Options Index-wise (No Option Shuffle)
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={isSequential}
+                    onChange={(e) => setIsSequential(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  🔄 Keep Questions Index-wise (Sequential Rows)
+                </label>
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"
@@ -4220,6 +4248,7 @@ export default function SpreadsheetTemplateCreator() {
                   />
                   🖼️ Show Image in Question Prompt
                 </label>
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"
@@ -4227,8 +4256,9 @@ export default function SpreadsheetTemplateCreator() {
                     onChange={(e) => setImageHasAudio(e.target.checked)}
                     style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                   />
-                  🔊 Attach Audio Speaker to Clipart
+                  🔊 Audio Speaker on Clipart
                 </label>
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"

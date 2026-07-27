@@ -54,6 +54,10 @@ export function useGridEditorStore() {
   const [customPartsText, setCustomPartsText] = useState('');
   const [isPartsRawJsonMode, setIsPartsRawJsonMode] = useState(false);
 
+  // Option & Question Ordering state
+  const [preserveOptionOrder, setPreserveOptionOrder] = useState(false);
+  const [isSequential, setIsSequential] = useState(false);
+
   // Option Choices state
   const [questionMode, setQuestionMode] = useState('mcq');
   const [imageHasAudio, setImageHasAudio] = useState(false);
@@ -148,10 +152,12 @@ export function useGridEditorStore() {
     customPartsText, setCustomPartsText,
     isPartsRawJsonMode, setIsPartsRawJsonMode,
 
-    // Option Choices
+    // Option Choices & Ordering
     questionMode, setQuestionMode,
     imageHasAudio, setImageHasAudio,
     imageIsTransparent, setImageIsTransparent,
+    preserveOptionOrder, setPreserveOptionOrder,
+    isSequential, setIsSequential,
     optionsBinding, setOptionsBinding,
 
     // Status Flags
