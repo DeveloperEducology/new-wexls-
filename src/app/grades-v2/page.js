@@ -4,6 +4,8 @@ import { listV2Nodes, seedV2Initial } from '@/lib/curriculum/storeV2';
 import SiteHeader from '@/components/layout/SiteHeader';
 import HomeHero from '@/components/home/HomeHero';
 import GradeFilterDropdownV2 from './GradeFilterDropdownV2';
+import SyncSkillsButton from '@/components/admin/SyncSkillsButton';
+import { ALL_TEMPLATES_BY_TOPIC } from '@/lib/practice/allTemplates';
 import { getMongoDb } from '@/lib/db/mongo';
 import { cookies, headers } from 'next/headers';
 import { verifyAccessToken } from '@/lib/authService';
@@ -160,51 +162,116 @@ function practiceHrefV2(subjectId, unitId, skillId) {
   return `/practice?subject=${subjectId}&topic=${unitId}&skill=${skillId}`;
 }
 
-function getMatchedTemplate(skill, templates, dynamicTemplates) {
+function getMatchedTemplate(skill, templates = [], dynamicTemplates = [], questionCount = 0) {
+  const skillId = String(skill.id || '').trim();
+  const skillTitleClean = String(skill.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Extract explicit IDs from skill object
+  const explicitIds = new Set();
+  const rawTpl = skill.templateId || skill.template_id || skill.templateIds;
+  if (Array.isArray(rawTpl)) {
+    rawTpl.forEach(t => explicitIds.add(String(t).trim()));
+  } else if (typeof rawTpl === 'string' && rawTpl.trim()) {
+    rawTpl.split(',').forEach(t => explicitIds.add(t.trim()));
+  }
+  if (skill.generatorId) explicitIds.add(String(skill.generatorId).trim());
+  if (skill.spreadsheetId) explicitIds.add(String(skill.spreadsheetId).trim());
+  if (skill.engine) explicitIds.add(String(skill.engine).trim());
+
   // A. Match in templates collection (e.g. parameterized templates)
-  const tMatch = templates.find(t => 
-    t.skillId === skill.id || 
-    t.config?.skillId === skill.id || 
-    t.id === skill.id ||
-    t.id === `tpl-${skill.id}`
-  );
+  const tMatch = templates.find(t => {
+    const tid = String(t.id || t._id || '');
+    return (
+      (skillId && (t.skillId === skillId || t.config?.skillId === skillId || tid === skillId || tid === `tpl-${skillId}`)) ||
+      (explicitIds.size > 0 && (explicitIds.has(tid) || explicitIds.has(t.skillId)))
+    );
+  });
 
   if (tMatch) {
-    const rawInteraction = tMatch.config?.interaction;
+    const rawInteraction = tMatch.config?.interaction || tMatch.interaction;
     const interactionType = typeof rawInteraction === 'object' && rawInteraction !== null
-      ? (rawInteraction.engine || JSON.stringify(rawInteraction))
-      : (rawInteraction || tMatch.type || "parameterized");
+      ? (rawInteraction.engine || rawInteraction.type || JSON.stringify(rawInteraction))
+      : (rawInteraction || tMatch.type || tMatch.generatorType || "parameterized");
     const generatorType = tMatch.generatorType || tMatch.config?.generatorType || "parameterized";
     return {
       templateAdded: true,
       templateId: tMatch.id || String(tMatch._id),
-      interactionType: interactionType,
-      generatorType: generatorType,
+      interactionType: String(interactionType),
+      generatorType: String(generatorType),
       status: tMatch.status === "active" ? "Verified & Active" : "Draft / In Review"
     };
   }
 
   // B. Match in dynamic_templates collection
-  const dtMatch = dynamicTemplates.find(dt => 
-    dt.skillId === skill.id || 
-    dt.id === skill.id ||
-    dt.id === `ukg-english-${skill.id}` ||
-    dt.id.includes(skill.id) ||
-    (dt.title && dt.title.toLowerCase().replace(/[^a-z0-9]/g, '') === skill.title.toLowerCase().replace(/[^a-z0-9]/g, ''))
-  );
+  const dtMatch = dynamicTemplates.find(dt => {
+    const dtid = String(dt.id || dt._id || '');
+    return (
+      (skillId && (
+        dt.skillId === skillId ||
+        dtid === skillId ||
+        dtid === `ukg-english-${skillId}` ||
+        dtid === `universal-template-${skillId}` ||
+        dtid.includes(skillId) ||
+        (dt.logicType && dt.logicType === skillId) ||
+        (dt.logic_type && dt.logic_type === skillId) ||
+        (dt.title && dt.title.toLowerCase().replace(/[^a-z0-9]/g, '') === skillTitleClean)
+      )) ||
+      (explicitIds.size > 0 && (explicitIds.has(dtid) || explicitIds.has(dt.skillId) || explicitIds.has(dt.templateId)))
+    );
+  });
 
   if (dtMatch) {
     const rawInteraction = dtMatch.interaction;
     const interactionType = typeof rawInteraction === 'object' && rawInteraction !== null
-      ? (rawInteraction.engine || JSON.stringify(rawInteraction))
-      : (rawInteraction || dtMatch.type || "dynamic");
-    const generatorType = dtMatch.generatorType || dtMatch.config?.generatorType || "dynamic";
+      ? (rawInteraction.engine || rawInteraction.type || JSON.stringify(rawInteraction))
+      : (rawInteraction || dtMatch.type || dtMatch.optionsType || "dynamic");
+    const generatorType = dtMatch.generatorType || dtMatch.config?.generatorType || dtMatch.optionsType || "spreadsheet-grid";
     return {
       templateAdded: true,
       templateId: dtMatch.id || String(dtMatch._id),
-      interactionType: interactionType,
-      generatorType: generatorType,
+      interactionType: String(interactionType),
+      generatorType: String(generatorType),
       status: dtMatch.status === "active" ? "Verified & Active" : "Draft / In Review"
+    };
+  }
+
+  // C. Match in Code Generators (ALL_TEMPLATES_BY_TOPIC)
+  for (const [topic, tList] of Object.entries(ALL_TEMPLATES_BY_TOPIC)) {
+    const codeMatch = tList.find(ct => 
+      (skillId && (ct.id === skillId || ct.id === `tpl-${skillId}` || ct.id.includes(skillId))) ||
+      (explicitIds.size > 0 && (explicitIds.has(ct.id) || explicitIds.has(ct.engine)))
+    );
+    if (codeMatch) {
+      return {
+        templateAdded: true,
+        templateId: codeMatch.id,
+        interactionType: codeMatch.questionType || codeMatch.engine || "code-generator",
+        generatorType: codeMatch.engine || "code-generator",
+        status: "Verified & Active"
+      };
+    }
+  }
+
+  // D. Match explicit IDs if present on skill
+  if (explicitIds.size > 0) {
+    const firstId = Array.from(explicitIds)[0];
+    return {
+      templateAdded: true,
+      templateId: firstId,
+      interactionType: skill.engine || skill.type || "linked",
+      generatorType: skill.generatorId ? "generator" : (skill.spreadsheetId ? "spreadsheet" : "linked"),
+      status: "Linked & Active"
+    };
+  }
+
+  // E. Match static question bank
+  if (questionCount > 0 || skill.isStatic) {
+    return {
+      templateAdded: true,
+      templateId: `static-bank-${skillId}`,
+      interactionType: "static_question_bank",
+      generatorType: "static_bank",
+      status: "Static Questions Available"
     };
   }
 
@@ -322,9 +389,10 @@ export default async function GradesV2Page({ searchParams }) {
   const tableSkills = [];
   renderedGrades.forEach(([gradeTitle, gradeTopics, gradeId]) => {
     gradeTopics.forEach(topic => {
-      topic.skills.forEach(([code, title, skillId]) => {
-        const matched = getMatchedTemplate({ id: skillId, title }, templates, dynamicTemplates);
-        const skillNode = skills.find(s => s.id === skillId);
+      topic.skills.forEach(([code, title, skillId, tplIdFromChapter, engineFromChapter]) => {
+        const skillNode = skills.find(s => s.id === skillId) || { id: skillId, title, templateId: tplIdFromChapter, engine: engineFromChapter };
+        const qCount = questionCounts[skillId] || 0;
+        const matched = getMatchedTemplate(skillNode, templates, dynamicTemplates, qCount);
         tableSkills.push({
           id: skillId,
           code: code,
@@ -334,11 +402,11 @@ export default async function GradesV2Page({ searchParams }) {
           chapter: topic.title,
           unitId: topic.unitId || topic.id,
           templateAdded: matched.templateAdded,
-          templateId: matched.templateId,
-          interactionType: matched.interactionType,
+          templateId: matched.templateId !== '-' ? matched.templateId : (skillNode.templateId || '-'),
+          interactionType: matched.interactionType !== '-' ? matched.interactionType : (skillNode.engine || '-'),
           generatorType: matched.generatorType,
           isStatic: skillNode?.isStatic || skillNode?.static || false,
-          questionCount: questionCounts[skillId] || 0,
+          questionCount: qCount,
           status: matched.status
         });
       });
@@ -476,8 +544,8 @@ export default async function GradesV2Page({ searchParams }) {
           {activeView === 'table' ? (
             <section className="grade-content" style={{ flex: 1, width: '100%' }}>
               
-              {/* Search Form */}
-              <form method="GET" action="/grades-v2" style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', width: '100%', maxWidth: '500px' }}>
+              {/* Search Form & Sync Button */}
+              <form method="GET" action="/grades-v2" style={{ display: 'flex', gap: '10px', marginBottom: '1.5rem', width: '100%', maxWidth: '750px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input type="hidden" name="subject" value={activeSubjectNode.id} />
                 <input type="hidden" name="grade" value={selectedGradeId} />
                 <input type="hidden" name="view" value="table" />
@@ -490,7 +558,8 @@ export default async function GradesV2Page({ searchParams }) {
                     padding: '10px 16px',
                     borderRadius: '8px',
                     border: '1.5px solid #cbd5e1',
-                    width: '100%',
+                    flex: '1',
+                    minWidth: '240px',
                     fontSize: '14px',
                     outline: 'none',
                     background: '#ffffff',
@@ -532,6 +601,7 @@ export default async function GradesV2Page({ searchParams }) {
                     Clear
                   </Link>
                 )}
+                <SyncSkillsButton subject={activeSubjectNode.id} grade={selectedGradeId} />
               </form>
 
               {/* Stats Summary Bar */}

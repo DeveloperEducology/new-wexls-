@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './kpi.module.css';
+import SyncSkillsButton from '@/components/admin/SyncSkillsButton';
 
 export default function KPIDashboardPage() {
   const [theme, setTheme] = useState('light');
@@ -783,6 +784,12 @@ export default function KPIDashboardPage() {
                 >
                   📥 Export CSV
                 </button>
+
+                <SyncSkillsButton 
+                  subject={selectedSubject} 
+                  grade={selectedGrade} 
+                  onSynced={() => fetchCurriculumKpis()} 
+                />
               </div>
             </div>
           </div>
