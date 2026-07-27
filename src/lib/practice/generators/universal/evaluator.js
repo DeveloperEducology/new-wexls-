@@ -1082,7 +1082,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
             if (isUrlValue(val)) {
               // Image URL — show image chip, use filename as fallback label
               const filename = val.split('/').pop().replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ') || 'image';
-              dynItems.push({ id: `item_${key}`, label: filename, imageUrl: val, content: val, target: cat.id });
+              dynItems.push({ id: `item_${key}`, label: filename, imageUrl: val, content: filename, target: cat.id });
             } else {
               dynItems.push({ id: `item_${key}`, label: val, content: val, target: cat.id });
             }

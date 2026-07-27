@@ -1525,9 +1525,11 @@ function CategorySortLayout({
     const showCompactImage = Boolean(item.imageUrl || item.svg || toolSvg || contentIsSvg);
     const mediaCard = Boolean(item.imageUrl || item.svg || toolSvg || contentIsSvg);
     const transparentImageCard = isV2 && isTransparentImageStyle(item);
-    const cardLabelText = String(item.content || item.label || item.word || item.text || item.id || '').trim();
+    const cardLabelText = String(item.label || item.content || item.word || item.text || item.id || '').trim();
     // If content is SVG, hide the text label (there's nothing else to show)
-    const showImageLabel = !contentIsSvg && cardLabelText && !shouldHideImageLabel(item);
+    // Also hide label if the item has an imageUrl and the label IS a URL (auto-generated from spreadsheet)
+    const labelIsUrl = item.imageUrl && (cardLabelText.startsWith('http://') || cardLabelText.startsWith('https://') || (cardLabelText.startsWith('/') && /\.(png|jpg|jpeg|gif|webp|svg|avif)(\?|$)/i.test(cardLabelText)));
+    const showImageLabel = !contentIsSvg && !labelIsUrl && cardLabelText && !shouldHideImageLabel(item);
     const inlineSvg = item.svg || toolSvg
       ? cleanSvgContent(item.svg || toolSvg)
       : (item.imageUrl && isInlineSvg(item.imageUrl)

@@ -975,7 +975,7 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
                 (val.startsWith('/') && /\.(png|jpg|jpeg|gif|webp|svg|avif)(\?|$)/i.test(val));
               if (isUrl) {
                 const filename = val.split('/').pop().replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ') || 'image';
-                items.push({ id: `item_${key}_${hashSeed(val)}`, label: filename, imageUrl: val, content: val, target: catId });
+                items.push({ id: `item_${key}_${hashSeed(val)}`, label: filename, imageUrl: val, content: filename, target: catId });
               } else {
                 items.push({ id: `item_${key}_${hashSeed(val)}`, label: val, content: val, target: catId });
               }
