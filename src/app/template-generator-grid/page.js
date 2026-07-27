@@ -3122,16 +3122,11 @@ export default function SpreadsheetTemplateCreator() {
           transition: all 0.2s ease;
         }
         .grid-workspace.has-sidebar {
-          grid-template-columns: 320px 1fr 400px;
+          grid-template-columns: 1fr 400px;
         }
-        @media (max-width: 1200px) {
-          .grid-workspace.has-sidebar {
-            grid-template-columns: 280px 1fr 360px;
-          }
-        }
-        @media (max-width: 1024px) {
+        @media (max-width: 1300px) {
           .grid-workspace, .grid-workspace.has-sidebar {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 360px;
           }
         }
 
@@ -5892,16 +5887,17 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
 
   return (
     <aside style={{
+      position: 'fixed',
+      top: '64px',
+      left: 0,
       width: '320px',
       background: '#ffffff',
       borderRight: '1.5px solid #cbd5e1',
       display: 'flex',
       flexDirection: 'column',
       height: 'calc(100vh - 64px)',
-      position: 'sticky',
-      top: '64px',
-      boxShadow: '4px 0 20px rgba(148, 163, 184, 0.08)',
-      zIndex: 20
+      boxShadow: '6px 0 25px rgba(15, 23, 42, 0.15)',
+      zIndex: 100
     }}>
       <div style={{
         padding: '14px 16px',
