@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './kpi.module.css';
 import SyncSkillsButton from '@/components/admin/SyncSkillsButton';
+import { SkillTemplateAddedToggle, SkillTestingStatusSelector } from '@/components/admin/SkillStatusToggles';
 
 export default function KPIDashboardPage() {
   const [theme, setTheme] = useState('light');
@@ -872,9 +873,7 @@ export default function KPIDashboardPage() {
                           <td style={{ textTransform: 'capitalize' }}>{skill.chapter.replace(/-/g, ' ')}</td>
                           <td style={{ fontWeight: 600 }}>{skill.title}</td>
                           <td>
-                            <span className={`${styles.badge} ${skill.templateAdded ? styles.badgeSuccess : styles.badgeDanger}`}>
-                              {skill.templateAdded ? '✅ YES' : '❌ NO'}
-                            </span>
+                            <SkillTemplateAddedToggle skillId={skill.id} initialAdded={skill.templateAdded} />
                           </td>
                           <td style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--color-primary)' }}>
                             {skill.templateId}
@@ -883,13 +882,7 @@ export default function KPIDashboardPage() {
                             {skill.interactionType}
                           </td>
                           <td>
-                            <span className={styles.badge} style={{
-                              backgroundColor: skill.templateAdded 
-                                ? (skill.status.includes('Active') ? 'var(--color-success)' : '#eab308')
-                                : '#64748b'
-                            }}>
-                              {skill.templateAdded ? skill.status.toUpperCase() : 'PENDING'}
-                            </span>
+                            <SkillTestingStatusSelector skillId={skill.id} initialStatus={skill.status} templateAdded={skill.templateAdded} />
                           </td>
                         </tr>
                       ))}

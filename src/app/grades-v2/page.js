@@ -5,6 +5,7 @@ import SiteHeader from '@/components/layout/SiteHeader';
 import HomeHero from '@/components/home/HomeHero';
 import GradeFilterDropdownV2 from './GradeFilterDropdownV2';
 import SyncSkillsButton from '@/components/admin/SyncSkillsButton';
+import { SkillTemplateAddedToggle, SkillTestingStatusSelector } from '@/components/admin/SkillStatusToggles';
 import { ALL_TEMPLATES_BY_TOPIC } from '@/lib/practice/allTemplates';
 import { getMongoDb } from '@/lib/db/mongo';
 import { cookies, headers } from 'next/headers';
@@ -165,6 +166,18 @@ function practiceHrefV2(subjectId, unitId, skillId) {
 function getMatchedTemplate(skill, templates = [], dynamicTemplates = [], questionCount = 0) {
   const skillId = String(skill.id || '').trim();
   const skillTitleClean = String(skill.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Respect manual overrides if set on skill document in database
+  if (typeof skill.manualTemplateAdded === 'boolean' || typeof skill.manualTestingStatus === 'string') {
+    const isAdded = typeof skill.manualTemplateAdded === 'boolean' ? skill.manualTemplateAdded : Boolean(skill.templateAdded);
+    return {
+      templateAdded: isAdded,
+      templateId: skill.templateId || "-",
+      interactionType: skill.engine || skill.type || "-",
+      generatorType: skill.generatorType || "manual",
+      status: skill.manualTestingStatus || (isAdded ? "Verified & Active" : "Pending")
+    };
+  }
 
   // Extract explicit IDs from skill object
   const explicitIds = new Set();
@@ -744,19 +757,10 @@ export default async function GradesV2Page({ searchParams }) {
                             )}
                           </td>
                           <td style={{ padding: '12px 16px' }}>
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: '700',
-                              color: '#ffffff',
-                              backgroundColor: skill.templateAdded ? '#10b981' : '#ef4444'
-                            }}>
-                              {skill.templateAdded ? '✅ YES' : '❌ NO'}
-                            </span>
+                            <SkillTemplateAddedToggle skillId={skill.id} initialAdded={skill.templateAdded} />
                           </td>
                           <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#0284c7' }}>
-                            {skill.templateAdded ? (
+                            {skill.templateAdded && skill.templateId && skill.templateId !== '-' ? (
                               <Link
                                 href={skill.generatorType === 'spreadsheet-grid'
                                   ? `/template-generator-grid?id=${skill.templateId}`
@@ -789,18 +793,7 @@ export default async function GradesV2Page({ searchParams }) {
                           </td>
                           <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#64748b' }}>{skill.interactionType}</td>
                           <td style={{ padding: '12px 16px' }}>
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: '700',
-                              color: '#ffffff',
-                              backgroundColor: skill.templateAdded 
-                                ? (skill.status.includes('Active') ? '#10b981' : '#eab308')
-                                : '#64748b'
-                            }}>
-                              {skill.templateAdded ? skill.status.toUpperCase() : 'PENDING'}
-                            </span>
+                            <SkillTestingStatusSelector skillId={skill.id} initialStatus={skill.status} templateAdded={skill.templateAdded} />
                           </td>
                         </tr>
                       ))}
