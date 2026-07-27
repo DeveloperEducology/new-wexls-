@@ -970,7 +970,14 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
     // Combine and shuffle correct targets with distractors
     const rawOptions = [...targetOptions, ...selectedDistractors];
-    const activeOptions = seededShuffle(rawOptions, prng);
+    const preserveOptionOrder = Boolean(
+      poolDoc.preserveOptionOrder === true ||
+      poolDoc.shuffleOptions === false ||
+      poolDoc.isOrderedOptions === true ||
+      poolDoc.metadata?.preserveOptionOrder === true ||
+      poolDoc.metadata?.shuffleOptions === false
+    );
+    const activeOptions = preserveOptionOrder ? rawOptions : seededShuffle(rawOptions, prng);
 
     // 5. Interpolation helper
     const interpolate = (templateStr) => {
@@ -1152,7 +1159,18 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
     ? Math.max(2, Math.min(params.correctCount || 2, targetCandidates.length, targetOptionCount - 1))
     : 1;
 
-  const shuffledTargetCandidates = seededShuffle(targetCandidates, prng);
+  const isSequential = Boolean(
+    poolDoc.isSequential === true ||
+    poolDoc.isOrdered === true ||
+    poolDoc.metadata?.isSequential === true ||
+    poolDoc.metadata?.isOrdered === true
+  );
+  let shuffledTargetCandidates = seededShuffle(targetCandidates, prng);
+  if (isSequential) {
+    const numericSeed = typeof seed === 'number' ? seed : (parseInt(String(seed).replace(/\D/g, ''), 10) || 0);
+    const startIdx = numericSeed % targetCandidates.length;
+    shuffledTargetCandidates = targetCandidates.slice(startIdx).concat(targetCandidates.slice(0, startIdx));
+  }
   const targetOptions = shuffledTargetCandidates.slice(0, neededCorrectCount);
   const targetOption = targetOptions[0];
   const targetWord = targetOption.label;
@@ -1241,7 +1259,14 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
 
   // Combine and shuffle
   const rawOptions = [...targetOptions, ...selectedDistractors];
-  const activeOptions = seededShuffle(rawOptions, prng);
+  const preserveOptionOrder = Boolean(
+    poolDoc.preserveOptionOrder === true ||
+    poolDoc.shuffleOptions === false ||
+    poolDoc.isOrderedOptions === true ||
+    poolDoc.metadata?.preserveOptionOrder === true ||
+    poolDoc.metadata?.shuffleOptions === false
+  );
+  const activeOptions = preserveOptionOrder ? rawOptions : seededShuffle(rawOptions, prng);
 
   const interpolate = (templateStr) => {
     if (typeof templateStr !== 'string') return templateStr;
