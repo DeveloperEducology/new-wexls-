@@ -1066,6 +1066,11 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
 
     // Build items from resolved item_1a, item_1b, item_2a, item_2b, ... variables
     const dynItems = [];
+    const isUrlValue = (v) => {
+      if (!v) return false;
+      return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/') &&
+        /\.(png|jpg|jpeg|gif|webp|svg|avif)(\?|$)/i.test(v);
+    };
     if (dynCategories.length > 0) {
       dynCategories.forEach((cat, idx) => {
         const ci = idx + 1;
@@ -1074,7 +1079,13 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
           const key = `item_${ci}${suffix}`;
           if (resolvedVariables[key] !== undefined && resolvedVariables[key] !== null && String(resolvedVariables[key]).trim() !== '') {
             const val = String(resolvedVariables[key]).trim();
-            dynItems.push({ id: `item_${key}`, label: val, content: val, target: cat.id });
+            if (isUrlValue(val)) {
+              // Image URL — show image chip, use filename as fallback label
+              const filename = val.split('/').pop().replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ') || 'image';
+              dynItems.push({ id: `item_${key}`, label: filename, imageUrl: val, content: val, target: cat.id });
+            } else {
+              dynItems.push({ id: `item_${key}`, label: val, content: val, target: cat.id });
+            }
           }
         });
       });

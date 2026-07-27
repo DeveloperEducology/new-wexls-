@@ -4713,10 +4713,26 @@ export default function SpreadsheetTemplateCreator() {
 
               // 3. Categorization & Sorting
               if (questionMode === 'categorizationv2' || questionMode === 'sorting' || questionMode === 'categorisationv2') {
+                const isImgUrl = (v) => v && (v.startsWith('http://') || v.startsWith('https://') || (v.startsWith('/') && /\.(png|jpg|jpeg|gif|webp|svg|avif)(\?|$)/i.test(v)));
+                const renderItem = (val, color, bg) => {
+                  if (!val) return null;
+                  if (isImgUrl(val)) {
+                    return (
+                      <span style={{ background: bg, border: `1.5px solid ${color}`, borderRadius: '8px', padding: '4px', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <img src={val} alt="" style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '4px' }} />
+                      </span>
+                    );
+                  }
+                  return (
+                    <span style={{ background: bg, color: color === '#fcd34d' ? '#92400e' : '#1e40af', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                      {val}
+                    </span>
+                  );
+                };
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
                     <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase' }}>
-                      🗂️ Category Drop Zones & Sorted Items
+                      🗂️ Category Drop Zones &amp; Sorted Items
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div style={{ background: '#fffbeb', border: '2px dashed #fcd34d', borderRadius: '12px', padding: '12px' }}>
@@ -4724,12 +4740,9 @@ export default function SpreadsheetTemplateCreator() {
                           📦 {activeRow['category_1'] || 'Category A'}
                         </div>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
-                            {activeRow['item_1a'] || 'Item 1'}
-                          </span>
-                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
-                            {activeRow['item_1b'] || 'Item 2'}
-                          </span>
+                          {renderItem(activeRow['item_1a'] || 'Item 1', '#fcd34d', '#fef3c7')}
+                          {renderItem(activeRow['item_1b'] || 'Item 2', '#fcd34d', '#fef3c7')}
+                          {activeRow['item_1c'] && renderItem(activeRow['item_1c'], '#fcd34d', '#fef3c7')}
                         </div>
                       </div>
 
@@ -4738,14 +4751,14 @@ export default function SpreadsheetTemplateCreator() {
                           📦 {activeRow['category_2'] || 'Category B'}
                         </div>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
-                            {activeRow['item_2a'] || 'Item 3'}
-                          </span>
-                          <span style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
-                            {activeRow['item_2b'] || 'Item 4'}
-                          </span>
+                          {renderItem(activeRow['item_2a'] || 'Item 3', '#93c5fd', '#dbeafe')}
+                          {renderItem(activeRow['item_2b'] || 'Item 4', '#93c5fd', '#dbeafe')}
+                          {activeRow['item_2c'] && renderItem(activeRow['item_2c'], '#93c5fd', '#dbeafe')}
                         </div>
                       </div>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#6b7280', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px 12px', marginTop: '2px' }}>
+                      💡 <strong>Tip:</strong> Paste an image URL (https://…jpg) into any <code style={{background:'#f3f4f6',padding:'1px 4px',borderRadius:'3px'}}>item_</code> cell to show an image chip instead of text.
                     </div>
                   </div>
                 );

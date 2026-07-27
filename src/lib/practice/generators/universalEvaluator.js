@@ -966,16 +966,19 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
           categories.push({ id: catId, label: catLabel });
         }
         
-        Object.keys(ctx).forEach(key => {
+        Object.keys(ctx).sort().forEach(key => {
           if (key.startsWith(`item_${catIdx}`) || key.startsWith(`item_${String.fromCharCode(96 + catIdx)}`)) {
             const itemVal = ctx[key];
             if (itemVal !== undefined && itemVal !== null && String(itemVal).trim() !== '') {
-              items.push({
-                id: `item_${key}_${hashSeed(String(itemVal))}`,
-                label: String(itemVal).trim(),
-                content: String(itemVal).trim(),
-                target: catId
-              });
+              const val = String(itemVal).trim();
+              const isUrl = val.startsWith('http://') || val.startsWith('https://') ||
+                (val.startsWith('/') && /\.(png|jpg|jpeg|gif|webp|svg|avif)(\?|$)/i.test(val));
+              if (isUrl) {
+                const filename = val.split('/').pop().replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ') || 'image';
+                items.push({ id: `item_${key}_${hashSeed(val)}`, label: filename, imageUrl: val, content: val, target: catId });
+              } else {
+                items.push({ id: `item_${key}_${hashSeed(val)}`, label: val, content: val, target: catId });
+              }
             }
           }
         });
