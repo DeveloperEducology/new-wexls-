@@ -1083,6 +1083,16 @@ export default function SpreadsheetTemplateCreator() {
     setRows([...rows, newRow]);
   };
 
+  // Delete Row
+  const handleDeleteRow = (rIdx) => {
+    if (rows.length <= 1) return;
+    const updated = rows.filter((_, idx) => idx !== rIdx);
+    setRows(updated);
+    if (activeRowIndex >= updated.length) {
+      setActiveRowIndex(Math.max(0, updated.length - 1));
+    }
+  };
+
   // State & Helpers for Cell Interactivity and Auto-TTS Generation
   const [warmingTts, setWarmingTts] = useState(false);
   const isAudioUrl = (val) => typeof val === 'string' && (val.startsWith('/api/tts') || val.includes('.wav') || val.includes('.mp3'));
