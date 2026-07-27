@@ -1006,13 +1006,26 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         isMultiSelectMode = true;
       }
 
-      if (currentLevel === 1) {
+      const searchParams = difficultyContext?.searchParams;
+      const isOrderedOrPreserved = Boolean(
+        template.preserveOptionOrder === true ||
+        template.shuffleOptions === false ||
+        template.isSequential === true ||
+        template.isOrdered === true ||
+        template.metadata?.preserveOptionOrder === true ||
+        template.metadata?.isSequential === true ||
+        template.metadata?.isOrdered === true ||
+        searchParams?.get?.('mode') === 'static' ||
+        searchParams?.get?.('iit') === 'true' ||
+        searchParams?.get?.('isSequential') === 'true' ||
+        searchParams?.get?.('isOrdered') === 'true'
+      );
+
+      if (isOrderedOrPreserved || uniqueOptions.length >= 4) {
+        targetOptionCount = uniqueOptions.length;
+      } else if (currentLevel === 1 || currentLevel === 2) {
         targetOptionCount = 3;
-      } else if (currentLevel === 2) {
-        targetOptionCount = 3;
-      } else if (currentLevel === 3) {
-        targetOptionCount = 4;
-      } else if (currentLevel === 4) {
+      } else {
         targetOptionCount = 4;
       }
 
@@ -1020,6 +1033,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       let pickedIncorrect = [];
 
       const pickRandomMany = (items, count) => {
+        if (isOrderedOrPreserved) return items.slice(0, count);
         const shuffled = shuffle(items, rng);
         return shuffled.slice(0, count);
       };
@@ -1057,8 +1071,8 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         }
       }
 
-      const combined = [...pickedCorrect, ...pickedIncorrect];
-      const shouldShuffle = template.shuffleOptions !== false;
+      const combined = isOrderedOrPreserved ? uniqueOptions : [...pickedCorrect, ...pickedIncorrect];
+      const shouldShuffle = !isOrderedOrPreserved && template.shuffleOptions !== false;
       optionsList = shouldShuffle ? shuffle(combined, rng) : combined;
     } else {
       const shouldShuffle = template.optionsType !== 'hotspot_select' && 
