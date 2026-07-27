@@ -1959,10 +1959,28 @@ export default function CatV2HtmlRenderer({
   onAnswer,
   isAnswered,
 }) {
+  const catPart = useMemo(() => {
+    return question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2' || part.layoutMode);
+  }, [question.parts]);
+
+  const effectiveQuestion = useMemo(() => {
+    if (!catPart) return question;
+    return {
+      ...catPart,
+      ...question,
+      grid: question.grid || catPart.grid,
+      pattern: question.pattern || catPart.pattern,
+      behavior: { ...(catPart.behavior || {}), ...(question.behavior || {}) },
+      targets: (Array.isArray(question.targets) && question.targets.length > 0) ? question.targets : (catPart.targets || []),
+      items: (Array.isArray(question.items) && question.items.length > 0) ? question.items : (catPart.items || []),
+      layoutMode: question.layoutMode || catPart.layoutMode,
+    };
+  }, [question, catPart]);
+
   const categories = useMemo(() => {
-    let rawCategories = question.categories || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.categories;
+    let rawCategories = effectiveQuestion.categories || effectiveQuestion.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.categories;
     if (!rawCategories || rawCategories.length === 0) {
-      const vars = question.schema?.variables || question.variables || {};
+      const vars = effectiveQuestion.schema?.variables || effectiveQuestion.variables || {};
       const dynCats = [];
       let catIdx = 1;
       while (vars[`category_${catIdx}`]) {
@@ -1971,10 +1989,12 @@ export default function CatV2HtmlRenderer({
       }
       if (dynCats.length > 0) {
         rawCategories = dynCats;
-      } else if (Array.isArray(question.targetCategories) && question.targetCategories.length > 0) {
-        rawCategories = question.targetCategories.map(c => ({ id: `cat_${c}`, label: String(c).replace(/_/g, ' ') }));
+      } else if (Array.isArray(effectiveQuestion.targetCategories) && effectiveQuestion.targetCategories.length > 0) {
+        rawCategories = effectiveQuestion.targetCategories.map(c => ({ id: `cat_${c}`, label: String(c).replace(/_/g, ' ') }));
+      } else if (Array.isArray(effectiveQuestion.targets) && effectiveQuestion.targets.length > 0) {
+        rawCategories = effectiveQuestion.targets.map(t => ({ id: t.id, label: t.label || String(t.id || '').replace(/_/g, ' ') }));
       } else {
-        rawCategories = [{ id: 'cat_long_e', label: 'Long e' }, { id: 'cat_short_e', label: 'Short e' }];
+        rawCategories = [];
       }
     }
     return rawCategories.map((cat) => {
@@ -1983,12 +2003,12 @@ export default function CatV2HtmlRenderer({
       }
       return { ...cat, label: String(cat.label || cat.id || '').replace(/_/g, ' ') };
     });
-  }, [question.categories, question.parts, question.targetCategories, question.schema, question.variables]);
+  }, [effectiveQuestion]);
 
   const items = useMemo(() => {
-    let rawItems = question.items || question.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.items;
+    let rawItems = effectiveQuestion.items || effectiveQuestion.parts?.find((part) => part.type === 'categorization' || part.type === 'categorizationv2')?.items;
     if (!rawItems || rawItems.length === 0) {
-      const vars = question.schema?.variables || question.variables || {};
+      const vars = effectiveQuestion.schema?.variables || effectiveQuestion.variables || {};
       const dynItems = [];
       categories.forEach((cat, idx) => {
         const catIdx = idx + 1;
@@ -2008,28 +2028,38 @@ export default function CatV2HtmlRenderer({
       });
       if (dynItems.length > 0) {
         rawItems = dynItems;
-      } else if (Array.isArray(question.options) && question.options.length > 0) {
-        rawItems = question.options.map((opt, idx) => ({
+      } else if (Array.isArray(effectiveQuestion.options) && effectiveQuestion.options.length > 0) {
+        rawItems = effectiveQuestion.options.map((opt, idx) => ({
           id: opt.id || `opt_${idx}`,
           label: opt.label || opt.text || String(opt),
           imageUrl: opt.imageUrl || undefined,
           audioUrl: opt.audioUrl || undefined,
-          target: opt.isCorrect ? (categories[0]?.id || 'cat_long_e') : (categories[1]?.id || 'cat_short_e')
+          target: opt.isCorrect ? (categories[0]?.id || 'cat_1') : (categories[1]?.id || 'cat_2')
         }));
       } else {
         rawItems = [];
       }
     }
     return rawItems;
-  }, [question.items, question.parts, question.options, categories, question.schema, question.variables]);
-  const useHtmlRenderer = question.renderer === 'html' || question.type === 'categorizationv2' || question.type === 'grid_fill';
-  const rawLayoutMode = question.layoutMode || question.metadata?.layoutMode || question.htmlLayout || (question.type === 'grid_fill' ? 'grid_fill' : 'category_sort');
+  }, [effectiveQuestion, categories]);
+
+  const useHtmlRenderer = effectiveQuestion.renderer === 'html' || effectiveQuestion.type === 'categorizationv2' || effectiveQuestion.type === 'grid_fill';
+  const rawLayoutMode = effectiveQuestion.layoutMode || effectiveQuestion.metadata?.layoutMode || effectiveQuestion.htmlLayout || (effectiveQuestion.type === 'grid_fill' ? 'grid_fill' : 'category_sort');
   const isGridTable = categories.some(c => c.isGrid === true || (Number(c.rows) > 0 && Number(c.columns) > 1));
-  const allowGridFill = Boolean(question.enableGridFill || question.allowGridFill || question.type === 'grid_fill' || question.optionsType === 'grid_fill' || isGridTable);
+  const allowGridFill = Boolean(
+    effectiveQuestion.enableGridFill ||
+    effectiveQuestion.allowGridFill ||
+    effectiveQuestion.type === 'grid_fill' ||
+    effectiveQuestion.optionsType === 'grid_fill' ||
+    rawLayoutMode === 'grid_fill' ||
+    rawLayoutMode === 'table_fill' ||
+    catPart?.layoutMode === 'grid_fill' ||
+    isGridTable
+  );
   const layoutMode = (rawLayoutMode === 'grid_fill' || rawLayoutMode === 'table_fill') && allowGridFill ? 'grid_fill' : ((rawLayoutMode === 'grid_fill' || rawLayoutMode === 'table_fill') ? 'category_sort' : rawLayoutMode);
   const isWordCompletion = layoutMode === 'word_completion' || layoutMode === 'complete_words';
-  const cardStyle = question.cardStyle || question.behavior?.cardStyle || question.itemCardStyle || question.imageCardStyle || question.cardVariant;
-  const hideItemLabels = Boolean(question.hideItemLabels || question.behavior?.hideItemLabels);
+  const cardStyle = effectiveQuestion.cardStyle || effectiveQuestion.behavior?.cardStyle || effectiveQuestion.itemCardStyle || effectiveQuestion.imageCardStyle || effectiveQuestion.cardVariant;
+  const hideItemLabels = Boolean(effectiveQuestion.hideItemLabels || effectiveQuestion.behavior?.hideItemLabels);
   const containerRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -2098,7 +2128,7 @@ export default function CatV2HtmlRenderer({
 
         {layoutMode === 'ordering' ? (
           <OrderingLayout
-            question={question}
+            question={effectiveQuestion}
             items={items}
             cardStyle={cardStyle}
             hideItemLabels={hideItemLabels}
@@ -2108,7 +2138,7 @@ export default function CatV2HtmlRenderer({
           />
         ) : layoutMode === 'grid_fill' || layoutMode === 'table_fill' ? (
           <GridFillLayout
-            question={question}
+            question={effectiveQuestion}
             categories={categories}
             items={items}
             cardStyle={cardStyle}
@@ -2118,7 +2148,7 @@ export default function CatV2HtmlRenderer({
           />
         ) : layoutMode === 'diagram_slots' || layoutMode === 'diagram_labeling' ? (
           <DiagramSlotsLayout
-            question={question}
+            question={effectiveQuestion}
             items={items}
             cardStyle={cardStyle}
             hideItemLabels={hideItemLabels}
@@ -2127,7 +2157,7 @@ export default function CatV2HtmlRenderer({
           />
         ) : layoutMode === 'word_completion' || layoutMode === 'complete_words' ? (
           <WordCompletionLayout
-            question={question}
+            question={effectiveQuestion}
             items={items}
             onAnswer={onAnswer}
             isAnswered={isAnswered}
@@ -2138,14 +2168,14 @@ export default function CatV2HtmlRenderer({
             items={items}
             cardStyle={cardStyle}
             hideItemLabels={hideItemLabels}
-            isCopiable={Boolean(question.isCopiable)}
-            isRemoval={Boolean(question.isRemoval)}
+            isCopiable={Boolean(effectiveQuestion.isCopiable || effectiveQuestion.behavior?.isCopiable)}
+            isRemoval={Boolean(effectiveQuestion.isRemoval || effectiveQuestion.behavior?.isRemoval)}
             isV2={true}
             userAnswer={userAnswer}
             onAnswer={onAnswer}
             isAnswered={isAnswered}
-            showItemBorders={question.showItemBorders}
-            borderlessItems={question.borderlessItems}
+            showItemBorders={effectiveQuestion.showItemBorders}
+            borderlessItems={effectiveQuestion.borderlessItems}
           />
         )}
       </div>

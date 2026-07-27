@@ -27,9 +27,12 @@ const SentenceOrderingRenderer = dynamic(
 
 const ENGINE_TYPE_MAP = {
   mcq: 'mcq',
+  visual_choice: 'mcq',
   picture_mcq: 'picture_mcq',
+  picture_choice: 'picture_mcq',
   audio_mcq: 'audio_mcq',
   multi_select: 'multi_select',
+  msq: 'multi_select',
   fill_blank: 'fillInTheBlank',
   number_input: 'fillInTheBlank',
   text_input: 'fillInTheBlank',
@@ -59,7 +62,8 @@ function normalizeUniversalQuestion(question) {
     .trim()
     .toLowerCase();
   const type = ENGINE_TYPE_MAP[normalizedEngine] || question?.type || normalizedEngine || 'mcq';
-  const isChoice = ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'hotspot_select'].includes(type);
+  const isChoice = ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'hotspot_select', 'visual_choice'].includes(type)
+    || ['mcq', 'picture_mcq', 'audio_mcq', 'multi_select', 'hotspot_select', 'visual_choice'].includes(normalizedEngine);
   const isTextInput = ['fillInTheBlank', 'number_input', 'text_input'].includes(type);
 
   return {

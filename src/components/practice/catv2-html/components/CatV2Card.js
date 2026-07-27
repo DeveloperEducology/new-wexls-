@@ -65,11 +65,13 @@ export default function CatV2Card({
   onDragEnd,
 }) {
   const toolSvg = resolveToolSvg(item);
-  const svgContent = item.svg || toolSvg;
+  const rawLabel = item.content || item.label || item.id;
+  const labelIsSvg = isInlineSvg(rawLabel);
+  const svgContent = item.svg || (labelIsSvg ? rawLabel : null) || toolSvg;
   const imageUrl = item.imageUrl;
   const transparent = cardStyle === 'transparent_png' || cardStyle === 'borderless';
   const hasVisual = Boolean(svgContent || imageUrl);
-  const label = item.content || item.label || item.id;
+  const label = labelIsSvg ? '' : rawLabel;
   const isMath = typeof label === 'string' && (label.includes('$') || label.includes('\\'));
   const cardWidth = compact ? 92 : Number(item.imageWidth) || (hasVisual ? 132 : (isMath ? 320 : 96));
 
