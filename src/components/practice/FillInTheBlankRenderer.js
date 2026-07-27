@@ -295,8 +295,19 @@ export default function FillInTheBlankRenderer({
     ? question.parts
     : [{ type: 'text', content: question.questionText }];
 
-  const firstPartText = (parts[0]?.content || parts[0]?.text || '').trim();
-  const totalPartsText = parts.map(p => p?.content || p?.text || '').join('\n\n').trim();
+  const extractPartText = (part) => {
+    if (!part) return '';
+    if (typeof part === 'string') return part;
+    if (part.content) return String(part.content);
+    if (part.text) return String(part.text);
+    if (Array.isArray(part.parts)) {
+      return part.parts.map(extractPartText).filter(Boolean).join('\n');
+    }
+    return '';
+  };
+
+  const firstPartText = extractPartText(parts[0]).trim();
+  const totalPartsText = parts.map(extractPartText).filter(Boolean).join('\n\n').trim();
   const isDuplicateParts = Boolean(
     question.questionText && (
       totalPartsText === question.questionText.trim() ||
@@ -311,7 +322,7 @@ export default function FillInTheBlankRenderer({
   const partHasBlank = (part) => {
     if (!part) return false;
     if (part.type === 'input' || part.type === 'arithmeticLayout') return true;
-    if (hasBlankToken(part.content || part.text || '')) return true;
+    if (hasBlankToken(extractPartText(part))) return true;
     if (Array.isArray(part.parts)) {
       return part.parts.some(partHasBlank);
     }
