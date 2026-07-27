@@ -593,9 +593,25 @@ export default function MCQRenderer({
     question?.metadata?.autoSubmit ||
     question?.layoutConfig?.autoSubmit
   );
-  const visualPanels = useMemo(() => {
-    return (question.parts || []).filter(p => p.type === 'visual_panel');
-  }, [question.parts]);
+  const displayOptions = useMemo(() => {
+    const rawOptions = Array.isArray(question?.options) ? [...question.options] : [];
+    
+    // Check if options have A/B/C/D letter prefixes
+    const hasAlphaPrefixes = rawOptions.length > 0 && rawOptions.every(opt => {
+      const label = String(typeof opt === 'object' && opt !== null ? (opt.label || opt.text || opt.value || '') : opt).trim();
+      return /^\(?[A-Da-d]\)?[\.\s)]/.test(label);
+    });
+
+    if (hasAlphaPrefixes) {
+      return rawOptions.sort((a, b) => {
+        const labelA = String(typeof a === 'object' && a !== null ? (a.label || a.text || a.value || '') : a).trim();
+        const labelB = String(typeof b === 'object' && b !== null ? (b.label || b.text || b.value || '') : b).trim();
+        return labelA.localeCompare(labelB);
+      });
+    }
+
+    return rawOptions;
+  }, [question?.options]);
 
   const selectedIndices = useMemo(() => {
     if (!isMultiSelect && !isTapToFill) return [];
@@ -933,30 +949,31 @@ export default function MCQRenderer({
 
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: isPreK ? 4 : 14 }}>
-      {/* Demo / Sequential Index Badge */}
-      {(question?.isSequential || question?.isOrdered || question?.metadata?.isSequential || question?.metadata?.isOrdered || question?.preserveOptionOrder || question?.metadata?.preserveOptionOrder || question?.shuffleOptions === false) && (
+      {/* Demo / Sequential Index / Static Badge */}
+      {(question?.isSequential || question?.isOrdered || question?.metadata?.isSequential || question?.metadata?.isOrdered || question?.preserveOptionOrder || question?.metadata?.preserveOptionOrder || question?.shuffleOptions === false || question?.isStatic || question?.metadata?.isStatic || routeSearch.includes('mode=static') || routeSearch.includes('iit=true')) && (
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '4px 10px',
+          padding: '4px 12px',
           borderRadius: '8px',
           fontSize: '11px',
           fontWeight: '800',
           background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
           color: '#ffffff',
           boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
-          marginBottom: '4px',
+          marginBottom: '6px',
           width: 'fit-content',
           fontFamily: 'monospace'
         }}>
-          <span>📌 ORDER MODE:</span>
-          {(question?.isSequential || question?.isOrdered || question?.metadata?.isSequential || question?.metadata?.isOrdered) && (
-            <span>Row Index #{((typeof question?.rowIndex === 'number' ? question.rowIndex : (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex : 0)) + 1)} (Sequential)</span>
-          )}
-          {(question?.preserveOptionOrder || question?.metadata?.preserveOptionOrder || question?.shuffleOptions === false) && (
-            <span>• Options Fixed (1,2,3,4)</span>
-          )}
+          <span>📌 {routeSearch.includes('iit=true') || routeSearch.includes('mode=static') ? 'STATIC / IIT QN:' : 'ORDER MODE:'}</span>
+          <span>
+            {routeSearch.includes('mode=static') || routeSearch.includes('iit=true')
+              ? `Question 1 (Static Bank)`
+              : `Row Index #${((typeof question?.rowIndex === 'number' ? question.rowIndex : (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex : 0)) + 1)} (Sequential)`
+            }
+          </span>
+          <span>• Options Ordered (A, B, C, D)</span>
         </div>
       )}
       {question.metaConfig?.hasClickToFill && (
@@ -1389,10 +1406,12 @@ export default function MCQRenderer({
               })
             ) : (
               // Standard MCQ Options rendering
-              (question.options || []).map((option, index) => {
+              (displayOptions || []).map((option, index) => {
+                const originalIndex = (question.options || []).indexOf(option);
+                const activeIndex = originalIndex >= 0 ? originalIndex : index;
                 const selected = isMultiSelect
-                  ? selectedIndices.includes(index)
-                  : Number.isFinite(selectedIndex) && selectedIndex === index;
+                  ? selectedIndices.includes(activeIndex)
+                  : Number.isFinite(selectedIndex) && selectedIndex === activeIndex;
                 const content = getOptionContent(option);
                 const isSvgOption = hasSvgContent(option);
                 const isImageOption = isImageUrl(content);
@@ -1403,9 +1422,9 @@ export default function MCQRenderer({
                     type="button"
                     disabled={isAnswered}
                     onClick={() => {
-                      handleSelectOptionIndex(index);
+                      handleSelectOptionIndex(activeIndex);
                       if (isPreK || option?.audioUrl || question.metaConfig?.readOptions || question.metaConfig?.readable) {
-                        speakText(getOptionLabel(option, index), question.voice || 'Puck', option?.audioUrl);
+                        speakText(getOptionLabel(option, activeIndex), question.voice || 'Puck', option?.audioUrl);
                       }
                     }}
                     className={(() => {
