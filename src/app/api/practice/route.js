@@ -660,7 +660,15 @@ export async function GET(request) {
         skillQueryList.push(skill);
       }
 
-      const isStaticSkill = skillNode?.isStatic === true || skillNode?.metadata?.isStatic === true || skillNode?.static === true;
+      const isStaticSkill = Boolean(
+        skillNode?.isStatic === true || 
+        skillNode?.metadata?.isStatic === true || 
+        skillNode?.static === true ||
+        searchParams.get('mode') === 'static' ||
+        searchParams.get('iit') === 'true' ||
+        searchParams.get('isSequential') === 'true' ||
+        searchParams.get('isOrdered') === 'true'
+      );
 
       const storedPayload = await resolveStoredPracticePayload({
         subject: resolvedSubject,

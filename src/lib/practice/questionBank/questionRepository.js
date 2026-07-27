@@ -304,6 +304,10 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
       const nextQuestionId = candidates[index + 1] ? (candidates[index + 1].id || String(candidates[index + 1]._id)) : 'end';
       if (!document.metadata) document.metadata = {};
       document.metadata.nextQuestionId = nextQuestionId;
+      document.metadata.rowIndex = index;
+      document.metadata.qnNumber = index + 1;
+      document.metadata.totalStaticQuestions = candidates.length;
+      document.isStatic = true;
     }
 
     return normalizeStoredQuestion(document, { subject, topic, skill });

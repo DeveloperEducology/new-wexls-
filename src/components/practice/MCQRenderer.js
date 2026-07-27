@@ -969,7 +969,7 @@ export default function MCQRenderer({
           <span>📌 {routeSearch.includes('iit=true') || routeSearch.includes('mode=static') ? 'STATIC / IIT QN:' : 'ORDER MODE:'}</span>
           <span>
             {routeSearch.includes('mode=static') || routeSearch.includes('iit=true')
-              ? `Question 1 (Static Bank)`
+              ? `Question ${question?.metadata?.qnNumber || (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex + 1 : 1)} (Static Bank)`
               : `Row Index #${((typeof question?.rowIndex === 'number' ? question.rowIndex : (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex : 0)) + 1)} (Sequential)`
             }
           </span>
