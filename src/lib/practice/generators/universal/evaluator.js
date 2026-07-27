@@ -327,6 +327,11 @@ function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
     return '';
   }
 
+  // Fallback: if a formula/expression property exists evaluate it even without an explicit type
+  if (variable?.formula || variable?.expression) {
+    return resolveExpression(variable.formula || variable.expression, resolvedVariables);
+  }
+
   return variable?.value ?? '';
 }
 
@@ -1051,6 +1056,40 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   const isCategorizationEngine = ['categorization', 'categorizationv2', 'sorting', 'sort', 'categorysort'].includes(interactionEngine);
   
   if (isCategorizationEngine && !rawParts.some(p => p.type === 'categorization' || p.type === 'categorizationv2' || p.type === 'drag_drop')) {
+    // Try to build categories from resolved category_1, category_2, ... variables first
+    const dynCategories = [];
+    let catIdx = 1;
+    while (resolvedVariables[`category_${catIdx}`] !== undefined && resolvedVariables[`category_${catIdx}`] !== null && resolvedVariables[`category_${catIdx}`] !== '') {
+      dynCategories.push({ id: `cat_${catIdx}`, label: String(resolvedVariables[`category_${catIdx}`]).trim() });
+      catIdx++;
+    }
+
+    // Build items from resolved item_1a, item_1b, item_2a, item_2b, ... variables
+    const dynItems = [];
+    if (dynCategories.length > 0) {
+      dynCategories.forEach((cat, idx) => {
+        const ci = idx + 1;
+        // Check item_Na, item_Nb, item_Nc pattern
+        ['a','b','c','d','e'].forEach(suffix => {
+          const key = `item_${ci}${suffix}`;
+          if (resolvedVariables[key] !== undefined && resolvedVariables[key] !== null && String(resolvedVariables[key]).trim() !== '') {
+            const val = String(resolvedVariables[key]).trim();
+            dynItems.push({ id: `item_${key}`, label: val, content: val, target: cat.id });
+          }
+        });
+      });
+    }
+
+    if (dynCategories.length > 0) {
+      rawParts.push({
+        type: 'categorizationv2',
+        layoutMode: 'category_sort',
+        categories: dynCategories,
+        items: shuffle(dynItems.length > 0 ? dynItems : [], rng),
+        answerKey: Object.fromEntries(dynItems.map(i => [i.id, i.target]))
+      });
+    } else {
+
     const targetCats = template.targetCategories 
       || template.dataSources?.find(ds => Array.isArray(ds.targetCategories))?.targetCategories 
       || ['long_a', 'short_a'];
@@ -1089,6 +1128,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       items: shuffle(generatedItems, rng),
       answerKey
     });
+    } // end else (no dynCategories)
   }
 
   let parts = [];
