@@ -1128,6 +1128,9 @@ function _generateFromDynamicPool(poolDoc, seed, difficulty, history = {}, grade
         microSkillId: skillId,
         templateId: poolDoc.metadata?.templateId || 'lkg.english.word_recognition',
         engine: 'generator',
+        isSequential: Boolean(poolDoc.isSequential || poolDoc.isOrdered || poolDoc.metadata?.isSequential || poolDoc.metadata?.isOrdered),
+        preserveOptionOrder: Boolean(poolDoc.preserveOptionOrder || poolDoc.shuffleOptions === false || poolDoc.metadata?.preserveOptionOrder || poolDoc.metadata?.shuffleOptions === false),
+        rowIndex: typeof startIdx === 'number' ? startIdx : (typeof seed === 'number' ? seed : 0),
         remediationActive: !!targetWeakness,
         targetMisconception: targetWeakness,
         targetCategory: resolvedTargetCategory

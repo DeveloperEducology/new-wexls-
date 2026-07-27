@@ -933,6 +933,32 @@ export default function MCQRenderer({
 
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: isPreK ? 4 : 14 }}>
+      {/* Demo / Sequential Index Badge */}
+      {(question?.isSequential || question?.isOrdered || question?.metadata?.isSequential || question?.metadata?.isOrdered || question?.preserveOptionOrder || question?.metadata?.preserveOptionOrder || question?.shuffleOptions === false) && (
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 10px',
+          borderRadius: '8px',
+          fontSize: '11px',
+          fontWeight: '800',
+          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+          color: '#ffffff',
+          boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
+          marginBottom: '4px',
+          width: 'fit-content',
+          fontFamily: 'monospace'
+        }}>
+          <span>📌 ORDER MODE:</span>
+          {(question?.isSequential || question?.isOrdered || question?.metadata?.isSequential || question?.metadata?.isOrdered) && (
+            <span>Row Index #{((typeof question?.rowIndex === 'number' ? question.rowIndex : (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex : 0)) + 1)} (Sequential)</span>
+          )}
+          {(question?.preserveOptionOrder || question?.metadata?.preserveOptionOrder || question?.shuffleOptions === false) && (
+            <span>• Options Fixed (1,2,3,4)</span>
+          )}
+        </div>
+      )}
       {question.metaConfig?.hasClickToFill && (
         <ClickToFillBridge
           question={question}
