@@ -1430,6 +1430,145 @@ export default function SpreadsheetTemplateCreator() {
     e.target.value = '';
   };
 
+  const handleLoadQuestionTypeSample = (qTypeId) => {
+    let sampleCols = [];
+    let sampleRows = [];
+    let qMode = 'mcq';
+    let qBlueprint = '{{question_prompt}}';
+    let qSolution = '{{explanation}}';
+    let qTitle = '';
+    let bindings = [];
+
+    if (qTypeId === 'mcq') {
+      qMode = 'mcq';
+      qTitle = 'Single Choice MCQ Phonics Drill';
+      qBlueprint = '{{question_prompt}}';
+      qSolution = '{{explanation}}';
+      sampleCols = ['id', 'question_prompt', 'primary_asset', 'option_1', 'option_2', 'option_3', 'correct_answer', 'explanation'];
+      sampleRows = [
+        { id: 'mcq_01', question_prompt: 'Which word starts with the /b/ sound?', primary_asset: 'audio_b_v1', option_1: 'bear', option_2: 'cat', option_3: 'dog', correct_answer: 'bear', explanation: "The word bear starts with the bilabial plosive 'b' sound." },
+        { id: 'mcq_02', question_prompt: 'Which word starts with the /c/ sound?', primary_asset: 'audio_c_v1', option_1: 'cat', option_2: 'mop', option_3: 'tub', correct_answer: 'cat', explanation: "The word cat starts with the hard 'c' sound (/k/)." }
+      ];
+      bindings = [
+        { column: 'option_1', isCorrect: true },
+        { column: 'option_2', isCorrect: false },
+        { column: 'option_3', isCorrect: false }
+      ];
+    } else if (qTypeId === 'msq') {
+      qMode = 'msq';
+      qTitle = 'Multi-Select MSQ Phoneme Match';
+      qBlueprint = '{{question_prompt}}';
+      qSolution = '{{explanation}}';
+      sampleCols = ['id', 'question_prompt', 'correct_word_1', 'correct_word_2', 'distractor_word', 'explanation'];
+      sampleRows = [
+        { id: 'msq_01', question_prompt: 'Which two words start with the same sound?', correct_word_1: 'apple', correct_word_2: 'ant', distractor_word: 'dog', explanation: "Both apple and ant share the same initial short 'a' sound." },
+        { id: 'msq_02', question_prompt: 'Which two words start with the same sound?', correct_word_1: 'bear', correct_word_2: 'bat', distractor_word: 'sun', explanation: "Both bear and bat share the same initial 'b' sound." }
+      ];
+      bindings = [
+        { column: 'correct_word_1', isCorrect: true },
+        { column: 'correct_word_2', isCorrect: true },
+        { column: 'distractor_word', isCorrect: false }
+      ];
+    } else if (qTypeId === 'fill_blank') {
+      qMode = 'fill_blank';
+      qTitle = 'Fill in the Blank Addition Drill';
+      qBlueprint = 'Calculate: {{num1}} + {{num2}} = {{Result}}';
+      qSolution = '{{num1}} + {{num2}} equals {{Result}}.';
+      sampleCols = ['id', 'num1', 'num2', 'Result', 'explanation'];
+      sampleRows = [
+        { id: 'fill_01', num1: '5', num2: '3', Result: '8', explanation: '5 + 3 = 8.' },
+        { id: 'fill_02', num1: '12', num2: '4', Result: '16', explanation: '12 + 4 = 16.' }
+      ];
+      bindings = [
+        { column: 'Result', isCorrect: true }
+      ];
+    } else if (qTypeId === 'categorizationv2' || qTypeId === 'categorization') {
+      qMode = 'categorizationv2';
+      qTitle = 'Category Group Sorting Drill';
+      qBlueprint = 'Sort items into correct category buckets:';
+      qSolution = 'Group items by their category definitions.';
+      sampleCols = ['id', 'category_1', 'item_1a', 'item_1b', 'category_2', 'item_2a', 'item_2b'];
+      sampleRows = [
+        { id: 'cat_01', category_1: 'Nouns', item_1a: 'cat', item_1b: 'dog', category_2: 'Verbs', item_2a: 'run', item_2b: 'jump' },
+        { id: 'cat_02', category_1: 'Even Numbers', item_1a: '2', item_1b: '4', category_2: 'Odd Numbers', item_2a: '1', item_2b: '3' }
+      ];
+      bindings = [
+        { column: 'item_1a', isCorrect: true },
+        { column: 'item_1b', isCorrect: true },
+        { column: 'item_2a', isCorrect: true },
+        { column: 'item_2b', isCorrect: true }
+      ];
+    } else if (qTypeId === 'sentence_ordering') {
+      qMode = 'sentence_ordering';
+      qTitle = 'Sentence Word Ordering Drill';
+      qBlueprint = 'Reorder the words to form a correct sentence:';
+      qSolution = 'The correct sentence order is: {{correct_sentence}}';
+      sampleCols = ['id', 'jumbled_sentence', 'correct_sentence'];
+      sampleRows = [
+        { id: 'ord_01', jumbled_sentence: 'sat | The | cat | mat | on | the', correct_sentence: 'The cat sat on the mat' },
+        { id: 'ord_02', jumbled_sentence: 'is | Sky | blue | the', correct_sentence: 'The sky is blue' }
+      ];
+      bindings = [
+        { column: 'correct_sentence', isCorrect: true }
+      ];
+    } else if (qTypeId === 'tap_to_fill') {
+      qMode = 'tap_to_fill';
+      qTitle = 'Tap to Fill Word Completion Drill';
+      qBlueprint = 'Complete the word: {{given_prompt}}';
+      qSolution = 'The target word is {{target_word}}.';
+      sampleCols = ['id', 'target_word', 'given_prompt', 'missing_letter', 'tile_1', 'tile_2', 'tile_3'];
+      sampleRows = [
+        { id: 'tap_01', target_word: 'cat', given_prompt: 'C - [ ] - T', missing_letter: 'a', tile_1: 'a', tile_2: 'o', tile_3: 'e' },
+        { id: 'tap_02', target_word: 'dog', given_prompt: 'D - [ ] - G', missing_letter: 'o', tile_1: 'i', tile_2: 'o', tile_3: 'u' }
+      ];
+      bindings = [
+        { column: 'tile_1', isCorrect: true },
+        { column: 'tile_2', isCorrect: false },
+        { column: 'tile_3', isCorrect: false }
+      ];
+    } else if (qTypeId === 'token_select') {
+      qMode = 'token_select';
+      qTitle = 'Token Select Word Finder';
+      qBlueprint = 'Tap the target word in this sentence: {{sentence_text}}';
+      qSolution = 'The target word is {{target_word}}.';
+      sampleCols = ['id', 'sentence_text', 'target_word'];
+      sampleRows = [
+        { id: 'tok_01', sentence_text: 'The dog runs fast', target_word: 'runs' },
+        { id: 'tok_02', sentence_text: 'She reads a book', target_word: 'reads' }
+      ];
+      bindings = [
+        { column: 'target_word', isCorrect: true }
+      ];
+    } else if (qTypeId === 'visual_choice') {
+      qMode = 'visual_choice';
+      qTitle = 'Interactive Clock Reading Manipulative';
+      qBlueprint = 'Tell the time shown on the clock:';
+      qSolution = 'The correct time shown is {{correct_time}}.';
+      sampleCols = ['id', 'tool_type', 'hour', 'minute', 'correct_time'];
+      sampleRows = [
+        { id: 'clock_01', tool_type: 'analog_clock', hour: '3', minute: '30', correct_time: '3:30' },
+        { id: 'clock_02', tool_type: 'analog_clock', hour: '9', minute: '00', correct_time: '9:00' }
+      ];
+      bindings = [
+        { column: 'correct_time', isCorrect: true }
+      ];
+    }
+
+    setColumns(sampleCols);
+    setRows(sampleRows);
+    setActiveRowIndex(0);
+    setQuestionMode(qMode);
+    setBlueprint(qBlueprint);
+    setSolution(qSolution);
+    setOptionsBinding(bindings);
+    if (qTitle) setTitle(qTitle);
+
+    const el = document.getElementById('grid-table-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const downloadSampleCSV = (sampleType) => {
     let content = '';
     let filename = 'sample_template.csv';
@@ -3582,7 +3721,7 @@ export default function SpreadsheetTemplateCreator() {
           </div>
 
           {/* Interactive Spreadsheet Grid Card */}
-          <div className="grid-card">
+          <div className="grid-card" id="grid-table-section">
             <h3 className="grid-card-title">📊 Dynamic Parameter Spreadsheet</h3>
             <p className="grid-card-desc">Define columns as placeholder variables, and fill out rows with parallel values. commas in cells are supported as plain text.</p>
 
@@ -3596,6 +3735,27 @@ export default function SpreadsheetTemplateCreator() {
                   placeholder="e.g. synonym or fruit_count"
                 />
                 <button className="grid-btn-secondary" onClick={handleAddColumn}>➕ Add Column</button>
+                <select
+                  className="grid-select"
+                  style={{ padding: '7px 12px', fontSize: '13px', background: '#eff6ff', border: '1.5px solid #bfdbfe', color: '#1d4ed8', fontWeight: 800, borderRadius: '10px', cursor: 'pointer' }}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleLoadQuestionTypeSample(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>⚡ Quick Load Sample Schema ▾</option>
+                  <option value="mcq">🔘 1. Single Choice MCQ</option>
+                  <option value="msq">☑️ 2. Multi-Select MSQ</option>
+                  <option value="fill_blank">✏️ 3. Fill in the Blank</option>
+                  <option value="categorizationv2">🗂️ 4. Categorization & Sorting</option>
+                  <option value="sentence_ordering">🔤 5. Sentence & Word Ordering</option>
+                  <option value="tap_to_fill">🔠 6. Tap-to-Fill Word Completion</option>
+                  <option value="token_select">👆 7. Token Select Word Finder</option>
+                  <option value="visual_choice">📊 8. Interactive Clock Math Tool</option>
+                </select>
                 <label className="grid-btn-secondary" style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -4619,7 +4779,7 @@ export default function SpreadsheetTemplateCreator() {
       </div>
 
       {/* ── Documentation & Question Type Reference Guide (Light Background) ── */}
-      <GridQuestionTypesDocumentation />
+      <GridQuestionTypesDocumentation onLoadSample={handleLoadQuestionTypeSample} />
 
       {/* ── Image Picker Modal ── */}
       {isImgModalOpen && (
@@ -5791,7 +5951,7 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
   );
 }
 
-function GridQuestionTypesDocumentation() {
+function GridQuestionTypesDocumentation({ onLoadSample }) {
   const [activeTab, setActiveTab] = useState('all');
   const [copiedId, setCopiedId] = useState(null);
 
@@ -6041,24 +6201,45 @@ function GridQuestionTypesDocumentation() {
 
               {/* CSV Sample Code Box */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Sample CSV Format</span>
-                  <button
-                    onClick={() => copyToClipboard(q.sampleCsv, q.id)}
-                    style={{
-                      background: copiedId === q.id ? '#10b981' : '#ffffff',
-                      color: copiedId === q.id ? '#ffffff' : '#2563eb',
-                      border: '1px solid #bfdbfe',
-                      borderRadius: '6px',
-                      padding: '3px 8px',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {copiedId === q.id ? '✓ Copied!' : '📋 Copy CSV'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {onLoadSample && (
+                      <button
+                        onClick={() => onLoadSample(q.id)}
+                        style={{
+                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        ✨ Load Sample into Table
+                      </button>
+                    )}
+                    <button
+                      onClick={() => copyToClipboard(q.sampleCsv, q.id)}
+                      style={{
+                        background: copiedId === q.id ? '#10b981' : '#ffffff',
+                        color: copiedId === q.id ? '#ffffff' : '#2563eb',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {copiedId === q.id ? '✓ Copied!' : '📋 Copy CSV'}
+                    </button>
+                  </div>
                 </div>
                 <pre style={{
                   background: '#0f172a',
