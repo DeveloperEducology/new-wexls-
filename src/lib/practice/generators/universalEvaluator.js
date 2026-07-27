@@ -893,10 +893,10 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
       }
     }
 
-    // Determine interaction engine (fill_blank vs mcq)
+    // Determine interaction engine (fill_blank, msq, categorizationv2, sentence_ordering, tap_to_fill, token_select, visual_choice, mcq)
     const interactionEngine =
       (typeof config.interaction === 'object' ? config.interaction.engine : null) ||
-      config.optionsType || 'mcq';
+      config.optionsType || config.questionMode || 'mcq';
     const validationRules = config.validationRules || [];
     const answer = config.answer || null;
 
@@ -909,9 +909,11 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
       soundUrl: config.soundUrl ? interpolateString(config.soundUrl, ctx) : undefined,
       soundText: config.soundText ? interpolateString(config.soundText, ctx) : undefined,
       voice: config.voice || undefined,
+      questionMode: interactionEngine,
+      optionsType: interactionEngine,
       metaConfig: {
         readable: true,
-        readOptions: interactionEngine !== 'fill_blank' && interactionEngine !== 'fillInTheBlank',
+        readOptions: !['fill_blank', 'fillInTheBlank', 'sentence_ordering', 'categorizationv2', 'tap_to_fill', 'token_select'].includes(interactionEngine),
         hasClickToFill: Boolean(config.metaConfig?.hasClickToFill || config.clickToFill),
         visuals: config.visuals
       },
@@ -922,8 +924,8 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
       }
     };
 
-    // Attach fill-in-the-blank fields so QuestionRenderer picks the right renderer
-    if (interactionEngine === 'fill_blank' || interactionEngine === 'fillInTheBlank' || interactionEngine === 'number_input') {
+    // Attach interaction fields so QuestionRenderer routes to the exact activity component
+    if (['fill_blank', 'fillInTheBlank', 'number_input'].includes(interactionEngine)) {
       result.type = 'fillInTheBlank';
       result.interaction = { engine: 'fill_blank', inputMode: 'number' };
       
@@ -944,7 +946,22 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
           result.answer = answer;
         }
       }
-    } else if (isMultiSelectMode || isExplicitMsq) {
+    } else if (['sentence_ordering', 'ordering'].includes(interactionEngine)) {
+      result.type = 'sentence_ordering';
+      result.interaction = { engine: 'sentence_ordering', type: 'sentence_ordering' };
+    } else if (['categorizationv2', 'categorisationv2', 'sorting', 'categorySort'].includes(interactionEngine)) {
+      result.type = 'categorizationv2';
+      result.interaction = { engine: 'categorizationv2', type: 'categorizationv2' };
+    } else if (['tap_to_fill', 'tapToFill', 'tap-to-fill'].includes(interactionEngine)) {
+      result.type = 'tap_to_fill';
+      result.interaction = { engine: 'tap_to_fill', type: 'tap_to_fill' };
+    } else if (['token_select', 'pick_from_sentence'].includes(interactionEngine)) {
+      result.type = 'token_select';
+      result.interaction = { engine: 'token_select', type: 'token_select' };
+    } else if (['visual_choice'].includes(interactionEngine)) {
+      result.type = 'visual_choice';
+      result.interaction = { engine: 'visual_choice', type: 'visual_choice' };
+    } else if (isMultiSelectMode || isExplicitMsq || interactionEngine === 'msq') {
       result.type = 'msq';
       result.interaction = { engine: 'msq', inputMode: 'multi-choice', type: 'msq' };
     } else {
