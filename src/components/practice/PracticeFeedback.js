@@ -1229,21 +1229,31 @@ function renderCorrectAnswer(question) {
             ☑ Select ALL correct answers
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {expected.map((val, idx) => (
-              <div key={idx} style={{
-                padding: '8px 16px',
-                background: '#f5f3ff',
-                borderRadius: 10,
-                border: '2px solid #7c3aed',
-                color: '#5b21b6',
-                fontWeight: 900,
-                fontSize: 'clamp(15px, 2.8vw, 18px)',
-                fontFamily: 'var(--font-outfit), sans-serif',
-                boxShadow: '0 2px 8px rgba(124,58,237,0.10)',
-              }}>
-                {String(val)}
-              </div>
-            ))}
+            {expected.map((val, idx) => {
+              const valStr = String(val);
+              const isUrl = /^https?:\/\/.+\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(valStr);
+              return isUrl ? (
+                <img key={idx} src={valStr} alt="Correct answer" style={{
+                  width: 80, height: 80, objectFit: 'contain',
+                  borderRadius: 10, border: '2.5px solid #7c3aed',
+                  background: '#f5f3ff'
+                }} />
+              ) : (
+                <div key={idx} style={{
+                  padding: '8px 16px',
+                  background: '#f5f3ff',
+                  borderRadius: 10,
+                  border: '2px solid #7c3aed',
+                  color: '#5b21b6',
+                  fontWeight: 900,
+                  fontSize: 'clamp(15px, 2.8vw, 18px)',
+                  fontFamily: 'var(--font-outfit), sans-serif',
+                  boxShadow: '0 2px 8px rgba(124,58,237,0.10)',
+                }}>
+                  {valStr}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : typeof expected === 'object' && !Array.isArray(expected) ? (
@@ -1316,25 +1326,42 @@ function renderCorrectAnswer(question) {
         })()
       ) : (
         // Single value layout
-        <div style={{
-          padding: '14px 20px',
-          background: '#ffffff',
-          borderRadius: 12,
-          border: '2px solid #22c55e',
-          color: '#15803d',
-          fontWeight: 900,
-          fontSize: 'clamp(18px, 3.2vw, 21px)',
-          display: isSvgString(String(expected)) ? 'block' : 'inline-block',
-          fontFamily: 'var(--font-outfit), sans-serif',
-          boxShadow: '0 4px 10px rgba(34, 197, 94, 0.05)',
-          ...(isSvgString(String(expected)) ? { maxWidth: 360, margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' } : {})
-        }}>
-          {isSvgString(String(expected)) ? (
-            <div dangerouslySetInnerHTML={{ __html: String(expected) }} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} />
-          ) : (
-            String(expected)
-          )}
-        </div>
+        (() => {
+          const expStr = String(expected);
+          const isUrl = /^https?:\/\/.+\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(expStr);
+          if (isUrl) {
+            return (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <img src={expStr} alt="Correct answer" style={{
+                  maxWidth: 160, maxHeight: 140, objectFit: 'contain',
+                  borderRadius: 12, border: '3px solid #22c55e',
+                  boxShadow: '0 4px 12px rgba(34,197,94,0.15)'
+                }} />
+              </div>
+            );
+          }
+          return (
+            <div style={{
+              padding: '14px 20px',
+              background: '#ffffff',
+              borderRadius: 12,
+              border: '2px solid #22c55e',
+              color: '#15803d',
+              fontWeight: 900,
+              fontSize: 'clamp(18px, 3.2vw, 21px)',
+              display: isSvgString(expStr) ? 'block' : 'inline-block',
+              fontFamily: 'var(--font-outfit), sans-serif',
+              boxShadow: '0 4px 10px rgba(34, 197, 94, 0.05)',
+              ...(isSvgString(expStr) ? { maxWidth: 360, margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' } : {})
+            }}>
+              {isSvgString(expStr) ? (
+                <div dangerouslySetInnerHTML={{ __html: expStr }} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} />
+              ) : (
+                expStr
+              )}
+            </div>
+          );
+        })()
       )}
     </div>
   );
