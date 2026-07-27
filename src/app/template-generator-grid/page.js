@@ -685,6 +685,41 @@ const GRID_PRESETS = [
     ]
   }
 ];
+// Converts explanationSections (UI state) → proper explanation JSON for PracticeFeedback
+function buildExplanationFromSections(cleanSolutionText, sections, columns) {
+  const toTemplateVar = (str) => String(str || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]');
+
+  // Always start with the solution text section
+  const baseSections = [];
+  if (cleanSolutionText) {
+    baseSections.push({ type: 'text', content: toTemplateVar(cleanSolutionText) });
+  }
+
+  if (!sections || sections.length === 0) {
+    return { sections: baseSections };
+  }
+
+  const richSections = sections.map(sec => {
+    if (sec.type === 'text') {
+      return { type: 'text', content: toTemplateVar(sec.content) };
+    }
+    if (sec.type === 'key_idea') {
+      const result = { type: 'key_idea' };
+      if (sec.content) result.content = toTemplateVar(sec.content);
+      if (sec.imageUrl) result.imageUrl = toTemplateVar(sec.imageUrl);
+      return result;
+    }
+    if (sec.type === 'solution_image') {
+      const result = { type: 'solution_image' };
+      if (sec.imageUrl) result.imageUrl = toTemplateVar(sec.imageUrl);
+      if (sec.caption) result.caption = toTemplateVar(sec.caption);
+      return result;
+    }
+    return null;
+  }).filter(Boolean);
+
+  return { sections: [...baseSections, ...richSections] };
+}
 
 export default function SpreadsheetTemplateCreator() {
   const blueprintRef = useRef(null);
@@ -702,6 +737,28 @@ export default function SpreadsheetTemplateCreator() {
   const [solution, setSolution] = useState(
     'To find the prime factorization of {{number_to_factor}},\nwe divide it by prime numbers starting from the smallest prime (2) until we get 1.\n\nThe prime factorization is: {{Result}}.'
   );
+
+  // Rich explanation sections (IXL-style: key_idea, solution_image, text)
+  const [explanationSections, setExplanationSections] = useState([]);
+
+  const addExplanationSection = (type) => {
+    setExplanationSections(prev => [...prev, { type, content: '', imageUrl: '', caption: '' }]);
+  };
+  const updateExplanationSection = (idx, field, value) => {
+    setExplanationSections(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  };
+  const removeExplanationSection = (idx) => {
+    setExplanationSections(prev => prev.filter((_, i) => i !== idx));
+  };
+  const moveExplanationSection = (idx, dir) => {
+    setExplanationSections(prev => {
+      const arr = [...prev];
+      const swap = idx + dir;
+      if (swap < 0 || swap >= arr.length) return arr;
+      [arr[idx], arr[swap]] = [arr[swap], arr[idx]];
+      return arr;
+    });
+  };
   
   // Question mode: 'mcq' = single correct, 'msq' = multiple correct
   const [questionMode, setQuestionMode] = useState('mcq');
@@ -2819,12 +2876,7 @@ export default function SpreadsheetTemplateCreator() {
             inputMode: isSentenceOrdering ? 'ordering' : (isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')))
           },
           questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
-          explanation: {
-            sections: [{
-              type: 'text',
-              content: cleanSolution.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]')
-            }]
-          },
+          explanation: buildExplanationFromSections(cleanSolution, explanationSections, columns),
           options: optionsList,
           validationRules: isMSQ
             ? [{ type: 'all_correct', target: 'answer', values: correctOptions.map(o => `[${o.column}]`) }]
@@ -4192,6 +4244,80 @@ export default function SpreadsheetTemplateCreator() {
                   onFocus={(e) => setActiveField({ label: 'Solution Steps', element: e.target, onChange: setSolution })}
                   placeholder="Step 1: Divide by 2..."
                 />
+              </div>
+
+              {/* Rich Explanation Builder */}
+              <div style={{ marginTop: '18px', border: '1.5px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
+                <div style={{ background: 'linear-gradient(135deg,#1e293b,#0f172a)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#f1f5f9' }}>📚 Explanation Sections (IXL-style)</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Add key idea panels, solution images, or extra text shown after the answer</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {[['text','📝 Text','#10b981'],['key_idea','💡 Key Idea','#3b82f6'],['solution_image','🖼️ Solution Image','#f59e0b']].map(([t,label,color]) => (
+                      <button key={t} type="button" onClick={() => addExplanationSection(t)}
+                        style={{ background: color, color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
+                        + {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {explanationSections.length === 0 ? (
+                  <div style={{ padding: '18px', textAlign: 'center', color: '#475569', fontSize: '12px', background: '#0f172a' }}>
+                    No sections yet. Click a button above to add a <strong>Key Idea</strong> (blue tab), <strong>Solution Image</strong> (orange tab), or plain <strong>Text</strong> block.
+                  </div>
+                ) : (
+                  <div style={{ background: '#0f172a', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {explanationSections.map((sec, idx) => {
+                      const colors = { text: '#10b981', key_idea: '#3b82f6', solution_image: '#f59e0b' };
+                      const icons = { text: '📝', key_idea: '💡', solution_image: '🖼️' };
+                      const labels = { text: 'Text Block', key_idea: 'Key Idea Panel', solution_image: 'Solution Image' };
+                      const c = colors[sec.type] || '#64748b';
+                      return (
+                        <div key={idx} style={{ border: `1.5px solid ${c}40`, borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={{ background: `${c}20`, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: c }}>{icons[sec.type]} {labels[sec.type]}</span>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button type="button" onClick={() => moveExplanationSection(idx, -1)} style={{ background: 'none', border: `1px solid ${c}60`, borderRadius: '5px', color: c, padding: '2px 7px', fontSize: '11px', cursor: 'pointer' }}>↑</button>
+                              <button type="button" onClick={() => moveExplanationSection(idx, 1)} style={{ background: 'none', border: `1px solid ${c}60`, borderRadius: '5px', color: c, padding: '2px 7px', fontSize: '11px', cursor: 'pointer' }}>↓</button>
+                              <button type="button" onClick={() => removeExplanationSection(idx)} style={{ background: '#ef444420', border: '1px solid #ef444460', borderRadius: '5px', color: '#ef4444', padding: '2px 7px', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                            </div>
+                          </div>
+                          <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px', background: '#1e293b' }}>
+                            {(sec.type === 'text' || sec.type === 'key_idea') && (
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Text (markdown, use {{column}} vars)</div>
+                                <textarea value={sec.content} onChange={e => updateExplanationSection(idx, 'content', e.target.value)}
+                                  style={{ width: '100%', minHeight: '70px', background: '#0f172a', color: '#f1f5f9', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '13px', fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
+                                  placeholder={sec.type === 'key_idea' ? 'Some words tell you what a person does. These words are called **verbs**.' : 'Add explanation text here...'} />
+                              </div>
+                            )}
+                            {(sec.type === 'key_idea' || sec.type === 'solution_image') && (
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Image URL (or {{column}} variable with URL)</div>
+                                <input value={sec.imageUrl} onChange={e => updateExplanationSection(idx, 'imageUrl', e.target.value)}
+                                  style={{ width: '100%', background: '#0f172a', color: '#f1f5f9', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '13px', boxSizing: 'border-box' }}
+                                  placeholder="https://example.com/image.png or {{image_url}}" />
+                                {sec.imageUrl && !sec.imageUrl.includes('{{') && (
+                                  <img src={sec.imageUrl} alt="" style={{ marginTop: '6px', maxHeight: '80px', maxWidth: '120px', borderRadius: '6px', objectFit: 'contain', border: '1px solid #334155' }} />
+                                )}
+                              </div>
+                            )}
+                            {sec.type === 'solution_image' && (
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>Caption text (e.g. "Dad **sees** a bee!")</div>
+                                <input value={sec.caption} onChange={e => updateExplanationSection(idx, 'caption', e.target.value)}
+                                  style={{ width: '100%', background: '#0f172a', color: '#f1f5f9', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '13px', boxSizing: 'border-box' }}
+                                  placeholder="{{question_text}}" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <PartsArrayBuilder

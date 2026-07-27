@@ -429,6 +429,62 @@ function renderSolutionPart(part, index, context = {}) {
     );
   }
 
+  // IXL-style Key Idea panel (blue tab)
+  if (part.type === 'key_idea') {
+    return (
+      <div key={index} style={{ display: 'flex', borderRadius: 12, overflow: 'hidden', border: '1.5px solid #bfdbfe', marginBottom: 4 }}>
+        <div style={{ background: '#2563eb', color: '#fff', writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', padding: '10px 7px', fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          key idea
+        </div>
+        <div style={{ background: '#eff6ff', flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {part.content && (
+            <div style={{ fontSize: 16, lineHeight: 1.6, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button type="button" onClick={() => typeof speakText === 'function' && speakText(part.content)} style={{ background: '#dbeafe', border: 'none', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 14 }}>🔊</button>
+              <InlineMarkdown text={part.content} />
+            </div>
+          )}
+          {part.imageUrl && (
+            <img src={part.imageUrl} alt="" style={{ maxWidth: 160, maxHeight: 140, objectFit: 'contain', borderRadius: 8, alignSelf: 'flex-start' }} />
+          )}
+          {part.caption && (
+            <div style={{ fontSize: 15, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>🔊</span>
+              <InlineMarkdown text={part.caption} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // IXL-style Solution panel (orange tab)
+  if (part.type === 'solution_image') {
+    return (
+      <div key={index} style={{ display: 'flex', borderRadius: 12, overflow: 'hidden', border: '1.5px solid #fed7aa', marginBottom: 4 }}>
+        <div style={{ background: '#f97316', color: '#fff', writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', padding: '10px 7px', fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          solution
+        </div>
+        <div style={{ background: '#fff7ed', flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {part.content && (
+            <div style={{ fontSize: 16, lineHeight: 1.6, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button type="button" onClick={() => typeof speakText === 'function' && speakText(part.content)} style={{ background: '#fed7aa', border: 'none', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 14 }}>🔊</button>
+              <InlineMarkdown text={part.content} />
+            </div>
+          )}
+          {part.imageUrl && (
+            <img src={part.imageUrl} alt="" style={{ maxWidth: 180, maxHeight: 150, objectFit: 'contain', borderRadius: 8, alignSelf: 'flex-start' }} />
+          )}
+          {part.caption && (
+            <div style={{ fontSize: 15, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>🔊</span>
+              <InlineMarkdown text={part.caption} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (part.type === 'svg') {
     return (
       <div
