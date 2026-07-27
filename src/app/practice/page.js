@@ -1837,12 +1837,12 @@ function PracticePageContent() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const currentQn = params.get('qn');
-    let nextIndex = 0;
+    let nextIndex = 1;
 
     if (currentQn !== null && currentQn !== '') {
       if (!isNaN(Number(currentQn))) {
         const curIdx = Number(currentQn);
-        nextIndex = direction === 'next' ? curIdx + 1 : Math.max(0, curIdx - 1);
+        nextIndex = direction === 'next' ? curIdx + 1 : Math.max(1, curIdx - 1);
       } else {
         const metaNext = question?.metadata?.nextQuestionId;
         if (direction === 'next' && metaNext && metaNext !== 'end') {
@@ -1850,10 +1850,11 @@ function PracticePageContent() {
           router.replace(`/practice?${params.toString()}`, { scroll: false });
           return;
         }
-        nextIndex = direction === 'next' ? 1 : 0;
+        nextIndex = direction === 'next' ? 2 : 1;
       }
     } else {
-      nextIndex = direction === 'next' ? 1 : 0;
+      const currentQnNum = typeof question?.metadata?.qnNumber === 'number' ? question.metadata.qnNumber : 1;
+      nextIndex = direction === 'next' ? currentQnNum + 1 : 1;
     }
 
     params.set('qn', String(nextIndex));
@@ -2253,7 +2254,15 @@ function PracticePageContent() {
     }, ...prev].slice(0, 5));
 
     // ── Static Mode Override: skip adaptive routing, just move to next skill ──
-    const isStaticSkill = question?.metadata?.isStatic === true;
+    const isStaticSkill = Boolean(
+      question?.metadata?.isStatic === true ||
+      question?.isStatic === true ||
+      practiceMode === 'static' ||
+      searchParams.get('mode') === 'static' ||
+      searchParams.get('iit') === 'true' ||
+      searchParams.get('isSequential') === 'true' ||
+      searchParams.get('isOrdered') === 'true'
+    );
     if (isStaticSkill) {
       const branching = question?.metadata?.branching;
       let nextQn = branching ? (canonicalCorrect ? branching.correct : branching.incorrect) : null;
@@ -2275,16 +2284,14 @@ function PracticePageContent() {
         setAdaptiveBanner(null);
         window.setTimeout(() => {
           const params = new URLSearchParams(window.location.search);
-          if (nextQn) {
+          if (nextQn && nextQn !== 'end') {
             params.set('qn', String(nextQn));
           } else {
-            // Fallback: increment sequentially
-            const currentQn = parseInt(params.get('qn') || '0', 10);
-            if (!isNaN(currentQn)) {
-              params.set('qn', String(currentQn + 1));
-            } else {
-              params.set('qn', 'end');
-            }
+            // Fallback: increment 1-based qn sequentially (qn=1 -> 2 -> 3 -> 4)
+            const rawQn = params.get('qn');
+            const currentQn = rawQn ? parseInt(rawQn, 10) : (typeof question?.metadata?.qnNumber === 'number' ? question.metadata.qnNumber : 1);
+            const nextVal = !isNaN(currentQn) ? currentQn + 1 : 2;
+            params.set('qn', String(nextVal));
           }
           router.replace(`/practice?${params.toString()}`, { scroll: false });
 
