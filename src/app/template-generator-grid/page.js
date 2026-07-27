@@ -4618,6 +4618,9 @@ export default function SpreadsheetTemplateCreator() {
 
       </div>
 
+      {/* ── Documentation & Question Type Reference Guide (Light Background) ── */}
+      <GridQuestionTypesDocumentation />
+
       {/* ── Image Picker Modal ── */}
       {isImgModalOpen && (
         <div style={{
@@ -5785,5 +5788,297 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
         })}
       </div>
     </aside>
+  );
+}
+
+function GridQuestionTypesDocumentation() {
+  const [activeTab, setActiveTab] = useState('all');
+  const [copiedId, setCopiedId] = useState(null);
+
+  const copyToClipboard = (text, id) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (e) {
+      console.warn('Clipboard write failed:', e);
+    }
+  };
+
+  const questionTypes = [
+    {
+      id: 'mcq',
+      category: 'mcq_msq',
+      icon: '🔘',
+      name: 'Single Choice MCQ',
+      typeCode: 'mcq',
+      inputMode: 'choice',
+      badgeColor: '#2563eb',
+      badgeBg: '#eff6ff',
+      summary: 'Standard 1-of-4 multiple choice question with radio selection.',
+      description: 'Presents a question prompt with 3 or 4 answer choice cards. Supports text labels, clipart images, audio speaker buttons, and math formulas.',
+      csvHeader: 'id,question_prompt,primary_asset,option_1,option_2,option_3,correct_answer,explanation',
+      sampleCsv: `id,question_prompt,primary_asset,option_1,option_2,option_3,correct_answer,explanation\n"mcq_01","Which word starts with the /b/ sound?","audio_b_v1","bear","cat","dog","bear","The word bear starts with the bilabial plosive 'b' sound."\n"mcq_02","Which word starts with the /c/ sound?","audio_c_v1","cat","mop","tub","cat","The word cat starts with the hard 'c' sound (/k/)."`,
+      configGuide: 'Set Question Type to MCQ in Step 3. Mark 1 target option as Correct (checked).'
+    },
+    {
+      id: 'msq',
+      category: 'mcq_msq',
+      icon: '☑️',
+      name: 'Multi-Select MSQ',
+      typeCode: 'msq',
+      inputMode: 'multi-choice',
+      badgeColor: '#7c3aed',
+      badgeBg: '#f5f3ff',
+      summary: 'Questions with 2 or more correct options requiring checkbox selection.',
+      description: 'Renders checkboxes for option selection. Students must select ALL correct answer cards (e.g. 2 target words) to score points.',
+      csvHeader: 'id,question_prompt,correct_word_1,correct_word_2,distractor_word,explanation',
+      sampleCsv: `id,question_prompt,correct_word_1,correct_word_2,distractor_word,explanation\n"msq_01","Which two words start with the same sound?","apple","ant","dog","Both apple and ant share the same initial short 'a' sound."\n"msq_02","Which two words start with the same sound?","bear","bat","sun","Both bear and bat share the same initial 'b' sound."`,
+      configGuide: 'Set Question Type to MSQ in Step 3. Mark Target 1 and Target 2 as Correct (checked).'
+    },
+    {
+      id: 'fill_blank',
+      category: 'fill_blank',
+      icon: '✏️',
+      name: 'Fill in the Blank',
+      typeCode: 'fill_blank / fillInTheBlank',
+      inputMode: 'number / text',
+      badgeColor: '#059669',
+      badgeBg: '#ecfdf5',
+      summary: 'Students type missing numbers or words into input text boxes.',
+      description: 'Use mustache placeholders {{Result}} or empty brackets [] in your question template to generate interactive text inputs.',
+      csvHeader: 'id,num1,num2,Result,explanation',
+      sampleCsv: `id,num1,num2,Result,explanation\n"fill_01","5","3","8","5 + 3 = 8."\n"fill_02","12","4","16","12 + 4 = 16."`,
+      configGuide: 'Write blueprint: "Calculate: {{num1}} + {{num2}} = {{Result}}". Platform auto-detects input box.'
+    },
+    {
+      id: 'categorizationv2',
+      category: 'categorization',
+      icon: '🗂️',
+      name: 'Categorization & Group Sorting',
+      typeCode: 'categorizationv2 / sorting',
+      inputMode: 'drag-drop',
+      badgeColor: '#d97706',
+      badgeBg: '#fffbeCompleted',
+      summary: 'Drag or tap cards to sort items into 2 or 3 category buckets.',
+      description: 'Creates drop zones (Category A, Category B) where students sort words, numbers, or images into correct group buckets.',
+      csvHeader: 'id,category_1,item_1a,item_1b,category_2,item_2a,item_2b',
+      sampleCsv: `id,category_1,item_1a,item_1b,category_2,item_2a,item_2b\n"cat_01","Nouns","cat","dog","Verbs","run","jump"\n"cat_02","Even Numbers","2","4","Odd Numbers","1","3"`,
+      configGuide: 'Set Question Type to categorizationv2. Define category columns and item columns in Step 3.'
+    },
+    {
+      id: 'sentence_ordering',
+      category: 'ordering_tap',
+      icon: '🔤',
+      name: 'Sentence & Word Ordering',
+      typeCode: 'sentence_ordering',
+      inputMode: 'ordering',
+      badgeColor: '#dc2626',
+      badgeBg: '#fef2f2',
+      summary: 'Drag or tap jumbled word tokens into correct sequential order.',
+      description: 'Presents scrambled word chips. Students drag or tap them to reconstruct the correct sentence or numerical sequence.',
+      csvHeader: 'id,jumbled_sentence,correct_sentence',
+      sampleCsv: `id,jumbled_sentence,correct_sentence\n"ord_01","sat | The | cat | mat | on | the","The cat sat on the mat"\n"ord_02","is | Sky | blue | the","The sky is blue"`,
+      configGuide: 'Set Question Type to sentence_ordering in Step 3. Separate words with pipe (|) or spaces.'
+    },
+    {
+      id: 'tap_to_fill',
+      category: 'ordering_tap',
+      icon: '🔠',
+      name: 'Tap-to-Fill / Word Completion',
+      typeCode: 'tap_to_fill',
+      inputMode: 'choice',
+      badgeColor: '#0284c7',
+      badgeBg: '#f0f9ff',
+      summary: 'Tap letter or word tiles at bottom to complete missing word slots.',
+      description: 'Displays a word with empty letter slots (e.g. C - [ ] - T). Students tap letter tiles from the tile bank below.',
+      csvHeader: 'id,target_word,given_prompt,missing_letter,tile_1,tile_2,tile_3',
+      sampleCsv: `id,target_word,given_prompt,missing_letter,tile_1,tile_2,tile_3\n"tap_01","cat","C - [ ] - T","a","a","o","e"\n"tap_02","dog","D - [ ] - G","o","i","o","u"`,
+      configGuide: 'Set Question Type to tap_to_fill. Map letter tiles in option choices.'
+    },
+    {
+      id: 'token_select',
+      category: 'ordering_tap',
+      icon: '👆',
+      name: 'Token Select / Pick from Sentence',
+      typeCode: 'token_select / pick_from_sentence',
+      inputMode: 'choice',
+      badgeColor: '#4f46e5',
+      badgeBg: '#eef2ff',
+      summary: 'Every word in a sentence is clickable. Students tap target words.',
+      description: 'Converts a full sentence into interactive word tokens. Ideal for grammar identification (e.g. "Tap the verb").',
+      csvHeader: 'id,sentence_text,target_word',
+      sampleCsv: `id,sentence_text,target_word\n"tok_01","The dog runs fast","runs"\n"tok_02","She reads a book","reads"`,
+      configGuide: 'Set Question Type to token_select. Map sentence_text and target_word column.'
+    },
+    {
+      id: 'visual_choice',
+      category: 'math_tools',
+      icon: '📊',
+      name: 'Interactive Math & Science Tools',
+      typeCode: 'visual_choice / interactiveTool',
+      inputMode: 'choice',
+      badgeColor: '#0891b2',
+      badgeBg: '#ecfeff',
+      summary: 'Spreadsheet rows power interactive visual tools & manipulatives.',
+      description: 'Feeds row values into interactive visual applets: Analog Clocks, Fraction Circles, Rulers, Bar Graphs, Ten-Frames, Balance Scales, and Measuring Jugs.',
+      csvHeader: 'id,tool_type,value_1,value_2,correct_answer',
+      sampleCsv: `id,tool_type,hour,minute,correct_time\n"clock_01","analog_clock","3","30","3:30"\n"frac_01","fraction_circle","4","3","3/4"`,
+      configGuide: 'Set Question Type to visual_choice. Map visual parameters in Parts Builder.'
+    }
+  ];
+
+  const filteredTypes = activeTab === 'all'
+    ? questionTypes
+    : questionTypes.filter(q => q.category === activeTab);
+
+  return (
+    <div style={{
+      background: '#ffffff',
+      border: '1.5px solid #e2e8f0',
+      borderRadius: '24px',
+      padding: '36px',
+      margin: '36px 0',
+      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      color: '#1e293b'
+    }}>
+      {/* Documentation Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '28px', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '20px' }}>
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '10px' }}>
+            <span>📖</span> AUTHORING DOCUMENTATION
+          </div>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+            Spreadsheet Question Types & Schema Guide
+          </h2>
+          <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: '#64748b', maxWidth: '720px' }}>
+            Learn how to author 8 interactive question formats in the KlassChamp Spreadsheet Grid Editor using simple spreadsheet rows, columns, and variable placeholders.
+          </p>
+        </div>
+
+        {/* Quick Placeholder Cheat Sheet */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 18px', borderRadius: '14px', fontSize: '0.82rem', color: '#475569' }}>
+          <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>⚡ Placeholders Reference:</div>
+          <div><code style={{ background: '#e2e8f0', color: '#0f172a', padding: '2px 6px', borderRadius: '4px' }}>{"{{column_name}}"}</code> Blueprint row substitution</div>
+          <div style={{ marginTop: '4px' }}><code style={{ background: '#e2e8f0', color: '#0f172a', padding: '2px 6px', borderRadius: '4px' }}>[column_name]</code> Part & option binding</div>
+        </div>
+      </div>
+
+      {/* Category Filter Tabs */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '28px' }}>
+        {[
+          { id: 'all', label: 'All Question Types (8)' },
+          { id: 'mcq_msq', label: '🔘 MCQ & MSQ' },
+          { id: 'fill_blank', label: '✏️ Fill-in-Blank' },
+          { id: 'categorization', label: '🗂️ Categorization' },
+          { id: 'ordering_tap', label: '🔤 Ordering & Tap' },
+          { id: 'math_tools', label: '📊 Math & Visual Tools' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              border: activeTab === tab.id ? '2px solid #2563eb' : '1.5px solid #e2e8f0',
+              background: activeTab === tab.id ? '#eff6ff' : '#ffffff',
+              color: activeTab === tab.id ? '#1d4ed8' : '#64748b',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Question Type Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
+        {filteredTypes.map(q => (
+          <div
+            key={q.id}
+            style={{
+              background: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '18px',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              justify: 'space-between',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+            }}
+          >
+            <div>
+              {/* Card Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '1.5rem' }}>{q.icon}</span>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>{q.name}</h3>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, marginTop: '2px' }}>
+                      Engine: <code style={{ color: q.badgeColor, background: q.badgeBg, padding: '1px 6px', borderRadius: '4px' }}>{q.typeCode}</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary & Details */}
+              <p style={{ fontSize: '0.88rem', color: '#334155', fontWeight: 600, lineHeight: 1.4, margin: '0 0 10px' }}>
+                {q.summary}
+              </p>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, margin: '0 0 16px' }}>
+                {q.description}
+              </p>
+
+              {/* Authoring Config Tip */}
+              <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '0.8rem', color: '#475569', marginBottom: '16px' }}>
+                <strong style={{ color: '#0f172a' }}>⚙️ Grid Setup:</strong> {q.configGuide}
+              </div>
+
+              {/* CSV Sample Code Box */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Sample CSV Format</span>
+                  <button
+                    onClick={() => copyToClipboard(q.sampleCsv, q.id)}
+                    style={{
+                      background: copiedId === q.id ? '#10b981' : '#ffffff',
+                      color: copiedId === q.id ? '#ffffff' : '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '6px',
+                      padding: '3px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {copiedId === q.id ? '✓ Copied!' : '📋 Copy CSV'}
+                  </button>
+                </div>
+                <pre style={{
+                  background: '#0f172a',
+                  color: '#f8fafc',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  fontSize: '0.75rem',
+                  fontFamily: 'Consolas, Monaco, monospace',
+                  overflowX: 'auto',
+                  margin: 0,
+                  lineHeight: 1.4,
+                  border: '1px solid #1e293b'
+                }}>
+                  {q.sampleCsv}
+                </pre>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
