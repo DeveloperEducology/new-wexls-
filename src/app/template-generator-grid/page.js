@@ -4560,21 +4560,7 @@ export default function SpreadsheetTemplateCreator() {
                 </div>
               </div>
             )}
-          </div>
-
-        </div>
-
-        {/* Right Side: Sticky Simulator Preview panel */}
-        <div className="grid-preview-panel">
-          <div className="grid-preview-box">
-            <div className="grid-preview-header">
-              <span className="grid-preview-header-title">Live Row Simulator (Active: Row {activeRowIndex + 1})</span>
-              <button className={`grid-shuffle-btn ${shuffleClass}`} onClick={handleShuffle}>
-                🎲 Shuffle Row
-              </button>
-            </div>
-
-            {/* Render evaluated parts if present, otherwise fallback to blueprint */}
+                    {/* Render evaluated parts if present, otherwise fallback to blueprint */}
             {(() => {
               const evaluatedParts = getEvaluatedParts();
               if (evaluatedParts) {
@@ -4622,7 +4608,7 @@ export default function SpreadsheetTemplateCreator() {
                   </div>
                 );
               }
-              
+
               return (
                 <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line' }}>
                   {renderEvaluatedText(blueprint)}
@@ -4630,128 +4616,293 @@ export default function SpreadsheetTemplateCreator() {
               );
             })()}
 
-            {/* Render MCQ Option choices / Ordering Tiles */}
-            {questionMode === 'sentence_ordering' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginTop: '20px', width: '100%' }}>
-                {/* Empty Drop Slots */}
-                <div style={{
-                  display: 'flex',
-                  justify: 'center',
-                  gap: '12px',
-                  padding: '16px',
-                  width: '100%',
-                  borderRadius: '16px',
-                  border: '2px dashed #93c5fd',
-                  background: '#eff6ff'
-                }}>
-                  {optionsBinding.map((_, sIdx) => (
-                    <div key={`slot-${sIdx}`} style={{
-                      width: '48px',
-                      height: '54px',
-                      borderRadius: '12px',
-                      border: '2px dashed #60a5fa',
-                      background: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#94a3b8',
-                      fontSize: '20px',
-                      fontWeight: 'bold'
-                    }}>
-                      _
-                    </div>
-                  ))}
-                </div>
+            {/* Render Custom Question Mode Live Preview Simulator */}
+            {(() => {
+              const activeRow = rows[activeRowIndex] || {};
 
-                {/* Pool Tray Tiles */}
-                <div style={{
-                  display: 'flex',
-                  justify: 'center',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  padding: '14px',
-                  width: '100%',
-                  borderRadius: '16px',
-                  border: '1.5px solid #e2e8f0',
-                  background: '#f8fafc'
-                }}>
+              // 1. MSQ (Multi-Select Question)
+              if (questionMode === 'msq') {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      ☑️ Multi-Select Checkboxes (Select All Correct)
+                    </div>
+                    {optionsBinding.map((opt, idx) => {
+                      const cellVal = activeRow[opt.column] || `{{${opt.column || '?'}}}`;
+                      const imageVal = opt.imageColumn ? activeRow[opt.imageColumn] : null;
+                      return (
+                        <div key={idx} style={{
+                          background: opt.isCorrect ? '#f5f3ff' : '#ffffff',
+                          border: opt.isCorrect ? '2px solid #7c3aed' : '1.5px solid #cbd5e1',
+                          borderRadius: '12px',
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justify: 'space-between'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '18px', color: opt.isCorrect ? '#7c3aed' : '#94a3b8' }}>
+                              {opt.isCorrect ? '☑️' : '☐'}
+                            </span>
+                            {imageVal && <img src={imageVal} alt="Option visual" style={{ maxHeight: '36px', borderRadius: '6px' }} />}
+                            <span style={{ fontWeight: opt.isCorrect ? 800 : 500, color: '#1e293b' }}>
+                              {renderMathText(cellVal)}
+                            </span>
+                          </div>
+                          {opt.isCorrect && (
+                            <span style={{ background: '#7c3aed', color: '#fff', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>
+                              TARGET MATCH
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              // 2. Fill in the Blank
+              if (questionMode === 'fill_blank' || questionMode === 'fillInTheBlank') {
+                const targetCol = optionsBinding[0]?.column || 'Result';
+                const targetVal = activeRow[targetCol] || activeRow['Result'] || 'Answer';
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>
+                      ✏️ Interactive Text Input Box Preview
+                    </div>
+                    <div style={{ background: '#ecfdf5', border: '1.5px solid #a7f3d0', padding: '16px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#065f46' }}>Type Answer:</span>
+                      <input
+                        type="text"
+                        readOnly
+                        value={targetVal}
+                        style={{
+                          background: '#ffffff',
+                          border: '2px solid #059669',
+                          borderRadius: '8px',
+                          padding: '8px 14px',
+                          fontWeight: 800,
+                          color: '#047857',
+                          fontSize: '1rem',
+                          maxWidth: '180px'
+                        }}
+                      />
+                      <span style={{ background: '#059669', color: '#fff', fontSize: '0.78rem', fontWeight: 800, padding: '4px 10px', borderRadius: '6px' }}>
+                        ✓ Answer Key: {targetVal}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 3. Categorization & Sorting
+              if (questionMode === 'categorizationv2' || questionMode === 'sorting' || questionMode === 'categorisationv2') {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase' }}>
+                      🗂️ Category Drop Zones & Sorted Items
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ background: '#fffbeb', border: '2px dashed #fcd34d', borderRadius: '12px', padding: '12px' }}>
+                        <div style={{ fontWeight: 800, color: '#b45309', fontSize: '0.85rem', marginBottom: '8px' }}>
+                          📦 {activeRow['category_1'] || 'Category A'}
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                            {activeRow['item_1a'] || 'Item 1'}
+                          </span>
+                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                            {activeRow['item_1b'] || 'Item 2'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#eff6ff', border: '2px dashed #93c5fd', borderRadius: '12px', padding: '12px' }}>
+                        <div style={{ fontWeight: 800, color: '#1d4ed8', fontSize: '0.85rem', marginBottom: '8px' }}>
+                          📦 {activeRow['category_2'] || 'Category B'}
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                            {activeRow['item_2a'] || 'Item 3'}
+                          </span>
+                          <span style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                            {activeRow['item_2b'] || 'Item 4'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 4. Sentence & Word Ordering
+              if (questionMode === 'sentence_ordering') {
+                const rawJumbled = activeRow['jumbled_sentence'] || '';
+                const tiles = rawJumbled ? rawJumbled.split('|').map(s => s.trim()) : optionsBinding.map(o => activeRow[o.column] || o.column);
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase' }}>
+                      🔤 Sentence Word Ordering Tray
+                    </div>
+                    <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', padding: '14px', borderRadius: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {tiles.map((w, idx) => (
+                        <span key={idx} style={{ background: '#ffffff', border: '1.5px solid #ef4444', color: '#b91c1c', padding: '6px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 2px 4px rgba(239, 68, 68, 0.15)', cursor: 'grab' }}>
+                          {w}
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 800, background: '#f0fdf4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                      ✓ Target Sequence: {activeRow['correct_sentence'] || 'Full sentence text'}
+                    </div>
+                  </div>
+                );
+              }
+
+              // 5. Tap-to-Fill Word Completion
+              if (questionMode === 'tap_to_fill') {
+                const givenPrompt = activeRow['given_prompt'] || `${activeRow['target_word'] || 'C'}_T`;
+                const tiles = [activeRow['tile_1'] || activeRow['missing_letter'] || 'a', activeRow['tile_2'] || 'o', activeRow['tile_3'] || 'e'];
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase' }}>
+                      🔠 Word Slot & Letter Tile Bank
+                    </div>
+                    <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', padding: '16px', borderRadius: '14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0369a1', letterSpacing: '2px', marginBottom: '12px' }}>
+                        {givenPrompt}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        {tiles.map((tile, tIdx) => (
+                          <span key={tIdx} style={{
+                            background: tile === (activeRow['missing_letter'] || activeRow['tile_1']) ? '#0284c7' : '#ffffff',
+                            color: tile === (activeRow['missing_letter'] || activeRow['tile_1']) ? '#ffffff' : '#0284c7',
+                            border: '2px solid #0284c7',
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            fontSize: '1rem',
+                            boxShadow: '0 2px 4px rgba(2, 132, 199, 0.15)',
+                            cursor: 'pointer'
+                          }}>
+                            {tile}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 6. Token Select
+              if (questionMode === 'token_select') {
+                const sentenceText = activeRow['sentence_text'] || 'The dog runs fast';
+                const targetWord = (activeRow['target_word'] || '').toLowerCase();
+                const tokens = sentenceText.split(' ');
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase' }}>
+                      👆 Clickable Sentence Tokens
+                    </div>
+                    <div style={{ background: '#eef2ff', border: '1.5px solid #c7d2fe', padding: '16px', borderRadius: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {tokens.map((token, tIdx) => {
+                        const isTarget = token.toLowerCase() === targetWord;
+                        return (
+                          <span key={tIdx} style={{
+                            background: isTarget ? '#4f46e5' : '#ffffff',
+                            color: isTarget ? '#ffffff' : '#1e1b4b',
+                            border: isTarget ? '2px solid #4338ca' : '1.5px solid #a5b4fc',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontWeight: isTarget ? 900 : 600,
+                            fontSize: '0.92rem',
+                            cursor: 'pointer'
+                          }}>
+                            {token} {isTarget && '🎯'}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              // 7. Visual Choice
+              if (questionMode === 'visual_choice') {
+                const toolType = activeRow['tool_type'] || 'analog_clock';
+                const hr = activeRow['hour'] || '3';
+                const min = activeRow['minute'] || '30';
+                const correctTime = activeRow['correct_time'] || `${hr}:${min}`;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0891b2', textTransform: 'uppercase' }}>
+                      📊 Visual Manipulative Tool Card ({toolType})
+                    </div>
+                    <div style={{ background: '#ecfeff', border: '1.5px solid #a5f3fc', padding: '16px', borderRadius: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontSize: '2.5rem' }}>⏰</div>
+                      <div style={{ fontWeight: 800, color: '#0e7490', fontSize: '1.1rem' }}>
+                        Clock Setting: {hr}:{min}
+                      </div>
+                      <div style={{ background: '#0891b2', color: '#fff', fontSize: '0.8rem', fontWeight: 800, padding: '4px 12px', borderRadius: '6px' }}>
+                        Target Answer: {correctTime}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 8. Default MCQ (Single Choice Multiple Choice)
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
                   {optionsBinding.map((opt, idx) => {
-                    const row = rows[activeRowIndex] || {};
-                    const cellVal = row[opt.column] || `[${opt.column || '?'}]`;
+                    const cellVal = activeRow[opt.column] || `{{${opt.column || 'Select Column'}}}`;
+                    const imageVal = opt.imageColumn ? activeRow[opt.imageColumn] : null;
+                    const audioVal = opt.audioColumn ? activeRow[opt.audioColumn] : null;
                     return (
                       <div key={idx} style={{
-                        width: '48px',
-                        height: '54px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                        color: '#ffffff',
+                        background: '#f8fafc',
+                        border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #cbd5e1',
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        fontSize: '0.88rem',
+                        color: '#1e293b',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '22px',
-                        fontWeight: 'bold',
-                        boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-                        border: '2px solid #60a5fa',
-                        cursor: 'pointer'
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: '8px'
                       }}>
-                        {cellVal}
+                        {imageVal && (
+                          <img
+                            src={imageVal || null}
+                            alt="Option visual"
+                            style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1', alignSelf: 'center', marginBottom: '4px' }}
+                          />
+                        )}
+                        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {audioVal && (
+                              <button
+                                title="Play option audio sound"
+                                onClick={() => {
+                                  try {
+                                    const audio = new Audio(audioVal);
+                                    audio.play();
+                                  } catch (e) {
+                                    console.warn('Failed to play preview audio:', e);
+                                  }
+                                }}
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#2563eb', padding: 0 }}
+                              >🔊</button>
+                            )}
+                            <span>{renderMathText(cellVal)}</span>
+                          </div>
+                          {opt.isCorrect && <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.78rem' }}>CORRECT ANSWER</span>}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
-                {optionsBinding.map((opt, idx) => {
-                  const row = rows[activeRowIndex] || {};
-                  const cellVal = row[opt.column] || `{{${opt.column || 'Select Column'}}}`;
-                  const imageVal = opt.imageColumn ? row[opt.imageColumn] : null;
-                  const audioVal = opt.audioColumn ? row[opt.audioColumn] : null;
-                  return (
-                    <div key={idx} style={{
-                      background: '#f8fafc',
-                      border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #cbd5e1',
-                      padding: '12px 16px',
-                      borderRadius: '10px',
-                      fontSize: '0.88rem',
-                      color: '#1e293b',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: '8px'
-                    }}>
-                      {imageVal && (
-                        <img
-                          src={imageVal || null}
-                          alt="Option visual"
-                          style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1', alignSelf: 'center', marginBottom: '4px' }}
-                        />
-                      )}
-                      <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {audioVal && (
-                            <button
-                              title="Play option audio sound"
-                              onClick={() => {
-                                try {
-                                  const audio = new Audio(audioVal);
-                                  audio.play();
-                                } catch (e) {
-                                  console.warn('Failed to play preview audio:', e);
-                                }
-                              }}
-                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#2563eb', padding: 0 }}
-                            >🔊</button>
-                          )}
-                          <span>{renderMathText(cellVal)}</span>
-                        </div>
-                        {opt.isCorrect && <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.78rem' }}>CORRECT ANSWER</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              );
+            })()}
 
             {/* Render Explanation Solution */}
             {solution.trim() && (
