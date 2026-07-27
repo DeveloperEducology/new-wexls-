@@ -685,20 +685,22 @@ const GRID_PRESETS = [
     ]
   }
 ];
-// Converts explanationSections (UI state) → proper explanation JSON for PracticeFeedback
+// Converts explanationSections (UI state) → proper explanation + solution JSON for PracticeFeedback
+// Returns { explanation: {...}, solution: {...} } — both are spread into the template
 function buildExplanationFromSections(cleanSolutionText, sections, columns) {
   const toTemplateVar = (str) => String(str || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]');
 
-  // Always start with the solution text section
-  const baseSections = [];
+  // explanation = plain text only (used for speech + summary)
+  const explanationSecs = [];
   if (cleanSolutionText) {
-    baseSections.push({ type: 'text', content: toTemplateVar(cleanSolutionText) });
+    explanationSecs.push({ type: 'text', content: toTemplateVar(cleanSolutionText) });
   }
 
   if (!sections || sections.length === 0) {
-    return { sections: baseSections };
+    return { explanation: { sections: explanationSecs } };
   }
 
+  // solution = rich sections rendered by renderSolutionPart (key_idea, solution_image, extra text)
   const richSections = sections.map(sec => {
     if (sec.type === 'text') {
       return { type: 'text', content: toTemplateVar(sec.content) };
@@ -707,18 +709,23 @@ function buildExplanationFromSections(cleanSolutionText, sections, columns) {
       const result = { type: 'key_idea' };
       if (sec.content) result.content = toTemplateVar(sec.content);
       if (sec.imageUrl) result.imageUrl = toTemplateVar(sec.imageUrl);
+      if (sec.caption) result.caption = toTemplateVar(sec.caption);
       return result;
     }
     if (sec.type === 'solution_image') {
       const result = { type: 'solution_image' };
       if (sec.imageUrl) result.imageUrl = toTemplateVar(sec.imageUrl);
       if (sec.caption) result.caption = toTemplateVar(sec.caption);
+      if (sec.content) result.content = toTemplateVar(sec.content);
       return result;
     }
     return null;
   }).filter(Boolean);
 
-  return { sections: [...baseSections, ...richSections] };
+  return {
+    explanation: { sections: explanationSecs },
+    solution: { sections: richSections }
+  };
 }
 
 export default function SpreadsheetTemplateCreator() {
@@ -2876,7 +2883,7 @@ export default function SpreadsheetTemplateCreator() {
             inputMode: isSentenceOrdering ? 'ordering' : (isCategorizationV2 ? 'drag-drop' : (isTapToFill ? 'choice' : (isMSQ ? 'multi-choice' : 'choice')))
           },
           questionText: cleanBlueprint.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, '[$1]'),
-          explanation: buildExplanationFromSections(cleanSolution, explanationSections, columns),
+          ...buildExplanationFromSections(cleanSolution, explanationSections, columns),
           options: optionsList,
           validationRules: isMSQ
             ? [{ type: 'all_correct', target: 'answer', values: correctOptions.map(o => `[${o.column}]`) }]

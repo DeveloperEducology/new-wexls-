@@ -1445,12 +1445,17 @@ export default function PracticeFeedback({
 
   if (!question) return null;
 
-  const solutionSections = Array.isArray(question?.solution?.sections)
-    ? question.solution.sections.filter(s => {
-        const secText = typeof s === 'string' ? s : (s?.content || s?.text || '');
-        return cleanText(secText) !== cleanExp;
-      })
-    : [];
+  // Prefer solution.sections for rich rendering; fall back to rich types inside explanation.sections
+  const RICH_SECTION_TYPES = new Set(['key_idea', 'solution_image']);
+  const rawSolutionSections = Array.isArray(question?.solution?.sections)
+    ? question.solution.sections
+    : Array.isArray(question?.explanation?.sections)
+      ? question.explanation.sections.filter(s => s && RICH_SECTION_TYPES.has(s.type))
+      : [];
+  const solutionSections = rawSolutionSections.filter(s => {
+    const secText = typeof s === 'string' ? s : (s?.content || s?.text || '');
+    return cleanText(secText) !== cleanExp;
+  });
 
   if (activeIsPreK) {
     return (
