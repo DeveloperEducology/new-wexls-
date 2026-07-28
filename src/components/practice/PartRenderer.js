@@ -7082,6 +7082,53 @@ function PictographScenePart({ part }) {
   );
 }
 
+function VideoPart({ part }) {
+  const src = part.videoUrl || part.src || part.content || null;
+  if (!src) return null;
+
+  const isEmbed = typeof src === 'string' && (src.includes('iframe') || src.includes('youtube.com') || src.includes('vimeo.com') || src.includes('kaltura.com') || src.includes('embed'));
+
+  return (
+    <div style={{
+      width: '100%',
+      maxWidth: part.maxWidth || 480,
+      margin: '12px auto',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      boxShadow: '0 4px 18px rgba(0,0,0,0.12)',
+      background: '#0f172a',
+      border: '2px solid #334155',
+      ...(part.style || {})
+    }}>
+      {isEmbed ? (
+        <iframe
+          src={src}
+          style={{ width: '100%', height: part.height || 280, border: 'none' }}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          title="Video Prompt"
+        />
+      ) : (
+        <video
+          controls
+          autoPlay={part.autoPlay !== false}
+          muted={part.muted !== false}
+          loop={part.loop !== false}
+          style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 340 }}
+        >
+          <source src={src} />
+          Your browser does not support video playback.
+        </video>
+      )}
+      {part.label && (
+        <div style={{ padding: '6px 12px', fontSize: '12px', color: '#94a3b8', background: '#020617', textAlign: 'center', fontWeight: 600 }}>
+          {part.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const PART_RENDERERS = {
 
   section: GroupPart,
@@ -7089,6 +7136,7 @@ const PART_RENDERERS = {
   play_sound_card: PlaySoundCard,
   svg: SvgPart,
   image: ImagePart,
+  video: VideoPart,
   input: InputPart,
   option_select: OptionSelectPart,
   choice: OptionSelectPart,

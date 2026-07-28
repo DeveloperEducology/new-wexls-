@@ -239,6 +239,7 @@ export default function PartsArrayBuilder({
                   <option value="text">📝 Text</option>
                   <option value="audio">🔊 Audio</option>
                   <option value="image">🖼️ Image</option>
+                  <option value="video">🎥 Video / Animation</option>
                   <option value="row">↔️ Row / Grid Group</option>
                   <option value="play_sound_card">🎵 Play Sound Card</option>
                 </select>
