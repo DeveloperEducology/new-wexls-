@@ -33,6 +33,25 @@ export default function PartsArrayBuilder({
     updateArr(newParts);
   };
 
+  const handleAutoSyncAllImageColumns = () => {
+    const audioCol = findAudioColumn(columns);
+    const imgCols = columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic'));
+    const newParts = [
+      { type: 'text', content: 'Click on the button. Then, answer the question.' }
+    ];
+    if (audioCol) {
+      newParts.push({ type: 'audio', content: `[${audioCol}]` });
+    }
+    if (imgCols.length > 0) {
+      imgCols.forEach(col => {
+        newParts.push({ type: 'image', content: `[${col}]` });
+      });
+    } else {
+      newParts.push({ type: 'image', content: '[target_image]' });
+    }
+    updateArr(newParts);
+  };
+
   return (
     <div style={{ marginTop: '20px', padding: '16px', background: '#0f172a', borderRadius: '12px', border: '1.5px solid #1e293b' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
@@ -44,7 +63,15 @@ export default function PartsArrayBuilder({
             Manually add or order text, audio, and image parts in sequence.
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleAutoSyncAllImageColumns}
+            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+            title="Auto-detect all image columns in spreadsheet and add them to prompt parts"
+          >
+            🖼️ Auto-Sync Image Columns ({columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic')).length})
+          </button>
           <button
             type="button"
             onClick={handleAutoBuildAudioText}
