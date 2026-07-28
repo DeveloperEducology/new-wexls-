@@ -2432,9 +2432,6 @@ export default function SpreadsheetTemplateCreator() {
           if (!Array.isArray(compiledParts)) {
             compiledParts = [];
           }
-          if (!includeQuestionImage) {
-            compiledParts = compiledParts.filter(p => p?.type !== 'image');
-          }
         } catch (e) {
           console.warn('Custom parts JSON parse failed:', e);
         }
