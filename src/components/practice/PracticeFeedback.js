@@ -36,11 +36,17 @@ function InlineMarkdown({ text }) {
 
   if (!cleanText.includes('<svg')) {
     const parseMathAndText = (str, keyPrefix) => {
-      const subSegments = str.split(/(\$[^\$]+\$)/g);
+      if (!str) return '';
+      const subSegments = String(str).split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\))/g);
       return subSegments.map((subPiece, subIndex) => {
-        const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-        if (mathMatch) {
-          return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />;
+        if (!subPiece) return null;
+        const blockMatch = subPiece.match(/^\$\$([\s\S]+)\$\$$/) || subPiece.match(/^\\\[([\s\S]+)\\\]$/);
+        if (blockMatch) {
+          return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={blockMatch[1]} displayMode={true} />;
+        }
+        const inlineMatch = subPiece.match(/^\$([\s\S]+)\$$/) || subPiece.match(/^\\\(([\s\S]+)\\\)$/);
+        if (inlineMatch) {
+          return <KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={inlineMatch[1]} displayMode={false} />;
         }
         return <span key={`${keyPrefix}-${subIndex}`}>{parseHTMLToJSX(subPiece.replace(/^#{1,4}\s*/, ''))}</span>;
       });
@@ -96,7 +102,7 @@ function InlineMarkdown({ text }) {
                     color: '#475569',
                     textAlign: 'center'
                   }}>
-                    {col}
+                    {renderInlineContent(col, `th-${colIdx}`)}
                   </th>
                 ))}
               </tr>
@@ -114,9 +120,9 @@ function InlineMarkdown({ text }) {
                       textAlign: 'center'
                     }}>
                       {col.startsWith('<u>') && col.endsWith('</u>') ? (
-                        <u style={{ color: '#16a34a', fontWeight: 900 }}>{col.replace(/<\/?u>/g, '')}</u>
+                        <u style={{ color: '#16a34a', fontWeight: 900 }}>{renderInlineContent(col.replace(/<\/?u>/g, ''), `td-u-${rowIdx}-${colIdx}`)}</u>
                       ) : (
-                        col
+                        renderInlineContent(col, `td-${rowIdx}-${colIdx}`)
                       )}
                     </td>
                   ))}
@@ -1357,7 +1363,7 @@ function renderCorrectAnswer(question) {
               {isSvgString(expStr) ? (
                 <div dangerouslySetInnerHTML={{ __html: expStr }} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} />
               ) : (
-                expStr
+                <InlineMarkdown text={expStr} />
               )}
             </div>
           );

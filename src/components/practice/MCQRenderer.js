@@ -107,11 +107,16 @@ function InlineMarkdown({ text, userAnswerLabel, userAnswerLabels }) {
   let globalBlankIndex = 0;
 
   const parseMathAndText = (str, keyPrefix) => {
-    const subSegments = str.split(/(\$[^\$]+\$)/g);
+    const subSegments = String(str).split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\))/g);
     return subSegments.flatMap((subPiece, subIndex) => {
-      const mathMatch = subPiece.match(/^\$([^\$]+)\$/);
-      if (mathMatch) {
-        return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={mathMatch[1]} displayMode={false} />];
+      if (!subPiece) return [];
+      const blockMath = subPiece.match(/^\$\$([\s\S]+)\$\$$/) || subPiece.match(/^\\\[([\s\S]+)\\\]$/);
+      if (blockMath) {
+        return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={blockMath[1]} displayMode={true} />];
+      }
+      const inlineMath = subPiece.match(/^\$([\s\S]+)\$$/) || subPiece.match(/^\\\(([\s\S]+)\\\)$/);
+      if (inlineMath) {
+        return [<KaTeXRenderer key={`${keyPrefix}-${subIndex}`} math={inlineMath[1]} displayMode={false} />];
       }
       
       // Match blank placeholders: '_', '__', '___', '[]', '[[blank1]]', '{{blank}}'
