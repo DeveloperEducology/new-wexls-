@@ -1890,22 +1890,24 @@ export default function SpreadsheetTemplateCreator() {
               searchWord = cleanWordStr(rawVal);
             }
 
-            // 1. Swap image/img/pic in imgCol with word/item/text (e.g. correct_image_1 -> correct_word_1)
+            // 1. Direct name/label/word swapping (e.g. _object_1_image_url -> object_1_name, object_1_label, object_1_word)
             if (!searchWord) {
+              const colBase = imgCol.toLowerCase().replace(/^_+/, '').replace(/_url$/, '');
               const swappedWordCol = columns.find(c => {
-                const lc = c.toLowerCase();
-                const colBase = imgCol.toLowerCase();
+                const lc = c.toLowerCase().replace(/^_+/, '');
+                const swappedName = colBase.replace(/image|img|pic/gi, 'name');
+                const swappedLabel = colBase.replace(/image|img|pic/gi, 'label');
                 const swappedWord = colBase.replace(/image|img|pic/gi, 'word');
                 const swappedItem = colBase.replace(/image|img|pic/gi, 'item');
                 const swappedText = colBase.replace(/image|img|pic/gi, 'text');
-                return lc !== colBase && (lc === swappedWord || lc === swappedItem || lc === swappedText);
+                return lc === swappedName || lc === swappedLabel || lc === swappedWord || lc === swappedItem || lc === swappedText;
               });
               if (swappedWordCol && row[swappedWordCol]) {
                 searchWord = cleanWordStr(row[swappedWordCol]);
               }
             }
 
-            // 2. Prefix matching fallback
+            // 2. Number/Index prefix matching (e.g. 1 in _object_1_image_url -> object_1_name)
             if (!searchWord) {
               const numMatch = imgCol.match(/\d+/);
               const numStr = numMatch ? numMatch[0] : '';
@@ -1913,16 +1915,19 @@ export default function SpreadsheetTemplateCreator() {
                 const lc = c.toLowerCase();
                 if (lc === imgCol.toLowerCase()) return false;
                 if (numStr && !lc.includes(numStr)) return false;
-                return lc.includes('word') || lc.includes('item') || lc.includes('text');
+                return lc.includes('name') || lc.includes('label') || lc.includes('word') || lc.includes('item') || lc.includes('text') || lc.includes('object');
               });
               if (matchingCol && row[matchingCol]) {
                 searchWord = cleanWordStr(row[matchingCol]);
               }
             }
 
-            // 3. Fallback to general word columns
+            // 3. Fallback to any non-image text column
             if (!searchWord) {
-              const wordCol = columns.find(c => ['correct_item', 'target_word', 'word', 'text', 'target', 'character_name'].includes(c));
+              const wordCol = columns.find(c => {
+                const lc = c.toLowerCase();
+                return !lc.includes('image') && !lc.includes('img') && !lc.includes('pic') && !lc.includes('audio') && !lc.includes('sound') && c !== '_level';
+              });
               if (wordCol && row[wordCol]) {
                 searchWord = cleanWordStr(row[wordCol]);
               }
