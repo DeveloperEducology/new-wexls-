@@ -44,11 +44,75 @@ export default function PartsArrayBuilder({
     }
     if (imgCols.length > 0) {
       imgCols.forEach(col => {
-        newParts.push({ type: 'image', content: `[${col}]` });
+        newParts.push({ type: 'image', content: `[${col}]`, maxWidth: 140, showSpeaker: false });
       });
     } else {
-      newParts.push({ type: 'image', content: '[target_image]' });
+      newParts.push({ type: 'image', content: '[target_image]', maxWidth: 140, showSpeaker: false });
     }
+    updateArr(newParts);
+  };
+
+  const handleAutoBuild2x2Grid = () => {
+    const audioCol = findAudioColumn(columns);
+    const imgCols = columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic'));
+    const newParts = [
+      { type: 'text', content: 'Click on the button. Then, answer the question.' }
+    ];
+    if (audioCol) {
+      newParts.push({ type: 'audio', content: `[${audioCol}]` });
+    }
+    const gridImageParts = (imgCols.length > 0 ? imgCols : ['target_image']).map(col => ({
+      type: 'image',
+      content: `[${col}]`,
+      maxWidth: 160,
+      showSpeaker: false
+    }));
+
+    newParts.push({
+      type: 'row',
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '14px',
+        maxWidth: '380px',
+        margin: '12px auto'
+      },
+      parts: gridImageParts
+    });
+
+    updateArr(newParts);
+  };
+
+  const handleAutoBuildHorizontalRow = () => {
+    const audioCol = findAudioColumn(columns);
+    const imgCols = columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic'));
+    const newParts = [
+      { type: 'text', content: 'Click on the button. Then, answer the question.' }
+    ];
+    if (audioCol) {
+      newParts.push({ type: 'audio', content: `[${audioCol}]` });
+    }
+    const rowImageParts = (imgCols.length > 0 ? imgCols : ['target_image']).map(col => ({
+      type: 'image',
+      content: `[${col}]`,
+      maxWidth: 130,
+      showSpeaker: false
+    }));
+
+    newParts.push({
+      type: 'row',
+      style: {
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px',
+        margin: '12px 0'
+      },
+      parts: rowImageParts
+    });
+
     updateArr(newParts);
   };
 
@@ -66,18 +130,34 @@ export default function PartsArrayBuilder({
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button
             type="button"
+            onClick={handleAutoBuild2x2Grid}
+            style={{ background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+            title="Arrange all spreadsheet images into a compact 2x2 grid layout"
+          >
+            🔲 2x2 Grid
+          </button>
+          <button
+            type="button"
+            onClick={handleAutoBuildHorizontalRow}
+            style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+            title="Arrange all spreadsheet images into a horizontal row layout"
+          >
+            ↔️ Row Layout
+          </button>
+          <button
+            type="button"
             onClick={handleAutoSyncAllImageColumns}
             style={{ background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
             title="Auto-detect all image columns in spreadsheet and add them to prompt parts"
           >
-            🖼️ Auto-Sync Image Columns ({columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic')).length})
+            🖼️ Auto-Sync ({columns.filter(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('img') || c.toLowerCase().includes('pic')).length})
           </button>
           <button
             type="button"
             onClick={handleAutoBuildAudioText}
             style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
           >
-            ✨ Auto-Build Audio+Text
+            ✨ Audio+Text
           </button>
           <button
             type="button"

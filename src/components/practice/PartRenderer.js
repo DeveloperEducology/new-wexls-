@@ -845,7 +845,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   const labelText = part.label || part.alt || '';
   const spokenText = part.spokenText || labelText || question?.soundText || question?.questionText || 'Image';
   const isDirectSelect = Boolean(question?.directImageSelect || question?.interaction === 'direct_image_select');
-  const canPlaySound = Boolean(part.audioUrl || part.spokenText || part.playLabelSound || part.showSpeaker || (spokenText && !isDirectSelect));
+  const canPlaySound = part.showSpeaker === false ? false : Boolean(part.audioUrl || part.playLabelSound || part.showSpeaker || (part.spokenText && !isDirectSelect));
   const isSelected = isDirectSelect && partIndex !== undefined && userAnswer !== null && Number(userAnswer) === partIndex;
 
   const handleImageClick = (e) => {
