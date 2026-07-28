@@ -2940,6 +2940,18 @@ export default function SpreadsheetTemplateCreator() {
         }
       }
 
+      // ALWAYS ensure the absolute latest customPartsText from Step 2 is injected into parsed.parts!
+      if (customPartsText && customPartsText.trim() !== '') {
+        try {
+          const latestParts = JSON.parse(customPartsText);
+          if (Array.isArray(latestParts) && latestParts.length > 0) {
+            parsed.parts = latestParts;
+          }
+        } catch (e) {
+          console.warn('Failed to parse customPartsText before publish:', e);
+        }
+      }
+
       const payload = {
         template: parsed,
         linkToQuestionId: linkToQuestionId
