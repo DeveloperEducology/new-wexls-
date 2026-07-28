@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import MCQRenderer from './MCQRenderer';
 import FillInTheBlankRenderer from './FillInTheBlankRenderer';
+import TapToFillActivity from './activities/tap_to_fill/TapToFillActivity';
 
 const LoadingRenderer = () => (
   <div style={{ padding: 24, color: '#64748b', fontWeight: 800 }}>
@@ -36,6 +37,9 @@ const ENGINE_TYPE_MAP = {
   fill_blank: 'fillInTheBlank',
   number_input: 'fillInTheBlank',
   text_input: 'fillInTheBlank',
+  tap_to_fill: 'tap_to_fill',
+  taptofill: 'tap_to_fill',
+  'tap-to-fill': 'tap_to_fill',
   drag_drop: 'categorizationv2',
   sorting: 'categorizationv2',
   matching: 'categorizationv2',
@@ -48,6 +52,8 @@ const ENGINE_TYPE_MAP = {
   hotspot: 'hotspot_select',
   interactive_tool: 'interactiveTool',
   sentence_ordering: 'sentence_ordering',
+  sentenceordering: 'sentence_ordering',
+  ordering: 'sentence_ordering',
 };
 
 function normalizeUniversalQuestion(question) {
@@ -99,6 +105,8 @@ export default function UniversalActivityRenderer({
     ? FillInTheBlankRenderer
     : normalizedType === 'interactivetool'
     ? InteractiveToolRenderer
+    : normalizedType === 'tap_to_fill'
+    ? TapToFillActivity
     : MCQRenderer;
 
   return (

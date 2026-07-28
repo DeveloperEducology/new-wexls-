@@ -856,7 +856,11 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   const questionText = interpolateString(rawQuestionText, resolvedVariables);
   
   let explanationContent = '';
-  if (template.explanation?.sections?.[0]?.content) {
+  if (resolvedVariables.explanation) {
+    explanationContent = interpolateString(resolvedVariables.explanation, resolvedVariables);
+  } else if (resolvedVariables.Explanation) {
+    explanationContent = interpolateString(resolvedVariables.Explanation, resolvedVariables);
+  } else if (template.explanation?.sections?.[0]?.content) {
     explanationContent = interpolateString(template.explanation.sections[0].content, resolvedVariables);
   }
 
