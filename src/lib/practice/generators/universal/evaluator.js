@@ -1090,7 +1090,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   let rawParts = Array.isArray(template.parts) ? [...template.parts] : [];
 
   // Auto-detect image variables in resolvedVariables if template.parts contains no image parts
-  const hasImagePartInRaw = rawParts.some(p => p?.type === 'image');
+  const hasImagePartInRaw = rawParts.some(p => p?.type === 'image' || (p?.type === 'row' && Array.isArray(p.parts) && p.parts.some(cp => cp?.type === 'image')));
   if (!hasImagePartInRaw && resolvedVariables) {
     const imgVarKeys = Object.keys(resolvedVariables).filter(k => {
       const lc = k.toLowerCase();
@@ -1109,6 +1109,32 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         });
       });
     }
+  }
+
+  // Auto-group standalone top-level image parts into a compact grid layout on practice page
+  const topLevelImageParts = rawParts.filter(p => p?.type === 'image');
+  if (topLevelImageParts.length >= 2) {
+    const nonImageParts = rawParts.filter(p => p?.type !== 'image');
+    const gridCols = topLevelImageParts.length === 4 ? 2 : Math.min(topLevelImageParts.length, 3);
+    const gridImageParts = topLevelImageParts.map(p => ({
+      ...p,
+      maxWidth: p.maxWidth || (gridCols === 2 ? 150 : 130),
+      showSpeaker: p.showSpeaker !== undefined ? p.showSpeaker : false
+    }));
+    rawParts = [
+      ...nonImageParts,
+      {
+        type: 'row',
+        style: {
+          display: 'grid',
+          gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+          gap: '14px',
+          maxWidth: `${gridCols * 180}px`,
+          margin: '12px auto'
+        },
+        parts: gridImageParts
+      }
+    ];
   }
   
   const interactionEngine = String(
