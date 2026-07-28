@@ -15,14 +15,16 @@ export default function OptionBindingEditor({
   preserveOptionOrder,
   setPreserveOptionOrder,
   isSequential,
-  setIsSequential
+  setIsSequential,
+  pairRemediationRows,
+  setPairRemediationRows
 }) {
   const imageCol = columns.find(c => c.toLowerCase().includes('image') || c.toLowerCase().includes('clipart'));
 
   return (
     <div className="grid-card" style={{ marginTop: '20px' }}>
       <h3 className="grid-card-title">📝 Step 3: Map Answer Choices & Question Ordering</h3>
-      <p className="grid-card-desc">Assign correct answers, distractor options, and index-wise ordering preferences.</p>
+      <p className="grid-card-desc">Assign correct answers, distractor options, and index-wise ordering / remediation preferences.</p>
 
       {/* MCQ / MSQ / Mode toggle */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -81,6 +83,14 @@ export default function OptionBindingEditor({
             onChange={(e) => setIsSequential?.(e.target.checked)}
           />
           🔄 Keep questions index-wise (Sequential row-by-row)
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#38bdf8', fontWeight: 700, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={Boolean(pairRemediationRows)}
+            onChange={(e) => setPairRemediationRows?.(e.target.checked)}
+          />
+          💡 Auto-pair is_remediation rows as step-down scaffold questions on wrong answer
         </label>
 
         {imageCol && (

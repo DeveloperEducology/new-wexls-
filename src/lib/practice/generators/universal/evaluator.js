@@ -1782,6 +1782,19 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       hasClickToFill,
       visuals: template.visuals
     },
+    metadata: {
+      ...(template.metadata || {}),
+      isRemediation: Boolean(
+        resolvedVariables.is_remediation === true ||
+        String(resolvedVariables.is_remediation).toLowerCase() === 'true' ||
+        String(resolvedVariables.is_remediation).toLowerCase() === 'yes' ||
+        resolvedVariables.isRemediation === true
+      ),
+      ...(Number.isFinite(Number(resolvedVariables.remediation_pair_index))
+        ? { remediationPairIndex: Number(resolvedVariables.remediation_pair_index) }
+        : (Number.isFinite(Number(resolvedVariables.remediationPairIndex)) ? { remediationPairIndex: Number(resolvedVariables.remediationPairIndex) } : {})
+      )
+    },
     layoutConfig: template.layoutConfig || template.layout || undefined,
     validationRules: resolveValidationRules(template.validationRules || template.validation?.rules, resolvedVariables),
     feedbackRules: template.feedbackRules || template.feedback || undefined,

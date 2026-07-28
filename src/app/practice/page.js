@@ -2281,9 +2281,16 @@ function PracticePageContent() {
           return;
         }
 
-        setAdaptiveBanner(null);
+        const wasRemediation = question?.metadata?.isRemediation || searchParams.get('remediationActive') === 'true';
+        setAdaptiveBanner(wasRemediation ? {
+          title: '🎉 SCAFFOLD MASTERED!',
+          subtitle: 'Great job! Now advancing to the next main question.',
+          type: 'success'
+        } : null);
+
         window.setTimeout(() => {
           const params = new URLSearchParams(window.location.search);
+          params.delete('remediationActive');
           if (nextQn && nextQn !== 'end') {
             params.set('qn', String(nextQn));
           } else {
@@ -2306,7 +2313,34 @@ function PracticePageContent() {
           }), 200);
         }, 400);
       } else {
-        // Incorrect: show explanation feedback first, save routing target in state
+        // Incorrect answer in static/sequential mode: check for linked remediation scaffold row
+        const pairIndex = question?.metadata?.remediationPairIndex;
+        if (typeof pairIndex === 'number' && pairIndex > 0) {
+          window.setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+            params.set('qn', String(pairIndex));
+            params.set('remediationActive', 'true');
+            router.replace(`/practice?${params.toString()}`, { scroll: false });
+
+            setAdaptiveBanner({
+              title: '💡 STEP-DOWN SCAFFOLD REMEDIATION',
+              subtitle: "Let's solve this simpler step-down question to master the concept!",
+              type: 'remediation'
+            });
+
+            setIsSubmitting(false);
+            submittingRef.current = false;
+            window.setTimeout(() => fetchQuestion(false, {
+              correctStreak: 0,
+              practiceLevel,
+              levelStreak: 0,
+              lastResult: 'incorrect',
+              slideIn: true,
+            }), 200);
+          }, 400);
+          return;
+        }
+
         setNextStaticQn(nextQn);
         setIsSubmitting(false);
         submittingRef.current = false;

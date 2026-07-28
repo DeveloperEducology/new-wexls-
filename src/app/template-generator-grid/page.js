@@ -796,6 +796,7 @@ export default function SpreadsheetTemplateCreator() {
   const [includeQuestionImage, setIncludeQuestionImage] = useState(false);
   const [preserveOptionOrder, setPreserveOptionOrder] = useState(false);
   const [isSequential, setIsSequential] = useState(false);
+  const [pairRemediationRows, setPairRemediationRows] = useState(false);
   const [customPartsText, setCustomPartsText] = useState('');
   const [isPartsRawJsonMode, setIsPartsRawJsonMode] = useState(false);
 
