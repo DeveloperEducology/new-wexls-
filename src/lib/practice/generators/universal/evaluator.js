@@ -1088,6 +1088,28 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   // 4. Resolve Parts and Visual SVG outputs
   let hasClickToFill = false;
   let rawParts = Array.isArray(template.parts) ? [...template.parts] : [];
+
+  // Auto-detect image variables in resolvedVariables if template.parts contains no image parts
+  const hasImagePartInRaw = rawParts.some(p => p?.type === 'image');
+  if (!hasImagePartInRaw && resolvedVariables) {
+    const imgVarKeys = Object.keys(resolvedVariables).filter(k => {
+      const lc = k.toLowerCase();
+      if (!lc.includes('image') && !lc.includes('img') && !lc.includes('pic')) return false;
+      const val = String(resolvedVariables[k] || '').trim();
+      return val.startsWith('http') || val.startsWith('/') || val.startsWith('data:');
+    });
+    if (imgVarKeys.length > 0) {
+      imgVarKeys.sort();
+      imgVarKeys.forEach(key => {
+        const val = String(resolvedVariables[key]).trim();
+        rawParts.push({
+          type: 'image',
+          content: val,
+          imageUrl: val
+        });
+      });
+    }
+  }
   
   const interactionEngine = String(
     template.interaction?.engine
