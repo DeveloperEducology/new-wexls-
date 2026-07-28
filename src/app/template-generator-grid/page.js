@@ -2094,12 +2094,14 @@ export default function SpreadsheetTemplateCreator() {
     if (partsSource.length === 0) return null;
 
     const currentRow = rows[activeRowIndex] || {};
-    return partsSource.map(part => {
-      let content = part.content || '';
-      let label = part.label || '';
-      let audioUrl = part.audioUrl || '';
+
+    const evaluateSinglePart = (part) => {
+      if (!part || typeof part !== 'object') return part;
+      const resPart = { ...part };
+      let content = resPart.content || '';
+      let label = resPart.label || '';
+      let audioUrl = resPart.audioUrl || '';
       
-      // Substitute placeholders like [col], [_col], or {{col}}
       columns.forEach(col => {
         const val = currentRow[col] !== undefined ? String(currentRow[col]) : '';
         const cleanCol = col.replace(/^_+/, '');
@@ -2110,18 +2112,22 @@ export default function SpreadsheetTemplateCreator() {
         audioUrl = audioUrl.replace(regex1, val).replace(regex2, val);
       });
       
-      // Fallback preview URL if image cell is empty in simulator
-      if (part.type === 'image' && (!content || (!content.startsWith('http') && !content.startsWith('/')))) {
+      if (resPart.type === 'image' && (!content || (!content.startsWith('http') && !content.startsWith('/')))) {
         content = 'https://placehold.co/360x240/1e293b/38bdf8?text=Image+Cell+Empty';
       }
 
-      return {
-        ...part,
-        content,
-        label,
-        audioUrl
-      };
-    });
+      resPart.content = content;
+      resPart.label = label;
+      if (audioUrl) resPart.audioUrl = audioUrl;
+
+      if (Array.isArray(resPart.parts)) {
+        resPart.parts = resPart.parts.map(evaluateSinglePart);
+      }
+
+      return resPart;
+    };
+
+    return partsSource.map(evaluateSinglePart);
   };
 
   const renderEvaluatedText = (templateText) => {
