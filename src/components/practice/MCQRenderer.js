@@ -95,7 +95,9 @@ function responsivePx(value, minPx, fallbackMaxPx) {
 
 function InlineMarkdown({ text, userAnswerLabel, userAnswerLabels }) {
   const sanitizedText = String(text || '').replace(/\$\$(.*?)\$\$/g, (match, p1) => `$${p1}$`);
-  const normalizedText = sanitizedText
+  // Auto-wrap plain caret exponents like km^2 or m^3 or 10^6 into $...$ if not already inside math
+  const caretProcessedText = sanitizedText.replace(/(^|[^$\\])\b([a-zA-Z0-9_-]+\^[a-zA-Z0-9_+-]+)\b([^$]|$)/g, '$1$$2$$3');
+  const normalizedText = caretProcessedText
     .replace(/\\n/g, '\n')
     .replace(/\/n/g, '\n');
   
@@ -952,6 +954,20 @@ export default function MCQRenderer({
 
   const hasVisualInterleaving = question.questionText && !hideHeader && visualParts.length > 0;
 
+  const activeQnNumber = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const qnVal = params.get('qn');
+      if (qnVal && !isNaN(Number(qnVal))) {
+        return Number(qnVal);
+      }
+    }
+    return (
+      question?.metadata?.qnNumber ||
+      (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex + 1 : 1)
+    );
+  }, [question, routeSearch]);
+
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: isPreK ? 4 : 14 }}>
       {/* Demo / Sequential Index / Static Badge */}
@@ -974,8 +990,8 @@ export default function MCQRenderer({
           <span>📌 {routeSearch.includes('iit=true') || routeSearch.includes('mode=static') ? 'STATIC / IIT QN:' : 'ORDER MODE:'}</span>
           <span>
             {routeSearch.includes('mode=static') || routeSearch.includes('iit=true')
-              ? `Question ${question?.metadata?.qnNumber || (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex + 1 : 1)} (Static Bank)`
-              : `Row Index #${((typeof question?.rowIndex === 'number' ? question.rowIndex : (typeof question?.metadata?.rowIndex === 'number' ? question.metadata.rowIndex : 0)) + 1)} (Sequential)`
+              ? `Question ${activeQnNumber} (Static Bank)`
+              : `Row Index #${activeQnNumber} (Sequential)`
             }
           </span>
           <span>• Options Ordered (A, B, C, D)</span>
