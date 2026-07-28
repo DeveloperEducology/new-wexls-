@@ -1106,15 +1106,17 @@ export default function SpreadsheetTemplateCreator() {
   };
 
   // Add column
-  const handleAddColumn = () => {
-    const clean = newColumnName.trim().replace(/[^a-zA-Z0-9_]+/g, '');
+  const handleAddColumn = (customName) => {
+    const colInput = customName || (typeof window !== 'undefined' ? window.prompt('Enter new column name (e.g. distractor_3, image_url, audio_url):') : '');
+    if (!colInput) return;
+    const clean = colInput.trim().replace(/[^a-zA-Z0-9_]+/g, '_');
     if (!clean) return;
     if (columns.includes(clean)) {
       alert('Column name already exists!');
       return;
     }
     setColumns([...columns, clean]);
-    setNewColumnName('');
+    if (typeof setNewColumnName === 'function') setNewColumnName('');
     setRows(prev => prev.map(row => ({ ...row, [clean]: '' })));
   };
 
@@ -3931,12 +3933,32 @@ export default function SpreadsheetTemplateCreator() {
                   <tr>
                     <th className="spreadsheet-th" style={{ width: '44px' }}>Row</th>
                     <th className="spreadsheet-th" style={{ width: '80px', textAlign: 'center' }}>Level</th>
-                    {columns.filter(c => c !== '_level').map(col => (
-                      <th key={col} className="spreadsheet-th">
-                        {col}
-                        <button className="spreadsheet-th-delete" onClick={() => handleDeleteColumn(col)}>×</button>
-                      </th>
-                    ))}
+                    {columns.filter(c => c !== '_level').map(col => {
+                      const colLower = col.toLowerCase();
+                      const isAudio = colLower.includes('audio') || colLower.includes('sound') || colLower.includes('tts') || colLower.includes('voice');
+                      const isImage = colLower.includes('image') || colLower.includes('img') || colLower.includes('pic') || colLower.includes('photo');
+
+                      return (
+                        <th key={col} className="spreadsheet-th" style={{ minWidth: '140px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 800 }}>
+                              {isAudio ? '🔊 ' : isImage ? '🖼️ ' : '📝 '}
+                              {col}
+                            </span>
+                            <button className="spreadsheet-th-delete" onClick={() => handleDeleteColumn(col)} title={`Delete column ${col}`}>×</button>
+                          </div>
+                        </th>
+                      );
+                    })}
+                    <th className="spreadsheet-th" style={{ width: '60px', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleAddColumn()}
+                        title="Insert New Column"
+                        style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}
+                      >
+                        + Col
+                      </button>
+                    </th>
                     <th className="spreadsheet-th" style={{ width: '50px', textAlign: 'center' }}>Del</th>
                   </tr>
                 </thead>
@@ -4133,6 +4155,13 @@ export default function SpreadsheetTemplateCreator() {
 
             <div className="spreadsheet-btn-row">
               <button className="grid-btn-primary" onClick={handleAddRow}>➕ Add Row Variant</button>
+              <button
+                className="grid-btn-primary"
+                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#fff', border: 'none' }}
+                onClick={() => handleAddColumn()}
+              >
+                ➕ Add Column
+              </button>
               <button
                 className="grid-btn-secondary"
                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none' }}

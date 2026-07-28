@@ -123,21 +123,62 @@ export default function OptionBindingEditor({
               Option #{idx + 1}
             </span>
 
-            {/* Column Selector */}
-            <select
-              value={opt.column || ''}
-              onChange={(e) => {
-                const next = [...optionsBinding];
-                next[idx] = { ...next[idx], column: e.target.value };
-                setOptionsBinding(next);
-              }}
-              style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600 }}
-            >
-              <option value="">Select Column...</option>
-              {columns.map(c => (
-                <option key={c} value={c}>Column: [{c}]</option>
-              ))}
-            </select>
+            {/* Text Column Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>📝 Text:</span>
+              <select
+                value={opt.column || ''}
+                onChange={(e) => {
+                  const next = [...optionsBinding];
+                  next[idx] = { ...next[idx], column: e.target.value };
+                  setOptionsBinding(next);
+                }}
+                style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600 }}
+              >
+                <option value="">(None)</option>
+                {columns.map(c => (
+                  <option key={c} value={c}>[{c}]</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Image Column Selector (Optional) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>🖼️ Image:</span>
+              <select
+                value={opt.imageColumn || ''}
+                onChange={(e) => {
+                  const next = [...optionsBinding];
+                  next[idx] = { ...next[idx], imageColumn: e.target.value };
+                  setOptionsBinding(next);
+                }}
+                style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600 }}
+              >
+                <option value="">(No Image)</option>
+                {columns.map(c => (
+                  <option key={c} value={c}>[{c}]</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Audio Column Selector (Optional) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>🔊 Audio:</span>
+              <select
+                value={opt.audioColumn || ''}
+                onChange={(e) => {
+                  const next = [...optionsBinding];
+                  next[idx] = { ...next[idx], audioColumn: e.target.value };
+                  setOptionsBinding(next);
+                }}
+                style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600 }}
+              >
+                <option value="">(No Audio)</option>
+                {columns.map(c => (
+                  <option key={c} value={c}>[{c}]</option>
+                ))}
+              </select>
+            </div>
 
             {/* Correct Checkbox */}
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: opt.isCorrect ? '#10b981' : '#94a3b8', cursor: 'pointer' }}>
