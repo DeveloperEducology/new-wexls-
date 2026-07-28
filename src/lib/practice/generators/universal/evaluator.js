@@ -1234,396 +1234,136 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     } // end else (no dynCategories)
   }
 
+  const resolvePartDeep = (part) => {
+    if (!part || typeof part !== 'object') return part;
+    const resolvedPart = { ...part };
+    
+    if (typeof resolvedPart.content === 'string') {
+      resolvedPart.content = interpolateString(resolvedPart.content, resolvedVariables);
+      const trimmed = resolvedPart.content.trim();
+      if (trimmed.startsWith('/api/tts') || trimmed.endsWith('.mp3') || trimmed.endsWith('.wav')) {
+        resolvedPart.type = 'audio';
+        resolvedPart.audioUrl = trimmed;
+      }
+    }
+    if (typeof resolvedPart.prompt === 'string') {
+      resolvedPart.prompt = interpolateString(resolvedPart.prompt, resolvedVariables);
+    }
+    if (typeof resolvedPart.label === 'string') {
+      resolvedPart.label = interpolateString(resolvedPart.label, resolvedVariables);
+    }
+    if (typeof resolvedPart.backgroundSvg === 'string') {
+      resolvedPart.backgroundSvg = interpolateString(resolvedPart.backgroundSvg, resolvedVariables);
+    }
+    if (typeof resolvedPart.imageUrl === 'string') {
+      resolvedPart.imageUrl = interpolateString(resolvedPart.imageUrl, resolvedVariables);
+    } else if (resolvedPart.type === 'image' && typeof resolvedPart.content === 'string') {
+      resolvedPart.imageUrl = interpolateString(resolvedPart.content, resolvedVariables);
+    }
+
+    const rawAudio = resolvedPart.audioUrl || resolvedPart.targetAudioUrl || resolvedPart.soundUrl;
+    if (typeof rawAudio === 'string') {
+      resolvedPart.audioUrl = interpolateString(rawAudio, resolvedVariables);
+    }
+
+    if (typeof resolvedPart.spokenText === 'string') {
+      resolvedPart.spokenText = interpolateString(resolvedPart.spokenText, resolvedVariables);
+    } else if (resolvedVariables.target_word || resolvedVariables.targetWord) {
+      resolvedPart.spokenText = resolvedVariables.target_word || resolvedVariables.targetWord;
+    }
+
+    if (Array.isArray(resolvedPart.parts)) {
+      resolvedPart.parts = resolvedPart.parts.map(resolvePartDeep);
+    }
+    
+    if (Array.isArray(resolvedPart.categories)) {
+      resolvedPart.categories = resolvedPart.categories.map(cat => ({
+        ...cat,
+        label: cat.label ? interpolateString(cat.label, resolvedVariables) : undefined,
+        imageUrl: cat.imageUrl ? interpolateString(cat.imageUrl, resolvedVariables) : undefined,
+        prefillImageUrl: cat.prefillImageUrl ? interpolateString(cat.prefillImageUrl, resolvedVariables) : undefined
+      }));
+    }
+    
+    if (Array.isArray(resolvedPart.items)) {
+      resolvedPart.items = resolvedPart.items.map(item => ({
+        ...item,
+        content: item.content ? interpolateString(item.content, resolvedVariables) : undefined,
+        label: item.label ? interpolateString(item.label, resolvedVariables) : undefined,
+        imageUrl: item.imageUrl ? interpolateString(item.imageUrl, resolvedVariables) : undefined,
+        audioUrl: item.audioUrl ? interpolateString(item.audioUrl, resolvedVariables) : undefined,
+        alt: item.alt ? interpolateString(item.alt, resolvedVariables) : undefined,
+        svg: item.svg ? interpolateString(item.svg, resolvedVariables) : undefined,
+        imageWidth: item.imageWidth ? resolveExpression(String(item.imageWidth), resolvedVariables) : undefined
+      }));
+    }
+
+    if (Array.isArray(resolvedPart.wordCards)) {
+      resolvedPart.wordCards = resolvedPart.wordCards.map(card => ({
+        ...card,
+        ending: card.ending ? interpolateString(card.ending, resolvedVariables) : card.ending,
+        answer: card.answer ? interpolateString(card.answer, resolvedVariables) : card.answer,
+        imageUrl: card.imageUrl ? interpolateString(card.imageUrl, resolvedVariables) : card.imageUrl,
+        svg: card.svg ? interpolateString(card.svg, resolvedVariables) : card.svg,
+        alt: card.alt ? interpolateString(card.alt, resolvedVariables) : card.alt,
+        prompt: card.prompt ? interpolateString(card.prompt, resolvedVariables) : card.prompt
+      }));
+    }
+
+    if (resolvedPart.type === 'categorizationv2' || resolvedPart.type === 'categorization' || resolvedPart.type === 'drag_drop') {
+      if (typeof resolvedPart.items === 'string') {
+        const varName = resolvedPart.items.replace(/^\[|\]$/g, '');
+        if (resolvedVariables[varName] !== undefined) {
+          resolvedPart.items = resolvedVariables[varName];
+        }
+      }
+      if (typeof resolvedPart.targets === 'string') {
+        const varName = resolvedPart.targets.replace(/^\[|\]$/g, '');
+        if (resolvedVariables[varName] !== undefined) {
+          resolvedPart.targets = resolvedVariables[varName];
+        }
+      }
+      if (typeof resolvedPart.categories === 'string') {
+        const varName = resolvedPart.categories.replace(/^\[|\]$/g, '');
+        if (resolvedVariables[varName] !== undefined) {
+          resolvedPart.categories = resolvedVariables[varName];
+        }
+      }
+    }
+
+    if (resolvedPart.answerKey && typeof resolvedPart.answerKey === 'object') {
+      resolvedPart.answerKey = Object.fromEntries(
+        Object.entries(resolvedPart.answerKey).map(([k, v]) => {
+          const resolvedK = interpolateString(k, resolvedVariables);
+          const resolvedV = typeof v === 'string' ? interpolateString(v, resolvedVariables) : v;
+          return [resolvedK, resolvedV];
+        })
+      );
+
+      if (Array.isArray(resolvedPart.items)) {
+        const finalItemIds = new Set(resolvedPart.items.map(item => item.id));
+        resolvedPart.answerKey = Object.fromEntries(
+          Object.entries(resolvedPart.answerKey).filter(([k]) => finalItemIds.has(k))
+        );
+      }
+    }
+
+    for (const prop of ['value', 'min', 'max', 'marker', 'hour', 'minute', 'numerator', 'denominator']) {
+      if (resolvedPart[prop] !== undefined) {
+        resolvedPart[prop] = resolveExpression(resolvedPart[prop], resolvedVariables);
+      }
+    }
+
+    if (resolvedPart.type === 'number_line' && (resolvedPart.interactive === true || resolvedPart.interactive === 'true' || resolvedPart.clickToFill === true || resolvedPart.clickToFill === 'true')) {
+      hasClickToFill = true;
+    }
+
+    return resolvedPart;
+  };
+
   let parts = [];
   if (rawParts.length > 0) {
-    parts = rawParts.map(part => {
-      const resolvedPart = { ...part };
-      
-      if (typeof resolvedPart.content === 'string') {
-        resolvedPart.content = interpolateString(resolvedPart.content, resolvedVariables);
-        const trimmed = resolvedPart.content.trim();
-        if (trimmed.startsWith('/api/tts') || trimmed.endsWith('.mp3') || trimmed.endsWith('.wav')) {
-          resolvedPart.type = 'audio';
-          resolvedPart.audioUrl = trimmed;
-        }
-      }
-      if (typeof resolvedPart.prompt === 'string') {
-        resolvedPart.prompt = interpolateString(resolvedPart.prompt, resolvedVariables);
-      }
-      if (typeof resolvedPart.label === 'string') {
-        resolvedPart.label = interpolateString(resolvedPart.label, resolvedVariables);
-      }
-      if (typeof resolvedPart.backgroundSvg === 'string') {
-        resolvedPart.backgroundSvg = interpolateString(resolvedPart.backgroundSvg, resolvedVariables);
-      }
-      if (typeof resolvedPart.imageUrl === 'string') {
-        resolvedPart.imageUrl = interpolateString(resolvedPart.imageUrl, resolvedVariables);
-      } else if (resolvedPart.type === 'image' && typeof resolvedPart.content === 'string') {
-        resolvedPart.imageUrl = interpolateString(resolvedPart.content, resolvedVariables);
-      }
-
-      const rawAudio = resolvedPart.audioUrl || resolvedPart.targetAudioUrl || resolvedPart.soundUrl;
-      if (typeof rawAudio === 'string') {
-        resolvedPart.audioUrl = interpolateString(rawAudio, resolvedVariables);
-      }
-
-      if (typeof resolvedPart.spokenText === 'string') {
-        resolvedPart.spokenText = interpolateString(resolvedPart.spokenText, resolvedVariables);
-      } else if (resolvedVariables.target_word || resolvedVariables.targetWord) {
-        resolvedPart.spokenText = resolvedVariables.target_word || resolvedVariables.targetWord;
-      }
-      
-      if (Array.isArray(resolvedPart.categories)) {
-        resolvedPart.categories = resolvedPart.categories.map(cat => ({
-          ...cat,
-          label: cat.label ? interpolateString(cat.label, resolvedVariables) : undefined,
-          imageUrl: cat.imageUrl ? interpolateString(cat.imageUrl, resolvedVariables) : undefined,
-          prefillImageUrl: cat.prefillImageUrl ? interpolateString(cat.prefillImageUrl, resolvedVariables) : undefined
-        }));
-      }
-      
-      if (Array.isArray(resolvedPart.items)) {
-        resolvedPart.items = resolvedPart.items.map(item => ({
-          ...item,
-          content: item.content ? interpolateString(item.content, resolvedVariables) : undefined,
-          label: item.label ? interpolateString(item.label, resolvedVariables) : undefined,
-          imageUrl: item.imageUrl ? interpolateString(item.imageUrl, resolvedVariables) : undefined,
-          audioUrl: item.audioUrl ? interpolateString(item.audioUrl, resolvedVariables) : undefined,
-          alt: item.alt ? interpolateString(item.alt, resolvedVariables) : undefined,
-          svg: item.svg ? interpolateString(item.svg, resolvedVariables) : undefined,
-          imageWidth: item.imageWidth ? resolveExpression(String(item.imageWidth), resolvedVariables) : undefined
-        }));
-      }
-
-      if (Array.isArray(resolvedPart.wordCards)) {
-        resolvedPart.wordCards = resolvedPart.wordCards.map(card => ({
-          ...card,
-          ending: card.ending ? interpolateString(card.ending, resolvedVariables) : card.ending,
-          answer: card.answer ? interpolateString(card.answer, resolvedVariables) : card.answer,
-          imageUrl: card.imageUrl ? interpolateString(card.imageUrl, resolvedVariables) : card.imageUrl,
-          svg: card.svg ? interpolateString(card.svg, resolvedVariables) : card.svg,
-          alt: card.alt ? interpolateString(card.alt, resolvedVariables) : card.alt,
-          prompt: card.prompt ? interpolateString(card.prompt, resolvedVariables) : card.prompt
-        }));
-      }
-
-      if (resolvedPart.type === 'categorizationv2' || resolvedPart.type === 'categorization' || resolvedPart.type === 'drag_drop') {
-        // Resolve dynamic variable strings for items, targets, categories, grid, pattern, and behavior
-        if (typeof resolvedPart.items === 'string') {
-          const varName = resolvedPart.items.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.items = resolvedVariables[varName];
-          }
-        }
-        if (typeof resolvedPart.targets === 'string') {
-          const varName = resolvedPart.targets.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.targets = resolvedVariables[varName];
-          }
-        }
-        if (typeof resolvedPart.categories === 'string') {
-          const varName = resolvedPart.categories.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.categories = resolvedVariables[varName];
-          }
-        }
-        if (typeof resolvedPart.grid === 'string') {
-          const varName = resolvedPart.grid.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.grid = resolvedVariables[varName];
-          }
-        }
-        if (typeof resolvedPart.pattern === 'string') {
-          const varName = resolvedPart.pattern.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.pattern = resolvedVariables[varName];
-          }
-        }
-        if (typeof resolvedPart.behavior === 'string') {
-          const varName = resolvedPart.behavior.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.behavior = resolvedVariables[varName];
-          }
-        }
-
-        // Interpolate inner properties of objects like grid, pattern, and behavior
-        if (resolvedPart.grid && typeof resolvedPart.grid === 'object') {
-          resolvedPart.grid = { ...resolvedPart.grid };
-          for (const key of Object.keys(resolvedPart.grid)) {
-            if (typeof resolvedPart.grid[key] === 'string') {
-              const cleaned = resolvedPart.grid[key].replace(/^\[|\]$/g, '');
-              if (resolvedVariables[cleaned] !== undefined) {
-                resolvedPart.grid[key] = resolvedVariables[cleaned];
-              } else {
-                resolvedPart.grid[key] = resolveExpression(resolvedPart.grid[key], resolvedVariables);
-              }
-            }
-          }
-        }
-        if (resolvedPart.pattern && typeof resolvedPart.pattern === 'object') {
-          resolvedPart.pattern = { ...resolvedPart.pattern };
-          for (const key of Object.keys(resolvedPart.pattern)) {
-            if (typeof resolvedPart.pattern[key] === 'string') {
-              const cleaned = resolvedPart.pattern[key].replace(/^\[|\]$/g, '');
-              if (resolvedVariables[cleaned] !== undefined) {
-                resolvedPart.pattern[key] = resolvedVariables[cleaned];
-              } else {
-                resolvedPart.pattern[key] = resolveExpression(resolvedPart.pattern[key], resolvedVariables);
-              }
-            }
-            if (Array.isArray(resolvedPart.pattern[key])) {
-              resolvedPart.pattern[key] = resolvedPart.pattern[key].map(elem => {
-                if (typeof elem === 'string') {
-                  const cleaned = elem.replace(/^\[|\]$/g, '');
-                  return resolvedVariables[cleaned] !== undefined ? resolvedVariables[cleaned] : elem;
-                }
-                return elem;
-              });
-            }
-          }
-        }
-        if (resolvedPart.behavior && typeof resolvedPart.behavior === 'object') {
-          resolvedPart.behavior = { ...resolvedPart.behavior };
-          for (const key of Object.keys(resolvedPart.behavior)) {
-            if (typeof resolvedPart.behavior[key] === 'string') {
-              const cleaned = resolvedPart.behavior[key].replace(/^\[|\]$/g, '');
-              if (resolvedVariables[cleaned] !== undefined) {
-                resolvedPart.behavior[key] = resolvedVariables[cleaned];
-              } else {
-                resolvedPart.behavior[key] = resolveExpression(resolvedPart.behavior[key], resolvedVariables);
-              }
-            }
-          }
-        }
-
-        // Post-processing mapping/interpolation of items after variable resolution
-        if (Array.isArray(resolvedPart.items)) {
-          resolvedPart.items = resolvedPart.items.map(item => ({
-            ...item,
-            content: item.content ? interpolateString(item.content, resolvedVariables) : undefined,
-            label: item.label ? interpolateString(item.label, resolvedVariables) : undefined,
-            imageUrl: item.imageUrl ? interpolateString(item.imageUrl, resolvedVariables) : undefined,
-            audioUrl: item.audioUrl ? interpolateString(item.audioUrl, resolvedVariables) : undefined,
-            alt: item.alt ? interpolateString(item.alt, resolvedVariables) : undefined,
-            svg: item.svg ? interpolateString(item.svg, resolvedVariables) : undefined,
-            imageWidth: item.imageWidth ? resolveExpression(String(item.imageWidth), resolvedVariables) : undefined
-          }));
-        }
-
-        // 1. Dynamic Categories Subsetting
-        const rawCatCount = resolvedPart.categoryCount || resolvedPart.categoriesCount || resolvedPart.maxCategories;
-        if (rawCatCount !== undefined && Array.isArray(resolvedPart.categories)) {
-          const catCountVal = Number(resolveExpression(String(rawCatCount), resolvedVariables));
-          if (catCountVal > 0 && catCountVal < resolvedPart.categories.length) {
-            const indexedCats = resolvedPart.categories.map((c, i) => ({ c, i }));
-            const shuffledCats = shuffle(indexedCats, rng);
-            const selected = shuffledCats.slice(0, catCountVal);
-            selected.sort((a, b) => a.i - b.i);
-            resolvedPart.categories = selected.map(x => x.c);
-          }
-        }
-
-        // 2. Filter items pool to only match selected categories
-        if (Array.isArray(resolvedPart.categories) && Array.isArray(resolvedPart.items)) {
-          const selectedCatIds = new Set(resolvedPart.categories.map(c => c.id));
-          let validItems = resolvedPart.items.filter(item => {
-            const targetCatId = resolvedPart.answerKey?.[item.id] || item.target;
-            return selectedCatIds.has(targetCatId);
-          });
-
-          // 3. Dynamic Items Subsetting (Round-Robin Distribution across categories)
-          const rawItemCount = resolvedPart.itemCount || resolvedPart.itemsCount || resolvedPart.maxItems || resolvedPart.count;
-          if (rawItemCount !== undefined) {
-            const itemCountVal = Number(resolveExpression(String(rawItemCount), resolvedVariables));
-            if (itemCountVal > 0 && itemCountVal < validItems.length) {
-              // Group items by category
-              const itemsByCat = {};
-              for (const cat of resolvedPart.categories) {
-                itemsByCat[cat.id] = [];
-              }
-              for (const item of validItems) {
-                const targetCatId = resolvedPart.answerKey?.[item.id] || item.target;
-                if (itemsByCat[targetCatId]) {
-                  itemsByCat[targetCatId].push(item);
-                }
-              }
-              // Shuffle items inside each category
-              for (const catId of Object.keys(itemsByCat)) {
-                itemsByCat[catId] = shuffle(itemsByCat[catId], rng);
-              }
-              // Gather active categories
-              const activeCats = Object.keys(itemsByCat).filter(catId => itemsByCat[catId].length > 0);
-              if (activeCats.length > 0) {
-                const selectedItems = [];
-                const shuffledCatsList = shuffle(activeCats, rng);
-                let catIdx = 0;
-                while (selectedItems.length < itemCountVal) {
-                  let itemPicked = false;
-                  for (let i = 0; i < shuffledCatsList.length; i++) {
-                    const targetCat = shuffledCatsList[(catIdx + i) % shuffledCatsList.length];
-                    if (itemsByCat[targetCat].length > 0) {
-                      selectedItems.push(itemsByCat[targetCat].shift());
-                      itemPicked = true;
-                      if (selectedItems.length >= itemCountVal) break;
-                    }
-                  }
-                  if (!itemPicked) break;
-                  catIdx = (catIdx + 1) % shuffledCatsList.length;
-                }
-                validItems = selectedItems;
-              } else {
-                validItems = shuffle(validItems, rng).slice(0, itemCountVal);
-              }
-            }
-          }
-          resolvedPart.items = validItems;
-        }
-      }
-      
-      if (resolvedPart.answerKey && typeof resolvedPart.answerKey === 'object') {
-        resolvedPart.answerKey = Object.fromEntries(
-          Object.entries(resolvedPart.answerKey).map(([k, v]) => {
-            const resolvedK = interpolateString(k, resolvedVariables);
-            const resolvedV = typeof v === 'string' ? interpolateString(v, resolvedVariables) : v;
-            return [resolvedK, resolvedV];
-          })
-        );
-
-        // 4. Clean/filter answerKey to only reference final items
-        if (Array.isArray(resolvedPart.items)) {
-          const finalItemIds = new Set(resolvedPart.items.map(item => item.id));
-          resolvedPart.answerKey = Object.fromEntries(
-            Object.entries(resolvedPart.answerKey).filter(([k]) => finalItemIds.has(k))
-          );
-        }
-      }
-
-      if (resolvedPart.type === 'pick_from_sentence' || resolvedPart.type === 'select_from_sentence') {
-        if (typeof resolvedPart.tokens === 'string') {
-          const varName = resolvedPart.tokens.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.tokens = resolvedVariables[varName];
-          }
-        }
-      }
-
-      if (resolvedPart.type === 'interactive_stickers') {
-
-        if (typeof resolvedPart.sceneImageUrl === 'string') {
-          resolvedPart.sceneImageUrl = interpolateString(resolvedPart.sceneImageUrl, resolvedVariables);
-        }
-        if (typeof resolvedPart.stickers === 'string') {
-          const varName = resolvedPart.stickers.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.stickers = resolvedVariables[varName];
-          }
-        }
-        if (Array.isArray(resolvedPart.stickers)) {
-          resolvedPart.stickers = resolvedPart.stickers.map(stk => ({
-            ...stk,
-            name: stk.name ? interpolateString(stk.name, resolvedVariables) : stk.name,
-            imageUrl: stk.imageUrl ? interpolateString(stk.imageUrl, resolvedVariables) : stk.imageUrl
-          }));
-        }
-        if (typeof resolvedPart.initialPlacements === 'string') {
-          const varName = resolvedPart.initialPlacements.replace(/^\[|\]$/g, '');
-          if (resolvedVariables[varName] !== undefined) {
-            resolvedPart.initialPlacements = resolvedVariables[varName];
-          }
-        }
-      }
-
-      for (const prop of ['value', 'min', 'max', 'marker', 'hour', 'minute', 'numerator', 'denominator']) {
-        if (resolvedPart[prop] !== undefined) {
-          resolvedPart[prop] = resolveExpression(resolvedPart[prop], resolvedVariables);
-        }
-      }
-
-      if (resolvedPart.type === 'hotspot_canvas' && resolvedPart.composeScene) {
-        const compose = resolvedPart.composeScene;
-        const containerType = typeof compose.containerType === 'string'
-          ? interpolateString(compose.containerType, resolvedVariables)
-          : 'box';
-        
-        let targetClipart = '';
-        if (typeof compose.targetClipart === 'string') {
-          targetClipart = interpolateString(compose.targetClipart, resolvedVariables);
-          if (resolvedVariables[targetClipart] !== undefined) {
-            targetClipart = resolvedVariables[targetClipart];
-          }
-        }
-        
-        let placements = [];
-        if (Array.isArray(compose.placements)) {
-          placements = compose.placements.map(p => {
-            if (typeof p === 'string') {
-              const interpolated = interpolateString(p, resolvedVariables);
-              return resolvedVariables[interpolated] !== undefined ? resolvedVariables[interpolated] : interpolated;
-            } else if (typeof p === 'object' && p !== null) {
-              const resP = { ...p };
-              if (typeof resP.type === 'string') {
-                resP.type = interpolateString(resP.type, resolvedVariables);
-                if (resolvedVariables[resP.type] !== undefined) resP.type = resolvedVariables[resP.type];
-              }
-              if (typeof resP.clipart === 'string') {
-                resP.clipart = interpolateString(resP.clipart, resolvedVariables);
-                if (resolvedVariables[resP.clipart] !== undefined) resP.clipart = resolvedVariables[resP.clipart];
-              }
-              return resP;
-            }
-            return p;
-          });
-        }
-        
-        const hsList = Array.isArray(resolvedPart.hotspots) ? resolvedPart.hotspots.map(h => {
-          const resH = { ...h };
-          if (typeof resH.label === 'string') {
-            resH.label = interpolateString(resH.label, resolvedVariables);
-          }
-          return resH;
-        }) : [];
-
-        resolvedPart.backgroundSvg = generateDynamicSceneSvg({
-          containerType,
-          targetClipart,
-          placements,
-          hotspots: hsList,
-          canvasWidth: resolvedPart.canvasWidth || 500,
-          canvasHeight: resolvedPart.canvasHeight || 320,
-          outsidePosition: typeof compose.outsidePosition === 'string'
-            ? interpolateString(compose.outsidePosition, resolvedVariables)
-            : 'auto'
-        });
-      }
-      
-      if (resolvedPart.type === 'arithmeticLayout' && resolvedPart.layout && Array.isArray(resolvedPart.layout.rows)) {
-        resolvedPart.layout = {
-          ...resolvedPart.layout,
-          rows: resolvedPart.layout.rows.map(row => {
-            const resRow = { ...row };
-            if (typeof resRow.text === 'string') {
-              resRow.text = interpolateString(resRow.text, resolvedVariables);
-            }
-            if (Array.isArray(resRow.cells)) {
-              resRow.cells = resRow.cells.map(cell => {
-                const resCell = { ...cell };
-                if (resCell.expected !== undefined) {
-                  resCell.expected = interpolateString(String(resCell.expected), resolvedVariables);
-                }
-                return resCell;
-              });
-            }
-            return resRow;
-          })
-        };
-      }
-      
-      if (resolvedPart.type === 'number_line' && (resolvedPart.interactive === true || resolvedPart.interactive === 'true' || resolvedPart.clickToFill === true || resolvedPart.clickToFill === 'true')) {
-        hasClickToFill = true;
-      }
-
-      return resolvedPart;
-    });
+    parts = rawParts.map(resolvePartDeep);
   } else {
     // Helper: expand a text block through inline {= expr =} expressions
     const expandTextBlock = (text) => {
