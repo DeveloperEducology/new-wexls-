@@ -4240,6 +4240,16 @@ export default function SpreadsheetTemplateCreator() {
                   🔄 Keep Questions Index-wise (Sequential Rows)
                 </label>
 
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#0284c7', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={pairRemediationRows}
+                    onChange={(e) => setPairRemediationRows(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  💡 Auto-pair is_remediation rows as step-down scaffold questions
+                </label>
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"
