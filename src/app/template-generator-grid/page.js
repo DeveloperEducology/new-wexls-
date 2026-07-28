@@ -2020,8 +2020,10 @@ export default function SpreadsheetTemplateCreator() {
 
     columns.forEach(col => {
       const val = currentRow[col] !== undefined ? String(currentRow[col]) : '';
-      const regex = new RegExp(`\\{\\{\\s*${col}\\s*\\}\\}`, 'g');
-      result = result.replace(regex, val);
+      const cleanCol = col.replace(/^_+/, '');
+      const regex1 = new RegExp(`\\[_?${cleanCol}\\]`, 'gi');
+      const regex2 = new RegExp(`\\{\\{\\s*_?${cleanCol}\\s*\\}\\}`, 'gi');
+      result = result.replace(regex1, val).replace(regex2, val);
     });
 
     return result;
@@ -2041,10 +2043,6 @@ export default function SpreadsheetTemplateCreator() {
       } catch (e) {
         console.warn('Preview parts JSON parse failed:', e);
       }
-    }
-
-    if (!includeQuestionImage) {
-      partsSource = partsSource.filter(p => p?.type !== 'image');
     }
 
     if (partsSource.length === 0) {
@@ -2101,16 +2099,22 @@ export default function SpreadsheetTemplateCreator() {
       let label = part.label || '';
       let audioUrl = part.audioUrl || '';
       
-      // Substitute placeholders like [col] or {{col}}
+      // Substitute placeholders like [col], [_col], or {{col}}
       columns.forEach(col => {
         const val = currentRow[col] !== undefined ? String(currentRow[col]) : '';
-        const regex1 = new RegExp(`\\[${col}\\]`, 'g');
-        const regex2 = new RegExp(`\\{\\{\\s*${col}\\s*\\}\\}`, 'g');
+        const cleanCol = col.replace(/^_+/, '');
+        const regex1 = new RegExp(`\\[_?${cleanCol}\\]`, 'gi');
+        const regex2 = new RegExp(`\\{\\{\\s*_?${cleanCol}\\s*\\}\\}`, 'gi');
         content = content.replace(regex1, val).replace(regex2, val);
         label = label.replace(regex1, val).replace(regex2, val);
         audioUrl = audioUrl.replace(regex1, val).replace(regex2, val);
       });
       
+      // Fallback preview URL if image cell is empty in simulator
+      if (part.type === 'image' && (!content || (!content.startsWith('http') && !content.startsWith('/')))) {
+        content = 'https://placehold.co/360x240/1e293b/38bdf8?text=Image+Cell+Empty';
+      }
+
       return {
         ...part,
         content,
