@@ -1,5 +1,14 @@
 import { resolveExpression } from './expressionParser.js';
 
+function getFromContext(key, context) {
+  if (!key || !context) return undefined;
+  if (context[key] !== undefined) return context[key];
+  const clean = key.replace(/^_+/, '');
+  if (context[clean] !== undefined) return context[clean];
+  if (context[`_${clean}`] !== undefined) return context[`_${clean}`];
+  return undefined;
+}
+
 // String interpolator to replace [var_name] placeholders
 export function interpolateString(str, context) {
   if (typeof str !== 'string') return str;
@@ -7,7 +16,8 @@ export function interpolateString(str, context) {
   // Handle {{var}} mustache-style placeholders (used by template builder blueprint/solution)
   str = str.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (_, name) => {
     const trimmed = name.trim();
-    if (context[trimmed] !== undefined) return context[trimmed];
+    const val = getFromContext(trimmed, context);
+    if (val !== undefined) return val;
     try { return resolveExpression(trimmed, context); } catch (e) { return `{{${trimmed}}}`; }
   });
 
@@ -15,8 +25,9 @@ export function interpolateString(str, context) {
   const exactMatch = str.trim().match(/^\[([^\]]+)\]$/);
   if (exactMatch) {
     const varName = exactMatch[1].trim();
-    if (context[varName] !== undefined) {
-      return context[varName];
+    const val = getFromContext(varName, context);
+    if (val !== undefined) {
+      return val;
     }
     try {
       return resolveExpression(varName, context);
@@ -36,8 +47,9 @@ export function interpolateString(str, context) {
 
   const withPathTokens = protectedStr.replace(/\[([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (_, name) => {
     const trimmed = name.trim();
-    if (context[trimmed] !== undefined) {
-      return context[trimmed];
+    const val = getFromContext(trimmed, context);
+    if (val !== undefined) {
+      return val;
     }
     return resolveExpression(trimmed, context);
   });
@@ -45,8 +57,9 @@ export function interpolateString(str, context) {
   const resolved = withPathTokens.replace(/\[(.*?)\]/g, (match, name) => {
     if (match.startsWith('[[') || name.startsWith('[') || name.startsWith('speak:')) return match;
     const trimmed = name.trim();
-    if (context[trimmed] !== undefined) {
-      return context[trimmed];
+    const val = getFromContext(trimmed, context);
+    if (val !== undefined) {
+      return val;
     }
     // Try resolving as an expression directly if it's like [A - B]
     try {
