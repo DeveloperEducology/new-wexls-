@@ -1107,9 +1107,12 @@ export default function SpreadsheetTemplateCreator() {
 
   // Add column
   const handleAddColumn = (customName) => {
-    const colInput = customName || (typeof window !== 'undefined' ? window.prompt('Enter new column name (e.g. distractor_3, image_url, audio_url):') : '');
-    if (!colInput) return;
-    const clean = colInput.trim().replace(/[^a-zA-Z0-9_]+/g, '_');
+    let nameStr = typeof customName === 'string' ? customName : '';
+    if (!nameStr && typeof window !== 'undefined') {
+      nameStr = window.prompt('Enter new column name (e.g. distractor_3, image_url, audio_url):') || '';
+    }
+    if (!nameStr) return;
+    const clean = String(nameStr).trim().replace(/[^a-zA-Z0-9_]+/g, '_');
     if (!clean) return;
     if (columns.includes(clean)) {
       alert('Column name already exists!');
