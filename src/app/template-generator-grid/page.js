@@ -9,6 +9,7 @@ import SpreadsheetGrid from '@/components/admin/grid/SpreadsheetGrid';
 import OptionBindingEditor from '@/components/admin/grid/OptionBindingEditor';
 import LiveRowSimulator from '@/components/admin/grid/LiveRowSimulator';
 import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
+import PartRenderer from '@/components/practice/PartRenderer';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -4803,45 +4804,14 @@ export default function SpreadsheetTemplateCreator() {
               if (evaluatedParts) {
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1.5px solid #e2e8f0' }}>
-                    {evaluatedParts.map((part, pIdx) => {
-                      if (part.type === 'audio') {
-                        return (
-                          <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              onClick={() => {
-                                try {
-                                  const audio = new Audio(part.content);
-                                  audio.play();
-                                } catch (e) {
-                                  console.warn('Failed to play preview audio:', e);
-                                }
-                              }}
-                              style={{ background: '#2563eb', border: 'none', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
-                            >
-                              🔊
-                            </button>
-                            {part.label && <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#475569' }}>{part.label}</span>}
-                          </div>
-                        );
-                      }
-                      if (part.type === 'image') {
-                        return (
-                          <div key={pIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', margin: '8px 0' }}>
-                            <img
-                              src={part.content || null}
-                              alt={part.label || "Preview Image"}
-                              style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                            />
-                            {part.label && <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{part.label}</span>}
-                          </div>
-                        );
-                      }
-                      return (
-                        <div key={pIdx} style={{ fontSize: '1.02rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line', fontWeight: part.type === 'text' && part.content.startsWith('_') ? 'bold' : 'normal' }}>
-                          {renderMathText(part.content)}
-                        </div>
-                      );
-                    })}
+                    {evaluatedParts.map((part, pIdx) => (
+                      <PartRenderer
+                        key={pIdx}
+                        part={part}
+                        question={{ questionText: '' }}
+                        partIndex={pIdx}
+                      />
+                    ))}
                   </div>
                 );
               }

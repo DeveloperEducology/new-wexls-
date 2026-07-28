@@ -43,14 +43,35 @@ export default function SpreadsheetGrid({
   }, [canUndo, canRedo, undo, redo]);
 
   const handleAddColumn = () => {
-    const name = prompt("Enter new column header name:");
+    const name = prompt("Enter new column header name (e.g. object_5_image_url, sound_effect):");
     if (name && name.trim()) {
-      const cleanName = name.trim();
-      if (!columns.includes(cleanName)) {
+      const cleanName = name.trim().replace(/[^a-zA-Z0-9_]+/g, '_');
+      if (cleanName && !columns.includes(cleanName)) {
         setColumns([...columns, cleanName]);
         setRows(rows.map(r => ({ ...r, [cleanName]: '' })));
       }
     }
+  };
+
+  const handleRenameColumn = (oldCol) => {
+    const newName = prompt(`Rename column "${oldCol}" to:`, oldCol);
+    if (!newName || !newName.trim()) return;
+    const cleanName = newName.trim().replace(/[^a-zA-Z0-9_]+/g, '_');
+    if (!cleanName || cleanName === oldCol) return;
+    if (columns.includes(cleanName)) {
+      alert(`Column "${cleanName}" already exists!`);
+      return;
+    }
+
+    setColumns(columns.map(c => c === oldCol ? cleanName : c));
+    setRows(rows.map(r => {
+      const copy = { ...r };
+      if (oldCol in copy) {
+        copy[cleanName] = copy[oldCol];
+        delete copy[oldCol];
+      }
+      return copy;
+    }));
   };
 
   const handleAddRow = () => {
@@ -150,10 +171,17 @@ export default function SpreadsheetGrid({
               {columns.map(col => (
                 <th key={col} style={{ padding: '10px 12px', textAlign: 'left', color: '#f8fafc', fontWeight: 700 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                    <span>{col}</span>
+                    <span
+                      title="Click or double-click to rename column"
+                      onClick={() => handleRenameColumn(col)}
+                      style={{ cursor: 'pointer', borderBottom: '1px dashed #475569' }}
+                    >
+                      {col} ✏️
+                    </span>
                     {columns.length > 2 && (
                       <button
                         type="button"
+                        title={`Delete column ${col}`}
                         onClick={() => {
                           if (confirm(`Delete column "${col}"?`)) {
                             setColumns(columns.filter(c => c !== col));
