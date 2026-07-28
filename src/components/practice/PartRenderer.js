@@ -841,7 +841,7 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   const isValidImgSrc = typeof src === 'string' && (src.startsWith('http') || src.startsWith('/') || src.startsWith('data:'));
   if (!src || !isValidImgSrc) return null;
 
-  const isTransparent = part.transparent || part.isTransparent || part.background === 'transparent' || (typeof src === 'string' && src.match(/\.(png|svg|webp)($|\?)/i));
+  const isTransparent = part.transparent || part.isTransparent || part.background === 'transparent' || (typeof src === 'string' && src.match(/\.(png|svg|webp|gif)($|\?)/i));
   const labelText = part.label || part.alt || '';
   const spokenText = part.spokenText || labelText || question?.soundText || question?.questionText || 'Image';
   const isDirectSelect = Boolean(question?.directImageSelect || question?.interaction === 'direct_image_select');
