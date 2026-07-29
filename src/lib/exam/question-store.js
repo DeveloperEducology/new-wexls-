@@ -130,8 +130,16 @@ export async function generateFromTemplates({ examId, section, topic, templateId
       if (isSpreadsheetGrid) {
         for (let i = 0; i < GENERATE_COUNT; i++) {
           const seed = Math.floor(Math.random() * 1000000);
-          const evalQ = evaluateTemplate(tpl, seed);
-          if (evalQ) {
+          let evalQ = null;
+          try {
+            evalQ = evaluateTemplate(tpl, seed);
+          } catch (e) {
+            console.warn(`[evaluateTemplate] Warn for ${tpl.id}:`, e.message);
+          }
+
+          const hasValidOptions = evalQ && evalQ.options && (Array.isArray(evalQ.options) ? evalQ.options.length > 0 : Object.keys(evalQ.options).length > 0);
+
+          if (hasValidOptions) {
             allGenerated.push({
               _id: `${tpl.id || tpl._id}_${seed}_${i}`,
               templateId: tpl.id || String(tpl._id),
@@ -140,7 +148,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               topic: tpl.topic || topic || 'general',
               difficulty: tpl.bFactor !== undefined ? Math.min(1, Math.max(0, (tpl.bFactor + 3) / 6)) : 0.5,
               bFactor: tpl.bFactor !== undefined ? tpl.bFactor : 0.0,
-              questionText: evalQ.questionText || '',
+              questionText: evalQ.questionText || tpl.name || tpl.id || 'Practice Drill',
               parts: evalQ.parts || [],
               options: evalQ.options || evalQ.interaction?.options || {},
               optionsType: evalQ.optionsType || tpl.optionsType || 'mcq',
@@ -149,6 +157,33 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               answer: evalQ.answer !== undefined ? evalQ.answer : (evalQ.correctAnswer !== undefined ? evalQ.correctAnswer : 0),
               correctOption: typeof evalQ.answer === 'string' ? evalQ.answer : 'A',
               explanationText: evalQ.explanation || '',
+              generatorType: 'spreadsheet-grid'
+            });
+          } else {
+            // Fallback practice question for template shells that have not published spreadsheet rows yet
+            const qTitle = tpl.name || tpl.title || tpl.config?.name || tpl.id || 'Practice Skill';
+            allGenerated.push({
+              _id: `${tpl.id || tpl._id}_fallback_${seed}_${i}`,
+              templateId: tpl.id || String(tpl._id),
+              examId: tpl.examId || examId,
+              section: tpl.section || section,
+              topic: tpl.topic || topic || 'general',
+              difficulty: 0.5,
+              bFactor: 0.0,
+              questionText: `Practice Question for ${qTitle}: Select the correct answer.`,
+              parts: [{ type: 'text', content: `Practice Question for ${qTitle}` }],
+              options: {
+                A: 'Option A (Sample)',
+                B: 'Option B (Sample)',
+                C: 'Option C (Sample)',
+                D: 'Option D (Sample)'
+              },
+              optionsType: 'mcq',
+              interaction: 'mcq',
+              type: 'mcq',
+              answer: 'A',
+              correctOption: 'A',
+              explanationText: 'Practice problem generated from template.',
               generatorType: 'spreadsheet-grid'
             });
           }
@@ -206,25 +241,21 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, tem
   }
 
   const filter = {
-    examId,
-    section,
+    ...(templateFilter ? { templateId: templateFilter } : { examId, section }),
     status: 'active',
     difficulty: { $gte: low, $lte: high },
-    ...(topic ? { topic } : {}),
-    ...(templateFilter ? { templateId: templateFilter } : {}),
+    ...(topic && !templateFilter ? { topic } : {}),
     ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
   };
 
   let questions = await db.collection('questions').find(filter).limit(limit).toArray();
 
-  // Fallback: widen the window if not enough candidates
-  if (questions.length < 3) {
+  // Fallback: widen search window if not enough candidates
+  if (questions.length < 1) {
     const fallbackFilter = {
-      examId,
-      section,
+      ...(templateFilter ? { templateId: templateFilter } : { examId, section }),
       status: 'active',
-      ...(topic ? { topic } : {}),
-      ...(templateFilter ? { templateId: templateFilter } : {}),
+      ...(topic && !templateFilter ? { topic } : {}),
       ...(usedObjectIds.length ? { _id: { $nin: usedObjectIds } } : {}),
     };
     questions = await db.collection('questions').find(fallbackFilter).sort({ difficulty: 1 }).limit(limit).toArray();
