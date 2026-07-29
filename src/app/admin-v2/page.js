@@ -360,10 +360,11 @@ export default function AdminV2Page() {
     const q = (query || '').toLowerCase().trim();
     if (!q) return null;
 
-    const matches = allTemplates.filter(t => 
-      t.id.toLowerCase().includes(q) || 
-      (t.title && t.title.toLowerCase().includes(q))
-    ).slice(0, 10);
+    const matches = (allTemplates || []).filter(t => {
+      const tid = String(t?.id || t?._id || '').toLowerCase();
+      const ttitle = String(t?.title || '').toLowerCase();
+      return tid.includes(q) || ttitle.includes(q);
+    }).slice(0, 10);
 
     if (matches.length === 0) return null;
 
@@ -416,10 +417,11 @@ export default function AdminV2Page() {
     const q = (query || '').toLowerCase().trim();
     if (!q) return null;
 
-    const matches = skills.filter(s => 
-      s.id.toLowerCase().includes(q) || 
-      (s.title && s.title.toLowerCase().includes(q))
-    ).slice(0, 10);
+    const matches = (skills || []).filter(s => {
+      const sid = String(s?.id || s?._id || '').toLowerCase();
+      const stitle = String(s?.title || '').toLowerCase();
+      return sid.includes(q) || stitle.includes(q);
+    }).slice(0, 10);
 
     if (matches.length === 0) return null;
 
@@ -1710,9 +1712,11 @@ export default function AdminV2Page() {
   };
 
   const renderOptionPoolsViewer = () => {
-    const filteredPools = optionPools.filter(p => 
-      p.poolId.toLowerCase().includes(poolSearch.toLowerCase())
-    );
+    const searchLower = (poolSearch || '').toLowerCase().trim();
+    const filteredPools = (optionPools || []).filter(p => {
+      const pid = String(p?.poolId || p?.id || p?._id || '').toLowerCase();
+      return pid.includes(searchLower);
+    });
 
     return (
       <div className="control-panel-grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', marginTop: '1.5rem' }}>
