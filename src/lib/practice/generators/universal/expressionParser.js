@@ -206,12 +206,12 @@ export function resolveExpression(expr, context) {
 
   let cleanedExpr = String(expr);
   if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
-    // Replace standalone [varName] placeholders with context values, leaving array literals like ["a", "b"][index] intact
-    cleanedExpr = cleanedExpr.replace(/(?<![A-Za-z0-9_\]\)"'])\[([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\]/g, (match, name) => {
+    // Replace [varName] placeholders with context values, including array indexing like [8,12,15][index]
+    cleanedExpr = cleanedExpr.replace(/\[([A-Za-z_][A-Za-z0-9_]*)\]/g, (match, name) => {
       const trimmed = name.trim();
       if (context && context[trimmed] !== undefined) {
         const val = context[trimmed];
-        return typeof val === 'string' ? JSON.stringify(val) : val;
+        return typeof val === 'number' ? String(val) : (typeof val === 'string' ? JSON.stringify(val) : val);
       }
       return match;
     });

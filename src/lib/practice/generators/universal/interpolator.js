@@ -13,12 +13,12 @@ function getFromContext(key, context) {
 export function interpolateString(str, context) {
   if (typeof str !== 'string') return str;
 
-  // Handle {{var}} mustache-style placeholders (used by template builder blueprint/solution)
-  str = str.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (_, name) => {
+  // Handle {{var}} and {var} mustache-style placeholders
+  str = str.replace(/\{{1,2}([A-Za-z0-9_]+)\}{1,2}/g, (_, name) => {
     const trimmed = name.trim();
     const val = getFromContext(trimmed, context);
     if (val !== undefined) return val;
-    try { return resolveExpression(trimmed, context); } catch (e) { return `{{${trimmed}}}`; }
+    try { return resolveExpression(trimmed, context); } catch (e) { return `{${trimmed}}`; }
   });
 
   // If the string is exactly a single placeholder, return the resolved value directly to preserve types (objects, arrays)
@@ -78,7 +78,7 @@ export function resolveLabelOrExpression(label, context) {
   if (typeof label !== 'string') return label;
   
   let interpolated = label;
-  if ((label.includes('[') && label.includes(']')) || (label.includes('{{') && label.includes('}}'))) {
+  if ((label.includes('[') && label.includes(']')) || (label.includes('{') && label.includes('}'))) {
     interpolated = interpolateString(label, context);
   }
 
