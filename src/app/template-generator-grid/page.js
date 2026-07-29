@@ -2952,6 +2952,24 @@ export default function SpreadsheetTemplateCreator() {
         }
       }
 
+      // Inject URL searchParams (examId, section, topic) if available from admin-v2 routing
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const qExam = urlParams.get('examId');
+        const qSec = urlParams.get('section');
+        const qTop = urlParams.get('topic');
+
+        if (qExam) parsed.examId = qExam;
+        if (qSec) parsed.section = qSec;
+        if (qTop) parsed.topic = qTop;
+
+        if (parsed.config) {
+          if (qExam) parsed.config.examId = qExam;
+          if (qSec) parsed.config.section = qSec;
+          if (qTop) parsed.config.topic = qTop;
+        }
+      }
+
       const payload = {
         template: parsed,
         linkToQuestionId: linkToQuestionId

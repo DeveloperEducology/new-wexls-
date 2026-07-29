@@ -121,7 +121,13 @@ export async function generateFromTemplates({ examId, section, topic, templateId
   const allGenerated = [];
   for (const tpl of templates) {
     try {
-      if (tpl.generatorType === 'spreadsheet-grid' || (tpl.variables && Array.isArray(tpl.parts))) {
+      const isSpreadsheetGrid = tpl.generatorType === 'spreadsheet-grid' || 
+                                tpl.type === 'spreadsheet-grid' || 
+                                tpl.config?.type === 'spreadsheet-grid' || 
+                                tpl.config?.generatorType === 'spreadsheet-grid' ||
+                                (tpl.variables && (Array.isArray(tpl.parts) || Array.isArray(tpl.options)));
+
+      if (isSpreadsheetGrid) {
         for (let i = 0; i < GENERATE_COUNT; i++) {
           const seed = Math.floor(Math.random() * 1000000);
           const evalQ = evaluateTemplate(tpl, seed);
