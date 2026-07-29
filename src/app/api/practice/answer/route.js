@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession, appendResponse, completeSession } from '../../../../lib/exam/session-store.js';
-import { getQuestion, getAdaptiveCandidates } from '../../../../lib/exam/question-store.js';
+import { getQuestion, getAdaptiveCandidates, generateFromTemplates } from '../../../../lib/exam/question-store.js';
 import { updateTheta, selectNextQuestion, updateTopicMastery, computeSessionReport } from '../../../../lib/exam/adaptive-engine.js';
 import { updateProfileAfterSession } from '../../../../lib/exam/profile-store.js';
 
@@ -49,7 +49,7 @@ export async function POST(req) {
     if (!isSessionComplete) {
       // Get used question IDs (including current)
       const usedIds = [...session.responses.map(r => r.questionId), questionId];
-      const candidates = await getAdaptiveCandidates({
+      let candidates = await getAdaptiveCandidates({
         examId: session.examId,
         section: session.section,
         topic: session.topic || null,
@@ -58,6 +58,19 @@ export async function POST(req) {
         usedIds,
         limit: 30,
       });
+
+      // If bank is thin or template-based drill (On-The-Fly Mode), generate next candidate variations!
+      if (candidates.length < 3 && session.templateId) {
+        const generated = await generateFromTemplates({
+          examId: session.examId,
+          section: session.section,
+          topic: session.topic || null,
+          templateId: session.templateId
+        });
+        const unusedGenerated = generated.filter(g => !usedIds.includes(g._id) && !usedIds.includes(g.id));
+        candidates = unusedGenerated.length > 0 ? unusedGenerated : generated;
+      }
+
       const next = selectNextQuestion(newTheta, newTopicMastery, candidates);
       if (next) nextQuestion = sanitizeQuestion(next);
     } else {
