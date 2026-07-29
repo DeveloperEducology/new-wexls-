@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import katex from 'katex';
 import SiteHeader from '../../../../../components/layout/SiteHeader';
+import PartRenderer from '../../../../../components/practice/PartRenderer';
 
 
 function parseMathAndText(text) {
@@ -906,27 +907,33 @@ export default function PracticePlayer({ params: paramsPromise }) {
               </div>
             )}
 
-            {/* Question text — if starts with <svg, split figure + text */}
-            {(() => {
-              const qt = question.questionText || '';
-              const trimmed = qt.trim();
-              // If questionText is "<svg.../> \n some text", split them
-              if (trimmed.startsWith('<svg')) {
-                const svgEnd = qt.indexOf('</svg>') + 6;
-                if (svgEnd > 6) {
-                  const svgPart = qt.slice(qt.indexOf('<svg'), svgEnd);
-                  const textPart = qt.slice(svgEnd).replace(/^\n+/, '').trim();
-                  return (
-                    <>
-                      <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 14px' }}
-                           dangerouslySetInnerHTML={{ __html: svgPart }} />
-                      {textPart && <div className="question-text">{parseMathAndText(textPart)}</div>}
-                    </>
-                  );
+            {/* Question prompt — render PartRenderer if question.parts exists (spreadsheet grid templates) */}
+            {Array.isArray(question.parts) && question.parts.length > 0 ? (
+              <div style={{ marginBottom: '20px' }}>
+                <PartRenderer parts={question.parts} question={question} />
+              </div>
+            ) : (
+              (() => {
+                const qt = question.questionText || '';
+                const trimmed = qt.trim();
+                // If questionText is "<svg.../> \n some text", split them
+                if (trimmed.startsWith('<svg')) {
+                  const svgEnd = qt.indexOf('</svg>') + 6;
+                  if (svgEnd > 6) {
+                    const svgPart = qt.slice(qt.indexOf('<svg'), svgEnd);
+                    const textPart = qt.slice(svgEnd).replace(/^\n+/, '').trim();
+                    return (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 14px' }}
+                             dangerouslySetInnerHTML={{ __html: svgPart }} />
+                        {textPart && <div className="question-text">{parseMathAndText(textPart)}</div>}
+                      </>
+                    );
+                  }
                 }
-              }
-              return <div className="question-text">{parseMathAndText(qt)}</div>;
-            })()}
+                return <div className="question-text">{parseMathAndText(qt)}</div>;
+              })()
+            )}
 
             {/* Question image — shown below question text if provided */}
             {question.questionImageUrl && (

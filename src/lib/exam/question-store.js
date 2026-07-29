@@ -94,10 +94,9 @@ export async function generateFromTemplates({ examId, section, topic, templateId
     }
   }
 
-  // Find matching templates (parameterized OR svg-figure OR visual-transformation)
+  // Find matching templates (supporting parameterized, svg-figure, visual-transformation, and spreadsheet-grid)
   const filter = {
     examId,
-    type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] },
     status: { $ne: 'inactive' },
     ...(!templateIds ? { section } : {}),
     ...(!templateIds && topic ? { topic } : {}),
@@ -114,7 +113,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
   if (templates.length === 0 && topic && !templateId) {
     const allSection = await db.collection('templates').find({
       examId, section,
-      type: { $in: ['parameterized', 'svg-figure', 'visual-transformation'] }
+      status: { $ne: 'inactive' }
     }).limit(10).toArray();
     templates.push(...allSection);
   }
@@ -122,7 +121,33 @@ export async function generateFromTemplates({ examId, section, topic, templateId
   const allGenerated = [];
   for (const tpl of templates) {
     try {
-      if (tpl.type === 'visual-transformation') {
+      if (tpl.generatorType === 'spreadsheet-grid' || (tpl.variables && Array.isArray(tpl.parts))) {
+        for (let i = 0; i < GENERATE_COUNT; i++) {
+          const seed = Math.floor(Math.random() * 1000000);
+          const evalQ = evaluateTemplate(tpl, seed);
+          if (evalQ) {
+            allGenerated.push({
+              _id: `${tpl.id || tpl._id}_${seed}_${i}`,
+              templateId: tpl.id || String(tpl._id),
+              examId: tpl.examId || examId,
+              section: tpl.section || section,
+              topic: tpl.topic || topic || 'general',
+              difficulty: tpl.bFactor !== undefined ? Math.min(1, Math.max(0, (tpl.bFactor + 3) / 6)) : 0.5,
+              bFactor: tpl.bFactor !== undefined ? tpl.bFactor : 0.0,
+              questionText: evalQ.questionText || '',
+              parts: evalQ.parts || [],
+              options: evalQ.options || evalQ.interaction?.options || {},
+              optionsType: evalQ.optionsType || tpl.optionsType || 'mcq',
+              interaction: evalQ.interaction || tpl.interaction || 'mcq',
+              type: evalQ.type || tpl.type || 'mcq',
+              answer: evalQ.answer !== undefined ? evalQ.answer : (evalQ.correctAnswer !== undefined ? evalQ.correctAnswer : 0),
+              correctOption: typeof evalQ.answer === 'string' ? evalQ.answer : 'A',
+              explanationText: evalQ.explanation || '',
+              generatorType: 'spreadsheet-grid'
+            });
+          }
+        }
+      } else if (tpl.type === 'visual-transformation') {
         const questions = instantiateVisualTransformationTemplate(tpl, GENERATE_COUNT);
         allGenerated.push(...questions);
       } else if (isSvgTemplate(tpl)) {
