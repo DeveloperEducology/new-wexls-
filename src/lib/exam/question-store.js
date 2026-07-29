@@ -79,7 +79,61 @@ export async function getQuestion(id) {
   } catch (err) {
     query = { $or: [{ _id: id }, { id: id }] };
   }
-  return db.collection('questions').findOne(query);
+  let q = await db.collection('questions').findOne(query);
+  if (q) return q;
+
+  // Dynamic on-the-fly evaluation fallback for un-inserted template questions (Free Tier / On-The-Fly Mode)
+  if (typeof id === 'string' && id.includes('_')) {
+    const parts = id.split('_');
+    if (parts.length >= 3) {
+      const seed = parseInt(parts[parts.length - 2], 10);
+      const templateId = parts.slice(0, parts.length - 2).join('_');
+
+      if (!isNaN(seed) && templateId) {
+        let tpl = await db.collection('templates').findOne({ $or: [{ id: templateId }, { _id: templateId }] });
+        let dynTpl = await db.collection('dynamic_templates').findOne({ $or: [{ id: templateId }, { _id: templateId }] });
+        if (tpl || dynTpl) {
+          const merged = { ...tpl, ...dynTpl };
+          const evalQ = evaluateTemplate(merged, seed);
+          if (evalQ) {
+            let optionsDict = {};
+            let correctKey = 'A';
+            if (Array.isArray(evalQ.options)) {
+              const letters = ['A', 'B', 'C', 'D'];
+              evalQ.options.forEach((opt, idx) => {
+                const letter = letters[idx] || `OPT_${idx + 1}`;
+                const label = typeof opt === 'object' ? (opt.label || opt.content || '') : String(opt);
+                optionsDict[letter] = label;
+                if (opt.isCorrect || label === evalQ.answer || letter === evalQ.answer) {
+                  correctKey = letter;
+                }
+              });
+            } else if (typeof evalQ.options === 'object' && evalQ.options !== null) {
+              optionsDict = evalQ.options;
+              correctKey = typeof evalQ.answer === 'string' && evalQ.answer.length === 1 ? evalQ.answer : (evalQ.correctOption || 'A');
+            }
+
+            return {
+              _id: id,
+              templateId,
+              questionText: evalQ.questionText || merged.name || merged.id || 'Practice Drill',
+              parts: evalQ.parts || [{ type: 'text', content: evalQ.questionText || '' }],
+              options: optionsDict,
+              optionsType: evalQ.optionsType || merged.optionsType || 'mcq',
+              interaction: evalQ.interaction || merged.interaction || 'mcq',
+              type: evalQ.type || merged.type || 'mcq',
+              answer: correctKey,
+              correctOption: correctKey,
+              explanationText: typeof evalQ.explanation === 'object' ? (evalQ.explanation?.sections?.[0]?.content || '') : (evalQ.explanation || ''),
+              generatorType: 'spreadsheet-grid'
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 /**

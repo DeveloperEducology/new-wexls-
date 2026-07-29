@@ -67,12 +67,21 @@ export async function POST(req) {
     // Fetch candidates BEFORE creating session so we know the exact count
     let candidates = await getAdaptiveCandidates({ examId, section: targetSection, topic, templateId, theta, usedIds: [], limit: isPyq ? 200 : 30 });
 
-    // ── AUTO-GENERATE from templates if bank is empty/thin ─────────────
+    // Determine tier (Free Tier vs Premium Tier)
+    const isPremium = profile?.isPremium === true || profile?.plan === 'premium' || profile?.plan === 'pro';
+
+    // ── AUTO-GENERATE / FETCH candidates ─────────────
     if ((!isPyq || templateId) && candidates.length < MIN_QUESTIONS_NEEDED) {
       const generated = await generateFromTemplates({ examId, section: targetSection, topic, templateId });
       if (generated.length > 0) {
-        await insertQuestions(generated);
-        candidates = await getAdaptiveCandidates({ examId, section: targetSection, topic, templateId, theta, usedIds: [], limit: 30 });
+        if (isPremium) {
+          // Premium Tier: Persist question instances to DB for deep IRT analytics & item response tracking
+          await insertQuestions(generated);
+          candidates = await getAdaptiveCandidates({ examId, section: targetSection, topic, templateId, theta, usedIds: [], limit: 30 });
+        } else {
+          // Free Tier / Guests: Pure On-The-Fly Mode (0 DB writes, 100% in-memory execution)
+          candidates = generated;
+        }
       }
     }
 
