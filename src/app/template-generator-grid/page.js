@@ -2538,17 +2538,22 @@ export default function SpreadsheetTemplateCreator() {
         throw new Error(`Failed to fetch templates: HTTP status ${res.status}`);
       }
       const data = await res.json();
-      if (data.success && Array.isArray(data.dynamicTemplates)) {
-        // Only load templates created by the spreadsheet grid creator
-        const grids = data.dynamicTemplates.filter(t => {
+      if (data.success) {
+        const allList = [
+          ...(Array.isArray(data.templates) ? data.templates : []),
+          ...(Array.isArray(data.dynamicTemplates) ? data.dynamicTemplates : [])
+        ];
+        const grids = allList.filter(t => {
           return t.generatorType === 'spreadsheet-grid' ||
-            (t.config && t.config.generatorType === 'spreadsheet-grid');
+            t.type === 'spreadsheet-grid' ||
+            (t.config && (t.config.generatorType === 'spreadsheet-grid' || t.config.type === 'spreadsheet-grid')) ||
+            (Array.isArray(t.rows) && t.rows.length > 0) ||
+            (t.variables && (Array.isArray(t.parts) || Array.isArray(t.options)));
         });
-        // Deduplicate: keep the first occurrence of each logical id
         const seenIds = new Set();
         const uniqueGrids = grids.filter(t => {
-          const uid = t._id || t.id;
-          if (seenIds.has(uid)) return false;
+          const uid = t.id || String(t._id);
+          if (!uid || seenIds.has(uid)) return false;
           seenIds.add(uid);
           return true;
         });
@@ -2693,6 +2698,21 @@ export default function SpreadsheetTemplateCreator() {
           }
           compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
           setRows(compiledRows);
+        } else if (vars && typeof vars === 'object' && !Array.isArray(vars)) {
+          const varKeys = Object.keys(vars);
+          if (varKeys.length > 0 && varKeys.every(k => Array.isArray(vars[k]))) {
+            const maxLen = Math.max(...varKeys.map(k => vars[k].length));
+            setColumns(varKeys);
+            const compiledRows = [];
+            for (let r = 0; r < maxLen; r++) {
+              const rowObj = { _level: 'l1' };
+              varKeys.forEach(col => {
+                rowObj[col] = vars[col][r] !== undefined ? String(vars[col][r]) : '';
+              });
+              compiledRows.push(rowObj);
+            }
+            setRows(compiledRows);
+          }
         }
       }
 
