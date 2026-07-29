@@ -4,6 +4,7 @@ import { getAdaptiveCandidates, insertQuestions, generateFromTemplates } from '.
 import { selectNextQuestion } from '../../../../lib/exam/adaptive-engine.js';
 import { getOrCreateProfile } from '../../../../lib/exam/profile-store.js';
 import { getMongoDb } from '../../../../lib/db/mongo.js';
+import { resolveUserId } from '../../../../lib/auth/getAuthUser.js';
 
 const INITIAL_THETA = 0.5;
 const DEFAULT_SESSION_LENGTH = 15;
@@ -11,7 +12,8 @@ const MIN_QUESTIONS_NEEDED = 5;
 
 export async function POST(req) {
   try {
-    const { examId, section, userId, topic = null, templateId = null } = await req.json();
+    const { examId, section, userId: providedUserId, topic = null, templateId = null } = await req.json();
+    const userId = resolveUserId(req, providedUserId);
 
     if (!examId || !section || !userId) {
       return NextResponse.json(

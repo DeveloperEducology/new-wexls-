@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { getMongoDb } from '../../../../../lib/db/mongo.js';
 import { createSession } from '../../../../../lib/exam/session-store.js';
 import { getAdaptiveCandidates, generateFromTemplates } from '../../../../../lib/exam/question-store.js';
+import { resolveUserId } from '../../../../../lib/auth/getAuthUser.js';
 
 export async function POST(req) {
   try {
-    const { examId = 'jnvst', userId = 'guest_child' } = await req.json();
+    const { examId = 'jnvst', userId: providedUserId = 'guest_child' } = await req.json();
+    const userId = resolveUserId(req, providedUserId);
 
     const db = await getMongoDb();
     if (!db) {
