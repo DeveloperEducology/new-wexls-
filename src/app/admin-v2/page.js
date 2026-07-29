@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AdminConsolePage from '../admin/page';
+import TestSeriesManager from '../../components/admin/TestSeriesManager';
 
 export default function AdminV2Page() {
   const [adminMode, setAdminMode] = useState('school'); // school, exam
@@ -2621,14 +2622,14 @@ export default function AdminV2Page() {
       <nav className="tab-track-container">
         {((adminMode === 'school' || adminMode === 'iit') 
           ? ['grade', 'subject', 'unit', 'chapter', 'skill', 'question', 'questions_list', 'option_pool']
-          : ['exam', 'section', 'topic', 'skill', 'question', 'questions_list', 'option_pool']
+          : ['exam', 'section', 'topic', 'skill', 'question', 'questions_list', 'test_series', 'option_pool']
         ).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`tab-item-btn ${activeTab === tab ? 'active' : ''} ${activeTab === tab ? ((adminMode === 'school' || adminMode === 'iit') ? (adminMode === 'iit' ? 'iit' : 'school') : 'exam') : ''}`}
           >
-            {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab === 'question' ? 'Authoring Center' : tab === 'questions_list' ? 'Questions Library' : tab === 'option_pool' ? 'Option Pools' : tab + 's'}
+            {tab === 'exam' ? 'Exams' : tab === 'mat' ? 'MAT' : tab === 'question' ? 'Authoring Center' : tab === 'questions_list' ? 'Questions Library' : tab === 'test_series' ? '🏆 Test Series & Mocks' : tab === 'option_pool' ? 'Option Pools' : tab + 's'}
           </button>
         ))}
       </nav>
@@ -2846,6 +2847,8 @@ export default function AdminV2Page() {
             }
           }}
         />
+      ) : activeTab === 'test_series' ? (
+        <TestSeriesManager selectedExamId={selectedExamId || 'jnvst'} />
       ) : activeTab === 'option_pool' ? (
         renderOptionPoolsViewer()
       ) : (
