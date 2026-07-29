@@ -35,13 +35,22 @@ export async function POST(req) {
         let objectId = null;
         try { objectId = new ObjectId(lookupId); } catch {}
         
-        const tpl = await db.collection('templates').findOne({
+        let tpl = await db.collection('templates').findOne({
           $or: [
             { id: lookupId },
             { _id: lookupId },
             ...(objectId ? [{ _id: objectId }] : [])
           ]
         });
+        if (!tpl) {
+          tpl = await db.collection('dynamic_templates').findOne({
+            $or: [
+              { id: lookupId },
+              { _id: lookupId },
+              ...(objectId ? [{ _id: objectId }] : [])
+            ]
+          });
+        }
         if (tpl && tpl.section) {
           targetSection = tpl.section;
         }

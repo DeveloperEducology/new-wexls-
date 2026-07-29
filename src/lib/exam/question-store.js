@@ -2,6 +2,7 @@ import { getMongoDb } from '../db/mongo.js';
 import { instantiateParameterized } from './template-engine.js';
 import { instantiateSvgTemplate, isSvgTemplate } from './svg-template-engine.js';
 import { instantiateVisualTransformationTemplate } from './visual-transformation-engine.js';
+import { evaluateTemplate } from '../practice/generators/universal/evaluator.js';
 
 const GENERATE_COUNT = 30;
 
@@ -45,14 +46,27 @@ export async function insertQuestion(q) {
 export async function insertQuestions(questions) {
   const db = await getMongoDb();
   if (!db) throw new Error('DB not available');
-  const docs = questions.map(q => ({
-    ...q,
-    status: q.status || 'active',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+  if (!questions || questions.length === 0) return [];
+
+  const ops = questions.map(q => ({
+    updateOne: {
+      filter: { _id: q._id || q.id },
+      update: {
+        $set: {
+          ...q,
+          status: q.status || 'active',
+          updatedAt: new Date()
+        },
+        $setOnInsert: {
+          createdAt: new Date()
+        }
+      },
+      upsert: true
+    }
   }));
-  const result = await db.collection('questions').insertMany(docs);
-  return result.insertedIds;
+
+  const result = await db.collection('questions').bulkWrite(ops);
+  return result;
 }
 
 export async function getQuestion(id) {
@@ -161,7 +175,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
           try {
             evalQ = evaluateTemplate(tpl, seed);
           } catch (e) {
-            console.warn(`[evaluateTemplate] Warn for ${tpl.id}:`, e.message);
+            console.warn(`[evaluateTemplate] Error for ${tpl.id || tpl._id}:`, e.message);
           }
 
           const hasValidOptions = evalQ && evalQ.options && (Array.isArray(evalQ.options) ? evalQ.options.length > 0 : Object.keys(evalQ.options).length > 0);
@@ -201,33 +215,6 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               answer: correctKey,
               correctOption: correctKey,
               explanationText: typeof evalQ.explanation === 'object' ? (evalQ.explanation?.sections?.[0]?.content || '') : (evalQ.explanation || ''),
-              generatorType: 'spreadsheet-grid'
-            });
-          } else {
-            // Fallback practice question for template shells that have not published spreadsheet rows yet
-            const qTitle = tpl.name || tpl.title || tpl.config?.name || tpl.id || 'Practice Skill';
-            allGenerated.push({
-              _id: `${tpl.id || tpl._id}_fallback_${seed}_${i}`,
-              templateId: tpl.id || String(tpl._id),
-              examId: tpl.examId || examId,
-              section: tpl.section || section,
-              topic: tpl.topic || topic || 'general',
-              difficulty: 0.5,
-              bFactor: 0.0,
-              questionText: `Practice Question for ${qTitle}: Select the correct answer.`,
-              parts: [{ type: 'text', content: `Practice Question for ${qTitle}` }],
-              options: {
-                A: 'Option A (Sample)',
-                B: 'Option B (Sample)',
-                C: 'Option C (Sample)',
-                D: 'Option D (Sample)'
-              },
-              optionsType: 'mcq',
-              interaction: 'mcq',
-              type: 'mcq',
-              answer: 'A',
-              correctOption: 'A',
-              explanationText: 'Practice problem generated from template.',
               generatorType: 'spreadsheet-grid'
             });
           }
