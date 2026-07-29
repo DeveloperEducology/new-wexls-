@@ -3,7 +3,8 @@ import {
   createOrUpdateTestSeries, 
   getTestSeriesByExam, 
   createOrUpdateMockTest, 
-  getMockTestById 
+  getMockTestById,
+  linkQuestionsToMockTest
 } from '../../../../lib/exam/test-series-store.js';
 
 export async function GET(req) {
@@ -40,7 +41,12 @@ export async function POST(req) {
       return NextResponse.json({ success: true, mockTest });
     }
 
-    return NextResponse.json({ success: false, error: 'Invalid action. Use createSeries or createMockTest.' }, { status: 400 });
+    if (action === 'linkQuestions') {
+      const result = await linkQuestionsToMockTest(data.mockTestId, data.questionIds);
+      return NextResponse.json({ success: true, result });
+    }
+
+    return NextResponse.json({ success: false, error: 'Invalid action. Use createSeries, createMockTest, or linkQuestions.' }, { status: 400 });
   } catch (err) {
     console.error('[api/admin/test-series POST]', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

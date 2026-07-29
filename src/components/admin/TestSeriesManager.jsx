@@ -126,6 +126,60 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
     }
   };
 
+  // Question Linker State
+  const [showLinkerModal, setShowLinkerModal] = useState(false);
+  const [selectedMockForLink, setSelectedMockForLink] = useState(null);
+  const [linkedQuestionIdsText, setLinkedQuestionIdsText] = useState('');
+
+  const openLinkerModal = (test) => {
+    setSelectedMockForLink(test);
+    const existingIds = test.questionIds || [
+      'jnvst-comp-moral',
+      'testing-factorization',
+      'testing-templete',
+      'mat-coding-decoding-01',
+      'mat-analogy-01'
+    ];
+    setLinkedQuestionIdsText(existingIds.join(', '));
+    setShowLinkerModal(true);
+  };
+
+  const handleSaveLinkedQuestions = async (e) => {
+    e.preventDefault();
+    if (!selectedMockForLink) return;
+    setSubmitting(true);
+
+    const idsArray = linkedQuestionIdsText
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    try {
+      const res = await fetch('/api/admin/test-series', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'linkQuestions',
+          data: {
+            mockTestId: selectedMockForLink.mockTestId || selectedMockForLink.id,
+            questionIds: idsArray
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowLinkerModal(false);
+        await loadTestSeries();
+      } else {
+        alert(data.error || 'Failed to link questions');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div style={{ padding: '24px', background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', fontFamily: 'Inter, sans-serif' }}>
       
@@ -232,14 +286,20 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
                               PUBLISHED
                             </span>
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => openLinkerModal(test)}
+                              style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                            >
+                              🔗 Link Questions
+                            </button>
                             <a
                               href={`/exam-prep/${selectedExamId || 'jnvst'}/mock-test`}
                               target="_blank"
                               rel="noreferrer"
                               style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none', fontSize: '0.85rem' }}
                             >
-                              ▶️ Launch Preview
+                              ▶️ Preview
                             </a>
                           </td>
                         </tr>
@@ -364,6 +424,53 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
                   style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#22c55e', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {submitting ? 'Publishing...' : 'Publish Mock Test'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Link Questions to Mock Test */}
+      {showLinkerModal && selectedMockForLink && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '580px', width: '100%' }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800 }}>🔗 Link Questions & Templates</h3>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 20px' }}>
+              Linking questions for: <strong>{selectedMockForLink.title}</strong>
+            </p>
+
+            <form onSubmit={handleSaveLinkedQuestions} style={{ display: 'grid', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                  Question / Template IDs (Comma Separated)
+                </label>
+                <textarea
+                  rows={5}
+                  placeholder="e.g. jnvst-comp-moral, testing-factorization, testing-templete, mat_figure_completion_01"
+                  value={linkedQuestionIdsText}
+                  onChange={e => setLinkedQuestionIdsText(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', fontFamily: 'monospace', lineHeight: 1.5 }}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '6px 0 0' }}>
+                  Tip: Provide explicit Question IDs from the Questions Library or Dynamic Spreadsheet Template IDs.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowLinkerModal(false)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#4338ca', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {submitting ? 'Linking...' : 'Save Linked Questions'}
                 </button>
               </div>
             </form>

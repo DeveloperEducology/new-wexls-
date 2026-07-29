@@ -106,3 +106,26 @@ export async function getMockTestById(mockTestId) {
     $or: [{ _id: mockTestId }, { id: mockTestId }]
   });
 }
+
+/**
+ * Links a specific array of question IDs or template IDs to a Mock Test in MongoDB
+ */
+export async function linkQuestionsToMockTest(mockTestId, questionIds) {
+  const db = await getMongoDb();
+  if (!db) throw new Error('Database connection unavailable');
+
+  const now = new Date();
+
+  await db.collection('mock_tests').updateOne(
+    { $or: [{ _id: mockTestId }, { id: mockTestId }] },
+    {
+      $set: {
+        questionIds: Array.isArray(questionIds) ? questionIds : [],
+        totalQuestions: Array.isArray(questionIds) ? questionIds.length : 80,
+        updatedAt: now
+      }
+    }
+  );
+
+  return { success: true, mockTestId, questionCount: questionIds.length };
+}
