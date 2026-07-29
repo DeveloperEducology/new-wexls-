@@ -3517,14 +3517,22 @@ export default function AdminV2Page() {
                         style={{ background: editingId ? '#f1f5f9' : '#fff' }}
                       />
                       {formData.id && (
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '4px', fontSize: '11.5px' }}>
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '4px', fontSize: '11.5px', flexWrap: 'wrap' }}>
+                          <a 
+                            href={`/template-generator-grid?id=${encodeURIComponent(formData.id)}&examId=${encodeURIComponent(selectedExamId)}&section=${encodeURIComponent(selectedSectionId)}&topic=${encodeURIComponent(selectedTopicId)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: '#16a34a', fontWeight: 800, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                          >
+                            📊 Open Spreadsheet Grid Editor
+                          </a>
                           <a 
                             href={`/admin/templates?id=${encodeURIComponent(formData.id)}`} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                           >
-                            🔗 Open Template Editor
+                            🔗 Open Legacy Template Editor
                           </a>
                           <a 
                             href={`/admin/vocabulary-pools?poolId=${encodeURIComponent(formData.id)}`} 
@@ -3557,6 +3565,7 @@ export default function AdminV2Page() {
                         onChange={handleInputChange}
                         className="premium-select"
                       >
+                        <option value="spreadsheet-grid">Spreadsheet Grid Generator (Recommended)</option>
                         <option value="parameterized">Parameterized Question Generator</option>
                         <option value="svg-figure">SVG/Geometry Figure Generator</option>
                         <option value="visual-transformation">Visual Grid/Fraction Block Transformation</option>
@@ -4428,10 +4437,19 @@ export default function AdminV2Page() {
                                       <div key={tid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
                                         <span style={{ color: '#475569' }}>{tid}</span>
                                         <a 
+                                          href={`/template-generator-grid?id=${encodeURIComponent(tid)}&examId=${encodeURIComponent(selectedExamId)}&section=${encodeURIComponent(selectedSectionId)}&topic=${encodeURIComponent(selectedTopicId)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#16a34a', fontWeight: 800, textDecoration: 'none', marginLeft: '2px' }}
+                                          title="Open Spreadsheet Grid Editor"
+                                        >
+                                          📊
+                                        </a>
+                                        <a 
                                           href={`/admin/templates?id=${encodeURIComponent(tid)}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          style={{ color: '#6366f1', fontWeight: 800, textDecoration: 'none', marginLeft: '2px' }}
+                                          style={{ color: '#6366f1', fontWeight: 800, textDecoration: 'none' }}
                                           title="Edit Template"
                                         >
                                           📝
