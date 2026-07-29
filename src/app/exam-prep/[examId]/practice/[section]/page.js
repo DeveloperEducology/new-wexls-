@@ -907,7 +907,7 @@ export default function PracticePlayer({ params: paramsPromise }) {
               </div>
             )}
 
-            {/* Question prompt — render PartRenderer if question.parts exists (spreadsheet grid templates) */}
+            {/* Question prompt & Reading Passage Renderer */}
             {Array.isArray(question.parts) && question.parts.length > 0 ? (
               <div style={{ marginBottom: '20px' }}>
                 <PartRenderer parts={question.parts} question={question} />
@@ -916,6 +916,20 @@ export default function PracticePlayer({ params: paramsPromise }) {
               (() => {
                 const qt = question.questionText || '';
                 const trimmed = qt.trim();
+
+                // 1. Check for explicit or embedded Reading Passages (Language Section)
+                let passageText = question.passageText || question.passageContent || null;
+                let passageTitle = question.passageTitle || 'Reading Comprehension';
+                let actualQ = qt;
+
+                if (!passageText && (qt.includes('Read the passage') || qt.includes('"') || qt.includes('“'))) {
+                  const match = qt.match(/Read the passage[^:]*:\s*\n*["“]([\s\S]+?)["”]\s*\n*\s*\*?\*?([\s\S]+)/i);
+                  if (match) {
+                    passageText = match[1].trim();
+                    actualQ = match[2].trim();
+                  }
+                }
+
                 // If questionText is "<svg.../> \n some text", split them
                 if (trimmed.startsWith('<svg')) {
                   const svgEnd = qt.indexOf('</svg>') + 6;
@@ -931,7 +945,49 @@ export default function PracticePlayer({ params: paramsPromise }) {
                     );
                   }
                 }
-                return <div className="question-text">{parseMathAndText(qt)}</div>;
+
+                return (
+                  <>
+                    {/* Reading Passage Box */}
+                    {passageText && (
+                      <div className="reading-passage-card" style={{
+                        background: '#f8fafc',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '16px',
+                        padding: '22px',
+                        marginBottom: '24px',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: 800,
+                          color: '#475569',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '12px'
+                        }}>
+                          📖 READING PASSAGE: {passageTitle}
+                        </div>
+                        <div style={{
+                          fontSize: '1.05rem',
+                          lineHeight: 1.75,
+                          color: '#1e293b',
+                          whiteSpace: 'pre-line',
+                          maxHeight: '280px',
+                          overflowY: 'auto',
+                          paddingRight: '8px'
+                        }}>
+                          {passageText}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="question-text">{parseMathAndText(actualQ)}</div>
+                  </>
+                );
               })()
             )}
 
