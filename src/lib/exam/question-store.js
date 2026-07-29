@@ -110,7 +110,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
   };
 
   let templates = await db.collection('templates').find(filter).limit(10).toArray();
-  if (templates.length === 0 && templateIds) {
+  if (templateIds) {
     const dynFilter = {
       $or: [
         { id: { $in: templateIds } },
@@ -118,8 +118,25 @@ export async function generateFromTemplates({ examId, section, topic, templateId
         ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
       ]
     };
-    templates = await db.collection('dynamic_templates').find(dynFilter).limit(10).toArray();
+    const dynTemplates = await db.collection('dynamic_templates').find(dynFilter).limit(10).toArray();
+    for (const dynTpl of dynTemplates) {
+      const existingIdx = templates.findIndex(t => (t.id || String(t._id)) === (dynTpl.id || String(dynTpl._id)));
+      if (existingIdx !== -1) {
+        templates[existingIdx] = {
+          ...templates[existingIdx],
+          ...dynTpl,
+          _id: templates[existingIdx]._id,
+          id: templates[existingIdx].id || dynTpl.id,
+          examId: templates[existingIdx].examId || examId,
+          section: templates[existingIdx].section || section,
+          topic: templates[existingIdx].topic || topic
+        };
+      } else {
+        templates.push(dynTpl);
+      }
+    }
   }
+
   if (templates.length === 0 && topic && !templateId) {
     const allSection = await db.collection('templates').find({
       examId, section,
@@ -150,6 +167,23 @@ export async function generateFromTemplates({ examId, section, topic, templateId
           const hasValidOptions = evalQ && evalQ.options && (Array.isArray(evalQ.options) ? evalQ.options.length > 0 : Object.keys(evalQ.options).length > 0);
 
           if (hasValidOptions) {
+            let optionsDict = {};
+            let correctKey = 'A';
+            if (Array.isArray(evalQ.options)) {
+              const letters = ['A', 'B', 'C', 'D'];
+              evalQ.options.forEach((opt, idx) => {
+                const letter = letters[idx] || `OPT_${idx + 1}`;
+                const label = typeof opt === 'object' ? (opt.label || opt.content || '') : String(opt);
+                optionsDict[letter] = label;
+                if (opt.isCorrect || label === evalQ.answer || letter === evalQ.answer) {
+                  correctKey = letter;
+                }
+              });
+            } else if (typeof evalQ.options === 'object' && evalQ.options !== null) {
+              optionsDict = evalQ.options;
+              correctKey = typeof evalQ.answer === 'string' && evalQ.answer.length === 1 ? evalQ.answer : (evalQ.correctOption || 'A');
+            }
+
             allGenerated.push({
               _id: `${tpl.id || tpl._id}_${seed}_${i}`,
               templateId: tpl.id || String(tpl._id),
@@ -159,14 +193,14 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               difficulty: tpl.bFactor !== undefined ? Math.min(1, Math.max(0, (tpl.bFactor + 3) / 6)) : 0.5,
               bFactor: tpl.bFactor !== undefined ? tpl.bFactor : 0.0,
               questionText: evalQ.questionText || tpl.name || tpl.id || 'Practice Drill',
-              parts: evalQ.parts || [],
-              options: evalQ.options || evalQ.interaction?.options || {},
+              parts: evalQ.parts || [{ type: 'text', content: evalQ.questionText || '' }],
+              options: optionsDict,
               optionsType: evalQ.optionsType || tpl.optionsType || 'mcq',
               interaction: evalQ.interaction || tpl.interaction || 'mcq',
               type: evalQ.type || tpl.type || 'mcq',
-              answer: evalQ.answer !== undefined ? evalQ.answer : (evalQ.correctAnswer !== undefined ? evalQ.correctAnswer : 0),
-              correctOption: typeof evalQ.answer === 'string' ? evalQ.answer : 'A',
-              explanationText: evalQ.explanation || '',
+              answer: correctKey,
+              correctOption: correctKey,
+              explanationText: typeof evalQ.explanation === 'object' ? (evalQ.explanation?.sections?.[0]?.content || '') : (evalQ.explanation || ''),
               generatorType: 'spreadsheet-grid'
             });
           } else {
