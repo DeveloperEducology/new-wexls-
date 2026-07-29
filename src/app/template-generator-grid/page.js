@@ -2569,6 +2569,19 @@ export default function SpreadsheetTemplateCreator() {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlExamId = params.get('examId');
+      if (urlExamId) {
+        setTargetCollection('templates');
+        setSelectedExamId(urlExamId);
+      }
+      const urlSection = params.get('section');
+      if (urlSection) setJnvstSection(urlSection);
+      const urlTopic = params.get('topic');
+      if (urlTopic) setJnvstTopic(urlTopic);
+    }
+
     if (existingTemplates.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const urlId = params.get('id') || params.get('templateId');

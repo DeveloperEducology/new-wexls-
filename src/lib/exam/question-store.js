@@ -109,7 +109,17 @@ export async function generateFromTemplates({ examId, section, topic, templateId
     } : {})
   };
 
-  const templates = await db.collection('templates').find(filter).limit(10).toArray();
+  let templates = await db.collection('templates').find(filter).limit(10).toArray();
+  if (templates.length === 0 && templateIds) {
+    const dynFilter = {
+      $or: [
+        { id: { $in: templateIds } },
+        { _id: { $in: templateIds } },
+        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
+      ]
+    };
+    templates = await db.collection('dynamic_templates').find(dynFilter).limit(10).toArray();
+  }
   if (templates.length === 0 && topic && !templateId) {
     const allSection = await db.collection('templates').find({
       examId, section,
