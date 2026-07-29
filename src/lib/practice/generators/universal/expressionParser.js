@@ -204,14 +204,16 @@ export function resolveExpression(expr, context) {
     }
   }
 
-  let cleanedExpr = String(expr);
+  let cleanedExpr = String(expr).replace(/\^/g, '**');
   if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
     // Replace [varName] placeholders with context values, including array indexing like [8,12,15][index]
     cleanedExpr = cleanedExpr.replace(/\[([A-Za-z_][A-Za-z0-9_]*)\]/g, (match, name) => {
       const trimmed = name.trim();
       if (context && context[trimmed] !== undefined) {
         const val = context[trimmed];
-        return typeof val === 'number' ? String(val) : (typeof val === 'string' ? JSON.stringify(val) : val);
+        if (typeof val === 'number') return String(val);
+        if (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val))) return String(Number(val));
+        return typeof val === 'string' ? JSON.stringify(val) : val;
       }
       return match;
     });

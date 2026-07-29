@@ -261,6 +261,18 @@ function normalizeDataSourceItems(source) {
 }
 
 function resolveVariableValue(variable, resolvedVariables, dataSourceMap, rng) {
+  if (typeof variable === 'number' || typeof variable === 'boolean') return variable;
+  if (typeof variable === 'string') {
+    if (variable.includes('[') || variable.includes('{') || /[\+\-\*\/\%()]/.test(variable)) {
+      try {
+        const exprRes = resolveExpression(variable, resolvedVariables);
+        if (exprRes !== undefined && exprRes !== null && !isNaN(exprRes)) return exprRes;
+      } catch (e) {}
+      return interpolateString(variable, resolvedVariables);
+    }
+    return variable;
+  }
+
   const type = String(variable?.type || '').toLowerCase();
   const sourceKey = variable?.source || variable?.sourceId;
   const sourceItems = sourceKey ? dataSourceMap[sourceKey] : null;
@@ -507,10 +519,11 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     return simplifyFraction(num, common);
   }
 
-  // Auto-compile template.rows into template.variables if template contains rows array
-  if (Array.isArray(template.rows) && template.rows.length > 0 && (!template.variables || (Array.isArray(template.variables) && template.variables.length === 0) || (typeof template.variables === 'object' && Object.keys(template.variables).length === 0))) {
-    const activeRowIndex = Math.floor(rng() * template.rows.length);
-    const activeRow = template.rows[activeRowIndex] || template.rows[0];
+  let activeTemplate = { ...template };
+  // Auto-compile template.rows into activeTemplate.variables if template contains rows array
+  if (Array.isArray(activeTemplate.rows) && activeTemplate.rows.length > 0 && (!activeTemplate.variables || (Array.isArray(activeTemplate.variables) && activeTemplate.variables.length === 0) || (typeof activeTemplate.variables === 'object' && Object.keys(activeTemplate.variables).length === 0))) {
+    const activeRowIndex = Math.floor(rng() * activeTemplate.rows.length);
+    const activeRow = activeTemplate.rows[activeRowIndex] || activeTemplate.rows[0];
     const varsObj = {};
     Object.keys(activeRow).forEach(k => {
       let val = activeRow[k];
@@ -520,7 +533,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       }
       varsObj[k] = val;
     });
-    template = { ...template, variables: varsObj };
+    activeTemplate = { ...activeTemplate, variables: varsObj };
   }
 
   // Built-in helper functions available to ALL template expressions & interpolations.
@@ -599,14 +612,14 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   };
 
   // 1. Evaluate variables sequentially
-  if (Array.isArray(template.variables)) {
-    for (const v of template.variables) {
+  if (Array.isArray(activeTemplate.variables)) {
+    for (const v of activeTemplate.variables) {
       const varName = v?.name || v?.id;
       if (!varName) continue;
 
       if (varName === 'index') {
         let levelVarName = `index_l${currentLevel}`;
-        const foundLvlVar = template.variables.find(x => (x?.name || x?.id) === levelVarName);
+        const foundLvlVar = activeTemplate.variables.find(x => (x?.name || x?.id) === levelVarName);
         const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
         if (Array.isArray(levelPool) && levelPool.length > 0) {
           resolvedVariables[varName] = resolveIndexVariable(levelPool);
@@ -626,14 +639,13 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
 
       resolvedVariables[varName] = resolveVariableValue(v, resolvedVariables, dataSourceMap, rng);
     }
-  } else if (template.variables && typeof template.variables === 'object') {
-    for (const [varName, v] of Object.entries(template.variables)) {
-      if (!v) continue;
-      const normalizedVar = { name: varName, ...v };
+  } else if (activeTemplate.variables && typeof activeTemplate.variables === 'object') {
+    for (const [varName, v] of Object.entries(activeTemplate.variables)) {
+      const normalizedVar = typeof v === 'object' && v !== null ? { name: varName, ...v } : v;
 
       if (varName === 'index') {
         let levelVarName = `index_l${currentLevel}`;
-        const foundLvlVar = template.variables[levelVarName];
+        const foundLvlVar = activeTemplate.variables[levelVarName];
         const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
         if (Array.isArray(levelPool) && levelPool.length > 0) {
           resolvedVariables[varName] = resolveIndexVariable(levelPool);
@@ -853,7 +865,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   }
 
   // 2. Interpolate question texts
-  let rawQuestionText = template.questionText || '';
+  let rawQuestionText = template.questionText || template.questionTemplate || template.questionPattern || template.blueprint || '';
   if (template.optionsType === 'fillInTheBlank' || String(template.interaction?.engine || '').toLowerCase() === 'fill_blank') {
     let blankCounter = 0;
     const existingBlanksRegex = /\[\[blank(\d+)\]\]/g;
