@@ -507,6 +507,22 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     return simplifyFraction(num, common);
   }
 
+  // Auto-compile template.rows into template.variables if template contains rows array
+  if (Array.isArray(template.rows) && template.rows.length > 0 && (!template.variables || (Array.isArray(template.variables) && template.variables.length === 0) || (typeof template.variables === 'object' && Object.keys(template.variables).length === 0))) {
+    const activeRowIndex = Math.floor(rng() * template.rows.length);
+    const activeRow = template.rows[activeRowIndex] || template.rows[0];
+    const varsObj = {};
+    Object.keys(activeRow).forEach(k => {
+      let val = activeRow[k];
+      if (typeof val === 'string' && val.includes(',')) {
+        const arr = val.split(',').map(s => s.trim());
+        val = arr[Math.floor(rng() * arr.length)];
+      }
+      varsObj[k] = val;
+    });
+    template = { ...template, variables: varsObj };
+  }
+
   // Built-in helper functions available to ALL template expressions & interpolations.
   const resolvedVariables = {
     toWords: numberToWords,
@@ -1068,7 +1084,9 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
         
         if (template.optionsType !== 'tap_to_fill' && template.type !== 'tap_to_fill' && template.interaction?.engine !== 'tap_to_fill') {
           template.optionsType = 'mcq';
-          if (template.interaction) {
+          if (typeof template.interaction === 'string') {
+            template.interaction = { engine: template.interaction, type: template.interaction };
+          } else if (template.interaction && typeof template.interaction === 'object') {
             template.interaction.engine = 'mcq';
             template.interaction.type = 'mcq';
           }

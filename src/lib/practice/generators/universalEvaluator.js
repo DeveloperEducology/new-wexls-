@@ -1003,7 +1003,7 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     } else if (['visual_choice'].includes(interactionEngine)) {
       result.type = 'visual_choice';
       result.interaction = { engine: 'visual_choice', type: 'visual_choice' };
-    } else if (isMultiSelectMode || isExplicitMsq || interactionEngine === 'msq') {
+    } else if (isMultiSelectMode || interactionEngine === 'msq') {
       result.type = 'msq';
       result.interaction = { engine: 'msq', inputMode: 'multi-choice', type: 'msq' };
     } else {

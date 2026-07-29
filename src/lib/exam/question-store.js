@@ -2,7 +2,7 @@ import { getMongoDb } from '../db/mongo.js';
 import { instantiateParameterized } from './template-engine.js';
 import { instantiateSvgTemplate, isSvgTemplate } from './svg-template-engine.js';
 import { instantiateVisualTransformationTemplate } from './visual-transformation-engine.js';
-import { evaluateTemplate } from '../practice/generators/universal/evaluator.js';
+import { evaluateTemplate } from '../practice/generators/universalEvaluator.js';
 
 const GENERATE_COUNT = 30;
 
@@ -220,7 +220,8 @@ export async function generateFromTemplates({ examId, section, topic, templateId
                                 tpl.type === 'spreadsheet-grid' || 
                                 tpl.config?.type === 'spreadsheet-grid' || 
                                 tpl.config?.generatorType === 'spreadsheet-grid' ||
-                                (tpl.variables && (Array.isArray(tpl.parts) || Array.isArray(tpl.options)));
+                                (tpl.variables && (Array.isArray(tpl.parts) || Array.isArray(tpl.options))) ||
+                                (Array.isArray(tpl.rows) && tpl.rows.length > 0);
 
       if (isSpreadsheetGrid) {
         for (let i = 0; i < GENERATE_COUNT; i++) {
