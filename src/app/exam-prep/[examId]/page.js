@@ -1146,6 +1146,49 @@ export default function JnvstDashboard({ params }) {
           {/* Left Main Column */}
           <div className="dash-left-col">
 
+            {/* Official JNVST Full Selection Mock Test Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              color: '#fff',
+              borderRadius: '24px',
+              padding: '28px',
+              marginBottom: '28px',
+              boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '20px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <span style={{ background: '#22c55e', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>LIVE EXAM MODE</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600 }}>120 Mins · 80 Questions · 100 Marks</span>
+                </div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 6px', color: '#fff' }}>Official JNVST Full Selection Mock Test</h2>
+                <p style={{ color: '#cbd5e1', fontSize: '0.95rem', margin: 0, maxWidth: '520px' }}>
+                  Simulate the exact Jawahar Navodaya 80-question exam with timed sections (Mental Ability, Arithmetic & Language) and real-time selection cutoff analysis.
+                </p>
+              </div>
+
+              <Link href={`/exam-prep/${examId}/mock-test`} style={{
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                color: '#fff',
+                padding: '14px 28px',
+                borderRadius: '14px',
+                fontWeight: 700,
+                fontSize: '1rem',
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap'
+              }}>
+                🚀 Launch Full Mock Test →
+              </Link>
+            </div>
+
             {/* Today's Goal Card */}
             <div className="goal-card" style={{ marginBottom: '28px' }}>
               <div className="goal-top">
