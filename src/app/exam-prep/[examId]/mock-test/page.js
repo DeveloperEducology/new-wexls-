@@ -173,8 +173,46 @@ export default function FullMockTestPage({ params }) {
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, sans-serif', color: '#1e293b' }}>
       <SiteHeader />
 
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 900px) {
+          .mock-grid-wrap {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+            padding: 0 12px !important;
+          }
+          .mock-player-box {
+            padding: 20px !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .mock-header-bar {
+            padding: 14px 16px !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .mock-timer-wrap {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+          }
+          .mock-sec-tab {
+            font-size: 12px !important;
+            padding: 12px 10px !important;
+            white-space: nowrap !important;
+          }
+          .mock-opt-btn {
+            padding: 12px 14px !important;
+            min-height: 48px !important;
+          }
+          .mock-palette-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+          }
+        }
+      ` }} />
+
       {/* Mock Test Header Bar */}
-      <div style={{ background: '#0f172a', color: '#fff', padding: '16px 24px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="mock-header-bar" style={{ background: '#0f172a', color: '#fff', padding: '16px 24px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🏆 JNVST Full Selection Mock Test</span>
@@ -184,7 +222,7 @@ export default function FullMockTestPage({ params }) {
         </div>
 
         {/* Timer Display */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="mock-timer-wrap" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ background: timeLeft < 600 ? '#7f1d1d' : '#1e293b', border: `1px solid ${timeLeft < 600 ? '#ef4444' : '#475569'}`, padding: '8px 16px', borderRadius: '8px', textAlign: 'center' }}>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Time Remaining</span>
             <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: timeLeft < 600 ? '#f87171' : '#38bdf8' }}>
@@ -202,32 +240,35 @@ export default function FullMockTestPage({ params }) {
       </div>
 
       {/* Section Switcher Tabs */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 24px', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', display: 'flex', gap: '4px', overflowX: 'auto' }}>
         <button
+          className="mock-sec-tab"
           onClick={() => { setActiveSection('mat'); jumpToQuestion(0); }}
-          style={{ padding: '14px 20px', border: 'none', borderBottom: activeSection === 'mat' ? '3px solid #6366f1' : '3px solid transparent', background: 'none', fontWeight: 600, color: activeSection === 'mat' ? '#6366f1' : '#64748b', cursor: 'pointer' }}
+          style={{ padding: '14px 16px', border: 'none', borderBottom: activeSection === 'mat' ? '3px solid #6366f1' : '3px solid transparent', background: 'none', fontWeight: 600, color: activeSection === 'mat' ? '#6366f1' : '#64748b', cursor: 'pointer' }}
         >
-          🧠 1. Mental Ability (MAT) (Q1 - Q40)
+          🧠 1. MAT (Q1 - Q40)
         </button>
         <button
+          className="mock-sec-tab"
           onClick={() => { setActiveSection('arithmetic'); jumpToQuestion(40); }}
-          style={{ padding: '14px 20px', border: 'none', borderBottom: activeSection === 'arithmetic' ? '3px solid #6366f1' : '3px solid transparent', background: 'none', fontWeight: 600, color: activeSection === 'arithmetic' ? '#6366f1' : '#64748b', cursor: 'pointer' }}
+          style={{ padding: '14px 16px', border: 'none', borderBottom: activeSection === 'arithmetic' ? '3px solid #6366f1' : '3px solid transparent', background: 'none', fontWeight: 600, color: activeSection === 'arithmetic' ? '#6366f1' : '#64748b', cursor: 'pointer' }}
         >
-          🔢 2. Arithmetic Test (Q41 - Q60)
+          🔢 2. Arithmetic (Q41 - Q60)
         </button>
         <button
+          className="mock-sec-tab"
           onClick={() => { setActiveSection('language'); jumpToQuestion(60); }}
-          style={{ padding: '14px 20px', border: 'none', borderBottom: activeSection === 'language' ? '3px solid #6366f1' : '3px solid transparent', background: 'none', fontWeight: 600, color: activeSection === 'language' ? '#6366f1' : '#64748b', cursor: 'pointer' }}
+          style={{ padding: '14px 16px', border: 'none', borderBottom: activeSection === 'language' ? '3px solid #6366f1' : '3px solid transparent', background: 'none', fontWeight: 600, color: activeSection === 'language' ? '#6366f1' : '#64748b', cursor: 'pointer' }}
         >
-          📖 3. Language Test (Q61 - Q80)
+          📖 3. Language (Q61 - Q80)
         </button>
       </div>
 
       {/* Main Workspace: Question & Palette Drawer */}
-      <div style={{ maxWidth: '1400px', margin: '24px auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
+      <div className="mock-grid-wrap" style={{ maxWidth: '1400px', margin: '24px auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
         
         {/* Left Column: Question Player */}
-        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+        <div className="mock-player-box" style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9' }}>
             <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 12px', borderRadius: '16px', fontSize: '0.85rem', fontWeight: 600 }}>
               Question {currentQNum} of 80 · {currentQ.sectionName}
@@ -256,6 +297,7 @@ export default function FullMockTestPage({ params }) {
               return (
                 <div
                   key={letter}
+                  className="mock-opt-btn"
                   onClick={() => handleSelectOption(letter)}
                   style={{
                     padding: '16px 20px',
@@ -324,7 +366,7 @@ export default function FullMockTestPage({ params }) {
           </div>
 
           {/* Palette Grid (1 to 80 Buttons) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+          <div className="mock-palette-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
             {questions.map((q, idx) => {
               const qNum = idx + 1;
               const isAns = userAnswers[qNum] !== undefined;

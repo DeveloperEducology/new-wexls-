@@ -772,6 +772,15 @@ export default function JnvstDashboard({ params }) {
           .continue-grid {
             grid-template-columns: 1fr;
           }
+          .jnvst-mock-banner {
+            padding: 20px !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .jnvst-mock-btn {
+            width: 100% !important;
+            justify-content: center !important;
+          }
         }
 
         .continue-card {
@@ -1147,7 +1156,7 @@ export default function JnvstDashboard({ params }) {
           <div className="dash-left-col">
 
             {/* Official JNVST Full Selection Mock Test Card */}
-            <div style={{
+            <div className="jnvst-mock-banner" style={{
               background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
               color: '#fff',
               borderRadius: '24px',
@@ -1171,7 +1180,7 @@ export default function JnvstDashboard({ params }) {
                 </p>
               </div>
 
-              <Link href={`/exam-prep/${examId}/mock-test`} style={{
+              <Link href={`/exam-prep/${examId}/mock-test`} className="jnvst-mock-btn" style={{
                 background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                 color: '#fff',
                 padding: '14px 28px',
