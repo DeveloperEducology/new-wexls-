@@ -91,10 +91,11 @@ export async function getQuestion(id) {
 
       if (!isNaN(seed) && templateId) {
         let tpl = await db.collection('templates').findOne({ $or: [{ id: templateId }, { _id: templateId }] });
-        let dynTpl = await db.collection('dynamic_templates').findOne({ $or: [{ id: templateId }, { _id: templateId }] });
         if (tpl || dynTpl) {
-          const merged = { ...tpl, ...dynTpl };
-          const evalQ = evaluateTemplate(merged, seed);
+          const tplTime = tpl ? new Date(tpl.updatedAt || tpl.createdAt || 0).getTime() : 0;
+          const dynTime = dynTpl ? new Date(dynTpl.updatedAt || dynTpl.createdAt || 0).getTime() : 0;
+          const chosen = (dynTime > tplTime) ? dynTpl : (tpl || dynTpl);
+          const evalQ = evaluateTemplate(chosen, seed);
           if (evalQ) {
             let optionsDict = {};
             let correctKey = 'A';
@@ -190,15 +191,12 @@ export async function generateFromTemplates({ examId, section, topic, templateId
     for (const dynTpl of dynTemplates) {
       const existingIdx = templates.findIndex(t => (t.id || String(t._id)) === (dynTpl.id || String(dynTpl._id)));
       if (existingIdx !== -1) {
-        templates[existingIdx] = {
-          ...templates[existingIdx],
-          ...dynTpl,
-          _id: templates[existingIdx]._id,
-          id: templates[existingIdx].id || dynTpl.id,
-          examId: templates[existingIdx].examId || examId,
-          section: templates[existingIdx].section || section,
-          topic: templates[existingIdx].topic || topic
-        };
+        const existingTpl = templates[existingIdx];
+        const tplTime = new Date(existingTpl.updatedAt || existingTpl.createdAt || 0).getTime();
+        const dynTime = new Date(dynTpl.updatedAt || dynTpl.createdAt || 0).getTime();
+        if (dynTime > tplTime) {
+          templates[existingIdx] = dynTpl;
+        }
       } else {
         templates.push(dynTpl);
       }
