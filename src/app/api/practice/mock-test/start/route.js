@@ -3,15 +3,22 @@ import { getMongoDb } from '../../../../../lib/db/mongo.js';
 import { createSession } from '../../../../../lib/exam/session-store.js';
 import { getAdaptiveCandidates, generateFromTemplates } from '../../../../../lib/exam/question-store.js';
 import { resolveUserId } from '../../../../../lib/auth/getAuthUser.js';
+import { getMockTestById } from '../../../../../lib/exam/test-series-store.js';
 
 export async function POST(req) {
   try {
-    const { examId = 'jnvst', userId: providedUserId = 'guest_child' } = await req.json();
+    const { examId = 'jnvst', mockTestId = null, userId: providedUserId = 'guest_child' } = await req.json();
     const userId = resolveUserId(req, providedUserId);
 
     const db = await getMongoDb();
     if (!db) {
       return NextResponse.json({ success: false, error: 'Database unavailable' }, { status: 500 });
+    }
+
+    // Check if a specific saved Mock Test was requested from DB
+    let savedMockTest = null;
+    if (mockTestId) {
+      savedMockTest = await getMockTestById(mockTestId);
     }
 
     // Helper to fetch/generate N questions for a given section
