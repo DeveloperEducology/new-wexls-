@@ -18,7 +18,7 @@ export default function JnvstDashboard({ params }) {
   const [loading, setLoading] = useState(true);
   const [selectedGateSection, setSelectedGateSection] = useState(null);
   const [showGate, setShowGate] = useState(false);
-  const [activeTab, setActiveTab] = useState('');
+  const [activeTab, setActiveTab] = useState('mat');
   const [templates, setTemplates] = useState([]);
   const [expandedTopics, setExpandedTopics] = useState({});
 
@@ -124,12 +124,26 @@ export default function JnvstDashboard({ params }) {
     }
   };
 
+  const scrollToTopicsSection = (sectionId) => {
+    if (sectionId) setActiveTab(sectionId);
+    const el = document.getElementById('topics-skills-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const formatTopicName = (topicId) => {
     if (!topicId) return '';
     return topicId
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+
+  const getTopicPrefix = (sectionId, index) => {
+    const sec = exam?.sections?.find(s => s.id === sectionId);
+    const char = sec ? (sec.shortName || sec.name || 'S').charAt(0).toUpperCase() : 'S';
+    return `${char}.${index + 1}`;
   };
 
   if (loading) {
@@ -142,7 +156,7 @@ export default function JnvstDashboard({ params }) {
             justify-content: center;
             min-height: 100vh;
             background: #f8fafc;
-            font-family: var(--font-outfit), 'Inter', sans-serif;
+            font-family: 'Outfit', 'Inter', sans-serif;
           }
           .spinner {
             border: 4px solid #e2e8f0;
@@ -169,6 +183,9 @@ export default function JnvstDashboard({ params }) {
   const avgTheta = (matTheta + arithTheta + langTheta) / 3;
   const jnvstReadiness = Math.round(((avgTheta - 0.05) / 0.9) * 100) || 67;
 
+  const weakTopics = profile?.weakTopics || [];
+  const strongTopics = profile?.strongTopics || [];
+
   // Subjects summary list mapping
   const subjectCards = [
     {
@@ -178,7 +195,7 @@ export default function JnvstDashboard({ params }) {
       bgColor: '#f3e8ff',
       iconColor: '#9333ea',
       barColor: '#a855f7',
-      progress: Math.round(((matTheta - 0.05) / 0.9) * 100) || 78
+      progress: Math.round(((matTheta - 0.05) / 0.9) * 100) || 67
     },
     {
       id: 'arithmetic',
@@ -187,7 +204,7 @@ export default function JnvstDashboard({ params }) {
       bgColor: '#dcfce7',
       iconColor: '#16a34a',
       barColor: '#22c55e',
-      progress: Math.round(((arithTheta - 0.05) / 0.9) * 100) || 61
+      progress: Math.round(((arithTheta - 0.05) / 0.9) * 100) || 100
     },
     {
       id: 'language',
@@ -196,7 +213,7 @@ export default function JnvstDashboard({ params }) {
       bgColor: '#ffedd5',
       iconColor: '#ea580c',
       barColor: '#f97316',
-      progress: Math.round(((langTheta - 0.05) / 0.9) * 100) || 83
+      progress: Math.round(((langTheta - 0.05) / 0.9) * 100) || 72
     },
     {
       id: 'previous-papers',
@@ -254,6 +271,7 @@ export default function JnvstDashboard({ params }) {
   ];
 
   const studentFirstName = session?.name ? session.name.split(' ')[0] : 'Rahul';
+  const activeSectionObj = exam?.sections?.find(s => s.id === activeTab) || exam?.sections?.[0];
 
   return (
     <div className="jnvst-redesign">
@@ -487,13 +505,6 @@ export default function JnvstDashboard({ params }) {
         .btn-continue:hover {
           transform: translateY(-2px);
           box-shadow: 0 12px 25px rgba(99, 102, 241, 0.4);
-        }
-
-        .goal-target-art {
-          width: 110px;
-          height: 110px;
-          object-fit: contain;
-          flex-shrink: 0;
         }
 
         /* JNVST Ready Circular Meter Card */
@@ -908,6 +919,144 @@ export default function JnvstDashboard({ params }) {
           color: #cbd5e1;
         }
 
+        /* Topic & Micro-Skills Section Styling */
+        .section-tabs-bar {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 20px;
+          overflow-x: auto;
+          padding-bottom: 6px;
+        }
+
+        .tab-btn {
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 10px 18px;
+          font-size: 13px;
+          font-weight: 800;
+          color: #475569;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
+          transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+          border-color: #cbd5e1;
+          color: #0f172a;
+        }
+
+        .tab-btn.active {
+          background: #6366f1;
+          color: #ffffff;
+          border-color: #6366f1;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        }
+
+        .topic-accordion-card {
+          background: #ffffff;
+          border: 1px solid #f1f5f9;
+          border-radius: 18px;
+          padding: 18px 22px;
+          margin-bottom: 14px;
+          box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+          transition: all 0.2s ease;
+        }
+
+        .topic-accordion-card:hover {
+          border-color: #e2e8f0;
+          box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .topic-row-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .topic-title-wrap {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          flex-grow: 1;
+        }
+
+        .topic-idx-badge {
+          background: #f1f5f9;
+          color: #6366f1;
+          font-size: 12px;
+          font-weight: 900;
+          padding: 4px 10px;
+          border-radius: 8px;
+        }
+
+        .topic-name-txt {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .topic-skills-count {
+          font-size: 12px;
+          color: #94a3b8;
+          font-weight: 600;
+        }
+
+        .skills-grid-box {
+          border-top: 1px solid #f1f5f9;
+          margin-top: 16px;
+          padding-top: 16px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 10px;
+        }
+
+        .skill-item-btn {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .skill-item-btn:hover {
+          background: #ffffff;
+          border-color: #6366f1;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+          transform: translateY(-1px);
+        }
+
+        .skill-code-tag {
+          font-size: 11px;
+          font-weight: 800;
+          color: #475569;
+          background: #e2e8f0;
+          padding: 2px 7px;
+          border-radius: 6px;
+          margin-right: 8px;
+        }
+
+        .skill-item-btn:hover .skill-code-tag {
+          background: #6366f1;
+          color: #ffffff;
+        }
+
+        .skill-label-txt {
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          line-height: 1.3;
+        }
+
         /* Recent Achievement Card */
         .recent-achieve-box {
           background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
@@ -1035,7 +1184,7 @@ export default function JnvstDashboard({ params }) {
             <div style={{ marginBottom: '32px' }}>
               <div className="card-header-row">
                 <h3 className="card-title">Subjects</h3>
-                <span className="view-all-link">View All</span>
+                <span className="view-all-link" onClick={() => scrollToTopicsSection('mat')}>View All</span>
               </div>
 
               <div className="subjects-grid">
@@ -1047,7 +1196,7 @@ export default function JnvstDashboard({ params }) {
                       if (sub.id === 'previous-papers') {
                         router.push(`/exam-prep/${examId}/practice/mat?mode=papers`);
                       } else {
-                        handleStartSection(sub.id, sub.name);
+                        scrollToTopicsSection(sub.id);
                       }
                     }}
                   >
@@ -1099,7 +1248,7 @@ export default function JnvstDashboard({ params }) {
                       </div>
                       <button 
                         className="btn-mini-practice"
-                        onClick={() => handleStartTopic('mat', 'Mental Ability', sk.id)}
+                        onClick={() => handleStartTopic(sk.sectionId, 'Mental Ability', sk.id)}
                       >
                         Practice →
                       </button>
@@ -1109,7 +1258,7 @@ export default function JnvstDashboard({ params }) {
               </div>
 
               {/* Achievement Banner Rows */}
-              <div className="achievement-rows">
+              <div className="achievement-rows" style={{ marginBottom: '32px' }}>
                 <div className="achievement-banner">
                   <div className="banner-left">
                     <span className="banner-icon">🎖️</span>
@@ -1143,6 +1292,138 @@ export default function JnvstDashboard({ params }) {
                   <span className="banner-arrow">❯</span>
                 </div>
               </div>
+            </div>
+
+            {/* Practice Topics & Micro-Skills Section */}
+            <div id="topics-skills-section" style={{ marginBottom: '32px' }}>
+              <div className="card-header-row">
+                <h3 className="card-title">📚 Practice Topics & Micro-Skills</h3>
+                {activeSectionObj && (
+                  <button 
+                    className="btn-mini-practice"
+                    onClick={() => handleStartSection(activeTab, activeSectionObj.name)}
+                    style={{ background: '#475569', fontSize: '13px', padding: '8px 16px' }}
+                  >
+                    Start Full {activeSectionObj.name} Drill →
+                  </button>
+                )}
+              </div>
+
+              {/* Subject Tabs */}
+              <div className="section-tabs-bar">
+                {exam?.sections?.map((sec) => {
+                  const isActive = activeTab === sec.id;
+                  return (
+                    <button
+                      key={sec.id}
+                      className={`tab-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => setActiveTab(sec.id)}
+                    >
+                      <span>{sec.icon || '📝'}</span>
+                      <span>{sec.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Topics Breakdown List */}
+              {activeSectionObj && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {activeSectionObj.topics?.map((topicId, idx) => {
+                    const isExpanded = !!expandedTopics[topicId];
+                    const isAllowed = gateStatus[activeTab]?.allowed !== false;
+                    
+                    // Filter matching templates for this topic
+                    const topicTemplates = templates.filter(t => {
+                      const cleanTplTopic = String(t.topic || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+                      const cleanTargetTopic = String(topicId || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+                      return cleanTplTopic === cleanTargetTopic ||
+                             cleanTplTopic.includes(cleanTargetTopic) ||
+                             cleanTargetTopic.includes(cleanTplTopic);
+                    });
+
+                    // Group templates by name
+                    const groupedTemplates = [];
+                    const nameToGroup = {};
+                    for (const t of topicTemplates) {
+                      const tName = (t.name || t.title || 'Micro Skill').trim();
+                      if (!nameToGroup[tName]) {
+                        nameToGroup[tName] = {
+                          name: tName,
+                          ids: [],
+                          id: t.id || String(t._id),
+                        };
+                        groupedTemplates.push(nameToGroup[tName]);
+                      }
+                      nameToGroup[tName].ids.push(t.id || String(t._id));
+                    }
+
+                    return (
+                      <div key={topicId} className="topic-accordion-card">
+                        <div className="topic-row-head">
+                          <div 
+                            className="topic-title-wrap"
+                            onClick={() => toggleTopic(topicId)}
+                          >
+                            <span className="topic-idx-badge">{getTopicPrefix(activeTab, idx)}</span>
+                            <div>
+                              <div className="topic-name-txt">{formatTopicName(topicId)}</div>
+                              <div className="topic-skills-count">
+                                {groupedTemplates.length > 0 ? `${groupedTemplates.length} skills available` : 'Comprehensive Topic Practice'}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '6px' }}>
+                              {isExpanded ? '▲' : '▼'}
+                            </span>
+                          </div>
+
+                          <button 
+                            className="btn-mini-practice"
+                            onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
+                          >
+                            Practice Topic →
+                          </button>
+                        </div>
+
+                        {/* Expanded micro-skills grid */}
+                        {isExpanded && (
+                          <div className="skills-grid-box">
+                            {groupedTemplates.length > 0 ? (
+                              groupedTemplates.map((group, gIdx) => {
+                                const skillCode = `${getTopicPrefix(activeTab, idx)}.${gIdx + 1}`;
+                                return (
+                                  <div
+                                    key={group.id}
+                                    className="skill-item-btn"
+                                    onClick={() => handleStartTemplate(activeTab, activeSectionObj.name, topicId, group.ids.join(','))}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                      <span className="skill-code-tag">{skillCode}</span>
+                                      <span className="skill-label-txt">{group.name}</span>
+                                    </div>
+                                    <span style={{ fontSize: '12px', color: '#6366f1', fontWeight: 800 }}>→</span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div 
+                                className="skill-item-btn"
+                                onClick={() => handleStartTopic(activeTab, activeSectionObj.name, topicId)}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <span className="skill-code-tag">{getTopicPrefix(activeTab, idx)}.1</span>
+                                  <span className="skill-label-txt">Standard {formatTopicName(topicId)} Practice</span>
+                                </div>
+                                <span style={{ fontSize: '12px', color: '#6366f1', fontWeight: 800 }}>→</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
           </div>
@@ -1223,7 +1504,7 @@ export default function JnvstDashboard({ params }) {
             <div className="white-card">
               <div className="card-header-row" style={{ marginBottom: '16px' }}>
                 <h3 className="card-title">Recent Achievement</h3>
-                <span className="view-all-link">View All</span>
+                <span className="view-all-link" onClick={() => scrollToTopicsSection('mat')}>View All</span>
               </div>
 
               <div className="recent-achieve-box">
