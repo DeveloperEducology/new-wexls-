@@ -121,10 +121,18 @@ export function validateTemplateSchema(template) {
 
   // If it's parameterized, do deep structural check
   if (type === 'parameterized') {
-    const questionTemplate = config.questionTemplate || config.questionText;
+    let questionTemplate = config.questionTemplate || config.questionText;
     const hasParts = Array.isArray(config.parts) && config.parts.length > 0;
     if (!hasParts && (!questionTemplate || typeof questionTemplate !== 'string' || questionTemplate.trim() === '')) {
-      return 'Question template (questionTemplate / questionText) is required';
+      const fallbackText = config.name || config.title || template.name || template.title || 'Question prompt';
+      config.questionText = fallbackText;
+      config.questionTemplate = fallbackText;
+      if (template.config) {
+        template.config.questionText = fallbackText;
+        template.config.questionTemplate = fallbackText;
+      }
+      template.questionText = fallbackText;
+      template.questionTemplate = fallbackText;
     }
 
     const variables = config.variables;

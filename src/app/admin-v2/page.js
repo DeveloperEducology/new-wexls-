@@ -1291,6 +1291,7 @@ export default function AdminV2Page() {
             const payload = {
               id: templateId,
               name: formData.title,
+              questionText: formData.title || 'Question prompt',
               type: formData.engine || 'parameterized',
               examId: selectedExamId,
               section: selectedSectionId,
