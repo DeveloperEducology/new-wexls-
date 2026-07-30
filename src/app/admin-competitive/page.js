@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -52,6 +52,188 @@ function parseMathAndText(text) {
   });
 }
 
+// INTERACTIVE CANVAS IMAGE CROPPER MODAL COMPONENT
+function ImageCropperModal({ imageSrc, onCropComplete, onClose }) {
+  const containerRef = useRef(null);
+  const imgRef = useRef(null);
+  const [crop, setCrop] = useState({ x: 10, y: 10, width: 80, height: 80 }); // percentage
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [uploading, setUploading] = useState(false);
+
+  const handleMouseDown = (e) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setIsDragging(true);
+    setDragStart({ x: xPct, y: yPct });
+    setCrop({ x: xPct, y: yPct, width: 0, height: 0 });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const currentXPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const currentYPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+    const x = Math.min(dragStart.x, currentXPct);
+    const y = Math.min(dragStart.y, currentYPct);
+    const width = Math.abs(currentXPct - dragStart.x);
+    const height = Math.abs(currentYPct - dragStart.y);
+
+    setCrop({ x, y, width, height });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleCropAndSave = async () => {
+    if (!imgRef.current || crop.width === 0 || crop.height === 0) {
+      alert('Please drag a box over the image portion you want to crop.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const img = imgRef.current;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const sourceX = (crop.x / 100) * img.naturalWidth;
+      const sourceY = (crop.y / 100) * img.naturalHeight;
+      const sourceW = (crop.width / 100) * img.naturalWidth;
+      const sourceH = (crop.height / 100) * img.naturalHeight;
+
+      canvas.width = sourceW;
+      canvas.height = sourceH;
+
+      ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sourceW, sourceH);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) throw new Error('Canvas blob generation failed.');
+
+        const croppedFile = new File([blob], `cropped-${Date.now()}.webp`, { type: 'image/webp' });
+        const formData = new FormData();
+        formData.append('file', croppedFile);
+        formData.append('folder', 'jnvst-questions');
+
+        const res = await fetch('/api/admin/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.success || data.url) {
+          const uploadedUrl = data.url || (data.file && data.file.url) || (data.files && data.files[0] && data.files[0].url);
+          onCropComplete(uploadedUrl);
+        } else {
+          alert(data.error || 'Failed to upload cropped image to R2.');
+        }
+        setUploading(false);
+      }, 'image/webp', 0.92);
+
+    } catch (err) {
+      console.error('Crop save error:', err);
+      alert('Failed to process image crop.');
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
+      <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '850px', padding: '28px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+              ✂️ Crop Selected Image Portion
+            </h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+              Click &amp; drag mouse over the image to select the exact figure portion to save into R2 storage.
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
+        </div>
+
+        {/* Interactive Crop Container */}
+        <div
+          ref={containerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          style={{
+            position: 'relative',
+            width: '100%',
+            maxHeight: '500px',
+            overflow: 'hidden',
+            background: '#0f172a',
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'crosshair',
+            userSelect: 'none'
+          }}
+        >
+          <img
+            ref={imgRef}
+            src={imageSrc}
+            alt="Crop target"
+            style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain', pointerEvents: 'none' }}
+          />
+
+          {/* Semi-transparent Selection Box */}
+          {crop.width > 0 && crop.height > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${crop.x}%`,
+                top: `${crop.y}%`,
+                width: `${crop.width}%`,
+                height: `${crop.height}%`,
+                border: '2px dashed #10b981',
+                background: 'rgba(16, 185, 129, 0.25)',
+                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                pointerEvents: 'none'
+              }}
+            >
+              <div style={{ position: 'absolute', top: '4px', left: '6px', background: '#10b981', color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>
+                Crop Region
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Crop Controls & Actions */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+          <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
+            {crop.width > 0 ? `Selected Box: ${Math.round(crop.width)}% × ${Math.round(crop.height)}%` : 'Drag mouse over image to select crop area'}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={onClose}
+              style={{ padding: '10px 18px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleCropAndSave}
+              disabled={uploading}
+              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
+            >
+              {uploading ? 'Cropping & Uploading to R2...' : '✂️ Crop & Save to R2'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCompetitivePage() {
   const [activeTab, setActiveTab] = useState('spreadsheets'); // 'spreadsheets', 'test-series', 'question-bank'
   const [selectedExamId, setSelectedExamId] = useState('jnvst');
@@ -95,6 +277,13 @@ export default function AdminCompetitivePage() {
   });
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [uploadingTarget, setUploadingTarget] = useState(null); // 'questionImage', 'optionAImage', etc.
+
+  // Cropper Modal State
+  const [cropperState, setCropperState] = useState({
+    isOpen: false,
+    imageSrc: null,
+    targetField: null
+  });
 
   // Batch JSON & Text Parser Import Modal State
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -165,7 +354,21 @@ export default function AdminCompetitivePage() {
     if (activeTab === 'question-bank') loadQuestionBank();
   }, [activeTab, selectedExamId]);
 
-  // Handle File Upload to R2 Storage
+  // Trigger Image Cropper Modal for Selected File
+  const handleSelectFileForCropper = (file, targetField) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCropperState({
+        isOpen: true,
+        imageSrc: e.target.result,
+        targetField
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle File Upload directly to R2 Storage (without crop)
   const handleFileUpload = async (file, targetField) => {
     if (!file) return;
     setUploadingTarget(targetField);
@@ -775,7 +978,7 @@ export default function AdminCompetitivePage() {
                         padding: '20px',
                         display: 'flex',
                         flexDirection: 'column',
-                        justify: 'space-between',
+                        justifyContent: 'space-between',
                         gap: '14px',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
                         transition: 'all 0.2s ease'
@@ -904,7 +1107,7 @@ export default function AdminCompetitivePage() {
                   🗃️ Static Sequential Question Bank ({questions.length})
                 </h2>
                 <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
-                  Create, edit, duplicate, delete, and bulk import static questions with live KaTeX &amp; R2 image uploads.
+                  Create, edit, duplicate, delete, crop &amp; upload image figures to Cloudflare R2.
                 </p>
               </div>
 
@@ -1185,7 +1388,7 @@ export default function AdminCompetitivePage() {
 
       </div>
 
-      {/* QUESTION FORM MODAL (CREATE / EDIT / DUPLICATE WITH IMAGE UPLOADER & R2 PATH) */}
+      {/* QUESTION FORM MODAL (CREATE / EDIT / DUPLICATE WITH IMAGE UPLOADER & CROPPER) */}
       {showQuestionModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
           <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '800px', maxHeight: '92vh', overflowY: 'auto', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
@@ -1251,12 +1454,13 @@ export default function AdminCompetitivePage() {
                 />
               </div>
 
-              {/* Question Image / R2 Storage Path Upload */}
-              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  🖼️ Question Figure Image (Cloudflare R2 Upload)
+              {/* Question Image / R2 Storage Path Upload & Crop */}
+              <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '14px', border: '1px dashed #cbd5e1' }}>
+                <label style={{ fontSize: '0.84rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  🖼️ Question Figure Image (Crop &amp; Upload to R2 Storage)
                 </label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="text"
                     placeholder="R2 Storage Path URL e.g. https://.../jnvst-questions/q1.png"
@@ -1264,8 +1468,21 @@ export default function AdminCompetitivePage() {
                     onChange={(e) => setQuestionFormData({ ...questionFormData, questionImage: e.target.value })}
                     style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
                   />
+
+                  {/* Crop & Upload Button */}
+                  <label style={{ background: '#10b981', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    ✂️ Crop &amp; Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleSelectFileForCropper(e.target.files[0], 'questionImage')}
+                    />
+                  </label>
+
+                  {/* Direct Upload Button */}
                   <label style={{ background: '#4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                    {uploadingTarget === 'questionImage' ? 'Uploading...' : '📁 Upload Image'}
+                    {uploadingTarget === 'questionImage' ? 'Uploading...' : '📁 Direct Upload'}
                     <input
                       type="file"
                       accept="image/*"
@@ -1274,14 +1491,22 @@ export default function AdminCompetitivePage() {
                     />
                   </label>
                 </div>
+
                 {questionFormData.questionImage && (
-                  <div style={{ marginTop: '8px' }}>
-                    <img src={questionFormData.questionImage} alt="Preview" style={{ maxHeight: '70px', borderRadius: '6px' }} />
+                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={questionFormData.questionImage} alt="Question figure preview" style={{ maxHeight: '80px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <button
+                      type="button"
+                      onClick={() => setQuestionFormData({ ...questionFormData, questionImage: '' })}
+                      style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
               </div>
 
-              {/* Options A, B, C, D with text & image inputs */}
+              {/* Options A, B, C, D with text, crop & image inputs */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 {['A', 'B', 'C', 'D'].map(letter => {
                   const textKey = `option${letter}`;
@@ -1292,6 +1517,7 @@ export default function AdminCompetitivePage() {
                       <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
                         Option {letter}
                       </label>
+
                       <input
                         type="text"
                         placeholder={`Option ${letter} Text or <svg>...`}
@@ -1309,8 +1535,21 @@ export default function AdminCompetitivePage() {
                           onChange={(e) => setQuestionFormData({ ...questionFormData, [imgKey]: e.target.value })}
                           style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}
                         />
-                        <label style={{ background: '#64748b', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
-                          📁 Image
+
+                        {/* Crop Button for Option Image */}
+                        <label style={{ background: '#10b981', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          ✂️ Crop
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => handleSelectFileForCropper(e.target.files[0], imgKey)}
+                          />
+                        </label>
+
+                        {/* Direct Upload Button */}
+                        <label style={{ background: '#64748b', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          📁 File
                           <input
                             type="file"
                             accept="image/*"
@@ -1319,6 +1558,12 @@ export default function AdminCompetitivePage() {
                           />
                         </label>
                       </div>
+
+                      {questionFormData[imgKey] && (
+                        <div style={{ marginTop: '6px' }}>
+                          <img src={questionFormData[imgKey]} alt={`Option ${letter}`} style={{ maxHeight: '50px', borderRadius: '4px' }} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1409,6 +1654,21 @@ export default function AdminCompetitivePage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* INTERACTIVE IMAGE CROPPER MODAL */}
+      {cropperState.isOpen && (
+        <ImageCropperModal
+          imageSrc={cropperState.imageSrc}
+          onClose={() => setCropperState({ isOpen: false, imageSrc: null, targetField: null })}
+          onCropComplete={(r2Url) => {
+            setQuestionFormData(prev => ({
+              ...prev,
+              [cropperState.targetField]: r2Url
+            }));
+            setCropperState({ isOpen: false, imageSrc: null, targetField: null });
+          }}
+        />
       )}
 
       {/* BATCH PARSE JSON & RAW TEXT IMPORT MODAL */}
