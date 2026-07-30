@@ -342,52 +342,70 @@ export default function FullMockTestPage({ params }) {
             {parseMathAndText(currentQ.questionText || 'Question prompt')}
           </div>
 
-          {/* Options List */}
-          <div style={{ display: 'grid', gap: '14px', marginBottom: '32px' }}>
-            {['A', 'B', 'C', 'D'].map(letter => {
-              const optText = currentQ.options ? currentQ.options[letter] : null;
-              if (!optText) return null;
-              const isSelected = userAnswers[currentQNum] === letter;
+          {/* Determine if options fit nicely in a 2x2 Grid */}
+          {(() => {
+            const isShortOptions = ['A', 'B', 'C', 'D'].every(l => {
+              const txt = currentQ.options ? currentQ.options[l] : '';
+              if (!txt) return true;
+              if (txt.includes('<svg')) return true;
+              return String(txt).length < 55;
+            });
+            const use2ColGrid = isShortOptions || currentQ.section === 'mat' || currentQ.section === 'arithmetic';
 
-              return (
-                <div
-                  key={letter}
-                  className="mock-opt-btn"
-                  onClick={() => handleSelectOption(letter)}
-                  style={{
-                    padding: '16px 20px',
-                    borderRadius: '12px',
-                    border: `2px solid ${isSelected ? '#6366f1' : '#e2e8f0'}`,
-                    background: isSelected ? '#eef2ff' : '#fff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: isSelected ? '#6366f1' : '#f1f5f9',
-                    color: isSelected ? '#fff' : '#475569',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    flexShrink: 0
-                  }}>
-                    {letter}
-                  </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 500, color: isSelected ? '#1e1b4b' : '#334155' }}>
-                    {parseMathAndText(optText)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            return (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: use2ColGrid ? 'repeat(2, 1fr)' : '1fr',
+                gap: '12px',
+                marginBottom: '28px'
+              }}>
+                {['A', 'B', 'C', 'D'].map(letter => {
+                  const optText = currentQ.options ? currentQ.options[letter] : null;
+                  if (!optText) return null;
+                  const isSelected = userAnswers[currentQNum] === letter;
+
+                  return (
+                    <div
+                      key={letter}
+                      className="mock-opt-btn"
+                      onClick={() => handleSelectOption(letter)}
+                      style={{
+                        padding: optText.includes('<svg') ? '8px 12px' : '12px 16px',
+                        borderRadius: '12px',
+                        border: `2px solid ${isSelected ? '#6366f1' : '#e2e8f0'}`,
+                        background: isSelected ? '#eef2ff' : '#fff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none'
+                      }}
+                    >
+                      <div style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        background: isSelected ? '#6366f1' : '#f1f5f9',
+                        color: isSelected ? '#fff' : '#475569',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 800,
+                        fontSize: '0.88rem',
+                        flexShrink: 0
+                      }}>
+                        {letter}
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
+                        {parseMathAndText(optText)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Navigation Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
