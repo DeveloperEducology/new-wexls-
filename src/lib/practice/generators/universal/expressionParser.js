@@ -206,7 +206,16 @@ export function resolveExpression(expr, context) {
 
   let cleanedExpr = String(expr).replace(/\^/g, '**');
   if (cleanedExpr.includes('[') && cleanedExpr.includes(']')) {
-    // Replace [varName] placeholders with context values, including array indexing like [8,12,15][index]
+    // 1. Preserve brackets for array indexing like ["a","b"][index] -> ["a","b"][1]
+    cleanedExpr = cleanedExpr.replace(/(\]|(?:\)\s*))\[([A-Za-z_][A-Za-z0-9_]*)\]/g, (match, prefix, name) => {
+      const trimmed = name.trim();
+      if (context && context[trimmed] !== undefined) {
+        return `${prefix}[${context[trimmed]}]`;
+      }
+      return match;
+    });
+
+    // 2. Replace standalone [varName] placeholders with context values
     cleanedExpr = cleanedExpr.replace(/\[([A-Za-z_][A-Za-z0-9_]*)\]/g, (match, name) => {
       const trimmed = name.trim();
       if (context && context[trimmed] !== undefined) {
