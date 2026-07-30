@@ -18,10 +18,34 @@ export default function AdminCompetitivePage() {
   const loadSpreadsheets = async () => {
     setLoadingTemplates(true);
     try {
-      const res = await fetch('/api/templates/list');
+      const res = await fetch('/api/admin/templates');
       const data = await res.json();
       if (data.success) {
-        setTemplates(data.templates || []);
+        let allList = [];
+        if (Array.isArray(data.dynamicTemplates)) {
+          allList.push(...data.dynamicTemplates);
+        }
+        if (Array.isArray(data.templates)) {
+          allList.push(...data.templates);
+        } else if (data.templates && typeof data.templates === 'object') {
+          Object.values(data.templates).forEach(val => {
+            if (Array.isArray(val)) allList.push(...val);
+            else if (val && typeof val === 'object') allList.push(val);
+          });
+        }
+
+        // Deduplicate by ID
+        const seen = new Set();
+        const deduped = [];
+        allList.forEach(t => {
+          const id = String(t.id || t._id);
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            deduped.push(t);
+          }
+        });
+
+        setTemplates(deduped);
       }
     } catch (err) {
       console.error('Failed to load spreadsheets:', err);
@@ -45,6 +69,10 @@ export default function AdminCompetitivePage() {
       setLoadingQuestions(false);
     }
   };
+
+  useEffect(() => {
+    loadSpreadsheets();
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'spreadsheets') loadSpreadsheets();
