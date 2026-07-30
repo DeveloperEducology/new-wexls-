@@ -31,7 +31,23 @@ export async function GET(request) {
     };
 
     let evaluatedAnswers = report.evaluatedAnswers || [];
-    const questions = session.questions || [];
+    let questions = session.questions || [];
+
+    if ((!questions || questions.length === 0) && (!evaluatedAnswers || evaluatedAnswers.length === 0)) {
+      const db = await getMongoDb();
+      if (db) {
+        const tId = session.templateId || '2020-jnvst-official-pyq-template';
+        let template = await db.collection('dynamic_templates').findOne({ id: tId });
+        if (!template) template = await db.collection('mock_tests').findOne({ id: tId });
+        if (!template) template = await db.collection('templates').findOne({ id: tId });
+
+        if (template && (template.rows || template.questions)) {
+          questions = template.rows || template.questions;
+        } else {
+          questions = await db.collection('questions').find({ status: { $ne: 'inactive' } }).sort({ qNumber: 1 }).limit(80).toArray();
+        }
+      }
+    }
 
     // Reconstruct evaluatedAnswers dynamically if missing question text or empty
     if ((!evaluatedAnswers || evaluatedAnswers.length === 0 || !evaluatedAnswers[0]?.questionText) && questions.length > 0) {

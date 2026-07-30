@@ -203,16 +203,23 @@ export async function POST(req) {
       timeLimitSeconds: 7200 // 2 Hours (120 Minutes)
     });
 
-    // Store assembled questions array in session document
-    await db.collection('sessions').updateOne(
+    // Store assembled questions array in test_sessions document
+    await db.collection('test_sessions').updateOne(
       { _id: session._id },
       {
         $set: {
+          templateId: targetSpreadsheetId || '2020-jnvst-official-pyq-template',
           questions: all80Questions.map(q => ({
             id: String(q._id || q.id),
             qNumber: q.qNumber,
             section: q.section,
+            sectionName: q.sectionName,
+            questionText: q.questionText || '',
+            questionImage: q.questionImage || q.imageUrl || '',
+            options: q.options || { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD },
+            optionsImages: q.optionsImages || {},
             correctOption: q.correctOption || q.answer || 'A',
+            explanationText: q.explanationText || q.explanation || '',
             difficulty: q.difficulty || 0.5
           })),
           timeLimitSeconds: 7200,
