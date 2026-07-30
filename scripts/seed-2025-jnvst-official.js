@@ -12,18 +12,41 @@ async function createOfficialJNVST2025Spreadsheet() {
   // SECTION I: MENTAL ABILITY TEST (Q1 - Q40)
   // ==========================================
   
+  // Helper functions to generate exact vector SVG figures matching exam booklet
+  function makeQ1Svg(type) {
+    let inner = '';
+    if (type === 'A') inner = `<line x1="20" y1="20" x2="80" y2="80" stroke="#000" stroke-width="2.5"/><line x1="50" y1="50" x2="62" y2="38" stroke="#000" stroke-width="2.5"/>`;
+    else if (type === 'B') inner = `<line x1="20" y1="80" x2="80" y2="20" stroke="#000" stroke-width="2.5"/><line x1="50" y1="80" x2="50" y2="92" stroke="#000" stroke-width="2.5"/>`;
+    else if (type === 'C') inner = `<line x1="20" y1="20" x2="80" y2="80" stroke="#000" stroke-width="2.5"/><line x1="80" y1="50" x2="92" y2="50" stroke="#000" stroke-width="2.5"/>`;
+    else if (type === 'D') inner = `<line x1="20" y1="80" x2="80" y2="20" stroke="#000" stroke-width="2.5"/><line x1="20" y1="50" x2="8" y2="50" stroke="#000" stroke-width="2.5"/>`;
+    return `<svg width="110" height="110" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="none" stroke="#000" stroke-width="3"/>${inner}</svg>`;
+  }
+
+  function makeQ2Svg(letters) {
+    return `<svg width="110" height="110" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="none" stroke="#000" stroke-width="3"/><text x="50" y="60" font-size="28" font-family="sans-serif" font-weight="900" text-anchor="middle" letter-spacing="2">${letters}</text></svg>`;
+  }
+
+  function makeQ3Svg(type) {
+    let inner = '';
+    if (type === 'A') inner = `<polygon points="20,20 20,80 80,80" fill="none" stroke="#000" stroke-width="2.5"/><rect x="20" y="70" width="10" height="10" fill="none" stroke="#000" stroke-width="1.5"/>`;
+    else if (type === 'B') inner = `<polygon points="20,20 80,20 50,80" fill="none" stroke="#000" stroke-width="2.5"/><path d="M45,70 A10,10 0 0,0 55,70" fill="none" stroke="#000" stroke-width="1.5"/>`;
+    else if (type === 'C') inner = `<polygon points="20,80 80,80 80,20" fill="none" stroke="#000" stroke-width="2.5"/><rect x="70" y="70" width="10" height="10" fill="none" stroke="#000" stroke-width="1.5"/>`;
+    else if (type === 'D') inner = `<polygon points="20,80 20,20 80,20" fill="none" stroke="#000" stroke-width="2.5"/><rect x="20" y="20" width="10" height="10" fill="none" stroke="#000" stroke-width="1.5"/>`;
+    return `<svg width="110" height="110" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="none" stroke="#000" stroke-width="3"/>${inner}</svg>`;
+  }
+
   // Part I: Odd One Out (Q1 - Q4)
   rows.push({
     _id: "jnvst2025_q1",
     section: "mat",
     sectionName: "Mental Ability (MAT)",
     questionText: "Part I (Odd One Out): Select the figure which is different from the other three.",
-    optionA: "Figure A (Cross line inside square)",
-    optionB: "Figure B (Cross line with bottom stroke)",
-    optionC: "Figure C (Corner line cut)",
-    optionD: "Figure D (Diagonal line corner)",
+    optionA: makeQ1Svg('A'),
+    optionB: makeQ1Svg('B'),
+    optionC: makeQ1Svg('C'),
+    optionD: makeQ1Svg('D'),
     answer: "B",
-    explanation: "Figure B contains an extra intersecting bottom stroke not present in the others."
+    explanation: "Figure B contains an extra intersecting bottom stroke extending outside the frame."
   });
 
   rows.push({
@@ -31,10 +54,10 @@ async function createOfficialJNVST2025Spreadsheet() {
     section: "mat",
     sectionName: "Mental Ability (MAT)",
     questionText: "Part I (Odd One Out): Select the figure/word which is different.",
-    optionA: "KIT",
-    optionB: "TIK",
-    optionC: "ITK",
-    optionD: "IKC",
+    optionA: makeQ2Svg('KIT'),
+    optionB: makeQ2Svg('TIK'),
+    optionC: makeQ2Svg('ITK'),
+    optionD: makeQ2Svg('IKC'),
     answer: "D",
     explanation: "KIT, TIK, and ITK all contain the letters {K, I, T}. IKC contains letter C which is different."
   });
@@ -44,12 +67,12 @@ async function createOfficialJNVST2025Spreadsheet() {
     section: "mat",
     sectionName: "Mental Ability (MAT)",
     questionText: "Part I (Odd One Out): Select the triangle figure which is different.",
-    optionA: "Right triangle (bottom-left corner angle)",
-    optionB: "Inverted isosceles triangle (vertex angle)",
-    optionC: "Right triangle (bottom-right corner angle)",
-    optionD: "Right triangle (top-left corner angle)",
+    optionA: makeQ3Svg('A'),
+    optionB: makeQ3Svg('B'),
+    optionC: makeQ3Svg('C'),
+    optionD: makeQ3Svg('D'),
     answer: "B",
-    explanation: "Figures A, C, D are right-angled triangles with a 90° square symbol. Figure B is an acute triangle."
+    explanation: "Figures A, C, and D are right-angled triangles marked with a 90° square symbol. Figure B is an acute isosceles triangle."
   });
 
   rows.push({
