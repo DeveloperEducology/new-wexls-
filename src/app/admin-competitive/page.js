@@ -284,9 +284,19 @@ export default function AdminCompetitivePage() {
       const trimmed = batchRawText.trim();
 
       if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-        // Parse JSON
-        const parsed = JSON.parse(trimmed);
-        questionsToImport = Array.isArray(parsed) ? parsed : [parsed];
+        // Parse JSON with resilient JS object fallback
+        try {
+          const parsed = JSON.parse(trimmed);
+          questionsToImport = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (jsonErr) {
+          try {
+            const relaxedFn = new Function(`return ${trimmed}`);
+            const parsed = relaxedFn();
+            questionsToImport = Array.isArray(parsed) ? parsed : [parsed];
+          } catch (e2) {
+            throw new Error(`JSON Syntax Error: ${jsonErr.message}`);
+          }
+        }
       } else {
         // Parse Raw Formatted Text (Question blocks)
         const blocks = trimmed.split(/\n\s*\n/);
