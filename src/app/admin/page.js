@@ -2136,18 +2136,25 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       setImgPickerOpen(false);
       setIsDirty(true);
     } else if (imgPickerHotspotId !== null) {
-      const updated = hotspots.map(h => {
-        if (h.id === imgPickerHotspotId) {
-          const newLabel = (!h.label || h.label.startsWith('Hotspot ') || h.label === '')
-            ? extractLabelFromUrl(url)
-            : h.label;
-          return { ...h, imageUrl: url, label: newLabel };
-        }
-        return h;
-      });
-      syncHotspotsToOptions(updated);
-      setImgPickerHotspotId(null);
-      setImgPickerOpen(false);
+      if (imgPickerHotspotId === 'canvas_bg') {
+        setBackgroundImage(url);
+        setImgPickerHotspotId(null);
+        setImgPickerOpen(false);
+        setIsDirty(true);
+      } else {
+        const updated = hotspots.map(h => {
+          if (h.id === imgPickerHotspotId) {
+            const newLabel = (!h.label || h.label.startsWith('Hotspot ') || h.label === '')
+              ? extractLabelFromUrl(url)
+              : h.label;
+            return { ...h, imageUrl: url, label: newLabel };
+          }
+          return h;
+        });
+        syncHotspotsToOptions(updated);
+        setImgPickerHotspotId(null);
+        setImgPickerOpen(false);
+      }
     } else if (imgPickerOptionIdx !== null) {
       updateOptionImageUrl(imgPickerOptionIdx, url);
       // Auto-fill label when picking image
@@ -11767,18 +11774,38 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
                                 <div className={styles.formGroup} style={{ flex: 1, minWidth: 250 }}>
                                   <label className={styles.filterLabel}>Canvas Background Image URL</label>
-                                  <input
-                                    type="text"
-                                    className={styles.formInput}
-                                    value={backgroundImage || ''}
-                                    onChange={(e) => {
-                                      setBackgroundImage(e.target.value);
-                                      ignoreDirtyChange.current = false;
-                                      setIsDirty(true);
-                                    }}
-                                    placeholder="https://example.com/diagram.png"
-                                    style={{ marginTop: 6 }}
-                                  />
+                                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 }}>
+                                    <input
+                                      type="text"
+                                      className={styles.formInput}
+                                      value={backgroundImage || ''}
+                                      onChange={(e) => {
+                                        setBackgroundImage(e.target.value);
+                                        ignoreDirtyChange.current = false;
+                                        setIsDirty(true);
+                                      }}
+                                      placeholder="https://example.com/diagram.png"
+                                      style={{ margin: 0, flex: 1 }}
+                                    />
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => openImgPickerForHotspot('canvas_bg', 'gallery')}
+                                      title="Browse uploaded images gallery"
+                                      style={{ padding: '6px 12px', fontSize: 12, height: '36px', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
+                                    >
+                                      🖼️ Gallery
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.btnOutline}
+                                      onClick={() => openImgPickerForHotspot('canvas_bg', 'upload')}
+                                      title="Upload new background image"
+                                      style={{ padding: '6px 12px', fontSize: 12, height: '36px', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
+                                    >
+                                      📁 Upload
+                                    </button>
+                                  </div>
                                   {backgroundImage && (
                                     <button
                                       type="button"
