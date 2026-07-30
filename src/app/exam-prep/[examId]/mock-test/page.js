@@ -2,7 +2,54 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import SiteHeader from '../../../../components/layout/SiteHeader';
+
+function parseMathAndText(text) {
+  if (!text) return '';
+  const trimmed = typeof text === 'string' ? text.trim() : '';
+  if (trimmed.startsWith('<svg') || trimmed.startsWith('<div')) {
+    return (
+      <div
+        dangerouslySetInnerHTML={{ __html: text }}
+        style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center', padding: '4px' }}
+      />
+    );
+  }
+  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('\\(') && part.endsWith('\\)')) {
+      const formula = part.slice(2, -2);
+      try {
+        const html = katex.renderToString(formula, { displayMode: false, throwOnError: false });
+        return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch { return <span key={i}>{part}</span>; }
+    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+      const formula = part.slice(2, -2);
+      try {
+        const html = katex.renderToString(formula, { displayMode: true, throwOnError: false });
+        return <div key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch { return <div key={i}>{part}</div>; }
+    } else if (part.startsWith('$$') && part.endsWith('$$')) {
+      const formula = part.slice(2, -2);
+      try {
+        const html = katex.renderToString(formula, { displayMode: true, throwOnError: false });
+        return <div key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch { return <div key={i}>{part}</div>; }
+    } else if (part.startsWith('$') && part.endsWith('$')) {
+      const formula = part.slice(1, -1);
+      try {
+        const html = katex.renderToString(formula, { displayMode: false, throwOnError: false });
+        return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch { return <span key={i}>{part}</span>; }
+    }
+    let processed = part;
+    processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    return <span key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
+  });
+}
 
 export default function FullMockTestPage({ params }) {
   const router = useRouter();
@@ -292,7 +339,7 @@ export default function FullMockTestPage({ params }) {
 
           {/* Question Text */}
           <div style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.6, marginBottom: '28px', color: '#0f172a' }}>
-            {currentQ.questionText || 'Question prompt'}
+            {parseMathAndText(currentQ.questionText || 'Question prompt')}
           </div>
 
           {/* Options List */}
@@ -329,12 +376,13 @@ export default function FullMockTestPage({ params }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 700,
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    flexShrink: 0
                   }}>
                     {letter}
                   </div>
                   <div style={{ fontSize: '1.05rem', fontWeight: 500, color: isSelected ? '#1e1b4b' : '#334155' }}>
-                    {optText}
+                    {parseMathAndText(optText)}
                   </div>
                 </div>
               );
