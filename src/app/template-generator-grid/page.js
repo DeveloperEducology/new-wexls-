@@ -4860,8 +4860,10 @@ export default function SpreadsheetTemplateCreator() {
                 </button>
               </div>
             {(() => {
+              const activeRow = rows[activeRowIndex] || {};
+              const rawQText = activeRow.questionText || activeRow.question || activeRow.Question || activeRow.questionPattern || blueprint || '';
               const evaluatedParts = getEvaluatedParts();
-              if (evaluatedParts) {
+              if (evaluatedParts && evaluatedParts.length > 0 && !activeRow.questionText && !activeRow.question) {
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1.5px solid #e2e8f0' }}>
                     {evaluatedParts.map((part, pIdx) => (
@@ -4877,8 +4879,8 @@ export default function SpreadsheetTemplateCreator() {
               }
 
               return (
-                <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line' }}>
-                  {renderEvaluatedText(blueprint)}
+                <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line', fontWeight: 600 }}>
+                  {renderMathText(getEvaluatedText(rawQText))}
                 </div>
               );
             })()}
@@ -4886,6 +4888,30 @@ export default function SpreadsheetTemplateCreator() {
             {/* Render Custom Question Mode Live Preview Simulator */}
             {(() => {
               const activeRow = rows[activeRowIndex] || {};
+              const rowKeys = Object.keys(activeRow);
+
+              // Resolve Effective Options (handles static optionA, optionB, optionC, optionD or A, B, C, D or Option1...)
+              let effectiveOptions = optionsBinding;
+              const hasStaticOptionCols = rowKeys.some(k => ['optionA', 'optionB', 'optionC', 'optionD', 'A', 'B', 'C', 'D', 'Option1', 'Option2', 'Option3', 'Option4'].includes(k));
+
+              if (hasStaticOptionCols || !optionsBinding || optionsBinding.every(o => !activeRow[o.column])) {
+                const keyA = rowKeys.find(k => ['optionA', 'A', 'Option1'].includes(k));
+                const keyB = rowKeys.find(k => ['optionB', 'B', 'Option2'].includes(k));
+                const keyC = rowKeys.find(k => ['optionC', 'C', 'Option3'].includes(k));
+                const keyD = rowKeys.find(k => ['optionD', 'D', 'Option4'].includes(k));
+
+                const ans = String(activeRow.answer || activeRow.correctOption || activeRow.correct || 'A').toUpperCase().trim();
+
+                const built = [];
+                if (keyA && activeRow[keyA] !== undefined) built.push({ column: keyA, label: 'A', isCorrect: ans === 'A' || ans === '1' || ans === String(activeRow[keyA]).toUpperCase().trim() });
+                if (keyB && activeRow[keyB] !== undefined) built.push({ column: keyB, label: 'B', isCorrect: ans === 'B' || ans === '2' || ans === String(activeRow[keyB]).toUpperCase().trim() });
+                if (keyC && activeRow[keyC] !== undefined) built.push({ column: keyC, label: 'C', isCorrect: ans === 'C' || ans === '3' || ans === String(activeRow[keyC]).toUpperCase().trim() });
+                if (keyD && activeRow[keyD] !== undefined) built.push({ column: keyD, label: 'D', isCorrect: ans === 'D' || ans === '4' || ans === String(activeRow[keyD]).toUpperCase().trim() });
+
+                if (built.length > 0) {
+                  effectiveOptions = built;
+                }
+              }
 
               // 1. MSQ (Multi-Select Question)
               if (questionMode === 'msq') {
@@ -4894,8 +4920,9 @@ export default function SpreadsheetTemplateCreator() {
                     <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', marginBottom: '4px' }}>
                       ☑️ Multi-Select Checkboxes (Select All Correct)
                     </div>
-                    {optionsBinding.map((opt, idx) => {
-                      const cellVal = activeRow[opt.column] || `{{${opt.column || '?'}}}`;
+                    {effectiveOptions.map((opt, idx) => {
+                      const rawCell = activeRow[opt.column];
+                      const cellVal = rawCell !== undefined ? getEvaluatedText(rawCell) : `{{${opt.column || '?'}}}`;
                       const imageVal = opt.imageColumn ? activeRow[opt.imageColumn] : null;
                       return (
                         <div key={idx} style={{
@@ -5133,14 +5160,15 @@ export default function SpreadsheetTemplateCreator() {
               // 8. Default MCQ (Single Choice Multiple Choice)
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
-                  {optionsBinding.map((opt, idx) => {
-                    const cellVal = activeRow[opt.column] || `{{${opt.column || 'Select Column'}}}`;
+                  {effectiveOptions.map((opt, idx) => {
+                    const rawCell = activeRow[opt.column];
+                    const cellVal = rawCell !== undefined ? renderMathText(getEvaluatedText(rawCell)) : `{{${opt.column || 'Select Column'}}}`;
                     const imageVal = opt.imageColumn ? activeRow[opt.imageColumn] : null;
                     const audioVal = opt.audioColumn ? activeRow[opt.audioColumn] : null;
                     return (
                       <div key={idx} style={{
-                        background: '#f8fafc',
-                        border: opt.isCorrect ? '2px solid rgba(16, 185, 129, 0.4)' : '1.5px solid #cbd5e1',
+                        background: opt.isCorrect ? '#f0fdf4' : '#f8fafc',
+                        border: opt.isCorrect ? '2px solid #10b981' : '1.5px solid #cbd5e1',
                         padding: '12px 16px',
                         borderRadius: '10px',
                         fontSize: '0.88rem',
