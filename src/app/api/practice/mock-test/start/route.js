@@ -7,7 +7,7 @@ import { getMockTestById } from '../../../../../lib/exam/test-series-store.js';
 
 export async function POST(req) {
   try {
-    const { examId = 'jnvst', mockTestId = null, userId: providedUserId = 'guest_child' } = await req.json();
+    const { examId = 'jnvst', mockTestId = null, templateId = null, spreadsheetId = null, userId: providedUserId = 'guest_child' } = await req.json();
     const userId = resolveUserId(req, providedUserId);
 
     const db = await getMongoDb();
@@ -91,7 +91,54 @@ export async function POST(req) {
 
     let all80Questions = [];
 
-    if (savedMockTest && Array.isArray(savedMockTest.questionIds) && savedMockTest.questionIds.length > 0) {
+    const targetSpreadsheetId = templateId || spreadsheetId || mockTestId;
+    if (targetSpreadsheetId) {
+      let sheetDoc = await db.collection('templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
+      if (!sheetDoc) {
+        sheetDoc = await db.collection('dynamic_templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
+      }
+      if (!sheetDoc) {
+        sheetDoc = await db.collection('mock_tests').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
+      }
+
+      if (sheetDoc && Array.isArray(sheetDoc.rows) && sheetDoc.rows.length > 0) {
+        all80Questions = sheetDoc.rows.map((row, idx) => {
+          const qNum = idx + 1;
+          const sec = row.section || (qNum <= 40 ? 'mat' : (qNum <= 60 ? 'arithmetic' : 'language'));
+          const secName = row.sectionName || (sec === 'mat' ? 'Mental Ability (MAT)' : (sec === 'arithmetic' ? 'Arithmetic Test' : 'Language Test'));
+
+          const text = row.questionText || row.question || row.Question || row.questionPattern || row.blueprint || `Question #${qNum}`;
+          
+          const optA = row.optionA || row.A || row.Option1 || row.Distractor1 || '';
+          const optB = row.optionB || row.B || row.Option2 || row.Distractor2 || '';
+          const optC = row.optionC || row.C || row.Option3 || row.Distractor3 || '';
+          const optD = row.optionD || row.D || row.Option4 || row.Result || '';
+
+          const ans = row.answer || row.correctOption || row.correct || 'A';
+          const exp = row.explanationText || row.explanation || row.Solution || '';
+
+          return {
+            qNumber: qNum,
+            id: row._id || row.id || `${targetSpreadsheetId}_row_${qNum}`,
+            examId,
+            section: sec,
+            sectionName: secName,
+            questionText: text,
+            parts: [{ type: 'text', content: text }],
+            options: {
+              A: String(optA),
+              B: String(optB),
+              C: String(optC),
+              D: String(optD)
+            },
+            answer: String(ans),
+            explanationText: String(exp)
+          };
+        });
+      }
+    }
+
+    if (all80Questions.length === 0 && savedMockTest && Array.isArray(savedMockTest.questionIds) && savedMockTest.questionIds.length > 0) {
       // Load exact static question list linked to the saved Mock Test
       const qDocs = await db.collection('questions').find({
         $or: [

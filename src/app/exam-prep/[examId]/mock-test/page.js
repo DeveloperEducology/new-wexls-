@@ -27,10 +27,18 @@ export default function FullMockTestPage({ params }) {
   useEffect(() => {
     async function startMockTest() {
       try {
+        let templateId = null;
+        let mockTestId = null;
+        if (typeof window !== 'undefined') {
+          const searchParams = new URLSearchParams(window.location.search);
+          templateId = searchParams.get('templateId') || searchParams.get('spreadsheetId') || searchParams.get('id');
+          mockTestId = searchParams.get('mockTestId');
+        }
+
         const res = await fetch('/api/practice/mock-test/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ examId, userId: 'guest_child' })
+          body: JSON.stringify({ examId, templateId, mockTestId, userId: 'guest_child' })
         });
         const data = await res.json();
         if (data.success) {
