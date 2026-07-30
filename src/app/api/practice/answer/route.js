@@ -114,8 +114,11 @@ function sanitizeQuestion(q) {
   return {
     id: String(q._id),
     questionText: q.questionText,
-    questionImageUrl: q.questionImageUrl || null,
+    questionImageUrl: q.questionImageUrl || q.questionImage || null,
+    questionImageCrop: q.questionImageCrop || null,
     options: q.options,
+    optionsImages: q.optionsImages || {},
+    optionsImagesCrops: q.optionsImagesCrops || {},
     topic: q.topic,
     difficulty: q.difficulty,
     section: q.section,

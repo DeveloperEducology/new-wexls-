@@ -8,6 +8,7 @@ import { speakText } from '@/lib/ttsClient';
 import { resolveToolSvg } from '@/lib/practice/svgTools';
 import InteractiveToolWrapper from './InteractiveToolWrapper';
 import { parseHTMLToJSX } from '@/lib/practice/htmlParser';
+import FramedImage from '@/components/common/FramedImage';
 
 const getSafeString = (val) => {
   if (!val) return '';
@@ -875,16 +876,13 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   const hasPercent = (val) => typeof val === 'string' && val.includes('%');
   const parsedMaxWidth = partMaxWidth && !hasPercent(partMaxWidth) ? toPixelNumber(partMaxWidth) : undefined;
 
-  const defaultMax = 360;
-  const hasExplicitWidth = rawCommonImageWidth && rawCommonImageWidth !== 180;
-  const specifiedMax = Math.max(
-    hasExplicitWidth ? toPixelNumber(rawCommonImageWidth) : 0, 
-    parsedMaxWidth || 0
-  );
-  const rawCommonNumeric = rawCommonImageWidth ? toPixelNumber(rawCommonImageWidth) : 0;
-  const commonImageWidth = isPreK
-    ? (rawCommonNumeric || Math.max(specifiedMax || defaultMax, 260))
-    : (rawCommonNumeric || specifiedMax || rawCommonImageWidth);
+  const explicitCommonNumeric = rawCommonImageWidth ? toPixelNumber(rawCommonImageWidth) : 0;
+  const specifiedMax = Math.max(explicitCommonNumeric, parsedMaxWidth || 0);
+  const commonImageWidth = (part.rowImage && explicitCommonNumeric > 0)
+    ? explicitCommonNumeric
+    : (isPreK
+        ? (explicitCommonNumeric || Math.max(specifiedMax || defaultMax, 260))
+        : (explicitCommonNumeric || specifiedMax || rawCommonImageWidth));
   const isFixedWidth = !!commonImageWidth;
   const minImageWidth = isPreK ? (part.rowImage ? 72 : 180) : 100;
   const preferredViewportWidth = isPreK ? (part.rowImage ? 24 : 70) : 42;
@@ -950,36 +948,53 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         display: 'flex', 
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: isTransparent ? 'transparent' : '#ffffff',
-        borderRadius: isTransparent ? undefined : 20,
-        border: isTransparent ? 'none' : cardBorder,
-        boxShadow: isTransparent ? 'none' : cardShadow,
-        padding: isTransparent ? '0' : '12px',
+        backgroundColor: 'transparent',
+        borderRadius: 14,
+        border: 'none',
+        boxShadow: 'none',
+        padding: 0,
         boxSizing: 'border-box',
-        aspectRatio: isTransparent ? 'auto' : (part.style?.height ? 'auto' : '1.15 / 1'),
+        aspectRatio: (part.cropWindow || isTransparent || part.style?.height) ? 'auto' : '1.15 / 1',
         maxHeight: part.maxHeight ? (typeof part.maxHeight === 'number' ? `${part.maxHeight}px` : part.maxHeight) : undefined,
         transition: 'border 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
         ...(part.style?.height ? { height: part.style.height } : {}),
       }}
     >
-      <img
-        src={src}
-        alt={part.alt || ''}
-        style={{
-          width: '100%',
-          height: part.style?.height ? '100%' : 'auto',
-          maxHeight: '100%',
-          objectFit: part.style?.objectFit || 'contain',
-          borderRadius: isTransparent ? undefined : 14,
-          transition: 'transform 0.2s ease, filter 0.2s ease',
-          filter: (part.transparent && isSelected)
-            ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
-            : 'none',
-          ...(part.style || {}),
-        }}
-        onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
-        onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
-      />
+      {part.cropWindow ? (
+        <FramedImage
+          src={src}
+          cropWindow={part.cropWindow}
+          alt={part.alt || ''}
+          style={{
+            width: '100%',
+            height: 'auto',
+            borderRadius: isTransparent ? undefined : 14,
+            filter: (part.transparent && isSelected)
+              ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
+              : 'none',
+            ...(part.style || {}),
+          }}
+        />
+      ) : (
+        <img
+          src={src}
+          alt={part.alt || ''}
+          style={{
+            width: '100%',
+            height: part.style?.height ? '100%' : 'auto',
+            maxHeight: '100%',
+            objectFit: part.style?.objectFit || 'contain',
+            borderRadius: isTransparent ? undefined : 14,
+            transition: 'transform 0.2s ease, filter 0.2s ease',
+            filter: (part.transparent && isSelected)
+              ? 'drop-shadow(3px 0 0 #22c55e) drop-shadow(-3px 0 0 #22c55e) drop-shadow(0 3px 0 #22c55e) drop-shadow(0 -3px 0 #22c55e) drop-shadow(0 0 12px rgba(34, 197, 94, 0.45))'
+              : 'none',
+            ...(part.style || {}),
+          }}
+          onMouseEnter={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1.04)'; }}
+          onMouseLeave={(e) => { if (canPlaySound && !isDirectSelect) e.currentTarget.style.transform = 'scale(1)'; }}
+        />
+      )}
       {showSpeakerOnCard && (
         <div
           onClick={(e) => {
@@ -1036,6 +1051,10 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
     </div>
   );
 
+  const outerCardStyle = { ...(part.style || {}) };
+  delete outerCardStyle.maxWidth;
+  delete outerCardStyle.height;
+
   return (
     <div
       onClick={handleImageClick}
@@ -1062,10 +1081,16 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
         justifyContent: isPreK ? 'flex-start' : 'center',
         cursor: (isDirectSelect && !isAnswered) ? 'pointer' : (canPlaySound ? 'pointer' : 'default'),
         position: 'relative',
+        borderRadius: '20px',
+        border: cardBorder,
+        boxShadow: cardShadow,
+        padding: '6px',
+        background: '#ffffff',
+        boxSizing: 'border-box',
         margin: isPreK ? '0 auto' : undefined,
-        transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
         transform: cardTransform,
-        ...(part.style || {}),
+        ...outerCardStyle,
         ...(isPreK ? { flex: part.rowImage && part.rowImageMode !== 'scroll' ? 'initial' : '0 0 auto', height: 'auto', minHeight: 'auto' } : {}),
       }}
     >

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from 'react';
 import styles from './admin.module.css';
 import QuestionRenderer from '@/components/practice/QuestionRenderer';
+import ImageFramingModal from '@/components/admin/ImageFramingModal';
+import FramedImage from '@/components/common/FramedImage';
 import { isAnswerCorrect } from '@/lib/practice/answerValidation';
 import { speakText, stopAllSpeech } from '@/lib/ttsClient';
 
@@ -1828,6 +1830,10 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
   const [activePreviewDevice, setActivePreviewDevice] = useState('desktop');
   const [layouts, setLayouts] = useState({ desktop: null, mobile: null });
 
+  // Visual Image Masking / Framing Modal state
+  const [framingModalOpen, setFramingModalOpen] = useState(false);
+  const [framingTarget, setFramingTarget] = useState(null); // { type: 'hotspot' | 'option', id, imageUrl, initialCrop }
+
   // Shadow Match states
   const [shadowStickers, setShadowStickers] = useState([]);
   const [shadowTargets, setShadowTargets] = useState([]);
@@ -2030,6 +2036,27 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
     setImgPickerOpen(true);
     // auto-load gallery
     fetchImgPickerGallery('images');
+  };
+
+  const openFramingModal = (target) => {
+    setFramingTarget(target);
+    setFramingModalOpen(true);
+  };
+
+  const handleSaveFraming = (cropWindow) => {
+    if (!framingTarget) return;
+
+    if (framingTarget.type === 'hotspot') {
+      const updated = hotspots.map(h => h.id === framingTarget.id ? { ...h, cropWindow } : h);
+      syncHotspotsToOptions(updated);
+    } else if (framingTarget.type === 'part' && framingTarget.realIdx !== undefined) {
+      handleUpdatePartFields(framingTarget.realIdx, { cropWindow });
+    }
+
+    setFramingModalOpen(false);
+    setFramingTarget(null);
+    ignoreDirtyChange.current = false;
+    setIsDirty(true);
   };
 
   const openAudioGalleryForOption = (optionIdx) => {
@@ -10177,16 +10204,39 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                                               />
                                             </div>
                                           </div>
-                                          {/* Image preview strip */}
+                                          {/* Image preview strip + Mask Framing Button */}
                                           {(part.imageUrl || part.src || part.content) && !isInlineSvg(part.imageUrl || part.src || part.content) && (
-                                            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                              <img
-                                                src={part.imageUrl || part.src || part.content}
-                                                alt="preview"
-                                                style={{ height: 52, maxWidth: 90, objectFit: 'contain', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
-                                                onError={e => { e.target.style.display = 'none'; }}
-                                              />
-                                              <span style={{ fontSize: 10, color: '#64748b', wordBreak: 'break-all' }}>{part.imageUrl || part.src || part.content}</span>
+                                            <div style={{ marginTop: 8, padding: 8, background: '#f8fafc', borderRadius: 8, border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+                                                <div style={{ width: 56, height: 56, flexShrink: 0 }}>
+                                                  <FramedImage src={part.imageUrl || part.src || part.content} cropWindow={part.cropWindow} alt="Option Part Preview" />
+                                                </div>
+                                                <div style={{ fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                  {part.cropWindow ? (
+                                                    <span style={{ color: '#0284c7', fontWeight: 700, display: 'block' }}>
+                                                      Custom Mask Frame ({part.cropWindow.width}% × {part.cropWindow.height}%)
+                                                    </span>
+                                                  ) : (
+                                                    <span style={{ display: 'block' }}>Original Image</span>
+                                                  )}
+                                                  <span style={{ fontSize: 10, opacity: 0.8, wordBreak: 'break-all' }}>{part.imageUrl || part.src || part.content}</span>
+                                                </div>
+                                              </div>
+
+                                              <button
+                                                type="button"
+                                                className={styles.btnPrimary}
+                                                onClick={() => openFramingModal({
+                                                  type: 'part',
+                                                  realIdx,
+                                                  imageUrl: part.imageUrl || part.src || part.content,
+                                                  initialCrop: part.cropWindow
+                                                })}
+                                                title="Visually mask / frame a specific region of this image without cropping the original file"
+                                                style={{ padding: '6px 12px', fontSize: 11, height: 32, display: 'flex', alignItems: 'center', gap: 4, background: '#0284c7', borderColor: '#0284c7', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}
+                                              >
+                                                📐 Frame / Mask Image
+                                              </button>
                                             </div>
                                           )}
                                           <div className={styles.formRow} style={{ marginTop: 8, gap: 12, alignItems: 'center' }}>
@@ -19760,6 +19810,16 @@ Explanation: A question must end with a question mark.`}</pre>
         </div>
       </div>
     )}
+
+    {/* VISUAL IMAGE FRAMING / MASKING MODAL */}
+    <ImageFramingModal
+      isOpen={framingModalOpen}
+      imageUrl={framingTarget?.imageUrl}
+      initialCrop={framingTarget?.initialCrop}
+      onClose={() => { setFramingModalOpen(false); setFramingTarget(null); }}
+      onSave={handleSaveFraming}
+    />
+
     {imgPreviewUrl && (
       <div
         role="dialog"

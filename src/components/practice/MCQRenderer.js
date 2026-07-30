@@ -781,20 +781,78 @@ export default function MCQRenderer({
     const middleVisuals = visualParts.filter(p => p && p.position === 'middle');
     const bottomVisuals = visualParts.filter(p => p && p.position !== 'top' && p.position !== 'middle');
     
-    const renderPartElement = (part, idx) => (
-      <PartRenderer
-        key={`vis-${idx}`}
-        part={part}
-        question={question}
-        userAnswer={userAnswer}
-        onAnswer={onAnswer}
-        isAnswered={isAnswered}
-        partIndex={idx}
-      />
-    );
+    const renderVisualGroup = (visualGroupParts, keyPrefix) => {
+      if (!visualGroupParts || visualGroupParts.length === 0) return null;
+      if (visualGroupParts.length === 1 && !question.arrangeImagesRow) {
+        return (
+          <PartRenderer
+            key={`${keyPrefix}-0`}
+            part={{
+              ...visualGroupParts[0],
+              ...(visualGroupParts[0].type === 'image' ? { commonImageWidth: question.commonImageWidth || 180, rowImage: true } : {})
+            }}
+            question={question}
+            userAnswer={userAnswer}
+            onAnswer={onAnswer}
+            isAnswered={isAnswered}
+            partIndex={0}
+          />
+        );
+      }
 
-    const topElements = topVisuals.map((part, idx) => renderPartElement(part, idx));
-    const bottomElements = bottomVisuals.map((part, idx) => renderPartElement(part, idx));
+      const rowMode = question.imageRowMode || question.metadata?.imageRowMode || 'wrap';
+      const rowGap = Number(question.imageRowGap || question.metadata?.imageRowGap || 20);
+      const singleRow = rowMode === 'scroll';
+      const rowCount = visualGroupParts.length;
+      const cardWidth = Number(question.commonImageWidth || question.metadata?.commonImageWidth || 170);
+
+      return (
+        <div
+          key={`image-group-${keyPrefix}`}
+          style={{
+            display: singleRow ? 'flex' : 'grid',
+            flexDirection: singleRow ? 'row' : undefined,
+            flexWrap: singleRow ? 'nowrap' : undefined,
+            gridTemplateColumns: singleRow
+              ? undefined
+              : `repeat(auto-fit, minmax(min(100%, ${rowCount <= 4 ? '130px' : '110px'}), 1fr))`,
+            justifyContent: 'center',
+            justifyItems: 'center',
+            alignItems: 'center',
+            gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
+            width: '100%',
+            maxWidth: singleRow ? 'min(100%, 1160px)' : '100%',
+            margin: '10px 0',
+            overflowX: singleRow ? 'auto' : 'visible',
+            overflowY: 'visible',
+            padding: '2px clamp(16px, 4vw, 44px) 8px',
+            boxSizing: 'border-box',
+          }}
+        >
+          {visualGroupParts.map((part, idx) => (
+            <PartRenderer
+              key={`${keyPrefix}-${idx}`}
+              part={{
+                ...part,
+                rowImage: true,
+                rowImageCount: rowCount,
+                rowImageGap: rowGap,
+                rowImageMode: rowMode,
+                commonImageWidth: cardWidth,
+              }}
+              question={question}
+              userAnswer={userAnswer}
+              onAnswer={onAnswer}
+              isAnswered={isAnswered}
+              partIndex={idx}
+            />
+          ))}
+        </div>
+      );
+    };
+
+    const topElements = renderVisualGroup(topVisuals, 'top');
+    const bottomElements = renderVisualGroup(bottomVisuals, 'bottom');
     const nonVisualElements = nonVisualParts.map((part, idx) => (
       <PartRenderer
         key={`non-vis-${idx}`}
@@ -1061,7 +1119,8 @@ export default function MCQRenderer({
                 style={{ display: 'flex', flexDirection: 'column', alignItems: isPreK ? 'center' : 'flex-start', gap: isPreK ? 4 : 12, width: '100%' }}
               >
               {(() => {
-                if (question.arrangeImagesRow) {
+                const hasMultipleImages = displayParts.filter(p => p.type === 'image').length >= 2;
+                if (question.arrangeImagesRow || hasMultipleImages) {
                   const elements = [];
                   let currentImageRow = [];
 
@@ -1082,12 +1141,13 @@ export default function MCQRenderer({
                             flexWrap: singleRow ? 'nowrap' : undefined,
                             gridTemplateColumns: singleRow
                               ? undefined
-                              : `repeat(${rowCount}, minmax(72px, 1fr))`,
+                              : `repeat(auto-fit, minmax(min(100%, ${rowCount <= 4 ? '130px' : '110px'}), 1fr))`,
                             justifyContent: 'center',
+                            justifyItems: 'center',
                             alignItems: 'center',
                             gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
                             width: '100%',
-                            maxWidth: singleRow ? 'min(100%, 1160px)' : `min(100%, ${rowMaxWidth}px)`,
+                            maxWidth: singleRow ? 'min(100%, 1160px)' : '100%',
                             margin: '10px 0',
                             overflowX: singleRow ? 'auto' : 'visible',
                             overflowY: 'visible',

@@ -567,7 +567,8 @@ export default function FillInTheBlankRenderer({
           ) : null}
 
           {(() => {
-            if (question.arrangeImagesRow) {
+            const hasMultipleImages = displayParts.filter(p => p.type === 'image').length >= 2;
+            if (question.arrangeImagesRow || hasMultipleImages) {
               const elements = [];
               let currentImageRow = [];
 
@@ -588,12 +589,13 @@ export default function FillInTheBlankRenderer({
                         flexWrap: singleRow ? 'nowrap' : undefined,
                         gridTemplateColumns: singleRow
                           ? undefined
-                          : `repeat(${rowCount}, minmax(72px, 1fr))`,
+                          : `repeat(auto-fit, minmax(min(100%, ${rowCount <= 4 ? '130px' : '110px'}), 1fr))`,
                         justifyContent: 'center',
+                        justifyItems: 'center',
                         alignItems: 'center',
                         gap: `clamp(8px, 2vw, ${Math.max(8, rowGap)}px)`,
                         width: '100%',
-                        maxWidth: singleRow ? 'min(100%, 1160px)' : `min(100%, ${rowMaxWidth}px)`,
+                        maxWidth: singleRow ? 'min(100%, 1160px)' : '100%',
                         margin: '10px 0',
                         overflowX: singleRow ? 'auto' : 'visible',
                         overflowY: 'visible',

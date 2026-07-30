@@ -6,6 +6,8 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import SiteHeader from '../../components/layout/SiteHeader';
 import TestSeriesManager from '../../components/admin/TestSeriesManager';
+import ImageFramingModal from '../../components/admin/ImageFramingModal';
+import FramedImage from '../../components/common/FramedImage';
 
 function parseMathAndText(text) {
   if (!text) return '';
@@ -269,6 +271,11 @@ export default function AdminCompetitivePage() {
     optionCImage: '',
     optionD: '',
     optionDImage: '',
+    questionImageCrop: null,
+    optionAImageCrop: null,
+    optionBImageCrop: null,
+    optionCImageCrop: null,
+    optionDImageCrop: null,
     correctOption: 'A',
     explanationText: '',
     isPYQ: true,
@@ -277,6 +284,20 @@ export default function AdminCompetitivePage() {
   });
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [uploadingTarget, setUploadingTarget] = useState(null); // 'questionImage', 'optionAImage', etc.
+
+  // Image Framing / Masking Modal State
+  const [framingModalOpen, setFramingModalOpen] = useState(false);
+  const [framingTarget, setFramingTarget] = useState(null);
+
+  const handleOpenFramingModal = (imageUrl, currentCropWindow, onSaveCrop) => {
+    if (!imageUrl) return;
+    setFramingTarget({
+      imageUrl,
+      cropWindow: currentCropWindow || { x: 0, y: 0, width: 100, height: 100 },
+      onSave: onSaveCrop
+    });
+    setFramingModalOpen(true);
+  };
 
   // Cropper Modal State
   const [cropperState, setCropperState] = useState({
@@ -431,6 +452,7 @@ export default function AdminCompetitivePage() {
     setEditingQuestionId(q._id || q.id);
     const opts = q.options || {};
     const optImgs = q.optionsImages || {};
+    const optCrops = q.optionsImagesCrops || {};
 
     setQuestionFormData({
       examId: q.examId || selectedExamId,
@@ -438,14 +460,19 @@ export default function AdminCompetitivePage() {
       qNumber: q.qNumber || 1,
       questionText: q.questionText || '',
       questionImage: q.questionImage || q.imageUrl || '',
+      questionImageCrop: q.questionImageCrop || q.cropWindow || null,
       optionA: typeof opts === 'object' ? (opts.A || opts.optionA || '') : '',
       optionAImage: optImgs.A || '',
+      optionAImageCrop: optCrops.A || null,
       optionB: typeof opts === 'object' ? (opts.B || opts.optionB || '') : '',
       optionBImage: optImgs.B || '',
+      optionBImageCrop: optCrops.B || null,
       optionC: typeof opts === 'object' ? (opts.C || opts.optionC || '') : '',
       optionCImage: optImgs.C || '',
+      optionCImageCrop: optCrops.C || null,
       optionD: typeof opts === 'object' ? (opts.D || opts.optionD || '') : '',
       optionDImage: optImgs.D || '',
+      optionDImageCrop: optCrops.D || null,
       correctOption: q.correctOption || q.answer || 'A',
       explanationText: q.explanationText || '',
       isPYQ: Boolean(q.isPYQ !== false),
@@ -460,6 +487,7 @@ export default function AdminCompetitivePage() {
     setEditingQuestionId(null);
     const opts = q.options || {};
     const optImgs = q.optionsImages || {};
+    const optCrops = q.optionsImagesCrops || {};
 
     setQuestionFormData({
       examId: q.examId || selectedExamId,
@@ -467,14 +495,19 @@ export default function AdminCompetitivePage() {
       qNumber: questions.length + 1,
       questionText: (q.questionText || '') + ' (Copy)',
       questionImage: q.questionImage || q.imageUrl || '',
+      questionImageCrop: q.questionImageCrop || q.cropWindow || null,
       optionA: typeof opts === 'object' ? (opts.A || opts.optionA || '') : '',
       optionAImage: optImgs.A || '',
+      optionAImageCrop: optCrops.A || null,
       optionB: typeof opts === 'object' ? (opts.B || opts.optionB || '') : '',
       optionBImage: optImgs.B || '',
+      optionBImageCrop: optCrops.B || null,
       optionC: typeof opts === 'object' ? (opts.C || opts.optionC || '') : '',
       optionCImage: optImgs.C || '',
+      optionCImageCrop: optCrops.C || null,
       optionD: typeof opts === 'object' ? (opts.D || opts.optionD || '') : '',
       optionDImage: optImgs.D || '',
+      optionDImageCrop: optCrops.D || null,
       correctOption: q.correctOption || q.answer || 'A',
       explanationText: q.explanationText || '',
       isPYQ: Boolean(q.isPYQ !== false),
@@ -497,17 +530,24 @@ export default function AdminCompetitivePage() {
         qNumber: Number(questionFormData.qNumber),
         questionText: questionFormData.questionText,
         questionImage: questionFormData.questionImage,
+        questionImageCrop: questionFormData.questionImageCrop,
         options: {
-          A: questionFormData.optionA,
-          B: questionFormData.optionB,
-          C: questionFormData.optionC,
-          D: questionFormData.optionD
+          A: questionFormData.optionAImage ? '' : questionFormData.optionA,
+          B: questionFormData.optionBImage ? '' : questionFormData.optionB,
+          C: questionFormData.optionCImage ? '' : questionFormData.optionC,
+          D: questionFormData.optionDImage ? '' : questionFormData.optionD
         },
         optionsImages: {
           A: questionFormData.optionAImage,
           B: questionFormData.optionBImage,
           C: questionFormData.optionCImage,
           D: questionFormData.optionDImage
+        },
+        optionsImagesCrops: {
+          A: questionFormData.optionAImageCrop,
+          B: questionFormData.optionBImageCrop,
+          C: questionFormData.optionCImageCrop,
+          D: questionFormData.optionDImageCrop
         },
         correctOption: questionFormData.correctOption,
         answer: questionFormData.correctOption,
@@ -1340,11 +1380,13 @@ export default function AdminCompetitivePage() {
                           </div>
 
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '14px' }}>
-                            {['A', 'B', 'C', 'D'].map(letter => {
+                          {['A', 'B', 'C', 'D'].map(letter => {
                               const opts = q.options || {};
                               const optImgs = q.optionsImages || {};
+                              const optCrops = q.optionsImagesCrops || {};
                               const val = typeof opts === 'object' ? (opts[letter] || opts[`option${letter}`]) : null;
                               const imgVal = optImgs[letter];
+                              const cropVal = optCrops[letter];
                               if (!val && !imgVal) return null;
                               const isCorrect = (q.correctOption === letter || String(q.answer) === letter);
 
@@ -1362,8 +1404,13 @@ export default function AdminCompetitivePage() {
                                 >
                                   <strong>({letter})</strong> {val ? parseMathAndText(String(val)) : ''}
                                   {imgVal && (
-                                    <div style={{ marginTop: '6px' }}>
-                                      <img src={imgVal} alt={`Option ${letter}`} style={{ maxHeight: '60px', borderRadius: '6px' }} />
+                                    <div style={{ marginTop: '6px', maxWidth: '140px' }}>
+                                      <FramedImage
+                                        src={imgVal}
+                                        cropWindow={cropVal || undefined}
+                                        alt={`Option ${letter}`}
+                                        style={{ width: '100%', borderRadius: '6px' }}
+                                      />
                                     </div>
                                   )}
                                 </div>
@@ -1490,14 +1537,34 @@ export default function AdminCompetitivePage() {
                       onChange={(e) => handleFileUpload(e.target.files[0], 'questionImage')}
                     />
                   </label>
+
+                  {/* Frame / Mask Image Button */}
+                  {questionFormData.questionImage && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenFramingModal(
+                        questionFormData.questionImage,
+                        questionFormData.questionImageCrop,
+                        (newCrop) => setQuestionFormData(prev => ({ ...prev, questionImageCrop: newCrop }))
+                      )}
+                      style={{ background: '#0284c7', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      📐 Frame / Mask Image
+                    </button>
+                  )}
                 </div>
 
                 {questionFormData.questionImage && (
                   <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <img src={questionFormData.questionImage} alt="Question figure preview" style={{ maxHeight: '80px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    {questionFormData.questionImageCrop && (
+                      <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 700, background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>
+                        Framed ({questionFormData.questionImageCrop.width.toFixed(1)}% × {questionFormData.questionImageCrop.height.toFixed(1)}%)
+                      </span>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setQuestionFormData({ ...questionFormData, questionImage: '' })}
+                      onClick={() => setQuestionFormData({ ...questionFormData, questionImage: '', questionImageCrop: null })}
                       style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
                     >
                       Remove
@@ -1511,20 +1578,23 @@ export default function AdminCompetitivePage() {
                 {['A', 'B', 'C', 'D'].map(letter => {
                   const textKey = `option${letter}`;
                   const imgKey = `option${letter}Image`;
+                  const cropKey = `option${letter}ImageCrop`;
+                  const hasImage = Boolean(questionFormData[imgKey]);
 
                   return (
-                    <div key={letter} style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    <div key={letter} style={{ background: hasImage ? '#f0f9ff' : '#f8fafc', padding: '12px', borderRadius: '12px', border: `1px solid ${hasImage ? '#bae6fd' : '#e2e8f0'}` }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                         Option {letter}
+                        {hasImage && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px' }}>Image only — text optional</span>}
                       </label>
 
                       <input
                         type="text"
-                        placeholder={`Option ${letter} Text or <svg>...`}
+                        placeholder={hasImage ? `(optional — image will be used)` : `Option ${letter} Text or <svg>...`}
                         value={questionFormData[textKey]}
                         onChange={(e) => setQuestionFormData({ ...questionFormData, [textKey]: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '6px', fontSize: '0.88rem' }}
-                        required
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '6px', fontSize: '0.88rem', opacity: hasImage ? 0.6 : 1 }}
+                        required={!hasImage}
                       />
 
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -1557,11 +1627,32 @@ export default function AdminCompetitivePage() {
                             onChange={(e) => handleFileUpload(e.target.files[0], imgKey)}
                           />
                         </label>
+
+                        {/* Frame / Mask Button for Option Image */}
+                        {questionFormData[imgKey] && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenFramingModal(
+                              questionFormData[imgKey],
+                              questionFormData[cropKey],
+                              (newCrop) => setQuestionFormData(prev => ({ ...prev, [cropKey]: newCrop }))
+                            )}
+                            style={{ background: '#0284c7', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            title="Frame / Mask option image"
+                          >
+                            📐 Frame
+                          </button>
+                        )}
                       </div>
 
                       {questionFormData[imgKey] && (
-                        <div style={{ marginTop: '6px' }}>
+                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <img src={questionFormData[imgKey]} alt={`Option ${letter}`} style={{ maxHeight: '50px', borderRadius: '4px' }} />
+                          {questionFormData[cropKey] && (
+                            <span style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 700, background: '#e0f2fe', padding: '2px 6px', borderRadius: '4px' }}>
+                              Framed ({questionFormData[cropKey].width.toFixed(1)}% × {questionFormData[cropKey].height.toFixed(1)}%)
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1667,6 +1758,21 @@ export default function AdminCompetitivePage() {
               [cropperState.targetField]: r2Url
             }));
             setCropperState({ isOpen: false, imageSrc: null, targetField: null });
+          }}
+        />
+      )}
+
+      {/* INTERACTIVE IMAGE FRAMING / MASKING MODAL */}
+      {framingModalOpen && framingTarget && (
+        <ImageFramingModal
+          isOpen={framingModalOpen}
+          imageUrl={framingTarget.imageUrl}
+          initialCropWindow={framingTarget.cropWindow}
+          onClose={() => { setFramingModalOpen(false); setFramingTarget(null); }}
+          onSave={(newCrop) => {
+            if (framingTarget.onSave) framingTarget.onSave(newCrop);
+            setFramingModalOpen(false);
+            setFramingTarget(null);
           }}
         />
       )}

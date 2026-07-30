@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import katex from 'katex';
 import SiteHeader from '../../../../../components/layout/SiteHeader';
 import PartRenderer from '../../../../../components/practice/PartRenderer';
+import FramedImage from '../../../../../components/common/FramedImage';
 
 
 function parseMathAndText(text) {
@@ -991,14 +992,14 @@ export default function PracticePlayer({ params: paramsPromise }) {
               })()
             )}
 
-            {/* Question image — shown below question text if provided */}
+            {/* Question image — with optional crop mask via FramedImage */}
             {question.questionImageUrl && (
               <div className="question-image-wrap">
-                <img
+                <FramedImage
                   src={question.questionImageUrl}
+                  cropWindow={question.questionImageCrop || undefined}
                   alt="Question diagram"
-                  className="question-image"
-                  onError={e => { e.currentTarget.style.display = 'none'; }}
+                  style={{ width: '100%', borderRadius: '10px' }}
                 />
               </div>
             )}
@@ -1026,25 +1027,26 @@ export default function PracticePlayer({ params: paramsPromise }) {
                     </button>
                   );
                 }
-                // Image-URL object option
+                // Image-URL object option (legacy)
                 const isImageOption = typeof value === 'object' && value !== null && value.imageUrl;
                 const optText = isImageOption ? value.text : value;
-                const optImgUrl = isImageOption ? value.imageUrl : null;
+                const optImgUrl = isImageOption ? value.imageUrl : ((question.optionsImages || {})[key] || null);
+                const optCrop = (question.optionsImagesCrops || {})[key] || null;
                 return (
                   <button
                     key={key}
-                    className={`option-button ${optClass}${isImageOption ? ' option-button--image' : ''}`}
+                    className={`option-button ${optClass}${optImgUrl ? ' option-button--image' : ''}`}
                     onClick={() => !isAnswered && setSelectedOption(key)}
                     disabled={isAnswered}
                   >
                     <span className="option-letter">{key}</span>
                     <span className="option-content">
                       {optImgUrl && (
-                        <img
+                        <FramedImage
                           src={optImgUrl}
+                          cropWindow={optCrop || undefined}
                           alt={`Option ${key}`}
-                          className="option-image"
-                          onError={e => { e.currentTarget.style.display = 'none'; }}
+                          style={{ width: '100%', borderRadius: '6px' }}
                         />
                       )}
                       {optText && <span>{parseMathAndText(optText)}</span>}

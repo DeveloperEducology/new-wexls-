@@ -12,6 +12,7 @@ export default function DevLinksPage() {
     '/admin/schools',
     '/admin/questions',
     '/admin-v2',
+    '/admin-competitive',
     '/school-admin/dashboard',
   ];
 
