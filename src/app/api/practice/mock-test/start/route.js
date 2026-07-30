@@ -21,43 +21,59 @@ export async function POST(req) {
       savedMockTest = await getMockTestById(mockTestId);
     }
 
-    // Helper to fetch/generate N questions for a given section
-    async function getQuestionsForSection(sec, neededCount) {
-      let questions = await getAdaptiveCandidates({
-        examId,
-        section: sec,
-        theta: 0.5,
-        usedIds: [],
-        limit: neededCount
-      });
+    // Helper to fetch STATIC questions from DB in exact sequential order (No templates)
+    async function getStaticQuestionsForSection(sec, neededCount) {
+      const filter = {
+        status: { $ne: 'inactive' },
+        $or: [
+          { section: sec },
+          { section: sec.toLowerCase() },
+          { examId, section: sec }
+        ]
+      };
+      
+      let staticQuestions = await db.collection('questions')
+        .find(filter)
+        .sort({ qNumber: 1, order: 1, createdAt: 1 })
+        .limit(neededCount)
+        .toArray();
 
-      if (questions.length < neededCount) {
-        // Auto-generate fresh dynamic questions from templates
-        const generated = await generateFromTemplates({ examId, section: sec });
-        if (generated.length > 0) {
-          const existingIds = new Set(questions.map(q => String(q._id || q.id)));
-          for (const g of generated) {
-            if (questions.length >= neededCount) break;
-            const gId = String(g._id || g.id);
-            if (!existingIds.has(gId)) {
-              existingIds.add(gId);
-              questions.push(g);
-            }
+      if (staticQuestions.length < neededCount) {
+        const fallbackFilter = {
+          status: { $ne: 'inactive' },
+          section: { $regex: new RegExp(`^${sec}$`, 'i') }
+        };
+        const extra = await db.collection('questions')
+          .find(fallbackFilter)
+          .sort({ qNumber: 1, order: 1, createdAt: 1 })
+          .limit(neededCount)
+          .toArray();
+
+        const seen = new Set(staticQuestions.map(q => String(q._id || q.id)));
+        for (const q of extra) {
+          const qId = String(q._id || q.id);
+          if (!seen.has(qId)) {
+            seen.add(qId);
+            staticQuestions.push(q);
           }
         }
       }
 
-      // If still needed, fill with fallback instances to guarantee exact question count
-      let seedIndex = 1;
-      while (questions.length < neededCount) {
-        questions.push({
-          _id: `${sec}_mock_q_${seedIndex}_${Date.now()}`,
-          id: `${sec}_mock_q_${seedIndex}_${Date.now()}`,
+      // If static questions exist, return sliced to neededCount
+      if (staticQuestions.length >= neededCount) {
+        return staticQuestions.slice(0, neededCount);
+      }
+
+      // Fill remaining count with static fallback questions orderwise
+      let index = staticQuestions.length + 1;
+      while (staticQuestions.length < neededCount) {
+        staticQuestions.push({
+          _id: `${sec}_static_q_${index}`,
+          id: `${sec}_static_q_${index}`,
           examId,
           section: sec,
-          topic: 'General',
-          difficulty: 0.5,
-          questionText: `${sec.toUpperCase()} Mock Question #${questions.length + 1}: Select the correct option.`,
+          qNumber: index,
+          questionText: `${sec.toUpperCase()} Static Exam Question #${index}`,
           options: {
             A: 'Option A',
             B: 'Option B',
@@ -65,25 +81,56 @@ export async function POST(req) {
             D: 'Option D'
           },
           correctOption: 'A',
-          explanationText: 'Standard solution derived from section syllabus.'
+          explanationText: `Explanation for ${sec.toUpperCase()} Question #${index}`
         });
-        seedIndex++;
+        index++;
       }
 
-      return questions.slice(0, neededCount);
+      return staticQuestions.slice(0, neededCount);
     }
 
-    // 1. Fetch Section Questions (40 MAT, 20 Arithmetic, 20 Language = 80 Total)
-    const matQuestions = await getQuestionsForSection('mat', 40);
-    const arithmeticQuestions = await getQuestionsForSection('arithmetic', 20);
-    const languageQuestions = await getQuestionsForSection('language', 20);
+    let all80Questions = [];
 
-    // 2. Assemble 80 Questions with sequential question index (1 to 80)
-    const all80Questions = [
-      ...matQuestions.map((q, idx) => ({ ...q, qNumber: idx + 1, section: 'mat', sectionName: 'Mental Ability (MAT)' })),
-      ...arithmeticQuestions.map((q, idx) => ({ ...q, qNumber: idx + 41, section: 'arithmetic', sectionName: 'Arithmetic Test' })),
-      ...languageQuestions.map((q, idx) => ({ ...q, qNumber: idx + 61, section: 'language', sectionName: 'Language Test' })),
-    ];
+    if (savedMockTest && Array.isArray(savedMockTest.questionIds) && savedMockTest.questionIds.length > 0) {
+      // Load exact static question list linked to the saved Mock Test
+      const qDocs = await db.collection('questions').find({
+        $or: [
+          { _id: { $in: savedMockTest.questionIds } },
+          { id: { $in: savedMockTest.questionIds } }
+        ]
+      }).toArray();
+
+      const docMap = new Map();
+      qDocs.forEach(d => {
+        docMap.set(String(d._id), d);
+        if (d.id) docMap.set(String(d.id), d);
+      });
+
+      savedMockTest.questionIds.forEach((qId, idx) => {
+        const doc = docMap.get(String(qId));
+        if (doc) {
+          all80Questions.push({
+            ...doc,
+            qNumber: idx + 1,
+            sectionName: doc.section === 'mat' ? 'Mental Ability (MAT)' : (doc.section === 'arithmetic' ? 'Arithmetic Test' : 'Language Test')
+          });
+        }
+      });
+    }
+
+    if (all80Questions.length === 0) {
+      // 1. Fetch Section Questions (40 MAT, 20 Arithmetic, 20 Language = 80 Total) orderwise
+      const matQuestions = await getStaticQuestionsForSection('mat', 40);
+      const arithmeticQuestions = await getStaticQuestionsForSection('arithmetic', 20);
+      const languageQuestions = await getStaticQuestionsForSection('language', 20);
+
+      // 2. Assemble 80 Questions with sequential question index (1 to 80)
+      all80Questions = [
+        ...matQuestions.map((q, idx) => ({ ...q, qNumber: idx + 1, section: 'mat', sectionName: 'Mental Ability (MAT)' })),
+        ...arithmeticQuestions.map((q, idx) => ({ ...q, qNumber: idx + 41, section: 'arithmetic', sectionName: 'Arithmetic Test' })),
+        ...languageQuestions.map((q, idx) => ({ ...q, qNumber: idx + 61, section: 'language', sectionName: 'Language Test' })),
+      ];
+    }
 
     // Sanitize questions for frontend (include options, hide raw answer during exam)
     const sanitizedQuestions = all80Questions.map(q => ({
