@@ -70,10 +70,27 @@ export default function AdminCompetitivePage() {
   const [sectionFilter, setSectionFilter] = useState('all'); // 'all', 'mat', 'arithmetic', 'language'
   const [expandedQuestionId, setExpandedQuestionId] = useState(null);
 
-  // Quick Link Modal State
-  const [linkModalTarget, setLinkModalTarget] = useState(null);
-  const [selectedMockTestForLink, setSelectedMockTestForLink] = useState('');
-  const [linkingStatus, setLinkingStatus] = useState(null);
+  // Question Form Modal State (Create / Edit / Duplicate)
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [editingQuestionId, setEditingQuestionId] = useState(null);
+  const [questionFormData, setQuestionFormData] = useState({
+    examId: 'jnvst',
+    section: 'arithmetic',
+    qNumber: 1,
+    questionText: '',
+    optionA: '',
+    optionB: '',
+    optionC: '',
+    optionD: '',
+    correctOption: 'A',
+    explanationText: ''
+  });
+  const [savingQuestion, setSavingQuestion] = useState(false);
+
+  // Batch JSON & Text Parser Import Modal State
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchRawText, setBatchRawText] = useState('');
+  const [batchParsing, setBatchParsing] = useState(false);
 
   // Fetch Spreadsheets & Templates
   const loadSpreadsheets = async () => {
@@ -138,6 +155,201 @@ export default function AdminCompetitivePage() {
     if (activeTab === 'spreadsheets') loadSpreadsheets();
     if (activeTab === 'question-bank') loadQuestionBank();
   }, [activeTab, selectedExamId]);
+
+  // Open Form to Create New Question
+  const handleOpenCreateQuestion = () => {
+    setEditingQuestionId(null);
+    setQuestionFormData({
+      examId: selectedExamId,
+      section: 'arithmetic',
+      qNumber: questions.length + 1,
+      questionText: '',
+      optionA: '',
+      optionB: '',
+      optionC: '',
+      optionD: '',
+      correctOption: 'A',
+      explanationText: ''
+    });
+    setShowQuestionModal(true);
+  };
+
+  // Open Form to Edit Existing Question
+  const handleEditQuestion = (q) => {
+    setEditingQuestionId(q._id || q.id);
+    const opts = q.options || {};
+    setQuestionFormData({
+      examId: q.examId || selectedExamId,
+      section: q.section || 'arithmetic',
+      qNumber: q.qNumber || 1,
+      questionText: q.questionText || '',
+      optionA: typeof opts === 'object' ? (opts.A || opts.optionA || '') : '',
+      optionB: typeof opts === 'object' ? (opts.B || opts.optionB || '') : '',
+      optionC: typeof opts === 'object' ? (opts.C || opts.optionC || '') : '',
+      optionD: typeof opts === 'object' ? (opts.D || opts.optionD || '') : '',
+      correctOption: q.correctOption || q.answer || 'A',
+      explanationText: q.explanationText || ''
+    });
+    setShowQuestionModal(true);
+  };
+
+  // Open Form to Duplicate Question
+  const handleDuplicateQuestion = (q) => {
+    setEditingQuestionId(null); // Create new
+    const opts = q.options || {};
+    setQuestionFormData({
+      examId: q.examId || selectedExamId,
+      section: q.section || 'arithmetic',
+      qNumber: questions.length + 1,
+      questionText: (q.questionText || '') + ' (Copy)',
+      optionA: typeof opts === 'object' ? (opts.A || opts.optionA || '') : '',
+      optionB: typeof opts === 'object' ? (opts.B || opts.optionB || '') : '',
+      optionC: typeof opts === 'object' ? (opts.C || opts.optionC || '') : '',
+      optionD: typeof opts === 'object' ? (opts.D || opts.optionD || '') : '',
+      correctOption: q.correctOption || q.answer || 'A',
+      explanationText: q.explanationText || ''
+    });
+    setShowQuestionModal(true);
+  };
+
+  // Save Single Question Form (Create / Edit)
+  const handleSaveQuestion = async (e) => {
+    e.preventDefault();
+    setSavingQuestion(true);
+    try {
+      const payload = {
+        _id: editingQuestionId,
+        id: editingQuestionId,
+        examId: questionFormData.examId,
+        section: questionFormData.section,
+        qNumber: Number(questionFormData.qNumber),
+        questionText: questionFormData.questionText,
+        options: {
+          A: questionFormData.optionA,
+          B: questionFormData.optionB,
+          C: questionFormData.optionC,
+          D: questionFormData.optionD
+        },
+        correctOption: questionFormData.correctOption,
+        answer: questionFormData.correctOption,
+        explanationText: questionFormData.explanationText,
+        status: 'active'
+      };
+
+      const res = await fetch('/api/admin/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setShowQuestionModal(false);
+        loadQuestionBank();
+      } else {
+        alert(data.error || 'Failed to save question.');
+      }
+    } catch (err) {
+      console.error('Failed to save question:', err);
+      alert('Error saving question.');
+    } finally {
+      setSavingQuestion(false);
+    }
+  };
+
+  // Delete Question
+  const handleDeleteQuestion = async (qId) => {
+    if (!confirm('Are you sure you want to delete this question?')) return;
+    try {
+      const res = await fetch(`/api/admin/questions?id=${qId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        loadQuestionBank();
+      } else {
+        alert(data.error || 'Failed to delete question.');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Error deleting question.');
+    }
+  };
+
+  // Batch Parse & Import JSON / Raw Text
+  const handleBatchImport = async () => {
+    if (!batchRawText.trim()) return alert('Please paste JSON or text questions.');
+    setBatchParsing(true);
+
+    try {
+      let questionsToImport = [];
+      const trimmed = batchRawText.trim();
+
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        // Parse JSON
+        const parsed = JSON.parse(trimmed);
+        questionsToImport = Array.isArray(parsed) ? parsed : [parsed];
+      } else {
+        // Parse Raw Formatted Text (Question blocks)
+        const blocks = trimmed.split(/\n\s*\n/);
+        blocks.forEach((block, idx) => {
+          const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+          if (lines.length > 0) {
+            const qObj = {
+              examId: selectedExamId,
+              section: 'arithmetic',
+              qNumber: idx + 1,
+              questionText: lines[0],
+              options: {
+                A: lines[1] || 'Option A',
+                B: lines[2] || 'Option B',
+                C: lines[3] || 'Option C',
+                D: lines[4] || 'Option D'
+              },
+              correctOption: 'A',
+              explanationText: ''
+            };
+            questionsToImport.push(qObj);
+          }
+        });
+      }
+
+      if (questionsToImport.length === 0) return alert('No valid questions found to import.');
+
+      // Save each question to DB
+      for (const q of questionsToImport) {
+        const payload = {
+          examId: q.examId || selectedExamId,
+          section: q.section || 'arithmetic',
+          qNumber: Number(q.qNumber || q.qNum || 1),
+          questionText: q.questionText || q.question || '',
+          options: q.options || {
+            A: q.optionA || 'Option A',
+            B: q.optionB || 'Option B',
+            C: q.optionC || 'Option C',
+            D: q.optionD || 'Option D'
+          },
+          correctOption: q.correctOption || q.answer || 'A',
+          explanationText: q.explanationText || q.explanation || '',
+          status: 'active'
+        };
+
+        await fetch('/api/admin/questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      alert(`✅ Successfully imported ${questionsToImport.length} questions!`);
+      setShowBatchModal(false);
+      setBatchRawText('');
+      loadQuestionBank();
+    } catch (err) {
+      console.error('Batch import failed:', err);
+      alert('Failed to parse JSON or text: ' + err.message);
+    } finally {
+      setBatchParsing(false);
+    }
+  };
 
   // Filter templates
   const filteredTemplates = templates.filter(t => {
@@ -208,7 +420,7 @@ export default function AdminCompetitivePage() {
               </Link>
 
               <Link
-                href={`/exam-prep/${selectedExamId}/mock-test?templateId=jnvst-full-mock-spreadsheet`}
+                href={`/exam-prep/${selectedExamId}/mock-test?templateId=2025-jnvst-official-pyq-template`}
                 target="_blank"
                 style={{
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -250,7 +462,7 @@ export default function AdminCompetitivePage() {
 
             <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '14px 18px' }}>
               <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', opacity: 0.75, fontWeight: 700 }}>Orderwise Question Bank</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, marginTop: '2px' }}>{questions.length || 80} Questions</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, marginTop: '2px' }}>{questions.length} Questions</div>
             </div>
 
             <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '14px 18px' }}>
@@ -338,7 +550,7 @@ export default function AdminCompetitivePage() {
               gap: '8px'
             }}
           >
-            🗃️ Static Question Bank (KaTeX Rendered)
+            🗃️ Static Question Bank ({questions.length})
           </button>
         </div>
 
@@ -470,7 +682,7 @@ export default function AdminCompetitivePage() {
                         padding: '20px',
                         display: 'flex',
                         flexDirection: 'column',
-                        justify: 'space-between',
+                        justifyContent: 'space-between',
                         gap: '14px',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
                         transition: 'all 0.2s ease'
@@ -590,40 +802,84 @@ export default function AdminCompetitivePage() {
           </div>
         )}
 
-        {/* Tab 3: Static Question Bank Explorer with KaTeX Rendering & Section Tabs */}
+        {/* Tab 3: Static Question Bank Explorer & Production Management Suite */}
         {activeTab === 'question-bank' && (
           <div style={{ background: '#ffffff', borderRadius: '24px', padding: '28px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
               <div>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                  🗃️ Static Sequential Question Bank (KaTeX Rendered)
+                  🗃️ Static Sequential Question Bank ({questions.length})
                 </h2>
                 <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
-                  Browse orderwise static questions with math formulas rendered formatted.
+                  Create, edit, duplicate, delete, and bulk import static questions with live KaTeX rendering.
                 </p>
               </div>
 
-              <select
-                value={selectedExamId}
-                onChange={(e) => setSelectedExamId(e.target.value)}
-                style={{
-                  padding: '9px 14px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1',
-                  fontWeight: 800,
-                  fontSize: '0.9rem'
-                }}
-              >
-                <option value="jnvst">JNVST Class 6</option>
-                <option value="imo">IMO Math Olympiad</option>
-                <option value="nso">NSO Science Olympiad</option>
-              </select>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Exam Select */}
+                <select
+                  value={selectedExamId}
+                  onChange={(e) => setSelectedExamId(e.target.value)}
+                  style={{
+                    padding: '9px 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontWeight: 800,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <option value="jnvst">JNVST Class 6</option>
+                  <option value="imo">IMO Math Olympiad</option>
+                  <option value="nso">NSO Science Olympiad</option>
+                </select>
+
+                {/* Batch Import Button */}
+                <button
+                  onClick={() => setShowBatchModal(true)}
+                  style={{
+                    background: '#6366f1',
+                    color: '#ffffff',
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    fontSize: '0.88rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📋 Parse JSON / Text
+                </button>
+
+                {/* Create Question Button */}
+                <button
+                  onClick={handleOpenCreateQuestion}
+                  style={{
+                    background: '#10b981',
+                    color: '#ffffff',
+                    padding: '9px 18px',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    fontSize: '0.88rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+                  }}
+                >
+                  ➕ Add New Question
+                </button>
+              </div>
             </div>
 
             {/* Section Filter Pills */}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {[
-                { id: 'all', label: 'All 80 Questions' },
+                { id: 'all', label: `All (${questions.length})` },
                 { id: 'mat', label: 'Mental Ability (MAT 1-40)' },
                 { id: 'arithmetic', label: 'Arithmetic Test (Math 41-60)' },
                 { id: 'language', label: 'Language Test (Reading 61-80)' }
@@ -652,7 +908,7 @@ export default function AdminCompetitivePage() {
             ) : filteredQuestions.length === 0 ? (
               <div style={{ padding: '60px', textAlign: 'center', color: '#94a3b8', fontSize: '1rem' }}>No static questions found for selected section filter.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {filteredQuestions.map((q, idx) => {
                   const qId = q._id || q.id || idx;
                   const isExpanded = expandedQuestionId === qId;
@@ -661,77 +917,146 @@ export default function AdminCompetitivePage() {
                     <div
                       key={qId}
                       style={{
-                        background: '#f8fafc',
+                        background: '#ffffff',
                         border: '1.5px solid #e2e8f0',
-                        borderRadius: '14px',
-                        padding: '16px 20px',
+                        borderRadius: '16px',
+                        padding: '18px 22px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      <div
-                        onClick={() => setExpandedQuestionId(isExpanded ? null : qId)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', gap: '16px' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                        
+                        {/* Question Badge & Title */}
+                        <div
+                          onClick={() => setExpandedQuestionId(isExpanded ? null : qId)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, cursor: 'pointer' }}
+                        >
                           <span style={{
                             background: '#4338ca',
                             color: '#fff',
                             fontWeight: 900,
                             borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
+                            width: '34px',
+                            height: '34px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '0.88rem',
+                            fontSize: '0.9rem',
                             flexShrink: 0
                           }}>
                             {q.qNumber || idx + 1}
                           </span>
 
                           <div>
-                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.98rem', lineHeight: 1.5 }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '1rem', lineHeight: 1.5 }}>
                               {parseMathAndText(q.questionText || 'Static Question')}
                             </div>
                             <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
-                              Section: <strong>{q.sectionName || q.section || 'General'}</strong>
+                              Section: <strong>{q.sectionName || q.section || 'General'}</strong> • Key: <strong style={{ color: '#059669' }}>{q.correctOption || q.answer || 'A'}</strong>
                             </div>
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ background: '#ecfdf5', color: '#047857', fontWeight: 900, fontSize: '0.82rem', padding: '4px 12px', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
-                            Key: {q.correctOption || q.answer || 'A'}
-                          </span>
-                          <span style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
+                        {/* Action Buttons: Edit, Duplicate, Delete, Expand */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            onClick={() => handleEditQuestion(q)}
+                            title="Edit Question"
+                            style={{
+                              background: '#f1f5f9',
+                              color: '#334155',
+                              border: '1px solid #cbd5e1',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✏️ Edit
+                          </button>
+
+                          <button
+                            onClick={() => handleDuplicateQuestion(q)}
+                            title="Duplicate Question"
+                            style={{
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              border: '1px solid #bfdbfe',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👯 Duplicate
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteQuestion(qId)}
+                            title="Delete Question"
+                            style={{
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fca5a5',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🗑️ Delete
+                          </button>
+
+                          <button
+                            onClick={() => setExpandedQuestionId(isExpanded ? null : qId)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#94a3b8',
+                              fontSize: '1rem',
+                              cursor: 'pointer',
+                              padding: '4px'
+                            }}
+                          >
                             {isExpanded ? '▲' : '▼'}
-                          </span>
+                          </button>
                         </div>
                       </div>
 
-                      {/* Expandable Question Details (Options A, B, C, D & Solution Explanation) */}
+                      {/* Expandable Options Breakdown Drawer */}
                       {isExpanded && (
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
                           <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
                             Options Breakdown:
                           </div>
 
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '14px' }}>
-                            {q.options && typeof q.options === 'object' && Object.entries(q.options).map(([k, val]) => (
-                              <div
-                                key={k}
-                                style={{
-                                  background: (q.correctOption === k || String(q.answer) === k) ? '#f0fdf4' : '#ffffff',
-                                  border: (q.correctOption === k || String(q.answer) === k) ? '2px solid #10b981' : '1px solid #cbd5e1',
-                                  borderRadius: '10px',
-                                  padding: '10px 14px',
-                                  fontSize: '0.88rem',
-                                  fontWeight: (q.correctOption === k || String(q.answer) === k) ? 800 : 500
-                                }}
-                              >
-                                <strong>({k})</strong> {parseMathAndText(String(val))}
-                              </div>
-                            ))}
+                            {['A', 'B', 'C', 'D'].map(letter => {
+                              const opts = q.options || {};
+                              const val = typeof opts === 'object' ? (opts[letter] || opts[`option${letter}`]) : null;
+                              if (!val) return null;
+                              const isCorrect = (q.correctOption === letter || String(q.answer) === letter);
+
+                              return (
+                                <div
+                                  key={letter}
+                                  style={{
+                                    background: isCorrect ? '#f0fdf4' : '#ffffff',
+                                    border: isCorrect ? '2px solid #10b981' : '1px solid #cbd5e1',
+                                    borderRadius: '10px',
+                                    padding: '10px 14px',
+                                    fontSize: '0.88rem',
+                                    fontWeight: isCorrect ? 800 : 500
+                                  }}
+                                >
+                                  <strong>({letter})</strong> {parseMathAndText(String(val))}
+                                </div>
+                              );
+                            })}
                           </div>
 
                           {q.explanationText && (
@@ -744,12 +1069,216 @@ export default function AdminCompetitivePage() {
                     </div>
                   );
                 })}
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        )}
 
-        </div>
       </div>
+
+      {/* QUESTION FORM MODAL (CREATE / EDIT / DUPLICATE) */}
+      {showQuestionModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                {editingQuestionId ? '✏️ Edit Question' : '➕ Create New Question'}
+              </h3>
+              <button onClick={() => setShowQuestionModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Exam ID</label>
+                  <select
+                    value={questionFormData.examId}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, examId: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                  >
+                    <option value="jnvst">JNVST Class 6</option>
+                    <option value="imo">IMO Olympiad</option>
+                    <option value="nso">NSO Olympiad</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Section</label>
+                  <select
+                    value={questionFormData.section}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, section: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                  >
+                    <option value="mat">Mental Ability (MAT)</option>
+                    <option value="arithmetic">Arithmetic (Math)</option>
+                    <option value="language">Language (Reading)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Q. Number</label>
+                  <input
+                    type="number"
+                    value={questionFormData.qNumber}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, qNumber: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Question Text (KaTeX &amp; SVG Enabled)</label>
+                <textarea
+                  rows={3}
+                  value={questionFormData.questionText}
+                  onChange={(e) => setQuestionFormData({ ...questionFormData, questionText: e.target.value })}
+                  placeholder="Enter question text or KaTeX formula e.g. What is $\frac{13}{4}$? or <svg>..."
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.95rem' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option A</label>
+                  <input
+                    type="text"
+                    value={questionFormData.optionA}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionA: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option B</label>
+                  <input
+                    type="text"
+                    value={questionFormData.optionB}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionB: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option C</label>
+                  <input
+                    type="text"
+                    value={questionFormData.optionC}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionC: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option D</label>
+                  <input
+                    type="text"
+                    value={questionFormData.optionD}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionD: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Correct Answer Key</label>
+                  <select
+                    value={questionFormData.correctOption}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, correctOption: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 800, color: '#059669' }}
+                  >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Solution Explanation</label>
+                  <input
+                    type="text"
+                    value={questionFormData.explanationText}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, explanationText: e.target.value })}
+                    placeholder="Step-by-step answer explanation..."
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionModal(false)}
+                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingQuestion}
+                  style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  {savingQuestion ? 'Saving...' : 'Save Question'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* BATCH PARSE JSON & RAW TEXT IMPORT MODAL */}
+      {showBatchModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '750px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                📋 Batch Import JSON or Raw Text
+              </h3>
+              <button onClick={() => setShowBatchModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.88rem', color: '#64748b' }}>
+              Paste a JSON array of questions or block formatted question text. The parser will automatically process and insert them into MongoDB.
+            </p>
+
+            <textarea
+              rows={12}
+              value={batchRawText}
+              onChange={(e) => setBatchRawText(e.target.value)}
+              placeholder={`Example JSON Format:\n[\n  {\n    "qNumber": 1,\n    "questionText": "What is 15 - 6?",\n    "optionA": "6", "optionB": "9", "optionC": "12", "optionD": "15",\n    "correctOption": "B",\n    "explanationText": "15 - 6 = 9"\n  }\n]`}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.88rem' }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+              <button
+                type="button"
+                onClick={() => setShowBatchModal(false)}
+                style={{ padding: '10px 18px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBatchImport}
+                disabled={batchParsing}
+                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, cursor: 'pointer' }}
+              >
+                {batchParsing ? 'Parsing & Importing...' : '🚀 Start Import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }

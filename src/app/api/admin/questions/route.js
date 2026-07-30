@@ -441,7 +441,18 @@ export async function DELETE(request) {
     const collectionName = process.env.MONGODB_QUESTIONS_COLLECTION || 'questions';
     const collection = db.collection(collectionName);
 
-    const result = await collection.deleteOne({ id });
+    const { ObjectId } = await import('mongodb');
+    let queryObj = {};
+    try {
+      queryObj = { _id: new ObjectId(id) };
+    } catch {
+      queryObj = { id };
+    }
+
+    let result = await collection.deleteOne(queryObj);
+    if (result.deletedCount === 0) {
+      result = await collection.deleteOne({ id });
+    }
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ success: false, error: 'Question not found' }, { status: 404 });
