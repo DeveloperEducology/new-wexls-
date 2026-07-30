@@ -79,11 +79,21 @@ export default function AdminCompetitivePage() {
     if (activeTab === 'question-bank') loadQuestionBank();
   }, [activeTab, selectedExamId]);
 
-  // Filter templates
+  const [filterExam, setFilterExam] = useState('all');
+  const [filterSubject, setFilterSubject] = useState('all');
+  const [filterGrade, setFilterGrade] = useState('all');
+
+  // Filter templates multi-categorization (Exam-wise, Subject-wise, Class/Grade-wise, Topic-wise)
   const filteredTemplates = templates.filter(t => {
-    const title = (t.title || t.id || '').toLowerCase();
+    const title = (t.title || t.name || t.id || '').toLowerCase();
     const search = searchTerm.toLowerCase();
-    return title.includes(search) || (t.subject || '').toLowerCase().includes(search) || (t.topic || '').toLowerCase().includes(search);
+    
+    const matchesSearch = !searchTerm || title.includes(search) || (t.subject || '').toLowerCase().includes(search) || (t.topic || '').toLowerCase().includes(search);
+    const matchesExam = filterExam === 'all' || (t.examId || '').toLowerCase() === filterExam.toLowerCase();
+    const matchesSubject = filterSubject === 'all' || (t.subject || '').toLowerCase() === filterSubject.toLowerCase();
+    const matchesGrade = filterGrade === 'all' || String(t.grade || '').toLowerCase() === filterGrade.toLowerCase();
+
+    return matchesSearch && matchesExam && matchesSubject && matchesGrade;
   });
 
   return (
@@ -296,10 +306,11 @@ export default function AdminCompetitivePage() {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Search Bar */}
                 <input
                   type="text"
-                  placeholder="🔍 Search spreadsheets..."
+                  placeholder="🔍 Search topic or title..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -307,9 +318,70 @@ export default function AdminCompetitivePage() {
                     borderRadius: '10px',
                     border: '1.5px solid #cbd5e1',
                     fontSize: '0.88rem',
-                    minWidth: '220px'
+                    minWidth: '180px'
                   }}
                 />
+
+                {/* Exam Filter */}
+                <select
+                  value={filterExam}
+                  onChange={(e) => setFilterExam(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                >
+                  <option value="all">🏆 All Exams</option>
+                  <option value="jnvst">JNVST (Navodaya)</option>
+                  <option value="imo">IMO Olympiad</option>
+                  <option value="nso">NSO Olympiad</option>
+                  <option value="cbse_class5">CBSE Entrance</option>
+                </select>
+
+                {/* Subject Filter */}
+                <select
+                  value={filterSubject}
+                  onChange={(e) => setFilterSubject(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                >
+                  <option value="all">📚 All Subjects</option>
+                  <option value="math">Math / Arithmetic</option>
+                  <option value="english">English / Phonics</option>
+                  <option value="science">Science</option>
+                  <option value="previous_years">Previous Years PYQs</option>
+                </select>
+
+                {/* Class / Grade Filter */}
+                <select
+                  value={filterGrade}
+                  onChange={(e) => setFilterGrade(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                >
+                  <option value="all">🎓 All Classes / Grades</option>
+                  <option value="ukg">UKG</option>
+                  <option value="5">Class / Grade 5</option>
+                  <option value="6">Class / Grade 6</option>
+                  <option value="7">Class / Grade 7</option>
+                  <option value="8">Class / Grade 8</option>
+                </select>
 
                 <Link
                   href="/template-generator-grid"
