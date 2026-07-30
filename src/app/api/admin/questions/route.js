@@ -241,17 +241,19 @@ export async function POST(request) {
         difficulty: Number(payload.difficulty) || 0.5,
         cognitiveLevel: payload.cognitiveLevel || '',
         questionText: payload.questionText,
+        questionImage: payload.questionImage || payload.imageUrl || '',
         options: payload.options,
+        optionsImages: payload.optionsImages || {},
         correctOption: payload.correctOption,
         explanationText: payload.explanationText || '',
         isPYQ: Boolean(payload.isPYQ),
         pyqYear: payload.pyqYear ? Number(payload.pyqYear) : null,
+        tags: Array.isArray(payload.tags) ? payload.tags : (typeof payload.tags === 'string' ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
         metadata: {
           ...(payload.metadata || {}),
           questionMode: payload.questionMode || 'mcq',
           optionsCategories: payload.optionsCategories || {}
         },
-        tags: payload.tags || [],
         status: payload.status || 'active',
         updatedAt: new Date()
       };

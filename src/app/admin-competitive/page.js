@@ -78,14 +78,23 @@ export default function AdminCompetitivePage() {
     section: 'arithmetic',
     qNumber: 1,
     questionText: '',
+    questionImage: '',
     optionA: '',
+    optionAImage: '',
     optionB: '',
+    optionBImage: '',
     optionC: '',
+    optionCImage: '',
     optionD: '',
+    optionDImage: '',
     correctOption: 'A',
-    explanationText: ''
+    explanationText: '',
+    isPYQ: true,
+    pyqYear: 2025,
+    tags: ''
   });
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [uploadingTarget, setUploadingTarget] = useState(null); // 'questionImage', 'optionAImage', etc.
 
   // Batch JSON & Text Parser Import Modal State
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -156,6 +165,38 @@ export default function AdminCompetitivePage() {
     if (activeTab === 'question-bank') loadQuestionBank();
   }, [activeTab, selectedExamId]);
 
+  // Handle File Upload to R2 Storage
+  const handleFileUpload = async (file, targetField) => {
+    if (!file) return;
+    setUploadingTarget(targetField);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'jnvst-questions');
+
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.success || data.url) {
+        const imageUrl = data.url || (data.file && data.file.url) || (data.files && data.files[0] && data.files[0].url);
+        setQuestionFormData(prev => ({
+          ...prev,
+          [targetField]: imageUrl
+        }));
+      } else {
+        alert(data.error || 'Failed to upload image to R2.');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Error uploading image to R2 storage.');
+    } finally {
+      setUploadingTarget(null);
+    }
+  };
+
   // Open Form to Create New Question
   const handleOpenCreateQuestion = () => {
     setEditingQuestionId(null);
@@ -164,12 +205,20 @@ export default function AdminCompetitivePage() {
       section: 'arithmetic',
       qNumber: questions.length + 1,
       questionText: '',
+      questionImage: '',
       optionA: '',
+      optionAImage: '',
       optionB: '',
+      optionBImage: '',
       optionC: '',
+      optionCImage: '',
       optionD: '',
+      optionDImage: '',
       correctOption: 'A',
-      explanationText: ''
+      explanationText: '',
+      isPYQ: true,
+      pyqYear: 2025,
+      tags: 'jnvst, pyq'
     });
     setShowQuestionModal(true);
   };
@@ -178,36 +227,56 @@ export default function AdminCompetitivePage() {
   const handleEditQuestion = (q) => {
     setEditingQuestionId(q._id || q.id);
     const opts = q.options || {};
+    const optImgs = q.optionsImages || {};
+
     setQuestionFormData({
       examId: q.examId || selectedExamId,
       section: q.section || 'arithmetic',
       qNumber: q.qNumber || 1,
       questionText: q.questionText || '',
+      questionImage: q.questionImage || q.imageUrl || '',
       optionA: typeof opts === 'object' ? (opts.A || opts.optionA || '') : '',
+      optionAImage: optImgs.A || '',
       optionB: typeof opts === 'object' ? (opts.B || opts.optionB || '') : '',
+      optionBImage: optImgs.B || '',
       optionC: typeof opts === 'object' ? (opts.C || opts.optionC || '') : '',
+      optionCImage: optImgs.C || '',
       optionD: typeof opts === 'object' ? (opts.D || opts.optionD || '') : '',
+      optionDImage: optImgs.D || '',
       correctOption: q.correctOption || q.answer || 'A',
-      explanationText: q.explanationText || ''
+      explanationText: q.explanationText || '',
+      isPYQ: Boolean(q.isPYQ !== false),
+      pyqYear: q.pyqYear || 2025,
+      tags: Array.isArray(q.tags) ? q.tags.join(', ') : (q.tags || '')
     });
     setShowQuestionModal(true);
   };
 
   // Open Form to Duplicate Question
   const handleDuplicateQuestion = (q) => {
-    setEditingQuestionId(null); // Create new
+    setEditingQuestionId(null);
     const opts = q.options || {};
+    const optImgs = q.optionsImages || {};
+
     setQuestionFormData({
       examId: q.examId || selectedExamId,
       section: q.section || 'arithmetic',
       qNumber: questions.length + 1,
       questionText: (q.questionText || '') + ' (Copy)',
+      questionImage: q.questionImage || q.imageUrl || '',
       optionA: typeof opts === 'object' ? (opts.A || opts.optionA || '') : '',
+      optionAImage: optImgs.A || '',
       optionB: typeof opts === 'object' ? (opts.B || opts.optionB || '') : '',
+      optionBImage: optImgs.B || '',
       optionC: typeof opts === 'object' ? (opts.C || opts.optionC || '') : '',
+      optionCImage: optImgs.C || '',
       optionD: typeof opts === 'object' ? (opts.D || opts.optionD || '') : '',
+      optionDImage: optImgs.D || '',
       correctOption: q.correctOption || q.answer || 'A',
-      explanationText: q.explanationText || ''
+      explanationText: q.explanationText || '',
+      isPYQ: Boolean(q.isPYQ !== false),
+      pyqYear: q.pyqYear || 2025,
+      tags: Array.isArray(q.tags) ? q.tags.join(', ') : (q.tags || '')
     });
     setShowQuestionModal(true);
   };
@@ -224,15 +293,25 @@ export default function AdminCompetitivePage() {
         section: questionFormData.section,
         qNumber: Number(questionFormData.qNumber),
         questionText: questionFormData.questionText,
+        questionImage: questionFormData.questionImage,
         options: {
           A: questionFormData.optionA,
           B: questionFormData.optionB,
           C: questionFormData.optionC,
           D: questionFormData.optionD
         },
+        optionsImages: {
+          A: questionFormData.optionAImage,
+          B: questionFormData.optionBImage,
+          C: questionFormData.optionCImage,
+          D: questionFormData.optionDImage
+        },
         correctOption: questionFormData.correctOption,
         answer: questionFormData.correctOption,
         explanationText: questionFormData.explanationText,
+        isPYQ: questionFormData.isPYQ,
+        pyqYear: Number(questionFormData.pyqYear) || 2025,
+        tags: questionFormData.tags ? questionFormData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         status: 'active'
       };
 
@@ -284,7 +363,6 @@ export default function AdminCompetitivePage() {
       const trimmed = batchRawText.trim();
 
       if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-        // Parse JSON with resilient JS object fallback
         try {
           const parsed = JSON.parse(trimmed);
           questionsToImport = Array.isArray(parsed) ? parsed : [parsed];
@@ -298,7 +376,6 @@ export default function AdminCompetitivePage() {
           }
         }
       } else {
-        // Parse Raw Formatted Text (Question blocks)
         const blocks = trimmed.split(/\n\s*\n/);
         blocks.forEach((block, idx) => {
           const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
@@ -315,7 +392,9 @@ export default function AdminCompetitivePage() {
                 D: lines[4] || 'Option D'
               },
               correctOption: 'A',
-              explanationText: ''
+              explanationText: '',
+              isPYQ: true,
+              pyqYear: 2025
             };
             questionsToImport.push(qObj);
           }
@@ -324,21 +403,25 @@ export default function AdminCompetitivePage() {
 
       if (questionsToImport.length === 0) return alert('No valid questions found to import.');
 
-      // Save each question to DB
       for (const q of questionsToImport) {
         const payload = {
           examId: q.examId || selectedExamId,
           section: q.section || 'arithmetic',
           qNumber: Number(q.qNumber || q.qNum || 1),
           questionText: q.questionText || q.question || '',
+          questionImage: q.questionImage || q.imageUrl || '',
           options: q.options || {
             A: q.optionA || 'Option A',
             B: q.optionB || 'Option B',
             C: q.optionC || 'Option C',
             D: q.optionD || 'Option D'
           },
+          optionsImages: q.optionsImages || {},
           correctOption: q.correctOption || q.answer || 'A',
           explanationText: q.explanationText || q.explanation || '',
+          isPYQ: Boolean(q.isPYQ !== false),
+          pyqYear: q.pyqYear ? Number(q.pyqYear) : 2025,
+          tags: q.tags || ['jnvst', 'pyq'],
           status: 'active'
         };
 
@@ -692,7 +775,7 @@ export default function AdminCompetitivePage() {
                         padding: '20px',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
+                        justify: 'space-between',
                         gap: '14px',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
                         transition: 'all 0.2s ease'
@@ -821,12 +904,11 @@ export default function AdminCompetitivePage() {
                   🗃️ Static Sequential Question Bank ({questions.length})
                 </h2>
                 <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
-                  Create, edit, duplicate, delete, and bulk import static questions with live KaTeX rendering.
+                  Create, edit, duplicate, delete, and bulk import static questions with live KaTeX &amp; R2 image uploads.
                 </p>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                {/* Exam Select */}
                 <select
                   value={selectedExamId}
                   onChange={(e) => setSelectedExamId(e.target.value)}
@@ -843,7 +925,6 @@ export default function AdminCompetitivePage() {
                   <option value="nso">NSO Science Olympiad</option>
                 </select>
 
-                {/* Batch Import Button */}
                 <button
                   onClick={() => setShowBatchModal(true)}
                   style={{
@@ -863,7 +944,6 @@ export default function AdminCompetitivePage() {
                   📋 Parse JSON / Text
                 </button>
 
-                {/* Create Question Button */}
                 <button
                   onClick={handleOpenCreateQuestion}
                   style={{
@@ -922,6 +1002,7 @@ export default function AdminCompetitivePage() {
                 {filteredQuestions.map((q, idx) => {
                   const qId = q._id || q.id || idx;
                   const isExpanded = expandedQuestionId === qId;
+                  const qImg = q.questionImage || q.imageUrl;
 
                   return (
                     <div
@@ -937,7 +1018,6 @@ export default function AdminCompetitivePage() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                         
-                        {/* Question Badge & Title */}
                         <div
                           onClick={() => setExpandedQuestionId(isExpanded ? null : qId)}
                           style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, cursor: 'pointer' }}
@@ -959,16 +1039,28 @@ export default function AdminCompetitivePage() {
                           </span>
 
                           <div>
-                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '1rem', lineHeight: 1.5 }}>
-                              {parseMathAndText(q.questionText || 'Static Question')}
+                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '1rem', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span>{parseMathAndText(q.questionText || 'Static Question')}</span>
+                              {q.isPYQ && (
+                                <span style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>
+                                  PYQ {q.pyqYear || 2025}
+                                </span>
+                              )}
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
+
+                            {qImg && (
+                              <div style={{ marginTop: '8px' }}>
+                                <img src={qImg} alt="Question figure" style={{ maxHeight: '80px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                              </div>
+                            )}
+
+                            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
                               Section: <strong>{q.sectionName || q.section || 'General'}</strong> • Key: <strong style={{ color: '#059669' }}>{q.correctOption || q.answer || 'A'}</strong>
+                              {Array.isArray(q.tags) && q.tags.length > 0 && ` • Tags: ${q.tags.join(', ')}`}
                             </div>
                           </div>
                         </div>
 
-                        {/* Action Buttons: Edit, Duplicate, Delete, Expand */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <button
                             onClick={() => handleEditQuestion(q)}
@@ -1047,8 +1139,10 @@ export default function AdminCompetitivePage() {
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '14px' }}>
                             {['A', 'B', 'C', 'D'].map(letter => {
                               const opts = q.options || {};
+                              const optImgs = q.optionsImages || {};
                               const val = typeof opts === 'object' ? (opts[letter] || opts[`option${letter}`]) : null;
-                              if (!val) return null;
+                              const imgVal = optImgs[letter];
+                              if (!val && !imgVal) return null;
                               const isCorrect = (q.correctOption === letter || String(q.answer) === letter);
 
                               return (
@@ -1063,7 +1157,12 @@ export default function AdminCompetitivePage() {
                                     fontWeight: isCorrect ? 800 : 500
                                   }}
                                 >
-                                  <strong>({letter})</strong> {parseMathAndText(String(val))}
+                                  <strong>({letter})</strong> {val ? parseMathAndText(String(val)) : ''}
+                                  {imgVal && (
+                                    <div style={{ marginTop: '6px' }}>
+                                      <img src={imgVal} alt={`Option ${letter}`} style={{ maxHeight: '60px', borderRadius: '6px' }} />
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1086,10 +1185,10 @@ export default function AdminCompetitivePage() {
 
       </div>
 
-      {/* QUESTION FORM MODAL (CREATE / EDIT / DUPLICATE) */}
+      {/* QUESTION FORM MODAL (CREATE / EDIT / DUPLICATE WITH IMAGE UPLOADER & R2 PATH) */}
       {showQuestionModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '800px', maxHeight: '92vh', overflowY: 'auto', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {editingQuestionId ? '✏️ Edit Question' : '➕ Create New Question'}
@@ -1098,6 +1197,8 @@ export default function AdminCompetitivePage() {
             </div>
 
             <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Row 1: Exam ID, Section, Q. Number */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Exam ID</label>
@@ -1137,10 +1238,11 @@ export default function AdminCompetitivePage() {
                 </div>
               </div>
 
+              {/* Row 2: Question Text */}
               <div>
                 <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Question Text (KaTeX &amp; SVG Enabled)</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={questionFormData.questionText}
                   onChange={(e) => setQuestionFormData({ ...questionFormData, questionText: e.target.value })}
                   placeholder="Enter question text or KaTeX formula e.g. What is $\frac{13}{4}$? or <svg>..."
@@ -1149,52 +1251,117 @@ export default function AdminCompetitivePage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option A</label>
+              {/* Question Image / R2 Storage Path Upload */}
+              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  🖼️ Question Figure Image (Cloudflare R2 Upload)
+                </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <input
                     type="text"
-                    value={questionFormData.optionA}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionA: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
-                    required
+                    placeholder="R2 Storage Path URL e.g. https://.../jnvst-questions/q1.png"
+                    value={questionFormData.questionImage}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, questionImage: e.target.value })}
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
+                  />
+                  <label style={{ background: '#4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                    {uploadingTarget === 'questionImage' ? 'Uploading...' : '📁 Upload Image'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleFileUpload(e.target.files[0], 'questionImage')}
+                    />
+                  </label>
+                </div>
+                {questionFormData.questionImage && (
+                  <div style={{ marginTop: '8px' }}>
+                    <img src={questionFormData.questionImage} alt="Preview" style={{ maxHeight: '70px', borderRadius: '6px' }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Options A, B, C, D with text & image inputs */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                {['A', 'B', 'C', 'D'].map(letter => {
+                  const textKey = `option${letter}`;
+                  const imgKey = `option${letter}Image`;
+
+                  return (
+                    <div key={letter} style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        Option {letter}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={`Option ${letter} Text or <svg>...`}
+                        value={questionFormData[textKey]}
+                        onChange={(e) => setQuestionFormData({ ...questionFormData, [textKey]: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '6px', fontSize: '0.88rem' }}
+                        required
+                      />
+
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          placeholder="Image R2 URL (optional)"
+                          value={questionFormData[imgKey]}
+                          onChange={(e) => setQuestionFormData({ ...questionFormData, [imgKey]: e.target.value })}
+                          style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}
+                        />
+                        <label style={{ background: '#64748b', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                          📁 Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => handleFileUpload(e.target.files[0], imgKey)}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* PYQ Metadata & Tags Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px', background: '#f1f5f9', padding: '12px', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="isPYQ"
+                    checked={questionFormData.isPYQ}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, isPYQ: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <label htmlFor="isPYQ" style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155' }}>
+                    🏆 Official PYQ
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '2px' }}>PYQ Year</label>
+                  <input
+                    type="number"
+                    value={questionFormData.pyqYear}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, pyqYear: e.target.value })}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 700 }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option B</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '2px' }}>Tags (comma-separated)</label>
                   <input
                     type="text"
-                    value={questionFormData.optionB}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionB: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option C</label>
-                  <input
-                    type="text"
-                    value={questionFormData.optionC}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionC: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Option D</label>
-                  <input
-                    type="text"
-                    value={questionFormData.optionD}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, optionD: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
-                    required
+                    value={questionFormData.tags}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, tags: e.target.value })}
+                    placeholder="jnvst, mat, odd-one-out"
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                   />
                 </div>
               </div>
 
+              {/* Correct Key & Explanation */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Correct Answer Key</label>
@@ -1233,7 +1400,7 @@ export default function AdminCompetitivePage() {
 
                 <button
                   type="submit"
-                  disabled={savingQuestion}
+                  disabled={savingQuestion || uploadingTarget !== null}
                   style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, cursor: 'pointer' }}
                 >
                   {savingQuestion ? 'Saving...' : 'Save Question'}
@@ -1263,7 +1430,7 @@ export default function AdminCompetitivePage() {
               rows={12}
               value={batchRawText}
               onChange={(e) => setBatchRawText(e.target.value)}
-              placeholder={`Example JSON Format:\n[\n  {\n    "qNumber": 1,\n    "questionText": "What is 15 - 6?",\n    "optionA": "6", "optionB": "9", "optionC": "12", "optionD": "15",\n    "correctOption": "B",\n    "explanationText": "15 - 6 = 9"\n  }\n]`}
+              placeholder={`Example JSON Format:\n[\n  {\n    "qNumber": 1,\n    "questionText": "What is 15 - 6?",\n    "questionImage": "https://.../figure.png",\n    "optionA": "6", "optionB": "9", "optionC": "12", "optionD": "15",\n    "correctOption": "B",\n    "isPYQ": true,\n    "pyqYear": 2025,\n    "tags": ["jnvst", "pyq"]\n  }\n]`}
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.88rem' }}
             />
 
