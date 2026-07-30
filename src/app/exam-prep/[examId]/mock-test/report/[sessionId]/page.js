@@ -18,15 +18,24 @@ export default function MockTestReportPage({ params }) {
   useEffect(() => {
     async function loadReport() {
       try {
-        const res = await fetch(`/api/practice/session?sessionId=${sessionId}`);
-        const data = await res.json();
-        if (data.success && data.session && data.session.report) {
-          setReport(data.session.report);
-        } else {
-          // Fallback fetch if stored in report structure
-          const repRes = await fetch(`/api/practice/mock-test/report?sessionId=${sessionId}`);
-          const repData = await repRes.json();
-          if (repData.success) setReport(repData.report);
+        const res = await fetch(`/api/practice/mock-test/report?sessionId=${sessionId}`);
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success && data.report) {
+            setReport(data.report);
+            return;
+          }
+        }
+
+        // Fallback fetch from session route if stored in custom shape
+        const sessRes = await fetch(`/api/practice/${sessionId}`);
+        const sessContentType = sessRes.headers.get('content-type') || '';
+        if (sessContentType.includes('application/json')) {
+          const sessData = await sessRes.json();
+          if (sessData.success && sessData.session && sessData.session.report) {
+            setReport(sessData.session.report);
+          }
         }
       } catch (err) {
         console.error('Failed to load report:', err);
@@ -34,7 +43,9 @@ export default function MockTestReportPage({ params }) {
         setLoading(false);
       }
     }
-    loadReport();
+    if (sessionId) {
+      loadReport();
+    }
   }, [sessionId]);
 
   if (loading) {

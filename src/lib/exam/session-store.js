@@ -40,8 +40,22 @@ export async function createSession({ userId, examId, section, sessionType = 'ad
 
 export async function getSession(sessionId) {
   const db = await getMongoDb();
-  if (!db) return null;
-  return db.collection('test_sessions').findOne({ _id: new ObjectId(sessionId) });
+  if (!db || !sessionId) return null;
+  
+  let session = null;
+  if (typeof sessionId === 'string' && sessionId.length === 24 && /^[0-9a-fA-F]{24}$/.test(sessionId)) {
+    try {
+      session = await db.collection('test_sessions').findOne({ _id: new ObjectId(sessionId) });
+    } catch (e) {}
+  }
+
+  if (!session) {
+    session = await db.collection('test_sessions').findOne({
+      $or: [{ id: sessionId }, { sessionId: sessionId }, { _id: sessionId }]
+    });
+  }
+
+  return session;
 }
 
 export async function appendResponse(sessionId, { questionId, topic, difficulty, selectedOption, isCorrect, timeTakenMs, thetaAfter, topicMastery }) {
