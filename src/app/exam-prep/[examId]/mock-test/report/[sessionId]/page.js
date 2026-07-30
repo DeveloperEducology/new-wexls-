@@ -126,9 +126,25 @@ export default function MockTestReportPage({ params }) {
     return `${m}m ${s}s`;
   };
 
+  // Helper to normalize section name
+  const getNormalizedSection = (ans) => {
+    if (ans.section) {
+      const s = String(ans.section).toLowerCase();
+      if (s.includes('mat') || s.includes('mental')) return 'mat';
+      if (s.includes('arithmetic') || s.includes('math')) return 'arithmetic';
+      if (s.includes('language') || s.includes('reading')) return 'language';
+    }
+    const qNum = Number(ans.qNumber);
+    if (qNum >= 1 && qNum <= 40) return 'mat';
+    if (qNum >= 41 && qNum <= 60) return 'arithmetic';
+    if (qNum >= 61 && qNum <= 80) return 'language';
+    return 'general';
+  };
+
   // Filter Answers
   const filteredAnswers = evaluatedAnswers.filter(ans => {
-    const matchesSection = sectionTab === 'all' || (ans.section || '').toLowerCase() === sectionTab.toLowerCase();
+    const normSec = getNormalizedSection(ans);
+    const matchesSection = sectionTab === 'all' || normSec === sectionTab;
     
     let matchesStatus = true;
     if (statusFilter === 'correct') matchesStatus = ans.isCorrect;
