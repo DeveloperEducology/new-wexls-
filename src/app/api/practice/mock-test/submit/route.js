@@ -44,11 +44,16 @@ export async function POST(req) {
 
       return {
         qNumber: qNum,
-        questionId: q.id,
+        questionId: q.id || q._id,
         section: q.section,
+        questionText: q.questionText,
+        questionImage: q.questionImage || q.imageUrl || '',
+        options: q.options || { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD },
+        optionsImages: q.optionsImages || {},
         selectedOption,
-        correctOption: q.correctOption,
+        correctOption: q.correctOption || q.answer || 'A',
         isCorrect,
+        explanation: q.explanationText || q.explanation || '',
         markedForReview: markedForReview.includes(qNum)
       };
     });
