@@ -13,6 +13,7 @@ import PartRenderer from '@/components/practice/PartRenderer';
 import AiAssistantToolbar from '@/components/admin/grid/AiAssistantToolbar';
 import DatasetHealthPanel from '@/components/admin/grid/DatasetHealthPanel';
 import BulkOperationsToolbar from '@/components/admin/grid/BulkOperationsToolbar';
+import PublishingPipelineBar from '@/components/admin/grid/PublishingPipelineBar';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -743,6 +744,7 @@ export default function SpreadsheetTemplateCreator() {
   const [newColumnName, setNewColumnName] = useState('');
   const [rows, setRows] = useState(DEFAULT_ROWS);
   const [selectedRowIndices, setSelectedRowIndices] = useState([]);
+  const [publicationStatus, setPublicationStatus] = useState('draft');
 
   // Auto-Fix handlers for Dataset Health Audit
   const handleAutoBalanceLevels = () => {
@@ -3895,6 +3897,15 @@ export default function SpreadsheetTemplateCreator() {
             </div>
             {aiError && <div style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '10px' }}>{aiError}</div>}
           </div>
+
+          {/* Publishing Pipeline & Lifecycle Stepper Bar */}
+          <PublishingPipelineBar
+            currentStatus={publicationStatus}
+            onStatusChange={(newStatus) => setPublicationStatus(newStatus)}
+            onSaveToDatabase={(statusToSave) => {
+              if (typeof handleSaveToDatabase === 'function') handleSaveToDatabase(statusToSave);
+            }}
+          />
 
           {/* AI Author Assistant Bar */}
           <AiAssistantToolbar
