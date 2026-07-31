@@ -310,6 +310,13 @@ export default function AdminCompetitivePage() {
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchRawText, setBatchRawText] = useState('');
   const [batchParsing, setBatchParsing] = useState(false);
+  const [batchMeta, setBatchMeta] = useState({
+    examId: 'jnvst',
+    section: 'arithmetic',
+    pyqYear: 2024,
+    isPYQ: true,
+    startQNum: 1
+  });
 
   // Fetch Spreadsheets & Templates
   const loadSpreadsheets = async () => {
@@ -619,38 +626,75 @@ export default function AdminCompetitivePage() {
           }
         }
       } else {
+        // Smart Raw Text Block Parser
         const blocks = trimmed.split(/\n\s*\n/);
+        const startNum = Number(batchMeta.startQNum) || 1;
+
         blocks.forEach((block, idx) => {
-          const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-          if (lines.length > 0) {
-            const qObj = {
-              examId: selectedExamId,
-              section: 'arithmetic',
-              qNumber: idx + 1,
-              questionText: lines[0],
-              options: {
-                A: lines[1] || 'Option A',
-                B: lines[2] || 'Option B',
-                C: lines[3] || 'Option C',
-                D: lines[4] || 'Option D'
-              },
-              correctOption: 'A',
-              explanationText: '',
-              isPYQ: true,
-              pyqYear: 2025
-            };
-            questionsToImport.push(qObj);
-          }
+          let lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+          if (lines.length === 0) return;
+
+          let detectedAns = 'A';
+          let detectedSection = batchMeta.section;
+          let questionText = lines[0];
+
+          // Strip question number prefix like "1. ", "Q1: ", "1) "
+          questionText = questionText.replace(/^(Q?\d+[\.\:\)]\s*)/i, '');
+
+          const optionLines = [];
+          
+          lines.slice(1).forEach(line => {
+            // Check for answer directive e.g. "Ans: B", "Answer: C", "Correct: A", "Key: D"
+            const ansMatch = line.match(/^(?:ans|answer|correct|key)\s*[\:\-\=]\s*([A-D])/i);
+            if (ansMatch) {
+              detectedAns = ansMatch[1].toUpperCase();
+              return;
+            }
+
+            // Check for section directive e.g. "Section: mat"
+            const secMatch = line.match(/^section\s*[\:\-\=]\s*(\w+)/i);
+            if (secMatch) {
+              detectedSection = secMatch[1].toLowerCase();
+              return;
+            }
+
+            // Clean option prefix e.g. "A) ", "A. ", "(A) ", "1) "
+            let cleanOpt = line.replace(/^(\([A-D1-4]\)|[A-D1-4][\)\.\:\-]\s*)/i, '').trim();
+            if (cleanOpt) {
+              optionLines.push(cleanOpt);
+            }
+          });
+
+          const qObj = {
+            examId: batchMeta.examId || selectedExamId,
+            section: detectedSection || batchMeta.section,
+            qNumber: startNum + idx,
+            questionText: questionText,
+            options: {
+              A: optionLines[0] || 'Option A',
+              B: optionLines[1] || 'Option B',
+              C: optionLines[2] || 'Option C',
+              D: optionLines[3] || 'Option D'
+            },
+            correctOption: detectedAns,
+            explanationText: '',
+            isPYQ: Boolean(batchMeta.isPYQ),
+            pyqYear: Number(batchMeta.pyqYear) || 2024
+          };
+          questionsToImport.push(qObj);
         });
       }
 
       if (questionsToImport.length === 0) return alert('No valid questions found to import.');
 
-      for (const q of questionsToImport) {
+      const defaultStartNum = Number(batchMeta.startQNum) || 1;
+
+      for (let i = 0; i < questionsToImport.length; i++) {
+        const q = questionsToImport[i];
         const payload = {
-          examId: q.examId || selectedExamId,
-          section: q.section || 'arithmetic',
-          qNumber: Number(q.qNumber || q.qNum || 1),
+          examId: q.examId || batchMeta.examId || selectedExamId,
+          section: q.section || batchMeta.section || 'arithmetic',
+          qNumber: Number(q.qNumber || q.qNum || (defaultStartNum + i)),
           questionText: q.questionText || q.question || '',
           questionImage: q.questionImage || q.imageUrl || '',
           options: q.options || {
@@ -662,8 +706,8 @@ export default function AdminCompetitivePage() {
           optionsImages: q.optionsImages || {},
           correctOption: q.correctOption || q.answer || 'A',
           explanationText: q.explanationText || q.explanation || '',
-          isPYQ: Boolean(q.isPYQ !== false),
-          pyqYear: q.pyqYear ? Number(q.pyqYear) : 2025,
+          isPYQ: q.isPYQ !== undefined ? Boolean(q.isPYQ) : Boolean(batchMeta.isPYQ),
+          pyqYear: q.pyqYear ? Number(q.pyqYear) : Number(batchMeta.pyqYear || 2024),
           tags: q.tags || ['jnvst', 'pyq'],
           status: 'active'
         };
@@ -678,6 +722,14 @@ export default function AdminCompetitivePage() {
       alert(`✅ Successfully imported ${questionsToImport.length} questions!`);
       setShowBatchModal(false);
       setBatchRawText('');
+      if (typeof loadQuestionBank === 'function') loadQuestionBank();
+    } catch (err) {
+      console.error(err);
+      alert(`Import error: ${err.message}`);
+    } finally {
+      setBatchParsing(false);
+    }
+  };
       loadQuestionBank();
     } catch (err) {
       console.error('Batch import failed:', err);
@@ -1985,7 +2037,7 @@ export default function AdminCompetitivePage() {
       {/* BATCH PARSE JSON & RAW TEXT IMPORT MODAL */}
       {showBatchModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '750px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '820px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxH: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 📋 Batch Import JSON or Raw Text
@@ -1994,15 +2046,96 @@ export default function AdminCompetitivePage() {
             </div>
 
             <p style={{ margin: '0 0 16px 0', fontSize: '0.88rem', color: '#64748b' }}>
-              Paste a JSON array of questions or block formatted question text. The parser will automatically process and insert them into MongoDB.
+              Select target metadata below. If JSON items specify their own <code>examId</code>, <code>section</code>, or <code>pyqYear</code>, those will override these defaults.
             </p>
 
+            {/* Default Metadata Controls Bar */}
+            <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '16px 20px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', alignItems: 'end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Target Exam</label>
+                <select
+                  value={batchMeta.examId}
+                  onChange={e => setBatchMeta({ ...batchMeta, examId: e.target.value })}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: 700, fontSize: '0.85rem' }}
+                >
+                  <option value="jnvst">JNVST Class 6</option>
+                  <option value="imo">IMO Olympiad</option>
+                  <option value="nso">NSO Science</option>
+                  <option value="cbse_class5">CBSE Class 5</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Section</label>
+                <select
+                  value={batchMeta.section}
+                  onChange={e => setBatchMeta({ ...batchMeta, section: e.target.value })}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: 700, fontSize: '0.85rem' }}
+                >
+                  <option value="mat">Mental Ability (mat)</option>
+                  <option value="arithmetic">Arithmetic (math)</option>
+                  <option value="language">Language (passages)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>📅 PYQ Year</label>
+                <input
+                  type="number"
+                  value={batchMeta.pyqYear}
+                  onChange={e => setBatchMeta({ ...batchMeta, pyqYear: Number(e.target.value) || 2024 })}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: 800, fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Start Q. No.</label>
+                <input
+                  type="number"
+                  value={batchMeta.startQNum}
+                  onChange={e => setBatchMeta({ ...batchMeta, startQNum: Number(e.target.value) || 1 })}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: 800, fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div style={{ paddingBottom: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.83rem', fontWeight: 800, color: '#334155' }}>
+                  <input
+                    type="checkbox"
+                    checked={batchMeta.isPYQ}
+                    onChange={e => setBatchMeta({ ...batchMeta, isPYQ: e.target.checked })}
+                    style={{ width: '16px', height: '16px', accentColor: '#6366f1' }}
+                  />
+                  🏆 Official PYQ
+                </label>
+              </div>
+            </div>
+
             <textarea
-              rows={12}
+              rows={11}
               value={batchRawText}
               onChange={(e) => setBatchRawText(e.target.value)}
-              placeholder={`Example JSON Format:\n[\n  {\n    "qNumber": 1,\n    "questionText": "What is 15 - 6?",\n    "questionImage": "https://.../figure.png",\n    "optionA": "6", "optionB": "9", "optionC": "12", "optionD": "15",\n    "correctOption": "B",\n    "isPYQ": true,\n    "pyqYear": 2025,\n    "tags": ["jnvst", "pyq"]\n  }\n]`}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.88rem' }}
+              placeholder={`Option 1: Paste JSON Array Format:
+[
+  {
+    "qNumber": 1,
+    "questionText": "What is 15 - 6?",
+    "optionA": "6", "optionB": "9", "optionC": "12", "optionD": "15",
+    "correctOption": "B",
+    "isPYQ": true,
+    "pyqYear": 2020,
+    "section": "arithmetic"
+  }
+]
+
+Option 2: Paste Raw Text Blocks (separated by blank lines):
+What is 15 - 6?
+A) 6
+B) 9
+C) 12
+D) 15
+Ans: B`}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.88rem', lineHeight: 1.5 }}
             />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
