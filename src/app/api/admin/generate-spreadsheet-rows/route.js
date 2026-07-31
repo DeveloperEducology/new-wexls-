@@ -32,6 +32,7 @@ export async function POST(request) {
       seedRows = [],
       count = 10,
       prompt: customPrompt = '',
+      targetLanguage = 'Hindi',
       subject = '',
       topic = '',
       questionMode = ''
@@ -105,6 +106,35 @@ Seed examples for style reference:
 ${JSON.stringify(existingExamples, null, 2)}
 
 Generate ${count} rows matching this specification. Return ONLY a JSON array.
+`;
+    } else if (action === 'translate') {
+      systemInstruction = `
+You are a multilingual educational translator specializing in translating curriculum and competitive exam questions.
+Your task is to translate the text content of the provided spreadsheet rows into ${targetLanguage}.
+
+RULES:
+1. Preserve all KaTeX math formulas (e.g. $\\frac{1}{2}$, $x^2$), numbers, and SVG tags exactly as they are.
+2. Translate question text, option texts, and distractor texts into high-quality natural ${targetLanguage}.
+3. Return ONLY a valid JSON array of objects. Each object MUST contain all columns: ${JSON.stringify(cleanColumns)}.
+`;
+
+      userPrompt = `
+Translate these rows to ${targetLanguage}:
+${JSON.stringify(seedRows, null, 2)}
+`;
+    } else if (action === 'generate_explanation') {
+      systemInstruction = `
+You are an expert tutor creating step-by-step solution explanations for questions.
+Your task is to generate clear, pedagogical step-by-step explanations for each provided question row.
+
+RULES:
+1. Return ONLY a valid JSON array of objects containing all original columns plus an "explanation" or "solution" field.
+2. Explanations should be simple, encouraging, and break down why the correct answer is right and why distractors are wrong.
+`;
+
+      userPrompt = `
+Generate step-by-step explanations for these question rows:
+${JSON.stringify(seedRows, null, 2)}
 `;
     } else {
       // Default: 'expand_rows'

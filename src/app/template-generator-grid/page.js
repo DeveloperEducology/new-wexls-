@@ -12,6 +12,7 @@ import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
 import PartRenderer from '@/components/practice/PartRenderer';
 import AiAssistantToolbar from '@/components/admin/grid/AiAssistantToolbar';
 import DatasetHealthPanel from '@/components/admin/grid/DatasetHealthPanel';
+import BulkOperationsToolbar from '@/components/admin/grid/BulkOperationsToolbar';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -741,6 +742,7 @@ export default function SpreadsheetTemplateCreator() {
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);
   const [newColumnName, setNewColumnName] = useState('');
   const [rows, setRows] = useState(DEFAULT_ROWS);
+  const [selectedRowIndices, setSelectedRowIndices] = useState([]);
 
   // Auto-Fix handlers for Dataset Health Audit
   const handleAutoBalanceLevels = () => {
@@ -3920,6 +3922,15 @@ export default function SpreadsheetTemplateCreator() {
               const data = await res.json();
               if (data.success && data.rows) setRows(data.rows);
             }}
+          />
+
+          {/* Bulk Operations Toolbar */}
+          <BulkOperationsToolbar
+            columns={columns}
+            rows={rows}
+            setRows={setRows}
+            selectedRowIndices={selectedRowIndices}
+            setSelectedRowIndices={setSelectedRowIndices}
           />
 
           {/* Interactive Spreadsheet Grid Card */}

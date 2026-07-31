@@ -24,7 +24,9 @@ export default function SpreadsheetGrid({
   undo,
   redo,
   selectedVoice = 'Puck',
-  setSelectedVoice
+  setSelectedVoice,
+  selectedRowIndices = [],
+  setSelectedRowIndices
 }) {
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -166,7 +168,20 @@ export default function SpreadsheetGrid({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
             <tr style={{ background: '#0f172a', borderBottom: '1px solid #334155' }}>
-              <th style={{ padding: '10px', width: '50px', textAlign: 'center', color: '#94a3b8' }}>#</th>
+              <th style={{ padding: '10px', width: '40px', textAlign: 'center' }}>
+                {setSelectedRowIndices && (
+                  <input
+                    type="checkbox"
+                    checked={rows.length > 0 && selectedRowIndices.length === rows.length}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedRowIndices(rows.map((_, i) => i));
+                      else setSelectedRowIndices([]);
+                    }}
+                    style={{ width: '15px', height: '15px', accentColor: '#6366f1', cursor: 'pointer' }}
+                  />
+                )}
+              </th>
+              <th style={{ padding: '10px', width: '40px', textAlign: 'center', color: '#94a3b8' }}>#</th>
               <th style={{ padding: '10px', width: '70px', textAlign: 'center', color: '#94a3b8' }}>Level</th>
               {columns.map(col => (
                 <th key={col} style={{ padding: '10px 12px', textAlign: 'left', color: '#f8fafc', fontWeight: 700 }}>
@@ -212,11 +227,24 @@ export default function SpreadsheetGrid({
                   key={rIdx}
                   onClick={() => setActiveRowIndex(rIdx)}
                   style={{
-                    background: isActive ? 'rgba(56, 189, 248, 0.08)' : (rIdx % 2 === 0 ? '#1e293b' : '#0f172a'),
+                    background: selectedRowIndices.includes(rIdx) ? 'rgba(99, 102, 241, 0.18)' : (isActive ? 'rgba(56, 189, 248, 0.08)' : (rIdx % 2 === 0 ? '#1e293b' : '#0f172a')),
                     borderBottom: '1px solid #1e293b',
                     cursor: 'pointer'
                   }}
                 >
+                  <td style={{ padding: '8px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                    {setSelectedRowIndices && (
+                      <input
+                        type="checkbox"
+                        checked={selectedRowIndices.includes(rIdx)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedRowIndices([...selectedRowIndices, rIdx]);
+                          else setSelectedRowIndices(selectedRowIndices.filter(i => i !== rIdx));
+                        }}
+                        style={{ width: '15px', height: '15px', accentColor: '#6366f1', cursor: 'pointer' }}
+                      />
+                    )}
+                  </td>
                   <td style={{ padding: '8px', textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>
                     {rIdx + 1}
                   </td>
