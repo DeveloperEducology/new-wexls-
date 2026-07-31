@@ -8713,10 +8713,10 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                         </tr>
                       </thead>
                       <tbody>
-                        {stats.recentAttempts.map((attempt) => {
+                        {stats.recentAttempts.map((attempt, idx) => {
                           const dateText = new Date(attempt.loggedAt || attempt.createdAt).toLocaleTimeString();
                           return (
-                            <tr key={attempt._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <tr key={attempt._id || attempt.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '8px 4px', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>{dateText}</td>
                               <td style={{ padding: '8px 4px', fontWeight: '800', color: '#4f46e5' }}>{attempt.userId || 'Guest'}</td>
                               <td style={{ padding: '8px 4px', fontWeight: '600', color: 'var(--color-text)' }}>{attempt.skillId}</td>
@@ -9171,8 +9171,8 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                         </tr>
                       </thead>
                       <tbody>
-                        {questions.map((q) => (
-                          <tr key={q.id}>
+                        {questions.map((q, idx) => (
+                          <tr key={q._id || q.id || `q_${idx}`}>
                             {visibleColumns.id && (
                               <td className={styles.idCol}>
                                 <code>{q.id}</code>
@@ -9356,8 +9356,8 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
                         </tr>
                       </thead>
                       <tbody>
-                        {paginatedTemplates.map((tpl) => (
-                          <tr key={tpl.id}>
+                        {paginatedTemplates.map((tpl, idx) => (
+                          <tr key={tpl._id || tpl.id || `tpl_${idx}`}>
                             {visibleColumns.id && (
                               <td className={styles.idCol}>
                                 <code>{tpl.id}</code>
@@ -15097,8 +15097,8 @@ Explanation: A question must end with a question mark.`}</pre>
                       </tr>
                     </thead>
                     <tbody>
-                      {cacheItems.map((item) => (
-                        <tr key={item._id}>
+                      {cacheItems.map((item, idx) => (
+                        <tr key={item._id || item.id || `cache_${idx}`}>
                           <td><code style={{ fontSize: 11 }}>{item._id}</code></td>
                           <td style={{ fontSize: 13 }}>{item.text}</td>
                           <td>
