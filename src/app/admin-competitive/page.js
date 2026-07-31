@@ -237,7 +237,7 @@ function ImageCropperModal({ imageSrc, onCropComplete, onClose }) {
 }
 
 export default function AdminCompetitivePage() {
-  const [activeTab, setActiveTab] = useState('spreadsheets'); // 'spreadsheets', 'test-series', 'question-bank'
+  const [activeTab, setActiveTab] = useState('spreadsheets'); // 'spreadsheets', 'test-series', 'question-bank', 'guide'
   const [selectedExamId, setSelectedExamId] = useState('jnvst');
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
@@ -888,6 +888,29 @@ export default function AdminCompetitivePage() {
           >
             🗃️ Static Question Bank ({questions.length})
           </button>
+
+          <button
+            onClick={() => setActiveTab('guide')}
+            style={{
+              flex: 1,
+              minWidth: '180px',
+              padding: '14px 20px',
+              borderRadius: '14px',
+              border: 'none',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              background: activeTab === 'guide' ? '#0891b2' : 'transparent',
+              color: activeTab === 'guide' ? '#ffffff' : '#64748b',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            📖 How-To Guide
+          </button>
         </div>
 
         {/* Tab 1: Direct Spreadsheet Manager */}
@@ -1135,6 +1158,188 @@ export default function AdminCompetitivePage() {
             </div>
 
             <TestSeriesManager selectedExamId={selectedExamId} />
+          </div>
+        )}
+
+        {/* Tab 4: How-To Guide */}
+        {activeTab === 'guide' && (
+          <div style={{ background: '#ffffff', borderRadius: '24px', padding: '36px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', fontFamily: 'Inter, sans-serif', maxWidth: '860px', margin: '0 auto' }}>
+            {/* Header */}
+            <div style={{ marginBottom: '32px', paddingBottom: '20px', borderBottom: '2px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '2rem' }}>📖</span>
+                <h2 style={{ fontSize: '1.7rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>Admin How-To Guide</h2>
+                <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: '12px' }}>JNVST</span>
+              </div>
+              <p style={{ color: '#64748b', fontSize: '0.95rem', margin: 0 }}>
+                Complete workflow for adding PYQ question banks and publishing year-specific mock tests.
+              </p>
+            </div>
+
+            {/* ─── GUIDE SECTION 1: Add a PYQ Question ─── */}
+            <div style={{ marginBottom: '36px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '36px', height: '36px', background: '#6366f1', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1rem', flexShrink: 0 }}>1</div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Add a question as a PYQ</h3>
+              </div>
+              <div style={{ marginLeft: '48px', display: 'grid', gap: '12px' }}>
+                <p style={{ color: '#475569', fontSize: '0.92rem', margin: 0 }}>
+                  Go to the <strong>🗃️ Static Question Bank</strong> tab → click <strong style={{ color: '#10b981' }}>+ Create New Question</strong>.
+                </p>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 800, color: '#475569' }}>Field</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 800, color: '#475569' }}>What to set</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['Exam ID', 'JNVST Class 6'],
+                        ['Section', 'mat / arithmetic / language'],
+                        ['Q. Number', 'Match the original paper (1–80)'],
+                        ['✅ Official PYQ', 'Check this box'],
+                        ['PYQ Year', '2020, 2022, 2023…'],
+                        ['Tags', 'jnvst, pyq, 2020'],
+                        ['Correct Answer', 'A / B / C / D'],
+                      ].map(([f, v]) => (
+                        <tr key={f} style={{ borderTop: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 16px', fontWeight: 700, color: '#334155' }}>{f}</td>
+                          <td style={{ padding: '10px 16px', color: '#64748b' }}>{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 16px', fontSize: '0.87rem', color: '#166534' }}>
+                  💡 <strong>Bulk import tip:</strong> Use <strong>📋 Parse JSON / Text</strong> to paste a full paper at once. Include <code style={{ background: '#dcfce7', padding: '1px 5px', borderRadius: '4px' }}>isPYQ: true, pyqYear: 2020</code> in each question object.
+                </div>
+              </div>
+            </div>
+
+            {/* ─── GUIDE SECTION 2: Create Test Series ─── */}
+            <div style={{ marginBottom: '36px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '36px', height: '36px', background: '#6366f1', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1rem', flexShrink: 0 }}>2</div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Create a Test Series (once per exam package)</h3>
+              </div>
+              <div style={{ marginLeft: '48px', display: 'grid', gap: '12px' }}>
+                <p style={{ color: '#475569', fontSize: '0.92rem', margin: 0 }}>
+                  Go to the <strong>🏆 Test Series &amp; Full Mocks</strong> tab → click <strong style={{ background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.82rem' }}>➕ New Test Series</strong>.
+                </p>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px 20px', fontSize: '0.88rem', color: '#334155' }}>
+                  <div><strong>Series Title:</strong> <span style={{ color: '#6366f1' }}>"JNVST Official PYQ Test Pack"</span></div>
+                  <div style={{ marginTop: '6px' }}><strong>Description:</strong> Year-wise official previous year papers for JNVST Class 6.</div>
+                </div>
+                <p style={{ color: '#64748b', fontSize: '0.85rem', margin: 0 }}>
+                  ✅ You only need <strong>one Test Series</strong> for all PYQ years. Each year becomes a separate Mock Test inside it.
+                </p>
+              </div>
+            </div>
+
+            {/* ─── GUIDE SECTION 3: Publish Mock Test per Year ─── */}
+            <div style={{ marginBottom: '36px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '36px', height: '36px', background: '#6366f1', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1rem', flexShrink: 0 }}>3</div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Publish one Mock Test per year</h3>
+              </div>
+              <div style={{ marginLeft: '48px', display: 'grid', gap: '12px' }}>
+                <p style={{ color: '#475569', fontSize: '0.92rem', margin: 0 }}>
+                  Click <strong style={{ background: '#22c55e', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.82rem' }}>➕ Publish Mock Test</strong> inside your series (or the + Add Mock Test button on a series row).
+                </p>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px 20px', display: 'grid', gap: '8px', fontSize: '0.88rem', color: '#334155' }}>
+                  <div><strong>Title:</strong> <span style={{ color: '#6366f1' }}>"JNVST 2020 Official Full Paper"</span></div>
+                  <div><strong>Duration:</strong> 120 mins</div>
+                  <div><strong>Total Questions:</strong> 80</div>
+                  <div><strong>📅 PYQ Year:</strong> <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: '4px', color: '#92400e', fontWeight: 800 }}>2020</code> ← this is the new field, set it!</div>
+                </div>
+                <p style={{ color: '#64748b', fontSize: '0.85rem', margin: 0 }}>
+                  Repeat for each year: 2022, 2023, 2024… Each will appear as a separate row with a <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 7px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800 }}>📅 2020</span> badge.
+                </p>
+              </div>
+            </div>
+
+            {/* ─── GUIDE SECTION 4: Auto-Link by PYQ Year ─── */}
+            <div style={{ marginBottom: '36px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '36px', height: '36px', background: '#6366f1', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1rem', flexShrink: 0 }}>4</div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Auto-link all questions to the mock test</h3>
+              </div>
+              <div style={{ marginLeft: '48px', display: 'grid', gap: '12px' }}>
+                <p style={{ color: '#475569', fontSize: '0.92rem', margin: 0 }}>
+                  Click <strong style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '6px', fontSize: '0.82rem' }}>🔗 Link Questions</strong> on the mock test row. The dialog opens with two tabs:
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ background: '#e0f2fe', border: '2px solid #0284c7', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ fontWeight: 800, color: '#0c4a6e', marginBottom: '8px', fontSize: '0.9rem' }}>📅 Auto-Link by PYQ Year <span style={{ background: '#0284c7', color: '#fff', fontSize: '0.7rem', padding: '1px 6px', borderRadius: '8px' }}>RECOMMENDED</span></div>
+                    <p style={{ color: '#075985', fontSize: '0.83rem', margin: 0 }}>
+                      Just type the year (e.g. <strong>2020</strong>) → click <strong>"🔗 Auto-Link 2020 PYQs"</strong>. The system finds and links all matching questions automatically, sorted in the correct JNVST section order.
+                    </p>
+                  </div>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ fontWeight: 800, color: '#334155', marginBottom: '8px', fontSize: '0.9rem' }}>✏️ Manual Question IDs</div>
+                    <p style={{ color: '#64748b', fontSize: '0.83rem', margin: 0 }}>
+                      Paste comma-separated question IDs (e.g. <code>mat-analogy-01, mat-figure-01</code>) for custom or mixed-year mock tests.
+                    </p>
+                  </div>
+                </div>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 16px', fontSize: '0.87rem', color: '#166534' }}>
+                  ✅ After auto-linking, you&apos;ll see: <em>"Linked 80 questions from 2020 PYQ paper."</em> The mock test is now live for students.
+                </div>
+              </div>
+            </div>
+
+            {/* ─── Visual Structure Example ─── */}
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>📂 How it looks in the database</h3>
+              <div style={{ background: '#0f172a', borderRadius: '12px', padding: '20px 24px', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: 1.7, color: '#94a3b8', overflow: 'auto' }}>
+                <div style={{ color: '#38bdf8' }}>Test Series: <span style={{ color: '#fbbf24' }}>"JNVST Official PYQ Test Pack"</span></div>
+                <div style={{ paddingLeft: '16px', color: '#a78bfa' }}>├── Mock Test: <span style={{ color: '#fff' }}>"JNVST 2020 Official Full Paper"</span> <span style={{ color: '#fef3c7' }}>📅 2020</span>  [80 Qs]</div>
+                <div style={{ paddingLeft: '16px', color: '#a78bfa' }}>├── Mock Test: <span style={{ color: '#fff' }}>"JNVST 2022 Official Full Paper"</span> <span style={{ color: '#fef3c7' }}>📅 2022</span>  [80 Qs]</div>
+                <div style={{ paddingLeft: '16px', color: '#a78bfa' }}>├── Mock Test: <span style={{ color: '#fff' }}>"JNVST 2023 Official Full Paper"</span> <span style={{ color: '#fef3c7' }}>📅 2023</span>  [80 Qs]</div>
+                <div style={{ paddingLeft: '16px', color: '#a78bfa' }}>└── Mock Test: <span style={{ color: '#fff' }}>"JNVST 2024 Official Full Paper"</span> <span style={{ color: '#fef3c7' }}>📅 2024</span>  [80 Qs]</div>
+              </div>
+            </div>
+
+            {/* ─── Section Sort Order ─── */}
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>📐 JNVST Section Order (auto-applied on link)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                {[
+                  { num: 'Q 1–40', label: 'Mental Ability Test', color: '#7c3aed', bg: '#ede9fe', icon: '🧠' },
+                  { num: 'Q 41–60', label: 'Arithmetic', color: '#0891b2', bg: '#e0f2fe', icon: '🔢' },
+                  { num: 'Q 61–80', label: 'Language', color: '#16a34a', bg: '#f0fdf4', icon: '📝' },
+                ].map(s => (
+                  <div key={s.label} style={{ background: s.bg, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{s.icon}</div>
+                    <div style={{ fontWeight: 800, color: s.color, fontSize: '0.9rem' }}>{s.label}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '4px' }}>{s.num}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ─── Quick Reference ─── */}
+            <div style={{ background: '#fafafa', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px 24px' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 14px' }}>⚡ Quick Reference: Required question fields for auto-linking</h3>
+              <div style={{ display: 'grid', gap: '8px', fontSize: '0.87rem' }}>
+                {[
+                  ['examId', '"jnvst"', 'Must match the exam package'],
+                  ['isPYQ', 'true', 'Marks it as a Previous Year Question'],
+                  ['pyqYear', '2020', 'The year of the paper (number, not string)'],
+                  ['section', '"mat" | "arithmetic" | "language"', 'Controls sort order in mock test'],
+                  ['qNumber', '1–80', 'Position within the year paper'],
+                  ['status', '"active" (default)', 'Inactive questions are excluded'],
+                ].map(([field, val, note]) => (
+                  <div key={field} style={{ display: 'grid', gridTemplateColumns: '140px 180px 1fr', gap: '8px', alignItems: 'center', padding: '8px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <code style={{ color: '#6366f1', fontWeight: 700 }}>{field}</code>
+                    <code style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontSize: '0.82rem' }}>{val}</code>
+                    <span style={{ color: '#64748b' }}>{note}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
