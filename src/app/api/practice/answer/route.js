@@ -3,6 +3,7 @@ import { getSession, appendResponse, completeSession } from '../../../../lib/exa
 import { getQuestion, getAdaptiveCandidates, generateFromTemplates } from '../../../../lib/exam/question-store.js';
 import { updateTheta, selectNextQuestion, updateTopicMastery, computeSessionReport } from '../../../../lib/exam/adaptive-engine.js';
 import { updateProfileAfterSession } from '../../../../lib/exam/profile-store.js';
+import { isAnswerCorrect, normalizeQuestion } from '../../../../lib/exam/question-schema.js';
 
 const DEFAULT_SESSION_LENGTH = 15;
 
@@ -21,8 +22,9 @@ export async function POST(req) {
     const question = await getQuestion(questionId);
     if (!question) return NextResponse.json({ success: false, error: 'Question not found' }, { status: 404 });
 
-    // Evaluate answer
-    const isCorrect = selectedOption !== null && selectedOption === question.correctOption;
+    // Evaluate answer — handles MCQ, MSQ, fill_blank, categorizationv2, sentence_ordering
+    const normalizedQ = normalizeQuestion(question);
+    const isCorrect = isAnswerCorrect(normalizedQ, selectedOption);
     const newTheta = updateTheta(session.currentTheta, isCorrect, question.difficulty);
     const newTopicMastery = updateTopicMastery(session.topicMastery, question.topic, isCorrect);
 
@@ -94,7 +96,8 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       isCorrect,
-      correctOption: question.correctOption,
+      correctOption: normalizedQ.correctOption,
+      questionMode:  normalizedQ.questionMode,
       explanationText: question.explanationText,
       explanationMath: question.explanationMath || null,
       updatedTheta: newTheta,
@@ -111,20 +114,23 @@ export async function POST(req) {
 }
 
 function sanitizeQuestion(q) {
+  const n = normalizeQuestion(q);
   return {
-    id: String(q._id),
-    questionText: q.questionText,
-    questionImageUrl: q.questionImageUrl || q.questionImage || null,
-    questionImageCrop: q.questionImageCrop || null,
-    options: q.options,
-    optionsImages: q.optionsImages || {},
-    optionsImagesCrops: q.optionsImagesCrops || {},
-    topic: q.topic,
-    difficulty: q.difficulty,
-    section: q.section,
-    cognitiveLevel: q.cognitiveLevel || null,
-    metadata: q.metadata || null,
-    drillTemplateId: q.drillTemplateId || null,
+    id: String(n._id),
+    questionText:      n.questionText,
+    questionImageUrl:  n.questionImageUrl,
+    questionImageCrop: n.questionImageCrop,
+    options:           n.options,
+    optionsImages:     n.optionsImages,
+    optionsImagesCrops:n.optionsImagesCrops,
+    parts:             n.parts,
+    questionMode:      n.questionMode,
+    topic:             n.topic,
+    difficulty:        n.difficulty,
+    section:           n.section,
+    cognitiveLevel:    n.cognitiveLevel,
+    metadata:          n.metadata,
+    drillTemplateId:   n.drillTemplateId,
   };
 }
 

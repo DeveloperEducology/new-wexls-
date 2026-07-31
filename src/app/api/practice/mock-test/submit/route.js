@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMongoDb } from '../../../../../lib/db/mongo.js';
 import { getSession, completeSession } from '../../../../../lib/exam/session-store.js';
+import { normalizeQuestion, isAnswerCorrect } from '../../../../../lib/exam/question-schema.js';
 
 export async function POST(req) {
   try {
@@ -27,33 +28,34 @@ export async function POST(req) {
     let languageTotal = 0;
 
     const evaluatedAnswers = storedQuestions.map(q => {
-      const qNum = q.qNumber;
+      const nq = normalizeQuestion(q);
+      const qNum = nq.qNumber || q.qNumber;
       const selectedOption = userAnswers[qNum] || null;
-      const isCorrect = selectedOption !== null && selectedOption === q.correctOption;
+      const isCorrect = isAnswerCorrect(nq, selectedOption);
 
-      if (q.section === 'mat') {
+      if (nq.section === 'mat') {
         matTotal++;
         if (isCorrect) matCorrect++;
-      } else if (q.section === 'arithmetic') {
+      } else if (nq.section === 'arithmetic') {
         arithmeticTotal++;
         if (isCorrect) arithmeticCorrect++;
-      } else if (q.section === 'language') {
+      } else if (nq.section === 'language') {
         languageTotal++;
         if (isCorrect) languageCorrect++;
       }
 
       return {
         qNumber: qNum,
-        questionId: q.id || q._id,
-        section: q.section,
-        questionText: q.questionText,
-        questionImage: q.questionImage || q.imageUrl || '',
-        options: q.options || { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD },
-        optionsImages: q.optionsImages || {},
+        questionId: nq.id || nq._id,
+        section: nq.section,
+        questionText: nq.questionText,
+        questionImage: nq.questionImageUrl || '',
+        options: nq.options || {},
+        optionsImages: nq.optionsImages || {},
         selectedOption,
-        correctOption: q.correctOption || q.answer || 'A',
+        correctOption: nq.correctOption,
         isCorrect,
-        explanation: q.explanationText || q.explanation || '',
+        explanation: nq.explanationText || '',
         markedForReview: markedForReview.includes(qNum)
       };
     });

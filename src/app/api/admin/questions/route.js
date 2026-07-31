@@ -4,6 +4,7 @@ import { getMongoDb } from '@/lib/db/mongo';
 import { generateTtsBuffer } from '@/lib/ttsService';
 import { uploadAudioToR2, isR2Configured } from '@/lib/r2Service';
 import { saveStoredPracticeQuestion } from '@/lib/practice/questionBank/questionRepository';
+import { buildQuestion } from '@/lib/exam/question-schema';
 
 /**
  * Gets cached R2 URL or generates a new audio buffer via Gemini and uploads to Cloudflare R2.

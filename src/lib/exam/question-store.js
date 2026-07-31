@@ -3,6 +3,7 @@ import { instantiateParameterized } from './template-engine.js';
 import { instantiateSvgTemplate, isSvgTemplate } from './svg-template-engine.js';
 import { instantiateVisualTransformationTemplate } from './visual-transformation-engine.js';
 import { evaluateTemplate } from '../practice/generators/universalEvaluator.js';
+import { normalizeQuestion, buildQuestion, normalizeOptions } from './question-schema.js';
 
 const GENERATE_COUNT = 30;
 
@@ -80,7 +81,7 @@ export async function getQuestion(id) {
     query = { $or: [{ _id: id }, { id: id }] };
   }
   let q = await db.collection('questions').findOne(query);
-  if (q) return q;
+  if (q) return normalizeQuestion(q);
 
   // Dynamic on-the-fly evaluation fallback for un-inserted template questions (Free Tier / On-The-Fly Mode)
   if (typeof id === 'string' && id.includes('_')) {
@@ -251,7 +252,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               correctKey = typeof evalQ.answer === 'string' && evalQ.answer.length === 1 ? evalQ.answer : (evalQ.correctOption || 'A');
             }
 
-            allGenerated.push({
+            allGenerated.push(buildQuestion({
               _id: `${tpl.id || tpl._id}_${seed}_${i}`,
               templateId: tpl.id || String(tpl._id),
               examId: tpl.examId || examId,
@@ -261,15 +262,14 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               bFactor: tpl.bFactor !== undefined ? tpl.bFactor : 0.0,
               questionText: evalQ.questionText || tpl.name || tpl.id || 'Practice Drill',
               parts: evalQ.parts || [{ type: 'text', content: evalQ.questionText || '' }],
-              options: optionsDict,
-              optionsType: evalQ.optionsType || tpl.optionsType || 'mcq',
-              interaction: evalQ.interaction || tpl.interaction || 'mcq',
-              type: evalQ.type || tpl.type || 'mcq',
-              answer: correctKey,
-              correctOption: correctKey,
+              options: evalQ.options,
+              answer: typeof evalQ.answer === 'string' ? evalQ.answer : null,
+              correctOption: (() => { const { correctOption } = normalizeOptions(evalQ.options, evalQ.correctOption || null, evalQ.answer ?? null); return correctOption; })(),
+              questionMode: evalQ.optionsType || evalQ.type || tpl.optionsType || 'mcq',
               explanationText: typeof evalQ.explanation === 'object' ? (evalQ.explanation?.sections?.[0]?.content || '') : (evalQ.explanation || ''),
-              generatorType: 'spreadsheet-grid'
-            });
+              generatorType: 'spreadsheet-grid',
+              status: 'active',
+            }));
           }
         }
       } else if (tpl.type === 'visual-transformation') {
@@ -385,7 +385,7 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, tem
     resolvedQuestions.push(q);
   }
 
-  return resolvedQuestions;
+  return resolvedQuestions.map(normalizeQuestion);
 }
 
 export async function listQuestions({ examId, section, topic, status, isPYQ, limit = 50, skip = 0 } = {}) {

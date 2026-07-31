@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '../../../../../lib/exam/session-store.js';
+import { getMongoDb } from '../../../../../lib/db/mongo.js';
+import { normalizeQuestion, isAnswerCorrect } from '../../../../../lib/exam/question-schema.js';
 
 export async function GET(request) {
   try {
@@ -53,27 +55,27 @@ export async function GET(request) {
     if ((!evaluatedAnswers || evaluatedAnswers.length === 0 || !evaluatedAnswers[0]?.questionText) && questions.length > 0) {
       const userAnswers = session.userAnswers || {};
       evaluatedAnswers = questions.map((q, idx) => {
-        const qNum = q.qNumber || q.qNum || (idx + 1);
+        const nq = normalizeQuestion(q);
+        const qNum = nq.qNumber || nq.qNum || q.qNumber || q.qNum || (idx + 1);
         const selectedOption = userAnswers[qNum] || userAnswers[String(qNum)] || null;
-        const correctOption = q.correctOption || q.answer || 'A';
-        const isCorrect = selectedOption !== null && selectedOption === correctOption;
+        const correct = isAnswerCorrect(nq, selectedOption);
 
-        let section = q.section || 'mat';
+        let section = nq.section || 'mat';
         if (qNum >= 41 && qNum <= 60) section = 'arithmetic';
         else if (qNum >= 61 && qNum <= 80) section = 'language';
 
         return {
           qNumber: qNum,
-          questionId: q._id || q.id || qNum,
+          questionId: nq._id || nq.id || qNum,
           section,
-          questionText: q.questionText || '',
-          questionImage: q.questionImage || q.imageUrl || '',
-          options: q.options || { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD },
-          optionsImages: q.optionsImages || {},
+          questionText: nq.questionText || '',
+          questionImage: nq.questionImageUrl || '',
+          options: nq.options || {},
+          optionsImages: nq.optionsImages || {},
           selectedOption,
-          correctOption,
-          isCorrect,
-          explanation: q.explanationText || q.explanation || ''
+          correctOption: nq.correctOption,
+          isCorrect: correct,
+          explanation: nq.explanationText || ''
         };
       });
 

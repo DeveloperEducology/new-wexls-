@@ -5,6 +5,7 @@ import { selectNextQuestion } from '../../../../lib/exam/adaptive-engine.js';
 import { getOrCreateProfile } from '../../../../lib/exam/profile-store.js';
 import { getMongoDb } from '../../../../lib/db/mongo.js';
 import { resolveUserId } from '../../../../lib/auth/getAuthUser.js';
+import { normalizeQuestion } from '../../../../lib/exam/question-schema.js';
 
 const INITIAL_THETA = 0.5;
 const DEFAULT_SESSION_LENGTH = 15;
@@ -130,20 +131,23 @@ export async function POST(req) {
 // generateFromTemplates is exported from question-store.js
 
 function sanitizeQuestion(q) {
+  const n = normalizeQuestion(q);
   return {
-    id: String(q._id),
-    questionText: q.questionText,
-    questionImageUrl: q.questionImageUrl || q.questionImage || null,
-    questionImageCrop: q.questionImageCrop || null,
-    options: q.options,
-    optionsImages: q.optionsImages || {},
-    optionsImagesCrops: q.optionsImagesCrops || {},
-    topic: q.topic,
-    difficulty: q.difficulty,
-    section: q.section,
-    cognitiveLevel: q.cognitiveLevel || null,
-    metadata: q.metadata || null,
-    drillTemplateId: q.drillTemplateId || null,
+    id: String(n._id),
+    questionText:       n.questionText,
+    questionImageUrl:   n.questionImageUrl,
+    questionImageCrop:  n.questionImageCrop,
+    options:            n.options,
+    optionsImages:      n.optionsImages,
+    optionsImagesCrops: n.optionsImagesCrops,
+    parts:              n.parts,
+    questionMode:       n.questionMode,
+    topic:              n.topic,
+    difficulty:         n.difficulty,
+    section:            n.section,
+    cognitiveLevel:     n.cognitiveLevel,
+    metadata:           n.metadata,
+    drillTemplateId:    n.drillTemplateId,
   };
 }
 
