@@ -730,14 +730,6 @@ export default function AdminCompetitivePage() {
       setBatchParsing(false);
     }
   };
-      loadQuestionBank();
-    } catch (err) {
-      console.error('Batch import failed:', err);
-      alert('Failed to parse JSON or text: ' + err.message);
-    } finally {
-      setBatchParsing(false);
-    }
-  };
 
   // Filter templates
   const filteredTemplates = templates.filter(t => {
