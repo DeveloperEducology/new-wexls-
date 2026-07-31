@@ -10,6 +10,7 @@ import OptionBindingEditor from '@/components/admin/grid/OptionBindingEditor';
 import LiveRowSimulator from '@/components/admin/grid/LiveRowSimulator';
 import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
 import PartRenderer from '@/components/practice/PartRenderer';
+import AiAssistantToolbar from '@/components/admin/grid/AiAssistantToolbar';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -3873,6 +3874,17 @@ export default function SpreadsheetTemplateCreator() {
             </div>
             {aiError && <div style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '10px' }}>{aiError}</div>}
           </div>
+
+          {/* AI Author Assistant Bar */}
+          <AiAssistantToolbar
+            columns={columns}
+            rows={rows}
+            subject={subject}
+            topic={topic}
+            questionMode={questionMode}
+            onRowsAdded={(newRows) => setRows(prev => [...prev, ...newRows])}
+            onRowsReplaced={(replacedRows) => setRows(replacedRows)}
+          />
 
           {/* Interactive Spreadsheet Grid Card */}
           <div className="grid-card" id="grid-table-section">
