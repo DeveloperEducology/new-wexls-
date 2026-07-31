@@ -11,6 +11,7 @@ import LiveRowSimulator from '@/components/admin/grid/LiveRowSimulator';
 import PartsArrayBuilder from '@/components/admin/grid/PartsArrayBuilder';
 import PartRenderer from '@/components/practice/PartRenderer';
 import AiAssistantToolbar from '@/components/admin/grid/AiAssistantToolbar';
+import DatasetHealthPanel from '@/components/admin/grid/DatasetHealthPanel';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -740,6 +741,24 @@ export default function SpreadsheetTemplateCreator() {
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);
   const [newColumnName, setNewColumnName] = useState('');
   const [rows, setRows] = useState(DEFAULT_ROWS);
+
+  // Auto-Fix handlers for Dataset Health Audit
+  const handleAutoBalanceLevels = () => {
+    const levels = ['l1', 'l2', 'l3', 'l4'];
+    setRows(prev => prev.map((r, i) => ({ ...r, _level: levels[i % 4] })));
+  };
+
+  const handleRemoveDuplicateRows = () => {
+    setRows(prev => {
+      const seen = new Set();
+      return prev.filter(r => {
+        const key = JSON.stringify(Object.keys(r).filter(k => k !== '_id' && k !== '_level').map(k => String(r[k] || '').trim().toLowerCase()));
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    });
+  };
 
   // Template blueprints
   const [blueprint, setBlueprint] = useState('Find the prime factorization of {{number_to_factor}}.');
@@ -3884,6 +3903,23 @@ export default function SpreadsheetTemplateCreator() {
             questionMode={questionMode}
             onRowsAdded={(newRows) => setRows(prev => [...prev, ...newRows])}
             onRowsReplaced={(replacedRows) => setRows(replacedRows)}
+          />
+
+          {/* Dataset Health & Quality Audit Panel */}
+          <DatasetHealthPanel
+            columns={columns}
+            rows={rows}
+            onAutoBalanceLevels={handleAutoBalanceLevels}
+            onRemoveDuplicates={handleRemoveDuplicateRows}
+            onTriggerAiFix={async () => {
+              const res = await fetch('/api/admin/generate-spreadsheet-rows', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'upgrade_distractors', columns, seedRows: rows, subject, topic, questionMode })
+              });
+              const data = await res.json();
+              if (data.success && data.rows) setRows(data.rows);
+            }}
           />
 
           {/* Interactive Spreadsheet Grid Card */}
