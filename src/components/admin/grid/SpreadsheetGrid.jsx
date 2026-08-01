@@ -27,7 +27,8 @@ export default function SpreadsheetGrid({
   setSelectedVoice,
   selectedRowIndices = [],
   setSelectedRowIndices,
-  onOpenColumnManager
+  onOpenColumnManager,
+  onOpenBatchSlicer
 }) {
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -154,6 +155,16 @@ export default function SpreadsheetGrid({
           >
             ➕ Add Column
           </button>
+          {onOpenBatchSlicer && (
+            <button
+              type="button"
+              onClick={onOpenBatchSlicer}
+              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 10px rgba(99,102,241,0.3)' }}
+              title="Upload 1 page image and slice it into 5 question rows in 1 click"
+            >
+              ⚡ Batch Slice Page (5 Rows)
+            </button>
+          )}
           <button
             type="button"
             onClick={handleAddRow}

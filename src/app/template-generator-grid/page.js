@@ -16,6 +16,7 @@ import BulkOperationsToolbar from '@/components/admin/grid/BulkOperationsToolbar
 import PublishingPipelineBar from '@/components/admin/grid/PublishingPipelineBar';
 import ColumnManagerModal from '@/components/admin/grid/ColumnManagerModal';
 import RowEditorModal from '@/components/admin/grid/RowEditorModal';
+import BatchPageSlicerModal from '@/components/admin/grid/BatchPageSlicerModal';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -754,6 +755,27 @@ export default function SpreadsheetTemplateCreator() {
 
   const [editingRowIndex, setEditingRowIndex] = useState(null);
   const [isRowModalOpen, setIsRowModalOpen] = useState(false);
+
+  const [isBatchSlicerOpen, setIsBatchSlicerOpen] = useState(false);
+
+  const handleApplyBatchCrops = (croppedItems) => {
+    if (!columns.includes('questionImage')) {
+      setColumns(prev => [...prev, 'questionImage']);
+    }
+
+    setRows(prevRows => {
+      const newRows = [...prevRows];
+      croppedItems.forEach(({ rowIndex, questionImage }) => {
+        if (newRows[rowIndex]) {
+          newRows[rowIndex] = {
+            ...newRows[rowIndex],
+            questionImage
+          };
+        }
+      });
+      return newRows;
+    });
+  };
 
   // Auto-Fix handlers for Dataset Health Audit
   const handleAutoBalanceLevels = () => {
@@ -4469,6 +4491,13 @@ export default function SpreadsheetTemplateCreator() {
             <div className="spreadsheet-btn-row">
               <button className="grid-btn-primary" onClick={handleAddRow}>➕ Add Row Variant</button>
               <button
+                className="grid-btn-secondary"
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', color: '#fff', border: 'none', fontWeight: 800, boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
+                onClick={() => setIsBatchSlicerOpen(true)}
+              >
+                ⚡ Batch Slice Page (5 Rows)
+              </button>
+              <button
                 className="grid-btn-primary"
                 style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#fff', border: 'none' }}
                 onClick={() => handleAddColumn()}
@@ -6395,6 +6424,15 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
         columns={columns}
         blueprint={blueprint}
         optionsBinding={optionsBinding}
+      />
+
+      {/* Batch Page Slicer Modal */}
+      <BatchPageSlicerModal
+        isOpen={isBatchSlicerOpen}
+        onClose={() => setIsBatchSlicerOpen(false)}
+        rows={rows}
+        startRowIndex={editingRowIndex !== null ? editingRowIndex : 0}
+        onApplyBatchCrops={handleApplyBatchCrops}
       />
     </div>
   );
