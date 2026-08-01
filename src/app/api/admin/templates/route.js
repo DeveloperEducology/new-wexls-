@@ -245,6 +245,9 @@ export async function POST(req) {
           queryId = templateId;
         }
 
+        const rowsToSave = tData.rows || (tData.config && tData.config.rows) || [];
+        const colsToSave = tData.columns || (tData.config && tData.config.columns) || [];
+
         const existing = await db.collection('templates').findOne({ _id: queryId });
         if (existing) {
           isUpdate = true;
@@ -260,6 +263,27 @@ export async function POST(req) {
                 topic,
                 difficulty,
                 config,
+                ...(rowsToSave.length > 0 ? { rows: rowsToSave } : {}),
+                ...(colsToSave.length > 0 ? { columns: colsToSave } : {}),
+                updatedAt: new Date()
+              }
+            }
+          );
+
+          // Keep dynamic_templates in sync as well
+          await db.collection('dynamic_templates').updateOne(
+            { $or: [{ id: templateId }, { _id: queryId }] },
+            {
+              $set: {
+                name,
+                type,
+                examId,
+                section,
+                topic,
+                difficulty,
+                config,
+                ...(rowsToSave.length > 0 ? { rows: rowsToSave } : {}),
+                ...(colsToSave.length > 0 ? { columns: colsToSave } : {}),
                 updatedAt: new Date()
               }
             }
@@ -268,8 +292,11 @@ export async function POST(req) {
       }
 
       if (!isUpdate) {
+        const rowsToSave = tData.rows || (tData.config && tData.config.rows) || [];
+        const colsToSave = tData.columns || (tData.config && tData.config.columns) || [];
         const doc = {
           ...(templateId ? { _id: templateId } : {}),
+          id: templateId,
           name,
           type,
           examId,
@@ -277,6 +304,8 @@ export async function POST(req) {
           topic,
           difficulty,
           config,
+          ...(rowsToSave.length > 0 ? { rows: rowsToSave } : {}),
+          ...(colsToSave.length > 0 ? { columns: colsToSave } : {}),
           generatedCount: 0,
           status: 'active',
           createdAt: new Date(),
@@ -284,6 +313,13 @@ export async function POST(req) {
         };
         const insertRes = await db.collection('templates').insertOne(doc);
         finalId = String(insertRes.insertedId);
+
+        // Also insert into dynamic_templates
+        await db.collection('dynamic_templates').updateOne(
+          { _id: doc._id },
+          { $set: doc },
+          { upsert: true }
+        );
       }
 
       // Automatic exam topic registration

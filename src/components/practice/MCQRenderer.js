@@ -1029,32 +1029,61 @@ export default function MCQRenderer({
   return (
     <section style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: isPreK ? 4 : 14 }}>
       {/* Demo / Sequential Index / Static Badge */}
-      {(question?.isSequential || question?.isOrdered || question?.metadata?.isSequential || question?.metadata?.isOrdered || question?.preserveOptionOrder || question?.metadata?.preserveOptionOrder || question?.shuffleOptions === false || question?.isStatic || question?.metadata?.isStatic || routeSearch.includes('mode=static') || routeSearch.includes('iit=true')) && (
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '4px 12px',
-          borderRadius: '8px',
-          fontSize: '11px',
-          fontWeight: '800',
-          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-          color: '#ffffff',
-          boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
-          marginBottom: '6px',
-          width: 'fit-content',
-          fontFamily: 'monospace'
-        }}>
-          <span>📌 {routeSearch.includes('iit=true') || routeSearch.includes('mode=static') ? 'STATIC / IIT QN:' : 'ORDER MODE:'}</span>
-          <span>
-            {routeSearch.includes('mode=static') || routeSearch.includes('iit=true')
-              ? `Question ${activeQnNumber} (Static Bank)`
-              : `Row Index #${activeQnNumber} (Sequential)`
-            }
-          </span>
-          <span>• Options Ordered (A, B, C, D)</span>
-        </div>
-      )}
+      {(() => {
+        const isTemplate = Boolean(
+          question?.templateId ||
+          question?.schema?.templateId ||
+          question?.metadata?.templateId ||
+          question?.generatorType === 'spreadsheet-grid' ||
+          question?.schema?.generatorType === 'spreadsheet-grid' ||
+          question?.metadata?.engine === 'universal-template' ||
+          question?.engine === 'universal-template'
+        );
+        const isStaticMode = !isTemplate && (
+          routeSearch.includes('mode=static') ||
+          routeSearch.includes('iit=true') ||
+          question?.isStatic ||
+          question?.metadata?.isStatic
+        );
+        const isOrderedMode = !isTemplate && (
+          question?.isSequential ||
+          question?.isOrdered ||
+          question?.metadata?.isSequential ||
+          question?.metadata?.isOrdered ||
+          question?.preserveOptionOrder ||
+          question?.metadata?.preserveOptionOrder ||
+          question?.shuffleOptions === false
+        );
+
+        if (!isStaticMode && !isOrderedMode) return null;
+
+        return (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '4px 12px',
+            borderRadius: '8px',
+            fontSize: '11px',
+            fontWeight: '800',
+            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            color: '#ffffff',
+            boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
+            marginBottom: '6px',
+            width: 'fit-content',
+            fontFamily: 'monospace'
+          }}>
+            <span>📌 {isStaticMode ? 'STATIC / IIT QN:' : 'ORDER MODE:'}</span>
+            <span>
+              {isStaticMode
+                ? `Question ${activeQnNumber} (Static Bank)`
+                : `Row Index #${activeQnNumber} (Sequential)`
+              }
+            </span>
+            <span>• Options Ordered (A, B, C, D)</span>
+          </div>
+        );
+      })()}
       {question.metaConfig?.hasClickToFill && (
         <ClickToFillBridge
           question={question}

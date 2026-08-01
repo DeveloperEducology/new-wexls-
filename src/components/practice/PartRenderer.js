@@ -876,12 +876,13 @@ function ImagePart({ part, question, inGroup = false, userAnswer, onAnswer, isAn
   const hasPercent = (val) => typeof val === 'string' && val.includes('%');
   const parsedMaxWidth = partMaxWidth && !hasPercent(partMaxWidth) ? toPixelNumber(partMaxWidth) : undefined;
 
+  const defaultMaxWidth = 320;
   const explicitCommonNumeric = rawCommonImageWidth ? toPixelNumber(rawCommonImageWidth) : 0;
   const specifiedMax = Math.max(explicitCommonNumeric, parsedMaxWidth || 0);
   const commonImageWidth = (part.rowImage && explicitCommonNumeric > 0)
     ? explicitCommonNumeric
     : (isPreK
-        ? (explicitCommonNumeric || Math.max(specifiedMax || defaultMax, 260))
+        ? (explicitCommonNumeric || Math.max(specifiedMax || defaultMaxWidth, 260))
         : (explicitCommonNumeric || specifiedMax || rawCommonImageWidth));
   const isFixedWidth = !!commonImageWidth;
   const minImageWidth = isPreK ? (part.rowImage ? 72 : 180) : 100;

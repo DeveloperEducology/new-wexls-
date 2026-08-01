@@ -67,6 +67,7 @@ export default function FullMockTestPage({ params }) {
   const [timeLeft, setTimeLeft] = useState(7200); // 120 minutes = 7200s
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showDebugJson, setShowDebugJson] = useState(false);
 
   const timerRef = useRef(null);
 
@@ -342,6 +343,40 @@ export default function FullMockTestPage({ params }) {
             {parseMathAndText(currentQ.questionText || 'Question prompt')}
           </div>
 
+          {/* Question Figure Image */}
+          {(currentQ.questionImage || currentQ.questionImageUrl || currentQ.image || currentQ.figure_image) && (
+            <div style={{ marginBottom: '24px', textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
+              <img
+                src={currentQ.questionImage || currentQ.questionImageUrl || currentQ.image || currentQ.figure_image}
+                alt="Question figure"
+                style={{
+                  maxWidth: '100%',
+                  width: 'auto',
+                  maxHeight: '340px',
+                  minHeight: '140px',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  padding: '8px',
+                  background: '#fff',
+                  cursor: 'zoom-in',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                }}
+                onClick={(e) => {
+                  if (e.currentTarget.style.transform === 'scale(1.4)') {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.zIndex = '1';
+                  } else {
+                    e.currentTarget.style.transform = 'scale(1.4)';
+                    e.currentTarget.style.zIndex = '10';
+                  }
+                }}
+                title="Click to zoom image"
+              />
+            </div>
+          )}
+
           {/* Determine if options fit nicely in a 2x2 Grid */}
           {(() => {
             const isShortOptions = ['A', 'B', 'C', 'D'].every(l => {
@@ -363,6 +398,7 @@ export default function FullMockTestPage({ params }) {
                   const optText = currentQ.options ? currentQ.options[letter] : null;
                   if (!optText) return null;
                   const isSelected = userAnswers[currentQNum] === letter;
+                  const optImage = (currentQ.optionsImages && currentQ.optionsImages[letter]) || currentQ[`option${letter}Image`];
 
                   return (
                     <div
@@ -370,36 +406,57 @@ export default function FullMockTestPage({ params }) {
                       className="mock-opt-btn"
                       onClick={() => handleSelectOption(letter)}
                       style={{
-                        padding: optText.includes('<svg') ? '8px 12px' : '12px 16px',
+                        padding: optText.includes('<svg') || optImage ? '10px 14px' : '12px 16px',
                         borderRadius: '12px',
                         border: `2px solid ${isSelected ? '#6366f1' : '#e2e8f0'}`,
                         background: isSelected ? '#eef2ff' : '#fff',
                         cursor: 'pointer',
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
+                        flexDirection: optImage ? 'column' : 'row',
+                        alignItems: optImage ? 'flex-start' : 'center',
+                        gap: '10px',
                         transition: 'all 0.15s ease',
                         boxShadow: isSelected ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none'
                       }}
                     >
-                      <div style={{
-                        width: '30px',
-                        height: '30px',
-                        borderRadius: '50%',
-                        background: isSelected ? '#6366f1' : '#f1f5f9',
-                        color: isSelected ? '#fff' : '#475569',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: '0.88rem',
-                        flexShrink: 0
-                      }}>
-                        {letter}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                        <div style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: '50%',
+                          background: isSelected ? '#6366f1' : '#f1f5f9',
+                          color: isSelected ? '#fff' : '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.88rem',
+                          flexShrink: 0
+                        }}>
+                          {letter}
+                        </div>
+                        <div style={{ fontSize: '1rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
+                          {parseMathAndText(optText)}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
-                        {parseMathAndText(optText)}
-                      </div>
+
+                      {optImage && (
+                        <img
+                          src={optImage}
+                          alt={`Option ${letter} figure`}
+                          style={{
+                            maxWidth: '180px',
+                            maxHeight: '140px',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            alignSelf: 'center',
+                            margin: '6px 0',
+                            padding: '4px',
+                            background: '#fff'
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -424,6 +481,46 @@ export default function FullMockTestPage({ params }) {
             >
               Next Question →
             </button>
+          </div>
+
+          {/* Debug Question JSON Inspector */}
+          <div style={{ marginTop: '24px', borderTop: '1px dashed #cbd5e1', paddingTop: '16px' }}>
+            <button
+              onClick={() => setShowDebugJson(!showDebugJson)}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: '#334155',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🛠️ {showDebugJson ? 'Hide Debug Question JSON' : 'Show Debug Question JSON'}
+            </button>
+
+            {showDebugJson && (
+              <pre style={{
+                marginTop: '12px',
+                padding: '14px 18px',
+                background: '#0f172a',
+                color: '#38bdf8',
+                borderRadius: '10px',
+                fontSize: '0.82rem',
+                maxHeight: '320px',
+                overflow: 'auto',
+                fontFamily: 'monospace',
+                lineHeight: 1.5,
+                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+              }}>
+                {JSON.stringify(currentQ, null, 2)}
+              </pre>
+            )}
           </div>
         </div>
 

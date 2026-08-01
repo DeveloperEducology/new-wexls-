@@ -23,6 +23,7 @@ export async function resolveStoredPracticePayload({
   history = {},
   grade = 'lkg',
   qn,
+  seenItems,
   isStatic,
 }) {
   if (source === 'generator') return null;
@@ -34,6 +35,7 @@ export async function resolveStoredPracticePayload({
     difficulty,
     seed,
     qn,
+    seenItems,
     isStatic,
   });
 

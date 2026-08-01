@@ -1279,7 +1279,27 @@ function PracticePageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartScore, setSmartScore] = useState(0);
   const [correctStreak, setCorrectStreak] = useState(0);
-  const [seenItemIds, setSeenItemIds] = useState([]);
+  const [seenItemIds, setSeenItemIds] = useState(() => {
+    if (typeof window !== 'undefined' && logicType) {
+      try {
+        const stored = sessionStorage.getItem(`seen_items_${logicType}`);
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && logicType) {
+      try {
+        if (seenItemIds.length > 0) {
+          sessionStorage.setItem(`seen_items_${logicType}`, JSON.stringify(seenItemIds));
+        }
+      } catch (e) {}
+    }
+  }, [seenItemIds, logicType]);
   const [practiceLevel, setPracticeLevel] = useState(1);
   const [levelStreak, setLevelStreak] = useState(0);
   const [levelModal, setLevelModal] = useState(null);
@@ -1620,14 +1640,24 @@ function PracticePageContent() {
       } else {
         setStreakThreshold(5);
       }
-      if (Array.isArray(data.pickedItemIds)) {
+      const itemIdentifiers = [
+        ...(Array.isArray(data.pickedItemIds) ? data.pickedItemIds : []),
+        data.question.id,
+        data.question.schema?.variables?.index,
+        data.question.schema?.variables?.target_audio,
+        data.question.schema?.variables?.target_word_incomplete,
+        data.question.metadata?.rowIndex
+      ].filter(v => v !== undefined && v !== null && v !== '');
+
+      if (itemIdentifiers.length > 0) {
         setSeenItemIds(prev => {
           let next = [...prev];
-          if (next.length >= 20) {
+          if (next.length >= 30) {
             next = [];
           }
-          data.pickedItemIds.forEach(id => {
-            if (!next.includes(id)) next.push(id);
+          itemIdentifiers.forEach(id => {
+            const strId = String(id);
+            if (!next.includes(strId)) next.push(strId);
           });
           return next;
         });
@@ -1722,13 +1752,26 @@ function PracticePageContent() {
       params.set('mode', 'static');
     } else {
       params.delete('mode');
+      params.delete('qn');
     }
     router.replace(`/practice?${params.toString()}`, { scroll: false });
   }, [router]);
 
-  // Force static mode if the active skill specifies isStatic: true
+  // Force static mode ONLY for non-template static questions; if templateId is present, ensure clean adaptive mode
   useEffect(() => {
-    if (question?.metadata?.isStatic && practiceMode !== 'static') {
+    const windowParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const templateIdParam = windowParams?.get('templateId') || searchParams.get('templateId');
+    const isTemplate = Boolean(
+      question?.templateId ||
+      question?.metadata?.templateId ||
+      question?.generatorType === 'spreadsheet-grid' ||
+      templateIdParam
+    );
+    if (isTemplate) {
+      if (practiceMode === 'static' || windowParams?.has('mode') || windowParams?.has('qn')) {
+        setMode('adaptive');
+      }
+    } else if (question?.metadata?.isStatic && practiceMode !== 'static') {
       setMode('static');
     }
   }, [question, practiceMode, setMode]);
@@ -2177,6 +2220,8 @@ function PracticePageContent() {
           subject: attempt.subject,
           topic: attempt.topic,
           skillId: attempt.skillId,
+          templateId: searchParams.get('templateId') || question?.metadata?.templateId || question?.templateId || null,
+          seenItems: seenItemIds,
           competencyId: attempt.competencyId,
           difficulty,
           practiceLevel,
@@ -2254,7 +2299,13 @@ function PracticePageContent() {
     }, ...prev].slice(0, 5));
 
     // ── Static Mode Override: skip adaptive routing, just move to next skill ──
-    const isStaticSkill = Boolean(
+    const isTemplateQuestion = Boolean(
+      question?.templateId ||
+      question?.metadata?.templateId ||
+      question?.generatorType === 'spreadsheet-grid' ||
+      searchParams?.get('templateId')
+    );
+    const isStaticSkill = !isTemplateQuestion && Boolean(
       question?.metadata?.isStatic === true ||
       question?.isStatic === true ||
       practiceMode === 'static' ||
@@ -2447,6 +2498,17 @@ function PracticePageContent() {
         router.replace(`/practice?${params.toString()}`, { scroll: false });
       }
 
+      const currentSeenItemIds = Array.from(new Set([
+        ...seenItemIds,
+        question.id,
+        question.schema?.variables?.index,
+        question.schema?.variables?.target_audio,
+        question.schema?.variables?.target_word_incomplete,
+        question.metadata?.rowIndex
+      ].filter(v => v !== undefined && v !== null && v !== '').map(String)));
+
+      setSeenItemIds(currentSeenItemIds);
+
       const nextQuestionSession = {
         correctStreak: nextCorrectStreak,
         practiceLevel: nextPracticeLevel,
@@ -2455,6 +2517,7 @@ function PracticePageContent() {
         remediationNeeded: false,
         keepTransition: true,
         slideIn: true,
+        seenItemIds: currentSeenItemIds,
       };
 
       let nextQuestionPromise;
@@ -2661,7 +2724,13 @@ function PracticePageContent() {
   }, [questionJson]);
 
   const handleNextQuestion = useCallback(() => {
-    const isStaticSkill = question?.metadata?.isStatic === true;
+    const isTemplateQuestion = Boolean(
+      question?.templateId ||
+      question?.metadata?.templateId ||
+      question?.generatorType === 'spreadsheet-grid' ||
+      searchParams?.get('templateId')
+    );
+    const isStaticSkill = !isTemplateQuestion && question?.metadata?.isStatic === true;
     if (isStaticSkill) {
       if (nextStaticQn === 'end') {
         setMasteredOverlay({
@@ -2703,7 +2772,7 @@ function PracticePageContent() {
     fetchQuestion();
   }, [question, nextStaticQn, urlQn, fetchQuestion, router, logicType, sourceConfig.options]);
 
-  const inlineFeedback = isAnswered && !isCorrect ? (
+  const inlineFeedback = isAnswered ? (
     <PracticeFeedback
       question={question}
       isCorrect={isCorrect}

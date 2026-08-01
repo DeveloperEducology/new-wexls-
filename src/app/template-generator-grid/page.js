@@ -14,6 +14,8 @@ import AiAssistantToolbar from '@/components/admin/grid/AiAssistantToolbar';
 import DatasetHealthPanel from '@/components/admin/grid/DatasetHealthPanel';
 import BulkOperationsToolbar from '@/components/admin/grid/BulkOperationsToolbar';
 import PublishingPipelineBar from '@/components/admin/grid/PublishingPipelineBar';
+import ColumnManagerModal from '@/components/admin/grid/ColumnManagerModal';
+import RowEditorModal from '@/components/admin/grid/RowEditorModal';
 import { findAudioColumn, findImageColumn, findTextColumn, findPatternColumn, findWordColumn } from '@/lib/grid/gridColumnUtils';
 import { parseCsvText } from '@/lib/grid/services/csvService';
 import { useGridEditorStore } from '@/lib/grid/useGridEditorStore';
@@ -745,6 +747,13 @@ export default function SpreadsheetTemplateCreator() {
   const [rows, setRows] = useState(DEFAULT_ROWS);
   const [selectedRowIndices, setSelectedRowIndices] = useState([]);
   const [publicationStatus, setPublicationStatus] = useState('draft');
+
+  // Modal states for Editing Columns & Rows
+  const [editingColumnName, setEditingColumnName] = useState(null);
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+
+  const [editingRowIndex, setEditingRowIndex] = useState(null);
+  const [isRowModalOpen, setIsRowModalOpen] = useState(false);
 
   // Auto-Fix handlers for Dataset Health Audit
   const handleAutoBalanceLevels = () => {
@@ -2037,21 +2046,74 @@ export default function SpreadsheetTemplateCreator() {
     }
   };
 
-  // Substitute variables for simulation preview
-  const getEvaluatedText = (templateText) => {
-    if (!templateText) return '';
-    const currentRow = rows[activeRowIndex] || {};
-    let result = String(templateText).replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+  // Helper to evaluate math expression strings cleanly in preview
+  const evalMathString = (str) => {
+    if (str === undefined || str === null) return '';
+    let s = String(str).trim();
+    if (s.startsWith('=')) s = s.slice(1).trim();
+    if (!s) return '';
+    if (!isNaN(s) && !isNaN(parseFloat(s))) return s;
 
+    // Replace power symbol ^ with ** for JS exponentiation
+    const expr = s.replace(/\^/g, '**');
+
+    // Check if expression consists only of numbers, basic operators, and parens
+    if (/^[0-9\.\s\+\-\*\/\%\(\)\*\*\,\=]+$/.test(expr)) {
+      try {
+        const res = new Function(`return (${expr})`)();
+        if (typeof res === 'number' && isFinite(res)) {
+          return Number.isInteger(res) ? String(res) : String(Number(res.toFixed(2)));
+        }
+        return String(res);
+      } catch (e) {
+        return s;
+      }
+    }
+    return s;
+  };
+
+  // Substitute variables & evaluate formulas for live simulation preview
+  const getEvaluatedText = (templateText, depth = 0) => {
+    if (templateText === undefined || templateText === null || depth > 5) return '';
+    const currentRow = rows[activeRowIndex] || {};
+    let result = String(templateText).replace(/\\n/g, '\n').replace(/\/n/g, '\n').trim();
+
+    // Auto-normalize bare column names or "Column Unit" strings (e.g. "Result cm³" or "Result") into placeholder tags
     columns.forEach(col => {
-      const val = currentRow[col] !== undefined ? String(currentRow[col]) : '';
       const cleanCol = col.replace(/^_+/, '');
-      const regex1 = new RegExp(`\\[_?${cleanCol}\\]`, 'gi');
-      const regex2 = new RegExp(`\\{\\{\\s*_?${cleanCol}\\s*\\}\\}`, 'gi');
-      result = result.replace(regex1, val).replace(regex2, val);
+      if (result === col || result === cleanCol) {
+        result = `[${col}]`;
+      } else if (result.startsWith(col + ' ')) {
+        const suffix = result.slice(col.length + 1).trim();
+        result = `[${col}] ${suffix}`;
+      } else if (result.startsWith(cleanCol + ' ')) {
+        const suffix = result.slice(cleanCol.length + 1).trim();
+        result = `[${col}] ${suffix}`;
+      }
     });
 
-    return result;
+    columns.forEach(col => {
+      let rawVal = currentRow[col] !== undefined ? String(currentRow[col]) : '';
+
+      // If rawVal itself contains references or formulas, recursively substitute them
+      if (rawVal.includes('[') || rawVal.includes('{{') || rawVal.startsWith('=')) {
+        rawVal = getEvaluatedText(rawVal, depth + 1);
+      }
+
+      const evaluatedVal = evalMathString(rawVal);
+      const cleanCol = col.replace(/^_+/, '');
+
+      const regex1 = new RegExp(`\\[_?${cleanCol}\\]`, 'gi');
+      // Match {{ Result }} or {{ Result cm³ }} or {{ Result unit }}
+      const regex2 = new RegExp(`\\{\\{\\s*_?${cleanCol}(?:\\s+([^}]+))?\\s*\\}\\}`, 'gi');
+
+      result = result.replace(regex1, evaluatedVal);
+      result = result.replace(regex2, (match, suffix) => {
+        return suffix ? `${evaluatedVal} ${suffix.trim()}` : evaluatedVal;
+      });
+    });
+
+    return evalMathString(result);
   };
 
   const getEvaluatedParts = () => {
@@ -2162,6 +2224,33 @@ export default function SpreadsheetTemplateCreator() {
   const renderMathText = (text) => {
     if (!text) return '';
     const cleanedText = String(text).replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+    const strTrim = cleanedText.trim();
+
+    // 1. Direct SVG Code String Handling
+    if (strTrim.startsWith('<svg') || (strTrim.includes('<svg') && strTrim.includes('</svg>'))) {
+      return (
+        <span
+          className="svg-render-container"
+          dangerouslySetInnerHTML={{ __html: strTrim }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', overflow: 'hidden' }}
+        />
+      );
+    }
+
+    // 2. Direct Image URL Handling (R2 / HTTP / Data URIs)
+    if (
+      /^(https?:\/\/|\/|data:image\/)\S+\.(png|jpg|jpeg|gif|webp|svg)(\?\S*)?$/i.test(strTrim) ||
+      /^(https?:\/\/[^\s\n<>]+\.(r2\.dev|amazonaws\.com|cloudinary\.com)[^\s\n<>]*)$/i.test(strTrim)
+    ) {
+      return (
+        <img
+          src={strTrim}
+          alt="Option graphic"
+          style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'block', margin: '4px 0' }}
+        />
+      );
+    }
+
     const regex = /(\\\[[\s\S]*?\\\]|\\\(.*?\\\)|\\\$[^$]*?\\\$|\$[^\$]+\$)/g;
     const parts = cleanedText.split(regex);
 
@@ -2259,6 +2348,57 @@ export default function SpreadsheetTemplateCreator() {
       }
       return <span key={index}>{part}</span>;
     });
+  };
+
+  // Render Solution Rich Content (LaTeX, SVGs, Image URLs, Markdown headers & bullet lists)
+  const renderSolutionRichContent = (text) => {
+    if (!text) return null;
+    const cleaned = String(text).replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+    const lines = cleaned.split('\n');
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+        {lines.map((line, lIdx) => {
+          const trimmed = line.trim();
+          if (!trimmed) return <div key={lIdx} style={{ height: '4px' }} />;
+
+          if (trimmed.startsWith('# ')) {
+            return <h3 key={lIdx} style={{ margin: '6px 0 2px', fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>{renderMathText(trimmed.slice(2))}</h3>;
+          }
+          if (trimmed.startsWith('## ')) {
+            return <h4 key={lIdx} style={{ margin: '4px 0 2px', fontSize: '0.98rem', fontWeight: 800, color: '#1e293b' }}>{renderMathText(trimmed.slice(3))}</h4>;
+          }
+          if (trimmed.startsWith('### ')) {
+            return <h5 key={lIdx} style={{ margin: '4px 0 2px', fontSize: '0.92rem', fontWeight: 800, color: '#334155' }}>{renderMathText(trimmed.slice(4))}</h5>;
+          }
+
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            return (
+              <div key={lIdx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginLeft: '6px' }}>
+                <span style={{ color: '#10b981', fontWeight: 900 }}>•</span>
+                <div style={{ flex: 1, fontSize: '0.88rem', color: '#334155' }}>{renderMathText(trimmed.slice(2))}</div>
+              </div>
+            );
+          }
+
+          const numMatch = /^(\d+)\.\s+(.*)$/.exec(trimmed);
+          if (numMatch) {
+            return (
+              <div key={lIdx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginLeft: '6px' }}>
+                <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.84rem' }}>{numMatch[1]}.</span>
+                <div style={{ flex: 1, fontSize: '0.88rem', color: '#334155' }}>{renderMathText(numMatch[2])}</div>
+              </div>
+            );
+          }
+
+          return (
+            <div key={lIdx} style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.6' }}>
+              {renderMathText(trimmed)}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   // Load AI template from localStorage on mount if it exists
@@ -2597,6 +2737,8 @@ export default function SpreadsheetTemplateCreator() {
     fetchExistingTemplates();
   }, []);
 
+  const initialUrlLoadDoneRef = useRef(false);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -2611,12 +2753,14 @@ export default function SpreadsheetTemplateCreator() {
       if (urlTopic) setJnvstTopic(urlTopic);
     }
 
+    if (initialUrlLoadDoneRef.current) return;
     if (existingTemplates.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const urlId = params.get('id') || params.get('templateId');
     if (urlId) {
       const matched = existingTemplates.find(t => t.id === urlId || String(t._id) === urlId);
       if (matched) {
+        initialUrlLoadDoneRef.current = true;
         loadTemplateIntoEditor(matched);
       }
     }
@@ -3026,6 +3170,17 @@ export default function SpreadsheetTemplateCreator() {
           if (qTop) parsed.config.topic = qTop;
         }
       }
+
+      // ALWAYS sync the absolute latest live rows and columns from editor state into parsed payload!
+      if (rows && rows.length > 0) {
+        parsed.rows = rows;
+      }
+      if (columns && columns.length > 0) {
+        parsed.columns = columns;
+      }
+
+      // Also update jsonText to stay in 100% sync
+      setJsonText(JSON.stringify(parsed, null, 2));
 
       const payload = {
         template: parsed,
@@ -4090,9 +4245,13 @@ export default function SpreadsheetTemplateCreator() {
                       return (
                         <th key={col} className="spreadsheet-th" style={{ minWidth: '140px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 800 }}>
+                            <span
+                              onClick={() => { setEditingColumnName(col); setIsColumnModalOpen(true); }}
+                              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              title="Click to edit column role, name, or transform values"
+                            >
                               {isAudio ? '🔊 ' : isImage ? '🖼️ ' : '📝 '}
-                              {col}
+                              {col} ⚙️
                             </span>
                             <button className="spreadsheet-th-delete" onClick={() => handleDeleteColumn(col)} title={`Delete column ${col}`}>×</button>
                           </div>
@@ -4128,8 +4287,13 @@ export default function SpreadsheetTemplateCreator() {
                           borderLeft: `3px solid ${lc.color}`,
                         }}
                       >
-                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold', borderRight: '1px solid #1f2937', borderBottom: '1px solid #1f2937', fontSize: '0.78rem' }}>
-                          {rIdx + 1}
+                        <td
+                          className="spreadsheet-td"
+                          style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                          onClick={() => { setEditingRowIndex(rIdx); setIsRowModalOpen(true); }}
+                          title="Click to open Row Form Editor"
+                        >
+                          #{rIdx + 1} ✏️
                         </td>
                         {/* Level pill — click to cycle */}
                         <td style={{ textAlign: 'center', borderRight: '1px solid #1f2937', borderBottom: '1px solid #1f2937', padding: '4px 6px' }}>
@@ -4948,9 +5112,22 @@ export default function SpreadsheetTemplateCreator() {
                 );
               }
 
+              const qImgUrl = activeRow.questionImage || activeRow.image || activeRow.imageUrl || activeRow.q_image || activeRow.figure_image;
+
               return (
-                <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line', fontWeight: 600 }}>
-                  {renderMathText(getEvaluatedText(rawQText))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '1.05rem', lineHeight: '1.6', color: '#0f172a', whiteSpace: 'pre-line', fontWeight: 600 }}>
+                    {renderMathText(getEvaluatedText(rawQText))}
+                  </div>
+                  {qImgUrl && (
+                    <div style={{ marginTop: '6px', textAlign: 'center' }}>
+                      <img
+                        src={qImgUrl}
+                        alt="Question Figure"
+                        style={{ maxWidth: '220px', maxHeight: '160px', objectFit: 'contain', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -5232,8 +5409,21 @@ export default function SpreadsheetTemplateCreator() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
                   {effectiveOptions.map((opt, idx) => {
                     const rawCell = activeRow[opt.column];
-                    const cellVal = rawCell !== undefined ? renderMathText(getEvaluatedText(rawCell)) : `{{${opt.column || 'Select Column'}}}`;
-                    const imageVal = opt.imageColumn ? activeRow[opt.imageColumn] : null;
+                    let cellVal = '';
+                    if (rawCell !== undefined) {
+                      cellVal = getEvaluatedText(rawCell);
+                    } else if (opt.column) {
+                      cellVal = getEvaluatedText(opt.column);
+                    } else {
+                      cellVal = '{{Select Column}}';
+                    }
+                    const imageVal = (opt.imageColumn && activeRow[opt.imageColumn]) ||
+                      activeRow[`${opt.column}Image`] ||
+                      activeRow[`${opt.column}_image`] ||
+                      activeRow[`image_${opt.column}`] ||
+                      activeRow[`image${opt.label}`] ||
+                      activeRow[`image_${opt.label}`] ||
+                      null;
                     const audioVal = opt.audioColumn ? activeRow[opt.audioColumn] : null;
                     return (
                       <div key={idx} style={{
@@ -5282,27 +5472,24 @@ export default function SpreadsheetTemplateCreator() {
               );
             })()}
 
-            {/* Render Explanation Solution */}
-            {solution.trim() && (
-              <div style={{ marginTop: '28px', background: 'rgba(16, 185, 129, 0.03)', border: '1.5px dashed rgba(16, 185, 129, 0.2)', padding: '16px', borderRadius: '12px' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>🎒 Step-by-step Solution</div>
-                <div style={{ fontSize: '0.88rem', color: '#475569', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
-                  {renderEvaluatedText(solution)}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', padding: '16px', borderRadius: '16px', fontSize: '0.85rem' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>ℹ️ Parallel Array Compilation</div>
-            <p style={{ margin: 0, color: '#64748b', lineHeight: 1.5 }}>
-              This editor automatically compiles your rows into parallel list arrays (<code>[val1, val2, ...][index]</code>) mapped to a single synchronized <code>index</code> variable.
-            </p>
-            <p style={{ margin: '8px 0 0', color: '#64748b', lineHeight: 1.5 }}>
-              This guarantees that the platform's execution engine shuffles cell values synchronously, with <strong>zero dynamic formula errors</strong>!
-            </p>
-          </div>
+            {/* Render Explanation Solution (Markdown, LaTeX, SVGs, Image URLs) */}
+            {(() => {
+              const activeRow = rows[activeRowIndex] || {};
+              const rawExp = activeRow.solution || activeRow.explanation || activeRow.Explanation || activeRow.Solution || activeRow.step_by_step || activeRow.solutionExplanation || solution || '';
+              const evalExp = getEvaluatedText(rawExp);
 
+              if (!evalExp || !evalExp.trim()) return null;
+
+              return (
+                <div style={{ marginTop: '24px', background: 'rgba(16, 185, 129, 0.04)', border: '1.5px dashed rgba(16, 185, 129, 0.25)', padding: '16px 18px', borderRadius: '14px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#059669', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🎒 Step-by-Step Solution &amp; Explanation</span>
+                  </div>
+                  {renderSolutionRichContent(evalExp)}
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
       </div>
@@ -6176,8 +6363,6 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
                   className="grid-btn-primary"
                   disabled={!targetTextColForAudio}
                   style={{
-                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                    color: '#ffffff',
                     padding: '10px 24px'
                   }}
                 >
@@ -6189,6 +6374,28 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
         </div>
       )}
 
+      {/* Column Manager Modal */}
+      <ColumnManagerModal
+        isOpen={isColumnModalOpen}
+        onClose={() => setIsColumnModalOpen(false)}
+        columns={columns}
+        setColumns={setColumns}
+        rows={rows}
+        setRows={setRows}
+        editingColumn={editingColumnName}
+      />
+
+      {/* Row Form Editor Modal */}
+      <RowEditorModal
+        isOpen={isRowModalOpen}
+        onClose={() => setIsRowModalOpen(false)}
+        rowIndex={editingRowIndex}
+        rows={rows}
+        setRows={setRows}
+        columns={columns}
+        blueprint={blueprint}
+        optionsBinding={optionsBinding}
+      />
     </div>
   );
 }

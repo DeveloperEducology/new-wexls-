@@ -129,3 +129,53 @@ export async function linkQuestionsToMockTest(mockTestId, questionIds) {
 
   return { success: true, mockTestId, questionCount: questionIds.length };
 }
+
+/**
+ * Auto-links all PYQ questions for a specific year to a Mock Test.
+ * Queries questions with isPYQ:true + pyqYear + examId, sorted by section order then qNumber.
+ * Returns the linked question IDs and count.
+ */
+export async function linkQuestionsByPyqYear(mockTestId, examId, pyqYear) {
+  const db = await getMongoDb();
+  if (!db) throw new Error('Database connection unavailable');
+
+  const collectionName = process.env.MONGODB_QUESTIONS_COLLECTION || 'questions';
+
+  // Section sort order: mat → arithmetic → language (JNVST standard)
+  const SECTION_ORDER = { mat: 0, mental_ability: 0, arithmetic: 1, language: 2 };
+
+  const docs = await db.collection(collectionName)
+    .find({
+      examId,
+      isPYQ: true,
+      pyqYear: Number(pyqYear),
+      status: { $ne: 'inactive' },
+    })
+    .sort({ qNumber: 1 })
+    .toArray();
+
+  // Secondary sort: section order → qNumber
+  docs.sort((a, b) => {
+    const secA = SECTION_ORDER[a.section] ?? 99;
+    const secB = SECTION_ORDER[b.section] ?? 99;
+    if (secA !== secB) return secA - secB;
+    return (a.qNumber || 0) - (b.qNumber || 0);
+  });
+
+  const questionIds = docs.map(d => String(d._id || d.id));
+
+  const now = new Date();
+  await db.collection('mock_tests').updateOne(
+    { $or: [{ _id: mockTestId }, { id: mockTestId }] },
+    {
+      $set: {
+        questionIds,
+        pyqYear: Number(pyqYear),
+        totalQuestions: questionIds.length,
+        updatedAt: now,
+      }
+    }
+  );
+
+  return { success: true, mockTestId, pyqYear, questionCount: questionIds.length, questionIds };
+}

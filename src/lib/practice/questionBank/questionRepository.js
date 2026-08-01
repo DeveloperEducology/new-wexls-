@@ -17,8 +17,34 @@ function activeStatusFilter() {
   };
 }
 
+function resolveSkillAliases(skill) {
+  const skillList = Array.isArray(skill) ? [...skill] : [skill];
+  const aliases = new Set();
+
+  skillList.forEach(s => {
+    if (!s) return;
+    aliases.add(s);
+
+    const fullKey = s.replace(/^ukg-eng-/, 'ukg-english-').replace(/^lkg-eng-/, 'lkg-english-');
+    aliases.add(fullKey);
+
+    if (s.includes('blend-consonant-start') || s.includes('consonant-blend-start') || s.includes('starting-blend')) {
+      aliases.add('ukg-english-starting-consonant-blend');
+      aliases.add('ukg-english-complete-initial-blend');
+      aliases.add('ukg-english-has-starting-blend');
+    }
+    if (s.includes('blend-consonant-end') || s.includes('ending-blend')) {
+      aliases.add('ukg-english-ending-consonant-blend');
+      aliases.add('ukg-english-complete-final-blend');
+      aliases.add('ukg-english-has-ending-blend');
+    }
+  });
+
+  return Array.from(aliases);
+}
+
 function buildSkillFilter({ subject, topic, skill }) {
-  const skillList = Array.isArray(skill) ? skill : [skill];
+  const skillList = resolveSkillAliases(skill);
   const skillOrConditions = [];
 
   skillList.forEach(s => {
@@ -76,8 +102,8 @@ function buildSkillFilter({ subject, topic, skill }) {
     filters.push({
       $or: [
         ...topicOrConditions,
-        { skillId: { $in: Array.isArray(skill) ? skill : [skill] } },
-        { 'metadata.skillId': { $in: Array.isArray(skill) ? skill : [skill] } }
+        { skillId: { $in: skillList } },
+        { 'metadata.skillId': { $in: skillList } }
       ]
     });
   }
@@ -238,7 +264,7 @@ export function normalizeStoredQuestion(document, { subject, topic, skill }) {
   };
 }
 
-export async function findStoredPracticeQuestion({ subject, topic, skill, difficulty, seed, qn, isStatic }) {
+export async function findStoredPracticeQuestion({ subject, topic, skill, difficulty, seed, qn, seenItems, isStatic }) {
   if (!hasMongoConfig()) return null;
 
   try {
@@ -296,7 +322,26 @@ export async function findStoredPracticeQuestion({ subject, topic, skill, diffic
       }
       index = index % candidates.length;
     } else {
-      index = seedToIndex(seed, candidates.length);
+      const rawSeen = seenItems || [];
+      const seenSet = new Set(
+        (Array.isArray(rawSeen) ? rawSeen : String(rawSeen).split(','))
+          .map(s => String(s).trim().toLowerCase())
+          .filter(Boolean)
+      );
+
+      const unseenCandidates = candidates.filter(c => {
+        const cid = String(c.id || c._id).toLowerCase();
+        return !seenSet.has(cid);
+      });
+
+      if (unseenCandidates.length > 0) {
+        const selectedDoc = unseenCandidates[0];
+        index = candidates.findIndex(c => (c.id || String(c._id)) === (selectedDoc.id || String(selectedDoc._id)));
+        if (index === -1) index = 0;
+      } else {
+        const cycleIndex = seenSet.size % candidates.length;
+        index = cycleIndex;
+      }
     }
 
     const document = candidates[index];

@@ -50,11 +50,16 @@ export function resolveMode(raw) {
 // ---------------------------------------------------------------------------
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-export function normalizeOptions(rawOptions, existingCorrectOption, existingAnswer) {
+export function normalizeOptions(rawOptions, existingCorrectOption, existingAnswer, vars = null) {
   let options = {};
   let correctOption = existingCorrectOption || null;
 
   if (!rawOptions) return { options, correctOption: correctOption || 'A' };
+
+  const evalLabel = (lbl) => {
+    const s = String(lbl ?? '');
+    return vars ? resolveLabelOrExpression(s, vars) : s;
+  };
 
   if (Array.isArray(rawOptions)) {
     rawOptions.forEach((opt, idx) => {
@@ -62,7 +67,7 @@ export function normalizeOptions(rawOptions, existingCorrectOption, existingAnsw
       const text = typeof opt === 'object'
         ? String(opt.label ?? opt.text ?? opt.content ?? opt.value ?? '')
         : String(opt ?? '');
-      options[letter] = text;
+      options[letter] = evalLabel(text);
       if (!correctOption && typeof opt === 'object' && opt.isCorrect) {
         correctOption = letter;
       }
@@ -77,9 +82,10 @@ export function normalizeOptions(rawOptions, existingCorrectOption, existingAnsw
   } else if (typeof rawOptions === 'object') {
     Object.entries(rawOptions).forEach(([key, val], idx) => {
       const letter = LETTERS.includes(key.toUpperCase()) ? key.toUpperCase() : (LETTERS[idx] || key);
-      options[letter] = typeof val === 'object'
+      const text = typeof val === 'object'
         ? String(val?.label ?? val?.text ?? val?.content ?? '')
         : String(val ?? '');
+      options[letter] = evalLabel(text);
     });
     if (!correctOption) {
       if (typeof existingAnswer === 'string' && LETTERS.includes(existingAnswer.toUpperCase())) {
@@ -99,6 +105,8 @@ export function normalizeOptions(rawOptions, existingCorrectOption, existingAnsw
 export function normalizeQuestion(doc) {
   if (!doc) return doc;
 
+  const vars = doc.schema?.variables || doc.variables || doc.metadata?.variables || null;
+
   const rawMode =
     doc.questionMode ||
     doc.metadata?.questionMode ||
@@ -111,15 +119,20 @@ export function normalizeQuestion(doc) {
   const { options, correctOption } = normalizeOptions(
     doc.options,
     doc.correctOption || null,
-    doc.answer ?? doc.correctAnswerIndex ?? null
+    doc.answer ?? doc.correctAnswerIndex ?? null,
+    vars
   );
 
   const correctOptions = doc.correctOptions ||
     (questionMode === 'msq' && correctOption ? [correctOption] : undefined);
 
-  const correctAnswer =
+  let correctAnswer =
     doc.correctAnswer || doc.answerKey ||
     (questionMode === 'categorizationv2' && doc.answer && typeof doc.answer === 'object' ? doc.answer : undefined);
+
+  if (typeof correctAnswer === 'string' && vars) {
+    correctAnswer = resolveLabelOrExpression(correctAnswer, vars);
+  }
 
   let parts = doc.parts;
   if (!parts || !Array.isArray(parts) || parts.length === 0) {
@@ -130,6 +143,26 @@ export function normalizeQuestion(doc) {
   const questionText = typeof doc.questionText === 'string'
     ? doc.questionText
     : (parts[0]?.content || '');
+
+  let explanationText = doc.explanationText ||
+    (typeof doc.explanation === 'string' ? doc.explanation : doc.explanation?.sections?.[0]?.content) || null;
+
+  if (explanationText && vars) {
+    explanationText = resolveLabelOrExpression(explanationText, vars);
+  }
+
+  const isTemplateDoc = Boolean(
+    doc.metadata?.templateId ||
+    doc.templateId ||
+    doc.drillTemplateId ||
+    doc.generatorType === 'spreadsheet-grid' ||
+    doc.schema?.generatorType === 'spreadsheet-grid'
+  );
+
+  const finalMetadata = {
+    ...(doc.metadata || {}),
+    ...(isTemplateDoc ? { isStatic: false } : {})
+  };
 
   return {
     _id: doc._id,
@@ -164,8 +197,7 @@ export function normalizeQuestion(doc) {
     ...(doc.categories ? { categories: doc.categories } : {}),
     ...(doc.items      ? { items:       doc.items      } : {}),
 
-    explanationText: doc.explanationText ||
-      (typeof doc.explanation === 'string' ? doc.explanation : doc.explanation?.sections?.[0]?.content) || null,
+    explanationText: explanationText || null,
     explanationMath: doc.explanationMath || null,
 
     difficulty:      typeof doc.difficulty === 'number' ? doc.difficulty : 0.5,
@@ -173,7 +205,7 @@ export function normalizeQuestion(doc) {
     cognitiveLevel:  doc.cognitiveLevel || null,
     isPYQ:           Boolean(doc.isPYQ),
     pyqYear:         doc.pyqYear        || null,
-    metadata:        doc.metadata       || null,
+    metadata:        finalMetadata,
     metaConfig:      doc.metaConfig     || null,
     generatorType:   doc.generatorType  || null,
     templateId:      doc.templateId     || null,

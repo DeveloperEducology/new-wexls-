@@ -93,16 +93,20 @@ export async function POST(req) {
 
     const targetSpreadsheetId = templateId || spreadsheetId || mockTestId;
     if (targetSpreadsheetId) {
-      let sheetDoc = await db.collection('templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
-      if (!sheetDoc) {
-        sheetDoc = await db.collection('dynamic_templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
+      let sheetDoc = await db.collection('dynamic_templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
+      if (!sheetDoc || !Array.isArray(sheetDoc.rows) || sheetDoc.rows.length === 0) {
+        sheetDoc = await db.collection('templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
       }
       if (!sheetDoc) {
         sheetDoc = await db.collection('mock_tests').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
       }
 
-      if (sheetDoc && Array.isArray(sheetDoc.rows) && sheetDoc.rows.length > 0) {
-        all80Questions = sheetDoc.rows.map((row, idx) => {
+      const rawRows = (sheetDoc && Array.isArray(sheetDoc.rows) && sheetDoc.rows.length > 0)
+        ? sheetDoc.rows
+        : (sheetDoc && sheetDoc.config && Array.isArray(sheetDoc.config.rows) ? sheetDoc.config.rows : []);
+
+      if (rawRows.length > 0) {
+        all80Questions = rawRows.map((row, idx) => {
           const qNum = idx + 1;
           const sec = row.section || (qNum <= 40 ? 'mat' : (qNum <= 60 ? 'arithmetic' : 'language'));
           const secName = row.sectionName || (sec === 'mat' ? 'Mental Ability (MAT)' : (sec === 'arithmetic' ? 'Arithmetic Test' : 'Language Test'));
@@ -117,6 +121,12 @@ export async function POST(req) {
           const ans = row.answer || row.correctOption || row.correct || 'A';
           const exp = row.explanationText || row.explanation || row.Solution || '';
 
+          const qImg = row.questionImage || row.image || row.imageUrl || row.q_image || row.figure_image || '';
+          const optAImg = row.optionAImage || row.A_image || '';
+          const optBImg = row.optionBImage || row.B_image || '';
+          const optCImg = row.optionCImage || row.C_image || '';
+          const optDImg = row.optionDImage || row.D_image || '';
+
           return {
             qNumber: qNum,
             id: row._id || row.id || `${targetSpreadsheetId}_row_${qNum}`,
@@ -124,12 +134,20 @@ export async function POST(req) {
             section: sec,
             sectionName: secName,
             questionText: text,
+            questionImage: qImg,
+            questionImageUrl: qImg,
             parts: [{ type: 'text', content: text }],
             options: {
               A: String(optA),
               B: String(optB),
               C: String(optC),
               D: String(optD)
+            },
+            optionsImages: {
+              A: optAImg,
+              B: optBImg,
+              C: optCImg,
+              D: optDImg
             },
             answer: String(ans),
             explanationText: String(exp)
@@ -179,15 +197,17 @@ export async function POST(req) {
       ];
     }
 
-    // Sanitize questions for frontend (include options, hide raw answer during exam)
+    // Sanitize questions for frontend (include options, images, hide raw answer during exam)
     const sanitizedQuestions = all80Questions.map(q => ({
       qNumber: q.qNumber,
       id: String(q._id || q.id),
       section: q.section,
       sectionName: q.sectionName,
       questionText: q.questionText || '',
+      questionImage: q.questionImage || q.questionImageUrl || '',
       parts: q.parts || [{ type: 'text', content: q.questionText || '' }],
       options: q.options || {},
+      optionsImages: q.optionsImages || {},
       optionsType: q.optionsType || 'mcq',
       explanationText: q.explanationText || ''
     }));

@@ -227,7 +227,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
           const seed = Math.floor(Math.random() * 1000000);
           let evalQ = null;
           try {
-            evalQ = evaluateTemplate(tpl, seed);
+            evalQ = evaluateTemplate(tpl, seed, { qn: i + 1, seenItems: allGenerated.map((_, idx) => idx) });
           } catch (e) {
             console.warn(`[evaluateTemplate] Error for ${tpl.id || tpl._id}:`, e.message);
           }

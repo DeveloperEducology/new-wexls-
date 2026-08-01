@@ -295,7 +295,7 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
   }
 
   if (template?.type === 'universal' || config.type === 'universal' || template?.generatorType === 'spreadsheet-grid' || config.generatorType === 'spreadsheet-grid' || template?.optionsType === 'sentence_ordering' || config.optionsType === 'sentence_ordering' || template?.type === 'sentence_ordering' || config.type === 'sentence_ordering') {
-    return baseEvaluateTemplate(config, difficultyContext, seed);
+    return baseEvaluateTemplate(config, seed, difficultyContext);
   }
 
   const isParameterized = template?.type === 'parameterized' ||

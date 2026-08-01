@@ -26,7 +26,8 @@ export default function SpreadsheetGrid({
   selectedVoice = 'Puck',
   setSelectedVoice,
   selectedRowIndices = [],
-  setSelectedRowIndices
+  setSelectedRowIndices,
+  onOpenColumnManager
 }) {
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -183,38 +184,37 @@ export default function SpreadsheetGrid({
               </th>
               <th style={{ padding: '10px', width: '40px', textAlign: 'center', color: '#94a3b8' }}>#</th>
               <th style={{ padding: '10px', width: '70px', textAlign: 'center', color: '#94a3b8' }}>Level</th>
-              {columns.map(col => (
-                <th key={col} style={{ padding: '10px 12px', textAlign: 'left', color: '#f8fafc', fontWeight: 700 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                    <span
-                      title="Click or double-click to rename column"
-                      onClick={() => handleRenameColumn(col)}
-                      style={{ cursor: 'pointer', borderBottom: '1px dashed #475569' }}
-                    >
-                      {col} ✏️
-                    </span>
-                    {columns.length > 2 && (
-                      <button
-                        type="button"
-                        title={`Delete column ${col}`}
+              {columns.map(col => {
+                const lower = col.toLowerCase();
+                let badgeIcon = '[fx]';
+                let badgeColor = '#06b6d4';
+                if (lower.includes('result') || lower.includes('target') || lower.includes('answer')) { badgeIcon = '🎯'; badgeColor = '#10b981'; }
+                else if (lower.includes('distractor') || lower.includes('option')) { badgeIcon = '🎲'; badgeColor = '#f59e0b'; }
+                else if (lower.includes('image') || lower.includes('figure') || lower.includes('img')) { badgeIcon = '🖼️'; badgeColor = '#a855f7'; }
+                else if (lower.includes('audio') || lower.includes('sound') || lower.includes('tts')) { badgeIcon = '🔊'; badgeColor = '#3b82f6'; }
+                else if (lower.includes('explanation') || lower.includes('solution')) { badgeIcon = '💬'; badgeColor = '#818cf8'; }
+
+                return (
+                  <th key={col} style={{ padding: '10px 12px', textAlign: 'left', color: '#f8fafc', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <span
+                        title="Click to manage column settings, rename, or transform"
                         onClick={() => {
-                          if (confirm(`Delete column "${col}"?`)) {
-                            setColumns(columns.filter(c => c !== col));
-                            setRows(rows.map(r => {
-                              const copy = { ...r };
-                              delete copy[col];
-                              return copy;
-                            }));
-                          }
+                          if (onOpenColumnManager) onOpenColumnManager(col);
+                          else handleRenameColumn(col);
                         }}
-                        style={{ background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '11px' }}
+                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </th>
-              ))}
+                        <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.1)', color: badgeColor, border: `1px solid ${badgeColor}`, padding: '1px 5px', borderRadius: '6px', fontWeight: 800 }}>
+                          {badgeIcon}
+                        </span>
+                        <span>{col}</span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>⚙️</span>
+                      </span>
+                    </div>
+                  </th>
+                );
+              })}
               <th style={{ padding: '10px', width: '40px' }}></th>
             </tr>
           </thead>

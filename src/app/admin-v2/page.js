@@ -4294,14 +4294,20 @@ export default function AdminV2Page() {
                                     </small>
                                   )}
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginTop: '0.25rem' }}>
-                                    <a 
-                                      href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}${adminMode === 'iit' ? '&iit=true' : ''}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', fontSize: '11px', display: 'inline-block' }}
-                                    >
-                                      🔗 Practice Test Link
-                                    </a>
+                                    {(() => {
+                                      const primaryTid = Array.isArray(item.templateId) ? item.templateId[0] : item.templateId;
+                                      const templateParam = primaryTid ? `&templateId=${encodeURIComponent(primaryTid)}` : '';
+                                      return (
+                                        <a 
+                                          href={`/practice?subject=${item.subjectId || 'math'}&topic=${item.topicId || 'counting'}&skill=${item.id}${templateParam}${adminMode === 'iit' ? '&iit=true' : ''}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'underline', fontSize: '11px', display: 'inline-block' }}
+                                        >
+                                          🔗 Practice Test Link
+                                        </a>
+                                      );
+                                    })()}
                                     {item.templateId && (
                                       <>
                                         <span style={{ fontSize: '10px', color: '#cbd5e1' }}>|</span>

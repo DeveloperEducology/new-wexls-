@@ -4,7 +4,8 @@ import {
   getTestSeriesByExam, 
   createOrUpdateMockTest, 
   getMockTestById,
-  linkQuestionsToMockTest
+  linkQuestionsToMockTest,
+  linkQuestionsByPyqYear
 } from '../../../../lib/exam/test-series-store.js';
 
 export async function GET(req) {
@@ -46,7 +47,16 @@ export async function POST(req) {
       return NextResponse.json({ success: true, result });
     }
 
-    return NextResponse.json({ success: false, error: 'Invalid action. Use createSeries, createMockTest, or linkQuestions.' }, { status: 400 });
+    if (action === 'linkByPyqYear') {
+      const { mockTestId, examId, pyqYear } = data;
+      if (!mockTestId || !examId || !pyqYear) {
+        return NextResponse.json({ success: false, error: 'mockTestId, examId, and pyqYear are required' }, { status: 400 });
+      }
+      const result = await linkQuestionsByPyqYear(mockTestId, examId, Number(pyqYear));
+      return NextResponse.json({ success: true, result });
+    }
+
+    return NextResponse.json({ success: false, error: 'Invalid action. Use createSeries, createMockTest, linkQuestions, or linkByPyqYear.' }, { status: 400 });
   } catch (err) {
     console.error('[api/admin/test-series POST]', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

@@ -28,12 +28,13 @@ export default function DevLinksPage() {
   ];
 
   const toolsAndGeneratorsLinks = [
-    '/template-generator',
-    '/blog-generator',
-    '/svg-tools',
-    '/question-bank',
-    '/admin/option-pooling-playground',
-    '/admin/vocabulary-pools',
+    { href: '/template-generator-grid', label: '/template-generator-grid 📊 (Publisher Grid, AI Assistant & Lifecycle Pipeline)' },
+    { href: '/template-generator', label: '/template-generator (Classic)' },
+    { href: '/blog-generator', label: '/blog-generator' },
+    { href: '/svg-tools', label: '/svg-tools' },
+    { href: '/question-bank', label: '/question-bank' },
+    { href: '/admin/option-pooling-playground', label: '/admin/option-pooling-playground' },
+    { href: '/admin/vocabulary-pools', label: '/admin/vocabulary-pools' },
   ];
 
   const otherDashboards = [
@@ -90,10 +91,10 @@ export default function DevLinksPage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4 text-purple-600">Tools & Generators</h2>
           <ul className="space-y-2">
-            {toolsAndGeneratorsLinks.map((link) => (
-              <li key={link}>
-                <Link href={link} className="text-gray-700 hover:text-purple-500 hover:underline">
-                  {link}
+            {toolsAndGeneratorsLinks.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="text-gray-700 hover:text-purple-500 hover:underline">
+                  {item.label}
                 </Link>
               </li>
             ))}

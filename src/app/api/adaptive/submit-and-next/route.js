@@ -65,6 +65,12 @@ function buildPracticeUrl(request, {
   url.searchParams.set('topic', topic);
   url.searchParams.set('skill', skillId);
   url.searchParams.set('forcedTask', skillId);
+
+  const templateId = body?.templateId || question?.metadata?.templateId || question?.templateId;
+  if (templateId) {
+    url.searchParams.set('templateId', templateId);
+  }
+
   url.searchParams.set('difficulty', nextMastery?.recommendedDifficulty || body.difficulty || 'adaptive');
   url.searchParams.set('correctStreak', String(nextMastery?.correctStreak || 0));
   url.searchParams.set('practiceLevel', String(nextMastery?.practiceLevel || 1));
@@ -73,6 +79,24 @@ function buildPracticeUrl(request, {
   url.searchParams.set('remediationActive', nextMastery?.remediationNeeded ? 'true' : 'false');
   url.searchParams.set('remediationStep', nextMastery?.remediationNeeded ? '1' : '0');
   url.searchParams.set('seed', nextSeed);
+
+  const bodySeen = Array.isArray(body?.seenItems)
+    ? body.seenItems
+    : (body?.seenItems ? String(body.seenItems).split(',') : []);
+
+  const accumulatedSeen = [
+    ...bodySeen,
+    question?.id,
+    question?.schema?.variables?.index,
+    question?.schema?.variables?.target_audio,
+    question?.schema?.variables?.target_word_incomplete,
+    question?.schema?.variables?.target_word,
+    question?.metadata?.rowIndex
+  ].filter(v => v !== undefined && v !== null && v !== '').map(String);
+
+  if (accumulatedSeen.length > 0) {
+    url.searchParams.set('seenItems', Array.from(new Set(accumulatedSeen)).join(','));
+  }
 
   return url;
 }

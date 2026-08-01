@@ -619,12 +619,19 @@ export async function GET(request) {
     5
   );
 
-  const isStaticSkill = skillNode?.isStatic === true || 
-                        skillNode?.metadata?.isStatic === true || 
-                        skillNode?.static === true ||
-                        skillNode?.progressionConfig?.enabled === false ||
-                        searchParams.get('mode') === 'static' ||
-                        searchParams.get('isStatic') === 'true';
+  const isTemplateSkill = Boolean(
+    skillNode?.templateId ||
+    (Array.isArray(skillNode?.templateIds) && skillNode.templateIds.length > 0) ||
+    searchParams.get('templateId')
+  );
+
+  const isStaticSkill = !isTemplateSkill && Boolean(
+    skillNode?.isStatic === true || 
+    skillNode?.metadata?.isStatic === true || 
+    skillNode?.static === true ||
+    searchParams.get('mode') === 'static' ||
+    searchParams.get('isStatic') === 'true'
+  );
 
   const withCompetency = (payload, ctx) => normalizeWithCompetency(payload, {
     ...ctx,
@@ -687,6 +694,7 @@ export async function GET(request) {
         },
         grade: skillNode?.grade || skillNode?.metadata?.grade || '1',
         qn: searchParams.get('qn'),
+        seenItems: searchParams.get('seenItems'),
         isStatic: isStaticSkill,
       });
 
@@ -1428,10 +1436,19 @@ export async function GET(request) {
           }
         };
 
+        const pickedItemIds = [
+          question.id,
+          question.schema?.variables?.index,
+          question.schema?.variables?.target_audio,
+          question.schema?.variables?.target_word_incomplete,
+          question.schema?.variables?.target_word
+        ].filter(v => v !== undefined && v !== null && v !== '');
+
         return respond(withCompetency({
           success: true,
           question,
           seed,
+          pickedItemIds,
           template: {
             logicType: resolvedTemplateId,
             templateId: resolvedTemplateId,
@@ -1489,10 +1506,16 @@ function normalizeWithCompetency(payload, { subject, topic, skill, streakThresho
     templateId: payloadWithSource.question.metadata?.templateId,
   });
 
+  const isTemplateQuestion = Boolean(
+    payloadWithSource.question.metadata?.templateId ||
+    payloadWithSource.question.templateId ||
+    payloadWithSource.question.generatorType === 'spreadsheet-grid'
+  );
+
   const questionMetadata = {
     ...(payloadWithSource.question.metadata || {}),
     streakThreshold: finalStreakThreshold,
-    isStatic: isStatic || payloadWithSource.question.metadata?.isStatic || undefined,
+    isStatic: isTemplateQuestion ? undefined : (isStatic || payloadWithSource.question.metadata?.isStatic || undefined),
   };
 
   if (competency) {

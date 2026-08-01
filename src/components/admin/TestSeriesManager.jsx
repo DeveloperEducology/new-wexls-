@@ -24,7 +24,8 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
     durationMinutes: 120,
     totalQuestions: 80,
     totalMarks: 100,
-    cutoffScore: 65
+    cutoffScore: 65,
+    pyqYear: '',         // optional — set this for year-specific PYQ mock tests
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -130,18 +131,51 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
   const [showLinkerModal, setShowLinkerModal] = useState(false);
   const [selectedMockForLink, setSelectedMockForLink] = useState(null);
   const [linkedQuestionIdsText, setLinkedQuestionIdsText] = useState('');
+  const [linkerTab, setLinkerTab] = useState('year'); // 'year' | 'manual'
+  const [pyqLinkYear, setPyqLinkYear] = useState(new Date().getFullYear() - 1);
+  const [linkerResult, setLinkerResult] = useState(null);
 
   const openLinkerModal = (test) => {
     setSelectedMockForLink(test);
-    const existingIds = test.questionIds || [
-      'jnvst-comp-moral',
-      'testing-factorization',
-      'testing-templete',
-      'mat-coding-decoding-01',
-      'mat-analogy-01'
-    ];
+    const existingIds = test.questionIds || [];
     setLinkedQuestionIdsText(existingIds.join(', '));
+    setPyqLinkYear(test.pyqYear || new Date().getFullYear() - 1);
+    setLinkerTab('year');
+    setLinkerResult(null);
     setShowLinkerModal(true);
+  };
+
+  // Auto-link by PYQ Year
+  const handleLinkByYear = async (e) => {
+    e.preventDefault();
+    if (!selectedMockForLink || !pyqLinkYear) return;
+    setSubmitting(true);
+    setLinkerResult(null);
+    try {
+      const res = await fetch('/api/admin/test-series', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'linkByPyqYear',
+          data: {
+            mockTestId: selectedMockForLink.mockTestId || selectedMockForLink.id,
+            examId: selectedExamId || 'jnvst',
+            pyqYear: Number(pyqLinkYear),
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLinkerResult({ type: 'success', message: `✅ Auto-linked ${data.result.questionCount} questions from ${pyqLinkYear} PYQ paper.` });
+        await loadTestSeries();
+      } else {
+        setLinkerResult({ type: 'error', message: data.error || 'Failed to link questions by year' });
+      }
+    } catch (err) {
+      setLinkerResult({ type: 'error', message: err.message });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSaveLinkedQuestions = async (e) => {
@@ -277,7 +311,14 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
                     <tbody>
                       {series.tests.map((test, idx) => (
                         <tr key={test.mockTestId || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a' }}>{test.title}</td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a' }}>
+                            {test.title}
+                            {test.pyqYear && (
+                              <span style={{ marginLeft: '8px', background: '#fef3c7', color: '#92400e', fontSize: '0.7rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px' }}>
+                                📅 {test.pyqYear}
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: '14px 16px', color: '#64748b' }}>{test.durationMinutes} Mins</td>
                           <td style={{ padding: '14px 16px', color: '#64748b' }}>{test.totalQuestions} Qs</td>
                           <td style={{ padding: '14px 16px', color: '#64748b' }}>{test.totalMarks} Marks</td>
@@ -410,6 +451,21 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
                   />
                 </div>
               </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  📅 PYQ Year <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional — for year-specific papers)</span>
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 2020, 2022, 2023"
+                  value={mockForm.pyqYear}
+                  onChange={e => setMockForm(prev => ({ ...prev, pyqYear: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                />
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '4px 0 0' }}>
+                  Set this to auto-link questions by year using the 🔗 Link Questions button after publishing.
+                </p>
+              </div>
               <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button
                   type="button"
@@ -435,45 +491,106 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
       {showLinkerModal && selectedMockForLink && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '580px', width: '100%' }}>
-            <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800 }}>🔗 Link Questions & Templates</h3>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800 }}>🔗 Link Questions to Mock Test</h3>
             <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 20px' }}>
-              Linking questions for: <strong>{selectedMockForLink.title}</strong>
+              Linking for: <strong>{selectedMockForLink.title}</strong>
             </p>
 
-            <form onSubmit={handleSaveLinkedQuestions} style={{ display: 'grid', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                  Question / Template IDs (Comma Separated)
-                </label>
-                <textarea
-                  rows={5}
-                  placeholder="e.g. jnvst-comp-moral, testing-factorization, testing-templete, mat_figure_completion_01"
-                  value={linkedQuestionIdsText}
-                  onChange={e => setLinkedQuestionIdsText(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', fontFamily: 'monospace', lineHeight: 1.5 }}
-                />
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '6px 0 0' }}>
-                  Tip: Provide explicit Question IDs from the Questions Library or Dynamic Spreadsheet Template IDs.
-                </p>
-              </div>
+            {/* Tab switcher */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: '#f1f5f9', borderRadius: '10px', padding: '4px' }}>
+              <button
+                onClick={() => setLinkerTab('year')}
+                style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
+                  background: linkerTab === 'year' ? '#4338ca' : 'transparent',
+                  color: linkerTab === 'year' ? '#fff' : '#64748b' }}
+              >
+                📅 Auto-Link by PYQ Year
+              </button>
+              <button
+                onClick={() => setLinkerTab('manual')}
+                style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
+                  background: linkerTab === 'manual' ? '#4338ca' : 'transparent',
+                  color: linkerTab === 'manual' ? '#fff' : '#64748b' }}
+              >
+                ✏️ Manual Question IDs
+              </button>
+            </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowLinkerModal(false)}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#4338ca', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  {submitting ? 'Linking...' : 'Save Linked Questions'}
-                </button>
+            {/* Result banner */}
+            {linkerResult && (
+              <div style={{ padding: '12px 16px', borderRadius: '10px', marginBottom: '16px', fontWeight: 600, fontSize: '0.9rem',
+                background: linkerResult.type === 'success' ? '#dcfce7' : '#fee2e2',
+                color: linkerResult.type === 'success' ? '#166534' : '#991b1b' }}>
+                {linkerResult.message}
               </div>
-            </form>
+            )}
+
+            {/* TAB: Auto-Link by Year */}
+            {linkerTab === 'year' && (
+              <form onSubmit={handleLinkByYear} style={{ display: 'grid', gap: '16px' }}>
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '14px 16px', fontSize: '0.88rem', color: '#0c4a6e' }}>
+                  ℹ️ This will <strong>automatically find all questions</strong> in the database that have <code>isPYQ: true</code> + the year you select, and link them to this mock test in the correct section order (MAT → Arithmetic → Language).
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    📅 PYQ Year
+                  </label>
+                  <input
+                    type="number"
+                    min={2000}
+                    max={2099}
+                    value={pyqLinkYear}
+                    onChange={e => setPyqLinkYear(e.target.value)}
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '2px solid #6366f1', fontSize: '1.1rem', fontWeight: 800, textAlign: 'center' }}
+                    required
+                  />
+                  <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '4px 0 0' }}>
+                    e.g. 2020, 2022, 2023 — must match the <code>pyqYear</code> field on questions.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setShowLinkerModal(false)}
+                    style={{ flex: 1, padding: '11px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={submitting}
+                    style={{ flex: 2, padding: '11px', borderRadius: '8px', border: 'none', background: '#4338ca', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>
+                    {submitting ? 'Linking...' : `🔗 Auto-Link ${pyqLinkYear} PYQs`}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* TAB: Manual IDs */}
+            {linkerTab === 'manual' && (
+              <form onSubmit={handleSaveLinkedQuestions} style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Question / Template IDs (Comma Separated)
+                  </label>
+                  <textarea
+                    rows={5}
+                    placeholder="e.g. jnvst-comp-moral, mat-analogy-01, mat-figure-01"
+                    value={linkedQuestionIdsText}
+                    onChange={e => setLinkedQuestionIdsText(e.target.value)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', fontFamily: 'monospace', lineHeight: 1.5 }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '6px 0 0' }}>
+                    Tip: Get IDs from the Questions table in the admin panel.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setShowLinkerModal(false)}
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={submitting}
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#4338ca', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                    {submitting ? 'Linking...' : 'Save Linked Questions'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

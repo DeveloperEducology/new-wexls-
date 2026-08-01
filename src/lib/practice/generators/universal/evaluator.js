@@ -190,15 +190,11 @@ function pickUnseenIndex(pool, templateVariables, options, rng) {
       .filter(Boolean)
   );
 
-  if (seenSet.size === 0) {
-    return pickRandom(pool, rng);
-  }
-
   let wordList = null;
   if (Array.isArray(templateVariables)) {
     const wordVar = templateVariables.find(v => {
       const name = String(v?.name || v?.id || '').toLowerCase();
-      return name === 'target_word' || name === 'word' || name === 'result' || name === 'answer_letter';
+      return name === 'target_word' || name === 'word' || name === 'result' || name === 'answer_letter' || name === 'target_audio' || name === 'target_word_incomplete' || name === 'id';
     });
     if (wordVar?.formula) {
       try {
@@ -210,6 +206,7 @@ function pickUnseenIndex(pool, templateVariables, options, rng) {
     }
   }
 
+  // Filter pool for rows that haven't been seen yet, preserving sequential order
   const unseenPool = pool.filter(idx => {
     const idxStr = String(idx).toLowerCase();
     if (seenSet.has(idxStr) || seenSet.has(`idx_${idxStr}`)) return false;
@@ -220,11 +217,23 @@ function pickUnseenIndex(pool, templateVariables, options, rng) {
     return true;
   });
 
-  if (unseenPool.length > 0) {
-    return pickRandom(unseenPool, rng);
+  // 1. If no seen history exists yet, pick a row based on seed RNG so refresh changes question
+  if (seenSet.size === 0) {
+    if (typeof rng === 'function') {
+      const randIdx = Math.floor(rng() * pool.length);
+      return pool[randIdx];
+    }
+    return pool[0];
   }
 
-  return pickRandom(pool, rng);
+  // 2. If there are unseen rows, pick the NEXT unseen row in sequential order
+  if (unseenPool.length > 0) {
+    return unseenPool[0];
+  }
+
+  // 3. If all rows have been seen, cycle back over sequentially
+  const cycleIndex = seenSet.size % pool.length;
+  return pool[cycleIndex];
 }
 
 function pickRandomMany(items, count, rng) {
@@ -520,20 +529,24 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   }
 
   let activeTemplate = { ...template };
-  // Auto-compile template.rows into activeTemplate.variables if template contains rows array
+  // Auto-compile template.rows into activeTemplate.variables with index formulas if template contains rows array
   if (Array.isArray(activeTemplate.rows) && activeTemplate.rows.length > 0 && (!activeTemplate.variables || (Array.isArray(activeTemplate.variables) && activeTemplate.variables.length === 0) || (typeof activeTemplate.variables === 'object' && Object.keys(activeTemplate.variables).length === 0))) {
-    const activeRowIndex = Math.floor(rng() * activeTemplate.rows.length);
-    const activeRow = activeTemplate.rows[activeRowIndex] || activeTemplate.rows[0];
-    const varsObj = {};
-    Object.keys(activeRow).forEach(k => {
-      let val = activeRow[k];
-      if (typeof val === 'string' && val.includes(',')) {
-        const arr = val.split(',').map(s => s.trim());
-        val = arr[Math.floor(rng() * arr.length)];
-      }
-      varsObj[k] = val;
+    const rowCount = activeTemplate.rows.length;
+    const indexPool = Array.from({ length: rowCount }, (_, i) => i);
+    const compiledVars = [
+      { name: 'index', values: indexPool }
+    ];
+
+    const keys = Object.keys(activeTemplate.rows[0]);
+    keys.forEach(k => {
+      const colValues = activeTemplate.rows.map(r => r[k] ?? '');
+      compiledVars.push({
+        name: k,
+        formula: `[${colValues.map(v => typeof v === 'number' ? v : JSON.stringify(String(v))).join(', ')}][index]`
+      });
     });
-    activeTemplate = { ...activeTemplate, variables: varsObj };
+
+    activeTemplate = { ...activeTemplate, variables: compiledVars };
   }
 
   // Built-in helper functions available to ALL template expressions & interpolations.
@@ -593,8 +606,6 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       template?.metadata?.isSequential === true ||
       template?.metadata?.isOrdered === true ||
       template?.metadata?.preserveOptionOrder === true ||
-      searchParams?.get?.('mode') === 'static' ||
-      searchParams?.get?.('iit') === 'true' ||
       searchParams?.get?.('isSequential') === 'true' ||
       searchParams?.get?.('isOrdered') === 'true'
     );
@@ -608,7 +619,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       return pool[0];
     }
 
-    return pickUnseenIndex(pool, template.variables, difficultyContext, rng);
+    return pickUnseenIndex(pool, activeTemplate.variables, difficultyContext, rng);
   };
 
   // 1. Evaluate variables sequentially
@@ -1606,6 +1617,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     },
     metadata: {
       ...(template.metadata || {}),
+      isStatic: false,
       isRemediation: Boolean(
         resolvedVariables.is_remediation === true ||
         String(resolvedVariables.is_remediation).toLowerCase() === 'true' ||
