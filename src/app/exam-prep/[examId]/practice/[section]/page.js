@@ -1029,27 +1029,36 @@ export default function PracticePlayer({ params: paramsPromise }) {
                 }
                 // Image-URL object option (legacy)
                 const isImageOption = typeof value === 'object' && value !== null && value.imageUrl;
-                const optText = isImageOption ? value.text : value;
+                const rawOptText = isImageOption ? value.text : value;
                 const optImgUrl = isImageOption ? value.imageUrl : ((question.optionsImages || {})[key] || null);
                 const optCrop = (question.optionsImagesCrops || {})[key] || null;
+
+                const isGenericText = optImgUrl && rawOptText && (
+                  String(rawOptText).toLowerCase().includes('figure') ||
+                  String(rawOptText).toLowerCase().includes('option') ||
+                  ['1', '2', '3', '4', 'a', 'b', 'c', 'd'].includes(String(rawOptText).trim().toLowerCase())
+                );
+                const showOptText = rawOptText && !isGenericText;
+
                 return (
                   <button
                     key={key}
                     className={`option-button ${optClass}${optImgUrl ? ' option-button--image' : ''}`}
                     onClick={() => !isAnswered && setSelectedOption(key)}
                     disabled={isAnswered}
+                    style={optImgUrl ? { padding: '8px 12px' } : undefined}
                   >
                     <span className="option-letter">{key}</span>
-                    <span className="option-content">
+                    <span className="option-content" style={{ display: 'flex', flexDirection: optImgUrl ? 'column' : 'row', alignItems: 'center', gap: '4px', width: '100%' }}>
                       {optImgUrl && (
                         <FramedImage
                           src={optImgUrl}
                           cropWindow={optCrop || undefined}
                           alt={`Option ${key}`}
-                          style={{ width: '100%', borderRadius: '6px' }}
+                          style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px' }}
                         />
                       )}
-                      {optText && <span>{parseMathAndText(optText)}</span>}
+                      {showOptText && <span>{parseMathAndText(rawOptText)}</span>}
                     </span>
                   </button>
                 );

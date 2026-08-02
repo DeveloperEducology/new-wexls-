@@ -396,9 +396,18 @@ export default function FullMockTestPage({ params }) {
               }}>
                 {['A', 'B', 'C', 'D'].map(letter => {
                   const optText = currentQ.options ? currentQ.options[letter] : null;
-                  if (!optText) return null;
                   const isSelected = userAnswers[currentQNum] === letter;
                   const optImage = (currentQ.optionsImages && currentQ.optionsImages[letter]) || currentQ[`option${letter}Image`];
+
+                  if (!optText && !optImage) return null;
+
+                  // Hide redundant text label if optImage exists and text is generic like "Figure 1", "Figure 2" or "Option A"
+                  const isGenericText = optImage && optText && (
+                    optText.toLowerCase().includes('figure') ||
+                    optText.toLowerCase().includes('option') ||
+                    ['1', '2', '3', '4', 'a', 'b', 'c', 'd'].includes(optText.trim().toLowerCase())
+                  );
+                  const showText = optText && !isGenericText;
 
                   return (
                     <div
@@ -406,23 +415,23 @@ export default function FullMockTestPage({ params }) {
                       className="mock-opt-btn"
                       onClick={() => handleSelectOption(letter)}
                       style={{
-                        padding: optText.includes('<svg') || optImage ? '10px 14px' : '12px 16px',
+                        padding: optImage ? '8px 12px' : (optText && optText.includes('<svg') ? '10px 14px' : '12px 16px'),
                         borderRadius: '12px',
                         border: `2px solid ${isSelected ? '#6366f1' : '#e2e8f0'}`,
                         background: isSelected ? '#eef2ff' : '#fff',
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: optImage ? 'column' : 'row',
-                        alignItems: optImage ? 'flex-start' : 'center',
-                        gap: '10px',
+                        alignItems: optImage ? 'center' : 'center',
+                        gap: optImage ? '6px' : '10px',
                         transition: 'all 0.15s ease',
                         boxShadow: isSelected ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                         <div style={{
-                          width: '30px',
-                          height: '30px',
+                          width: '26px',
+                          height: '26px',
                           borderRadius: '50%',
                           background: isSelected ? '#6366f1' : '#f1f5f9',
                           color: isSelected ? '#fff' : '#475569',
@@ -430,14 +439,16 @@ export default function FullMockTestPage({ params }) {
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontWeight: 800,
-                          fontSize: '0.88rem',
+                          fontSize: '0.82rem',
                           flexShrink: 0
                         }}>
                           {letter}
                         </div>
-                        <div style={{ fontSize: '1rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
-                          {parseMathAndText(optText)}
-                        </div>
+                        {showText && (
+                          <div style={{ fontSize: '0.95rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
+                            {parseMathAndText(optText)}
+                          </div>
+                        )}
                       </div>
 
                       {optImage && (
@@ -445,13 +456,13 @@ export default function FullMockTestPage({ params }) {
                           src={optImage}
                           alt={`Option ${letter} figure`}
                           style={{
-                            maxWidth: '180px',
-                            maxHeight: '140px',
+                            maxWidth: '100%',
+                            maxHeight: '100px',
                             objectFit: 'contain',
-                            borderRadius: '8px',
+                            borderRadius: '6px',
                             border: '1px solid #cbd5e1',
                             alignSelf: 'center',
-                            margin: '6px 0',
+                            margin: '2px 0',
                             padding: '4px',
                             background: '#fff'
                           }}
