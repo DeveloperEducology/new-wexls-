@@ -370,6 +370,7 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
               <img
                 ref={imgRef}
                 src={imageSrc}
+                crossOrigin="anonymous"
                 onLoad={handleImageLoad}
                 alt="Batch Slice Target"
                 style={{ display: 'block', maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', pointerEvents: 'none' }}

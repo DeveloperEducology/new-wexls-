@@ -31,9 +31,29 @@ export default function SingleQuestionCropperModal({ isOpen, onClose, onApply5Cr
   const imgRef = useRef(null);
   const containerRef = useRef(null);
 
+  const loadSafeImageSrc = async (src) => {
+    if (!src) {
+      setImageSrc('');
+      return;
+    }
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
+      setImageSrc(src);
+      return;
+    }
+    try {
+      const res = await fetch(src, { mode: 'cors' });
+      const blob = await res.blob();
+      const localUrl = URL.createObjectURL(blob);
+      setImageSrc(localUrl);
+    } catch (err) {
+      console.warn('CORS fetch fallback for cropper:', err);
+      setImageSrc(src);
+    }
+  };
+
   useEffect(() => {
     if (initialImageSrc) {
-      setImageSrc(initialImageSrc);
+      loadSafeImageSrc(initialImageSrc);
     }
   }, [initialImageSrc]);
 
@@ -300,6 +320,7 @@ export default function SingleQuestionCropperModal({ isOpen, onClose, onApply5Cr
               <img
                 ref={imgRef}
                 src={imageSrc}
+                crossOrigin="anonymous"
                 onLoad={handleImageLoad}
                 alt="Row Slicer Target"
                 style={{ display: 'block', maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', pointerEvents: 'none' }}
