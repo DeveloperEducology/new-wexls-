@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ImageCropperModal from './ImageCropperModal';
 import ImageGalleryModal from './ImageGalleryModal';
+import SingleQuestionCropperModal from './SingleQuestionCropperModal';
 
 const LEVEL_CONFIG = {
   l1: { label: 'L1 Easy', emoji: '🟢', color: '#10b981' },
@@ -24,6 +25,24 @@ export default function RowEditorModal({
   const [editedRow, setEditedRow] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [uploadingTarget, setUploadingTarget] = useState(null);
+
+  // 5-Box Single Question Cropper State
+  const [is5BoxCropperOpen, setIs5BoxCropperOpen] = useState(false);
+
+  const handleApply5Crops = (crops) => {
+    setEditedRow(prev => ({
+      ...prev,
+      questionImage: crops.questionImage || prev.questionImage || '',
+      optionAImage: crops.optionAImage || prev.optionAImage || '',
+      optionBImage: crops.optionBImage || prev.optionBImage || '',
+      optionCImage: crops.optionCImage || prev.optionCImage || '',
+      optionDImage: crops.optionDImage || prev.optionDImage || '',
+      optionA: prev.optionA || 'Figure 1',
+      optionB: prev.optionB || 'Figure 2',
+      optionC: prev.optionC || 'Figure 3',
+      optionD: prev.optionD || 'Figure 4'
+    }));
+  };
 
   // Cropper Modal State
   const [cropperState, setCropperState] = useState({
@@ -301,14 +320,23 @@ export default function RowEditorModal({
                     🖼️ Question Figure Image (Crop &amp; Upload to R2 Storage)
                   </label>
 
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                       type="text"
                       placeholder="R2 Storage Path URL e.g. https://.../jnvst-questions/q1.png"
                       value={imgVal}
                       onChange={e => handleFieldChange(col, e.target.value)}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
+                      style={{ flex: 1, minWidth: '220px', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
                     />
+
+                    {/* 5-Box Multi-Crop Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIs5BoxCropperOpen(true)}
+                      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 900, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 3px 10px rgba(99, 102, 241, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      🎯 5-Box Multi-Crop (Question + A,B,C,D)
+                    </button>
 
                     {/* Crop & Upload Button */}
                     <label style={{ background: '#10b981', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
@@ -609,6 +637,16 @@ export default function RowEditorModal({
             handleFieldChange(galleryState.targetField, selectedUrl);
             setGalleryState({ isOpen: false, targetField: '' });
           }}
+        />
+      )}
+
+      {/* 5-Box Single Question Cropper Modal */}
+      {is5BoxCropperOpen && (
+        <SingleQuestionCropperModal
+          isOpen={is5BoxCropperOpen}
+          onClose={() => setIs5BoxCropperOpen(false)}
+          initialImageSrc={editedRow.questionImage || ''}
+          onApply5Crops={handleApply5Crops}
         />
       )}
     </>
