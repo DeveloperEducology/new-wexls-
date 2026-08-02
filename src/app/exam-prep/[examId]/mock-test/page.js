@@ -415,58 +415,56 @@ export default function FullMockTestPage({ params }) {
                       className="mock-opt-btn"
                       onClick={() => handleSelectOption(letter)}
                       style={{
-                        padding: optImage ? '8px 12px' : (optText && optText.includes('<svg') ? '10px 14px' : '12px 16px'),
-                        borderRadius: '12px',
+                        padding: optImage ? '6px 10px' : (optText && optText.includes('<svg') ? '10px 14px' : '12px 16px'),
+                        borderRadius: '10px',
                         border: `2px solid ${isSelected ? '#6366f1' : '#e2e8f0'}`,
-                        background: isSelected ? '#eef2ff' : '#fff',
+                        background: isSelected ? '#f5f3ff' : '#fff',
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: optImage ? 'column' : 'row',
-                        alignItems: optImage ? 'center' : 'center',
-                        gap: optImage ? '6px' : '10px',
+                        alignItems: 'flex-start',
+                        gap: optImage ? '4px' : '10px',
                         transition: 'all 0.15s ease',
                         boxShadow: isSelected ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                         <div style={{
-                          width: '26px',
-                          height: '26px',
+                          width: '24px',
+                          height: '24px',
                           borderRadius: '50%',
-                          background: isSelected ? '#6366f1' : '#f1f5f9',
+                          background: isSelected ? '#6366f1' : '#e2e8f0',
                           color: isSelected ? '#fff' : '#475569',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontWeight: 800,
-                          fontSize: '0.82rem',
+                          fontSize: '0.78rem',
                           flexShrink: 0
                         }}>
                           {letter}
                         </div>
                         {showText && (
-                          <div style={{ fontSize: '0.95rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
+                          <div style={{ fontSize: '0.92rem', fontWeight: 600, color: isSelected ? '#1e1b4b' : '#334155', flex: 1, overflow: 'hidden' }}>
                             {parseMathAndText(optText)}
                           </div>
                         )}
                       </div>
 
                       {optImage && (
-                        <img
-                          src={optImage}
-                          alt={`Option ${letter} figure`}
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: '100px',
-                            objectFit: 'contain',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            alignSelf: 'center',
-                            margin: '2px 0',
-                            padding: '4px',
-                            background: '#fff'
-                          }}
-                        />
+                        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
+                          <img
+                            src={optImage}
+                            alt={`Option ${letter} figure`}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '85px',
+                              objectFit: 'contain',
+                              borderRadius: '4px',
+                              display: 'block'
+                            }}
+                          />
+                        </div>
                       )}
                     </div>
                   );
