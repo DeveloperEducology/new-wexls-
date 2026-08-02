@@ -16,9 +16,11 @@ import React, { useState, useEffect } from 'react';
  */
 export default function FramedImage({ src, cropWindow, alt = '', style = {}, className = '', imgStyle = {} }) {
   const [naturalAspect, setNaturalAspect] = useState(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!src) return;
+    setHasError(false);
     const img = new Image();
     img.src = src;
     img.onload = () => {
@@ -26,9 +28,12 @@ export default function FramedImage({ src, cropWindow, alt = '', style = {}, cla
         setNaturalAspect(img.naturalWidth / img.naturalHeight);
       }
     };
+    img.onerror = () => {
+      setHasError(true);
+    };
   }, [src]);
 
-  if (!src) return null;
+  if (!src || hasError) return null;
 
   // If no crop window or full uncropped 100% window, render normal image
   if (!cropWindow || !cropWindow.width || !cropWindow.height || (cropWindow.x === 0 && cropWindow.y === 0 && cropWindow.width >= 99.5 && cropWindow.height >= 99.5)) {
@@ -36,6 +41,7 @@ export default function FramedImage({ src, cropWindow, alt = '', style = {}, cla
       <img
         src={src}
         alt={alt}
+        onError={() => setHasError(true)}
         style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', ...style, ...imgStyle }}
         className={className}
       />

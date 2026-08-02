@@ -363,6 +363,12 @@ export default function FullMockTestPage({ params }) {
                   cursor: 'zoom-in',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease'
                 }}
+                onError={(e) => {
+                  console.warn('Question figure image failed to load:', e.currentTarget.src);
+                  if (e.currentTarget.parentElement) {
+                    e.currentTarget.parentElement.style.display = 'none';
+                  }
+                }}
                 onClick={(e) => {
                   if (e.currentTarget.style.transform === 'scale(1.4)') {
                     e.currentTarget.style.transform = 'scale(1)';
