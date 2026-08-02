@@ -81,7 +81,12 @@ export default function RowEditorModal({
       setColumns(prev => [...prev, ...newKeys]);
     }
 
-    setRows(updated);
+    updated[rowIndex] = editedRow;
+    if (typeof onSaveRow === 'function') {
+      onSaveRow(updated);
+    } else {
+      setRows(updated);
+    }
     onClose();
   };
 

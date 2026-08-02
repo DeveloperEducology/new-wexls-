@@ -759,8 +759,10 @@ export default function SpreadsheetTemplateCreator() {
   const [isBatchSlicerOpen, setIsBatchSlicerOpen] = useState(false);
 
   const handleApplyBatchCrops = (croppedItems) => {
+    let updatedCols = columns;
     if (!columns.includes('questionImage')) {
-      setColumns(prev => [...prev, 'questionImage']);
+      updatedCols = [...columns, 'questionImage'];
+      setColumns(updatedCols);
     }
 
     setRows(prevRows => {
@@ -773,6 +775,44 @@ export default function SpreadsheetTemplateCreator() {
           };
         }
       });
+
+      // Auto-save to MongoDB templates & dynamic_templates
+      if (loadedTemplateId) {
+        const parallelVariables = {};
+        updatedCols.forEach(col => {
+          parallelVariables[col] = newRows.map(r => {
+            const cell = String(r[col] || '').trim();
+            return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
+          });
+        });
+        const indicesPool = Array.from({ length: newRows.length }, (_, i) => i);
+        const compiledDerivations = {};
+        updatedCols.forEach(col => {
+          compiledDerivations[col] = `${JSON.stringify(parallelVariables[col])}[index]`;
+        });
+
+        const updates = {
+          rows: newRows,
+          columns: updatedCols,
+          'config.rows': newRows,
+          'config.columns': updatedCols,
+          'config.variables': { index: indicesPool },
+          'config.derivations': compiledDerivations,
+        };
+
+        fetch('/api/admin/templates', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: loadedTemplateId, updates, isExam: true })
+        }).catch(() => {});
+
+        fetch('/api/admin/templates', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: loadedTemplateId, updates, isExam: false })
+        }).catch(() => {});
+      }
+
       return newRows;
     });
   };
@@ -6437,6 +6477,44 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
         rowIndex={editingRowIndex}
         rows={rows}
         setRows={setRows}
+        onSaveRow={(updatedRows) => {
+          setRows(updatedRows);
+          if (loadedTemplateId) {
+            const parallelVariables = {};
+            columns.forEach(col => {
+              parallelVariables[col] = updatedRows.map(r => {
+                const cell = String(r[col] || '').trim();
+                return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
+              });
+            });
+            const indicesPool = Array.from({ length: updatedRows.length }, (_, i) => i);
+            const compiledDerivations = {};
+            columns.forEach(col => {
+              compiledDerivations[col] = `${JSON.stringify(parallelVariables[col])}[index]`;
+            });
+
+            const updates = {
+              rows: updatedRows,
+              columns: columns,
+              'config.rows': updatedRows,
+              'config.columns': columns,
+              'config.variables': { index: indicesPool },
+              'config.derivations': compiledDerivations,
+            };
+
+            fetch('/api/admin/templates', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: loadedTemplateId, updates, isExam: true })
+            }).catch(() => {});
+
+            fetch('/api/admin/templates', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: loadedTemplateId, updates, isExam: false })
+            }).catch(() => {});
+          }
+        }}
         columns={columns}
         blueprint={blueprint}
         optionsBinding={optionsBinding}
