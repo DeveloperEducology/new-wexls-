@@ -3299,6 +3299,10 @@ export default function SpreadsheetTemplateCreator() {
           compiledDerivations[col] = `${JSON.stringify(parallelVariables[col])}[index]`;
         });
         updates = {
+          rows: rows,
+          columns: columns,
+          'config.rows': rows,
+          'config.columns': columns,
           'config.variables': { index: indicesPool },
           'config.derivations': compiledDerivations,
         };
@@ -3314,17 +3318,29 @@ export default function SpreadsheetTemplateCreator() {
             formula: `${JSON.stringify(parallelVariables[col])}[index]`
           });
         });
-        updates = { variables: compiledVariables };
+        updates = {
+          rows: rows,
+          columns: columns,
+          'config.rows': rows,
+          'config.columns': columns,
+          variables: compiledVariables
+        };
       }
 
-      const isExam = targetCollection === 'templates';
-      const res = await fetch('/api/admin/templates', {
+      // Save to BOTH 'templates' and 'dynamic_templates' collections
+      const res1 = await fetch('/api/admin/templates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: loadedTemplateId, updates, isExam })
+        body: JSON.stringify({ id: loadedTemplateId, updates, isExam: true })
       });
-      const data = await res.json();
-      if (data.success) {
+      const res2 = await fetch('/api/admin/templates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: loadedTemplateId, updates, isExam: false })
+      });
+
+      const data = await res1.json();
+      if (data.success || res2.ok) {
         setSaveRowsStatus({ ok: true, msg: `✅ Saved ${rows.length} rows → template "${loadedTemplateId}"` });
       } else {
         setSaveRowsStatus({ ok: false, msg: '⚠️ ' + (data.error || 'Save failed') });
