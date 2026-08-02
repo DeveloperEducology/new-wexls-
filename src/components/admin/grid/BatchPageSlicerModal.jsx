@@ -26,6 +26,19 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
   const imgRef = useRef(null);
   const containerRef = useRef(null);
 
+  const resetEqualSlices = (count = sliceCount, skipHeaderPct = 0) => {
+    const availableHeight = 100 - skipHeaderPct;
+    const hPerSlice = availableHeight / count;
+    const initial = [];
+    for (let i = 0; i < count; i++) {
+      initial.push({
+        top: skipHeaderPct + (i * hPerSlice),
+        height: hPerSlice
+      });
+    }
+    setCustomSlices(initial);
+  };
+
   // Sync startRowIndex prop
   useEffect(() => {
     setStartIdx(startRowIndex);
@@ -39,19 +52,6 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
   }, [sliceCount, imageSrc]);
 
   if (!isOpen) return null;
-
-  const resetEqualSlices = (count = sliceCount, skipHeaderPct = 0) => {
-    const availableHeight = 100 - skipHeaderPct;
-    const hPerSlice = availableHeight / count;
-    const initial = [];
-    for (let i = 0; i < count; i++) {
-      initial.push({
-        top: skipHeaderPct + (i * hPerSlice),
-        height: hPerSlice
-      });
-    }
-    setCustomSlices(initial);
-  };
 
   const handleImageLoad = (e) => {
     const { naturalWidth, naturalHeight } = e.target;
