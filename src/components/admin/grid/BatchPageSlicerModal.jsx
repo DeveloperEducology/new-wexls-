@@ -15,6 +15,7 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
   const [startIdx, setStartIdx] = useState(startRowIndex);
   const [sliceCount, setSliceCount] = useState(4);
   const [sliceMode, setSliceMode] = useState('full'); // 'full' | 'left_only'
+  const [exportFormat, setExportFormat] = useState('webp'); // 'webp' | 'png'
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [processing, setProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
@@ -167,11 +168,15 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
           0, 0, canvas.width, canvas.height
         );
 
-        // Convert to Blob and Upload to R2
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
+        const mimeType = exportFormat === 'webp' ? 'image/webp' : 'image/png';
+        const qualityVal = exportFormat === 'webp' ? 0.75 : 1.0;
+        const ext = exportFormat === 'webp' ? 'webp' : 'png';
+
+        // Convert to Blob and Upload to R2 (WebP quality 0.75 ensures <10KB file size)
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, qualityVal));
 
         if (blob) {
-          const croppedFile = new File([blob], `batch-row-${rowNum}-${Date.now()}.png`, { type: 'image/png' });
+          const croppedFile = new File([blob], `batch-row-${rowNum}-${Date.now()}.${ext}`, { type: mimeType });
           const formData = new FormData();
           formData.append('file', croppedFile);
           formData.append('folder', 'jnvst-questions');
@@ -182,11 +187,11 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
               body: formData
             });
             const data = await res.json();
-            const url = data.url || (data.file && data.file.url) || (data.files && data.files[0] && data.files[0].url) || canvas.toDataURL('image/png');
+            const url = data.url || (data.file && data.file.url) || (data.files && data.files[0] && data.files[0].url) || canvas.toDataURL(mimeType, qualityVal);
             croppedUrls.push({ rowIndex: startIdx + i, questionImage: url });
           } catch (err) {
             console.error('Failed to upload slice', i, err);
-            const dataUrl = canvas.toDataURL('image/png');
+            const dataUrl = canvas.toDataURL(mimeType, qualityVal);
             croppedUrls.push({ rowIndex: startIdx + i, questionImage: dataUrl });
           }
         }
@@ -297,6 +302,29 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
             >
               Left Figures Only
             </button>
+          </div>
+
+          {/* Format Selector: WebP (<10KB) vs PNG */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginRight: '2px' }}>Format:</span>
+            {[
+              { id: 'webp', label: '⚡ WebP (<10KB)' },
+              { id: 'png', label: '💎 PNG' }
+            ].map(fmt => (
+              <button
+                key={fmt.id}
+                type="button"
+                onClick={() => setExportFormat(fmt.id)}
+                style={{
+                  background: exportFormat === fmt.id ? '#059669' : '#ffffff',
+                  color: exportFormat === fmt.id ? '#ffffff' : '#334155',
+                  border: `1px solid ${exportFormat === fmt.id ? '#059669' : '#cbd5e1'}`,
+                  padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer'
+                }}
+              >
+                {fmt.label}
+              </button>
+            ))}
           </div>
 
           {/* Presets: Skip Header & Reset */}
