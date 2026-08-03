@@ -420,36 +420,43 @@ export async function DELETE(req) {
 export async function PATCH(req) {
   try {
     const body = await req.json();
-    const { id, updates, isExam } = body;
+    const { id, updates } = body;
 
     if (!id || !updates) {
       return NextResponse.json({ success: false, error: 'id and updates are required.' }, { status: 400 });
     }
 
-    if (isExam !== false) {
-      // Update competitive exam template in 'templates' collection
-      const { updateTemplate } = await import('../../../../lib/exam/template-store.js');
-      await updateTemplate(id, updates);
-      return NextResponse.json({ success: true, message: `Template ${id} updated.` });
-    } else {
-      // Update curriculum template in 'dynamic_templates' collection
-      const { getMongoDb } = await import('../../../../lib/db/mongo.js');
-      const { ObjectId } = await import('mongodb');
-      const db = await getMongoDb();
-      let res;
-      try {
-        res = await db.collection('dynamic_templates').updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { ...updates, updatedAt: new Date() } }
-        );
-      } catch {
-        res = await db.collection('dynamic_templates').updateOne(
-          { _id: id },
-          { $set: { ...updates, updatedAt: new Date() } }
-        );
-      }
-      return NextResponse.json({ success: true, result: res });
+    const { getMongoDb } = await import('../../../../lib/db/mongo.js');
+    const { ObjectId } = await import('mongodb');
+    const db = await getMongoDb();
+    if (!db) {
+      return NextResponse.json({ success: false, error: 'Database unavailable' }, { status: 500 });
     }
+
+    let objId = null;
+    if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) {
+      try { objId = new ObjectId(id); } catch {}
+    }
+
+    const queryFilter = {
+      $or: [
+        { id: String(id) },
+        { _id: String(id) },
+        ...(objId ? [{ _id: objId }] : [])
+      ]
+    };
+
+    const patchPayload = { ...updates, updatedAt: new Date() };
+
+    const resTemplates = await db.collection('templates').updateMany(queryFilter, { $set: patchPayload });
+    const resDynamic = await db.collection('dynamic_templates').updateMany(queryFilter, { $set: patchPayload });
+
+    return NextResponse.json({
+      success: true,
+      message: `Template ${id} updated.`,
+      templatesMatched: resTemplates.matchedCount,
+      dynamicMatched: resDynamic.matchedCount
+    });
   } catch (err) {
     console.error('Templates API PATCH error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
