@@ -20,10 +20,43 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [processing, setProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
-
-  // Array of slice boxes: [{ left: %, top: %, width: %, height: % }]
   const [customSlices, setCustomSlices] = useState([]);
   const [dragState, setDragState] = useState(null); // null | { index, mode, startX, startY, startLeft, startTop, startW, startH }
+
+  const [selectedSliceIdx, setSelectedSliceIdx] = useState(0);
+  const [previewDataUrl, setPreviewDataUrl] = useState('');
+  const [zoomLevel, setZoomLevel] = useState(1.0); // 0.5x to 3.0x zoom scale
+
+  // Generate real-time slice crop preview of selected box
+  useEffect(() => {
+    if (!imageSrc || !naturalSize.width || !customSlices || customSlices.length === 0) return;
+    const slice = customSlices[selectedSliceIdx] || customSlices[0];
+    if (!slice) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const sourceX = (slice.left / 100) * naturalSize.width;
+      const sourceY = (slice.top / 100) * naturalSize.height;
+      const sourceW = (slice.width / 100) * naturalSize.width;
+      const sourceH = (slice.height / 100) * naturalSize.height;
+
+      canvas.width = Math.max(1, Math.round(sourceW));
+      canvas.height = Math.max(1, Math.round(sourceH));
+
+      ctx.drawImage(
+        img,
+        sourceX, sourceY, sourceW, sourceH,
+        0, 0, canvas.width, canvas.height
+      );
+
+      setPreviewDataUrl(canvas.toDataURL('image/png'));
+    };
+    img.src = imageSrc;
+  }, [selectedSliceIdx, customSlices, imageSrc, naturalSize]);
 
   const imgRef = useRef(null);
   const containerRef = useRef(null);
@@ -332,11 +365,25 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
             <input
               type="number"
               min={1}
-              max={10}
+              max={30}
               value={sliceCount}
-              onChange={(e) => setSliceCount(Math.max(1, Number(e.target.value) || 1))}
-              style={{ width: '48px', padding: '5px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.84rem', fontWeight: 800, textAlign: 'center' }}
+              onChange={(e) => setSliceCount(Math.min(30, Math.max(1, Number(e.target.value) || 1)))}
+              style={{ width: '56px', padding: '5px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.84rem', fontWeight: 800, textAlign: 'center' }}
             />
+            <button
+              type="button"
+              onClick={() => setSliceCount(10)}
+              style={{ padding: '3px 7px', borderRadius: '6px', border: sliceCount === 10 ? '1px solid #6366f1' : '1px solid #cbd5e1', background: sliceCount === 10 ? '#eef2ff' : '#fff', color: sliceCount === 10 ? '#4f46e5' : '#475569', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
+            >
+              10
+            </button>
+            <button
+              type="button"
+              onClick={() => setSliceCount(20)}
+              style={{ padding: '3px 7px', borderRadius: '6px', border: sliceCount === 20 ? '1px solid #e11d48' : '1px solid #cbd5e1', background: sliceCount === 20 ? '#fff1f2' : '#fff', color: sliceCount === 20 ? '#be123c' : '#475569', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer' }}
+            >
+              🔥 20
+            </button>
           </div>
 
           {/* Format Selector: WebP (<10KB) vs PNG */}
@@ -362,6 +409,51 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
             ))}
           </div>
 
+          {/* Zoom In / Zoom Out Toolbar */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#ffffff', padding: '3px 8px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}>
+            <span style={{ fontSize: '0.76rem', fontWeight: 900, color: '#0f172a', marginRight: '2px' }}>🔎 Zoom:</span>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(prev => Math.max(0.5, Math.round((prev - 0.25) * 100) / 100))}
+              disabled={zoomLevel <= 0.5}
+              style={{ padding: '2px 8px', borderRadius: '5px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 900, cursor: zoomLevel <= 0.5 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', color: '#0f172a' }}
+              title="Zoom Out (50% min)"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(1.0)}
+              style={{ padding: '2px 8px', borderRadius: '5px', border: 'none', background: '#e0e7ff', color: '#3730a3', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem' }}
+              title="Reset to 100% Zoom"
+            >
+              {Math.round(zoomLevel * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(prev => Math.min(3.0, Math.round((prev + 0.25) * 100) / 100))}
+              disabled={zoomLevel >= 3.0}
+              style={{ padding: '2px 8px', borderRadius: '5px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 900, cursor: zoomLevel >= 3.0 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', color: '#0f172a' }}
+              title="Zoom In (300% max)"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(1.5)}
+              style={{ padding: '2px 6px', borderRadius: '5px', border: zoomLevel === 1.5 ? '1px solid #6366f1' : '1px solid #e2e8f0', background: zoomLevel === 1.5 ? '#6366f1' : '#fff', color: zoomLevel === 1.5 ? '#fff' : '#475569', fontWeight: 800, cursor: 'pointer', fontSize: '0.72rem' }}
+            >
+              1.5x
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(2.0)}
+              style={{ padding: '2px 6px', borderRadius: '5px', border: zoomLevel === 2.0 ? '1px solid #e11d48' : '1px solid #e2e8f0', background: zoomLevel === 2.0 ? '#e11d48' : '#fff', color: zoomLevel === 2.0 ? '#fff' : '#475569', fontWeight: 900, cursor: 'pointer', fontSize: '0.72rem' }}
+            >
+              2x
+            </button>
+          </div>
+
           {/* Presets: Skip Header & Reset */}
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button
@@ -383,119 +475,232 @@ export default function BatchPageSlicerModal({ rows, startRowIndex = 0, isOpen, 
 
         </div>
 
-        {/* Visual Draggable Crop Overlay Canvas */}
-        <div
-          ref={containerRef}
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxHeight: '440px',
-            overflow: 'auto',
-            background: '#0f172a',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            userSelect: 'none',
-            padding: '16px'
-          }}
-        >
-          {imageSrc ? (
-            <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
-              <img
-                ref={imgRef}
-                src={imageSrc}
-                crossOrigin="anonymous"
-                onLoad={handleImageLoad}
-                alt="Batch Slice Target"
-                style={{ display: 'block', maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', pointerEvents: 'none' }}
-              />
+        {/* Main Work Area: Draggable Crop Canvas (Left) + Selected Box Live Preview (Right) */}
+        <div style={{ display: 'grid', gridTemplateColumns: imageSrc ? '1fr 280px' : '1fr', gap: '16px', alignItems: 'flex-start' }}>
+          
+          {/* Visual Draggable Crop Overlay Canvas */}
+          <div
+            ref={containerRef}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxHeight: '440px',
+              overflow: 'auto',
+              background: '#0f172a',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              userSelect: 'none',
+              padding: '16px'
+            }}
+          >
+            {imageSrc ? (
+              <div
+                style={{
+                  position: 'relative',
+                  display: 'inline-block',
+                  width: `${zoomLevel * 100}%`,
+                  maxWidth: 'none',
+                  transformOrigin: 'top center',
+                  transition: 'width 0.15s ease-out'
+                }}
+              >
+                <img
+                  ref={imgRef}
+                  src={imageSrc}
+                  crossOrigin="anonymous"
+                  onLoad={handleImageLoad}
+                  alt="Batch Slice Target"
+                  style={{ display: 'block', width: '100%', height: 'auto', pointerEvents: 'none' }}
+                />
 
-              {/* Draggable Cut Boxes Overlay */}
-              {customSlices.map((slice, i) => {
-                const rowTarget = startIdx + i + 1;
-                const boxColor = pageLayout === '2col'
-                  ? (i < Math.ceil(sliceCount / 2) ? '#10b981' : '#f59e0b')
-                  : (i % 2 === 0 ? '#10b981' : '#3b82f6');
+                {/* Draggable Cut Boxes Overlay */}
+                {customSlices.map((slice, i) => {
+                  const rowTarget = startIdx + i + 1;
+                  const isSelected = selectedSliceIdx === i;
+                  const boxColor = pageLayout === '2col'
+                    ? (i < Math.ceil(sliceCount / 2) ? '#10b981' : '#f59e0b')
+                    : (i % 2 === 0 ? '#10b981' : '#3b82f6');
 
-                return (
-                  <div
-                    key={i}
-                    onMouseDown={(e) => handleHandleMouseDown(e, i, 'move')}
-                    style={{
-                      position: 'absolute',
-                      left: `${slice.left}%`,
-                      top: `${slice.top}%`,
-                      width: `${slice.width}%`,
-                      height: `${slice.height}%`,
-                      border: `2px dashed ${boxColor}`,
-                      background: pageLayout === '2col'
-                        ? (i < Math.ceil(sliceCount / 2) ? 'rgba(16, 185, 129, 0.22)' : 'rgba(245, 158, 11, 0.22)')
-                        : (i % 2 === 0 ? 'rgba(16, 185, 129, 0.22)' : 'rgba(59, 130, 246, 0.22)'),
-                      boxSizing: 'border-box',
-                      cursor: 'grab',
-                      zIndex: dragState && dragState.index === i ? 20 : 10
-                    }}
-                  >
-                    {/* Top Edge Resizable Handle */}
+                  return (
                     <div
-                      onMouseDown={(e) => handleHandleMouseDown(e, i, 'top')}
+                      key={i}
+                      onMouseDown={(e) => {
+                        setSelectedSliceIdx(i);
+                        handleHandleMouseDown(e, i, 'move');
+                      }}
+                      onClick={() => setSelectedSliceIdx(i)}
                       style={{
                         position: 'absolute',
-                        top: '-4px', left: 0, right: 0,
-                        height: '8px',
-                        background: boxColor,
-                        cursor: 'ns-resize',
-                        borderRadius: '2px',
-                        zIndex: 10
+                        left: `${slice.left}%`,
+                        top: `${slice.top}%`,
+                        width: `${slice.width}%`,
+                        height: `${slice.height}%`,
+                        border: isSelected ? '3.5px solid #ec4899' : `2px dashed ${boxColor}`,
+                        background: isSelected
+                          ? 'rgba(236, 72, 153, 0.35)'
+                          : (pageLayout === '2col'
+                            ? (i < Math.ceil(sliceCount / 2) ? 'rgba(16, 185, 129, 0.22)' : 'rgba(245, 158, 11, 0.22)')
+                            : (i % 2 === 0 ? 'rgba(16, 185, 129, 0.22)' : 'rgba(59, 130, 246, 0.22)')),
+                        boxSizing: 'border-box',
+                        cursor: 'grab',
+                        zIndex: isSelected ? 30 : (dragState && dragState.index === i ? 20 : 10),
+                        boxShadow: isSelected ? '0 0 0 3px rgba(236, 72, 153, 0.5)' : 'none'
                       }}
-                      title="Drag top edge up/down"
-                    />
+                    >
+                      {/* Top Edge Resizable Handle */}
+                      <div
+                        onMouseDown={(e) => {
+                          setSelectedSliceIdx(i);
+                          handleHandleMouseDown(e, i, 'top');
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '-4px', left: 0, right: 0,
+                          height: '8px',
+                          background: isSelected ? '#ec4899' : boxColor,
+                          cursor: 'ns-resize',
+                          borderRadius: '2px',
+                          zIndex: 10
+                        }}
+                        title="Drag top edge up/down"
+                      />
 
-                    {/* Region Label Badge */}
-                    <div style={{ position: 'absolute', top: '6px', left: '8px', background: boxColor, color: '#fff', fontSize: '0.72rem', fontWeight: 900, padding: '2px 8px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', pointerEvents: 'none' }}>
-                      ✂️ Assign to Row #{rowTarget} ({Math.round(slice.width)}%W × {Math.round(slice.height)}%H)
+                      {/* Region Label Badge */}
+                      <div style={{ position: 'absolute', top: '6px', left: '8px', background: isSelected ? '#ec4899' : boxColor, color: '#fff', fontSize: '0.72rem', fontWeight: 900, padding: '2px 8px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', pointerEvents: 'none' }}>
+                        ✂️ Row #{rowTarget} ({Math.round(slice.width)}%W × {Math.round(slice.height)}%H)
+                      </div>
+
+                      {/* Bottom Edge Resizable Handle */}
+                      <div
+                        onMouseDown={(e) => {
+                          setSelectedSliceIdx(i);
+                          handleHandleMouseDown(e, i, 'bottom');
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '-4px', left: 0, right: 0,
+                          height: '8px',
+                          background: isSelected ? '#ec4899' : boxColor,
+                          cursor: 'ns-resize',
+                          borderRadius: '2px',
+                          zIndex: 10
+                        }}
+                        title="Drag bottom edge up/down"
+                      />
+
+                      {/* Corner Resize Handle */}
+                      <div
+                        onMouseDown={(e) => {
+                          setSelectedSliceIdx(i);
+                          handleHandleMouseDown(e, i, 'se');
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '-4px', right: '-4px',
+                          width: '10px', height: '10px',
+                          background: isSelected ? '#ec4899' : boxColor,
+                          border: '1px solid #fff',
+                          borderRadius: '2px',
+                          cursor: 'nwse-resize',
+                          zIndex: 30
+                        }}
+                        title="Drag corner to resize width & height"
+                      />
                     </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ color: '#94a3b8', padding: '60px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📄</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>No page image loaded yet</div>
+                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '4px' }}>Click "Choose Page Image" above to load a page sheet</div>
+              </div>
+            )}
+          </div>
 
-                    {/* Bottom Edge Resizable Handle */}
-                    <div
-                      onMouseDown={(e) => handleHandleMouseDown(e, i, 'bottom')}
-                      style={{
-                        position: 'absolute',
-                        bottom: '-4px', left: 0, right: 0,
-                        height: '8px',
-                        background: boxColor,
-                        cursor: 'ns-resize',
-                        borderRadius: '2px',
-                        zIndex: 10
-                      }}
-                      title="Drag bottom edge up/down"
-                    />
+          {/* Right Side Panel: Live Crop Preview for Selected Box */}
+          {imageSrc && (
+            <div style={{ background: '#f8fafc', borderRadius: '16px', border: '1.5px solid #cbd5e1', padding: '14px 16px', height: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0f172a' }}>
+                    🔍 Selected Box Preview
+                  </span>
+                  <span style={{ fontSize: '0.74rem', background: '#ec4899', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontWeight: 900 }}>
+                    #{selectedSliceIdx + 1} of {customSlices.length}
+                  </span>
+                </div>
 
-                    {/* Corner Resize Handle */}
-                    <div
-                      onMouseDown={(e) => handleHandleMouseDown(e, i, 'se')}
-                      style={{
-                        position: 'absolute',
-                        bottom: '-4px', right: '-4px',
-                        width: '10px', height: '10px',
-                        background: boxColor,
-                        border: '1px solid #fff',
-                        borderRadius: '2px',
-                        cursor: 'nwse-resize',
-                        zIndex: 30
-                      }}
-                      title="Drag corner to resize width & height"
+                {/* Target Row Badge */}
+                <div style={{ background: '#e0e7ff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: '0.82rem', fontWeight: 800, marginBottom: '10px' }}>
+                  📍 Target Row #{startIdx + selectedSliceIdx + 1}
+                  <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4338ca', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {rows[startIdx + selectedSliceIdx]?.questionText
+                      ? rows[startIdx + selectedSliceIdx].questionText
+                      : `Question #${startIdx + selectedSliceIdx + 1}`}
+                  </span>
+                </div>
+
+                {/* Live Cropped Image Thumbnail */}
+                <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px dashed #cbd5e1', padding: '8px', minHeight: '160px', maxHeight: '190px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.04)' }}>
+                  {previewDataUrl ? (
+                    <img
+                      src={previewDataUrl}
+                      alt="Selected Box Crop Preview"
+                      style={{ maxWidth: '100%', maxHeight: '170px', objectFit: 'contain', borderRadius: '4px' }}
                     />
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{ color: '#94a3b8', padding: '60px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📄</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>No page image loaded yet</div>
-              <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '4px' }}>Click "Choose Page Image" above to load a page sheet</div>
+                  ) : (
+                    <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Rendering preview...</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Box Navigator & Nudge Buttons */}
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSliceIdx(prev => Math.max(0, prev - 1))}
+                    disabled={selectedSliceIdx === 0}
+                    style={{ flex: 1, padding: '6px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.76rem', fontWeight: 800, cursor: selectedSliceIdx === 0 ? 'not-allowed' : 'pointer', color: '#334155' }}
+                  >
+                    ◀ Prev Box
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSliceIdx(prev => Math.min(customSlices.length - 1, prev + 1))}
+                    disabled={selectedSliceIdx === customSlices.length - 1}
+                    style={{ flex: 1, padding: '6px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.76rem', fontWeight: 800, cursor: selectedSliceIdx === customSlices.length - 1 ? 'not-allowed' : 'pointer', color: '#334155' }}
+                  >
+                    Next Box ▶
+                  </button>
+                </div>
+
+                {/* Quick Nudge Position */}
+                <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', fontSize: '0.74rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomSlices(prev => prev.map((s, idx) => idx === selectedSliceIdx ? { ...s, top: Math.max(0, s.top - 1) } : s));
+                    }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '3px 8px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    ▲ Move Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomSlices(prev => prev.map((s, idx) => idx === selectedSliceIdx ? { ...s, top: Math.min(95, s.top + 1) } : s));
+                    }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '3px 8px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    ▼ Move Down
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

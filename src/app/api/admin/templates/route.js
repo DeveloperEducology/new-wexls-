@@ -7,6 +7,8 @@ import {
 } from '../../../../lib/practice/questionBank/dynamicTemplatesRepository.js';
 import { listTemplates, createTemplate } from '../../../../lib/exam/template-store.js';
 
+import { JNVST_2025_PYQ_TEMPLATE } from '../../../../lib/exam/jnvst2025PyqData.js';
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -45,6 +47,17 @@ export async function GET(req) {
         _id: String(t._id)
       };
     });
+
+    // Ensure 2025 official PYQ template is present as fallback if not in DB
+    const has2025Exam = mappedExamTemplates.some(t => String(t.id || t._id).includes('2025'));
+    if (!has2025Exam) {
+      mappedExamTemplates.unshift(JNVST_2025_PYQ_TEMPLATE);
+    }
+
+    const has2025Curr = mappedCurriculum.some(t => String(t.id || t._id).includes('2025'));
+    if (!has2025Curr) {
+      mappedCurriculum.unshift(JNVST_2025_PYQ_TEMPLATE);
+    }
 
     // 3. Combine both flat lists for dynamicTemplates
     const allDynamic = [
@@ -448,14 +461,39 @@ export async function PATCH(req) {
 
     const patchPayload = { ...updates, updatedAt: new Date() };
 
-    const resTemplates = await db.collection('templates').updateMany(queryFilter, { $set: patchPayload });
-    const resDynamic = await db.collection('dynamic_templates').updateMany(queryFilter, { $set: patchPayload });
+    let templatesMatched = 0;
+    let dynamicMatched = 0;
+    let templatesError = null;
+    let dynamicError = null;
+
+    try {
+      const resTemplates = await db.collection('templates').updateMany(queryFilter, { $set: patchPayload });
+      templatesMatched = resTemplates.matchedCount;
+    } catch (err) {
+      templatesError = err.message;
+      console.warn('[PATCH Templates] Error updating templates collection:', err.message);
+    }
+
+    try {
+      const resDynamic = await db.collection('dynamic_templates').updateMany(queryFilter, { $set: patchPayload });
+      dynamicMatched = resDynamic.matchedCount;
+    } catch (err) {
+      dynamicError = err.message;
+      console.warn('[PATCH DynamicTemplates] Error updating dynamic_templates collection:', err.message);
+    }
+
+    if (templatesMatched === 0 && dynamicMatched === 0) {
+      return NextResponse.json({
+        success: false,
+        error: `Failed to update template. Templates error: ${templatesError || 'No match'}. Dynamic error: ${dynamicError || 'No match'}.`
+      }, { status: 400 });
+    }
 
     return NextResponse.json({
       success: true,
       message: `Template ${id} updated.`,
-      templatesMatched: resTemplates.matchedCount,
-      dynamicMatched: resDynamic.matchedCount
+      templatesMatched,
+      dynamicMatched
     });
   } catch (err) {
     console.error('Templates API PATCH error:', err);

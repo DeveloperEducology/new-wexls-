@@ -159,8 +159,42 @@ function buildGradeCurriculumV2(grades, subjects, units, chapters, skills, activ
   });
 }
 
-function practiceHrefV2(subjectId, unitId, skillId) {
-  return `/practice?subject=${subjectId}&topic=${unitId}&skill=${skillId}`;
+function practiceHrefV2(subjectId, unitId, skillId, gradeId = null) {
+  let resolvedGrade = gradeId;
+  
+  if (!resolvedGrade) {
+    const targetStr = `${skillId} ${unitId}`.toLowerCase();
+    if (targetStr.includes('lkg')) {
+      resolvedGrade = 'lkg';
+    } else if (targetStr.includes('ukg')) {
+      resolvedGrade = 'ukg';
+    } else if (targetStr.includes('prek')) {
+      resolvedGrade = 'prek';
+    } else {
+      const match = targetStr.match(/(?:-g|grade[- ]|g)([0-9a-zA-Z])/);
+      if (match) {
+        resolvedGrade = match[1];
+      } else {
+        resolvedGrade = '3';
+      }
+    }
+  }
+
+  let cleanTopic = unitId;
+  let cleanSkill = skillId;
+
+  if (resolvedGrade) {
+    const prefix = `${resolvedGrade}-`;
+    if (cleanTopic.startsWith(prefix)) {
+      cleanTopic = cleanTopic.slice(prefix.length);
+    }
+    if (cleanSkill.startsWith(prefix)) {
+      cleanSkill = cleanSkill.slice(prefix.length);
+    }
+    cleanSkill = cleanSkill.replace(/^(size|positions|count\d+|g\d+)-/, '');
+  }
+
+  return `/practice/${resolvedGrade}/${subjectId}/${cleanTopic}/${cleanSkill}`;
 }
 
 function getMatchedTemplate(skill, templates = [], dynamicTemplates = [], questionCount = 0) {
@@ -473,43 +507,7 @@ export default async function GradesV2Page({ searchParams }) {
           </div>
           <div className="tab-actions-group" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <GradeFilterDropdownV2 grades={grades} selectedGrade={selectedGradeId} />
-            <div style={{ display: 'flex', gap: '0.5rem', background: '#e2e8f0', borderRadius: '8px', padding: '4px' }}>
-              <Link 
-                href="/grades-v2"
-                style={{
-                  textDecoration: 'none',
-                  background: '#ffffff',
-                  color: '#4f46e5',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                🏫 Grades V2
-              </Link>
-              <Link 
-                href="/admin-v2"
-                style={{
-                  textDecoration: 'none',
-                  background: 'transparent',
-                  color: '#475569',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                🛠️ Admin V2
-              </Link>
-            </div>
+
           </div>
         </div>
 
@@ -821,7 +819,7 @@ export default async function GradesV2Page({ searchParams }) {
                               {topic.skills.map(([code, name, skillId]) => (
                                 <Link 
                                   key={skillId} 
-                                  href={practiceHrefV2(activeSubjectNode.id, topic.unitId || topic.id, skillId)} 
+                                  href={practiceHrefV2(activeSubjectNode.id, topic.unitId || topic.id, skillId, gradeId)} 
                                   className="skill-pill"
                                 >
                                   <span className="skill-code">{code}</span>

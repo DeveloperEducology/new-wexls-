@@ -524,14 +524,14 @@ export default function GeneratedBlogRenderer({ post }) {
                 <div className="grb-formula-label">📐 Key Formula</div>
                 <MathText>{conceptOverview.keyFormula}</MathText>
                 {conceptOverview.formulaExplanation && (
-                  <p className="grb-formula-note">{conceptOverview.formulaExplanation}</p>
+                  <MathPara className="grb-formula-note">{conceptOverview.formulaExplanation}</MathPara>
                 )}
               </div>
             )}
             {conceptOverview.realWorldAnalogy && (
               <div className="grb-analogy">
                 <span className="grb-analogy-icon">💡</span>
-                <div><strong>Think of it this way:</strong><p>{conceptOverview.realWorldAnalogy}</p></div>
+                <div><strong>Think of it this way:</strong><MathPara>{conceptOverview.realWorldAnalogy}</MathPara></div>
               </div>
             )}
           </div>
@@ -550,7 +550,7 @@ export default function GeneratedBlogRenderer({ post }) {
                     <h3 className="grb-step-title">{step.title}</h3>
                     <MathPara className="grb-step-expl">{step.explanation}</MathPara>
                     {step.math && <div className="grb-step-math"><MathText>{step.math}</MathText></div>}
-                    {step.proTip && <div className="grb-step-tip"><b>💡 Pro Tip:</b> {step.proTip}</div>}
+                    {step.proTip && <div className="grb-step-tip"><b>💡 Pro Tip:</b> <MathText>{step.proTip}</MathText></div>}
                   </div>
                 </li>
               ))}
@@ -573,7 +573,7 @@ export default function GeneratedBlogRenderer({ post }) {
                 </div>
                 {ex.solution && (
                   <div className="grb-solution">
-                    {ex.solution.approach && <p className="grb-sol-approach"><em>Approach: {ex.solution.approach}</em></p>}
+                    {ex.solution.approach && <p className="grb-sol-approach"><em>Approach: </em><MathText>{ex.solution.approach}</MathText></p>}
                     {ex.solution.steps?.length > 0 && (
                       <div className="grb-sol-steps">
                         {ex.solution.steps.map((s) => (
@@ -595,7 +595,7 @@ export default function GeneratedBlogRenderer({ post }) {
                       </div>
                     )}
                     {ex.solution.checkYourWork && (
-                      <div className="grb-check">🔍 Check: {ex.solution.checkYourWork}</div>
+                      <div className="grb-check">🔍 Check: <MathText>{ex.solution.checkYourWork}</MathText></div>
                     )}
                   </div>
                 )}
@@ -611,7 +611,7 @@ export default function GeneratedBlogRenderer({ post }) {
             {commonMistakes.map((m, i) => (
               <div key={i} className="grb-mistake">
                 <div className="grb-mistake-lbl">❌ Mistake #{i + 1}</div>
-                <p className="grb-mistake-desc">{m.mistake}</p>
+                <MathPara className="grb-mistake-desc">{m.mistake}</MathPara>
                 <div className="grb-mistake-cmp">
                   <div className="grb-wrong">
                     <div className="grb-cmp-lbl grb-wrong-lbl">Wrong ❌</div>
@@ -623,7 +623,7 @@ export default function GeneratedBlogRenderer({ post }) {
                     <MathText>{m.correctApproach}</MathText>
                   </div>
                 </div>
-                {m.memoryTrick && <div className="grb-mem">🧠 <strong>Remember:</strong> {m.memoryTrick}</div>}
+                {m.memoryTrick && <div className="grb-mem">🧠 <strong>Remember:</strong> <MathText>{m.memoryTrick}</MathText></div>}
               </div>
             ))}
           </div>
@@ -647,14 +647,14 @@ export default function GeneratedBlogRenderer({ post }) {
                   <div className="grb-meta-box grb-time-box">
                     <div className="grb-meta-icon">⏱️</div>
                     <div className="grb-meta-lbl">Time Management</div>
-                    <div className="grb-meta-val">{examTips.timeManagement}</div>
+                    <div className="grb-meta-val"><MathText>{examTips.timeManagement}</MathText></div>
                   </div>
                 )}
                 {examTips.quickCheckMethod && (
                   <div className="grb-meta-box grb-check-box">
                     <div className="grb-meta-icon">⚡</div>
                     <div className="grb-meta-lbl">Quick Check</div>
-                    <div className="grb-meta-val">{examTips.quickCheckMethod}</div>
+                    <div className="grb-meta-val"><MathText>{examTips.quickCheckMethod}</MathText></div>
                   </div>
                 )}
               </div>
@@ -675,7 +675,7 @@ export default function GeneratedBlogRenderer({ post }) {
                   <span className="grb-q-num">Q{i + 1}</span>
                   <MathText className="grb-q-text">{prob.question}</MathText>
                 </div>
-                {prob.hint && <div className="grb-hint">💡 Hint: {prob.hint}</div>}
+                {prob.hint && <div className="grb-hint">💡 Hint: <MathText>{prob.hint}</MathText></div>}
                 <button className="grb-reveal" onClick={() => setRevealedAnswers(p => ({ ...p, [i]: !p[i] }))}>
                   {revealedAnswers[i] ? '🙈 Hide Answer' : '👁 Reveal Answer'}
                 </button>
@@ -722,10 +722,9 @@ export default function GeneratedBlogRenderer({ post }) {
         {/* CTA */}
         {callToAction && (
           <div className="grb-cta">
-            <p>{callToAction}</p>
+            <MathPara>{callToAction}</MathPara>
             <div className="grb-cta-btns">
-              <Link href="/blog-generator" className="grb-cta-btn grb-cta-primary">📝 Generate More Blogs →</Link>
-              <Link href="/blog" className="grb-cta-btn grb-cta-secondary">Browse All Posts</Link>
+              <Link href="/blog" className="grb-cta-btn grb-cta-primary">Browse All Posts</Link>
               <Link href="/test-lesson" className="grb-cta-btn grb-cta-secondary">Make a Worksheet</Link>
             </div>
           </div>

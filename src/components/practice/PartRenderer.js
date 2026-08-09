@@ -7443,27 +7443,61 @@ function HotspotCanvasPart({ part, question, userAnswer, onAnswer, isAnswered })
 
   // Resolve layouts object
   const resolvedLayouts = part?.layouts || question?.layouts || question?.metadata?.layouts;
+  const desktopLayout = resolvedLayouts?.desktop || null;
+  const mobileLayout = resolvedLayouts?.mobile || null;
   
-  // Pick active layout based on viewport layout context
+  // Pick active layout based on viewport layout context.
+  // Unless mobileLayout has its OWN dedicated background image/SVG asset, default to desktopLayout.
+  // desktopLayout automatically scales to fit 100% of mobile width while preserving exact hotspot alignment & aspect ratio.
   const activeLayout = useMemo(() => {
     if (!resolvedLayouts) return null;
-    if (isMobileLayout && resolvedLayouts.mobile) {
-      return resolvedLayouts.mobile;
+    const hasMobileBg = Boolean(mobileLayout?.backgroundSvg || mobileLayout?.backgroundImage || mobileLayout?.backgroundUrl);
+    const hasMobileHotspots = Array.isArray(mobileLayout?.hotspots) && mobileLayout.hotspots.length > 0;
+
+    if (isMobileLayout && mobileLayout && hasMobileBg && hasMobileHotspots) {
+      return mobileLayout;
     }
-    return resolvedLayouts.desktop || null;
-  }, [resolvedLayouts, isMobileLayout]);
+    return desktopLayout || mobileLayout || null;
+  }, [resolvedLayouts, isMobileLayout, mobileLayout, desktopLayout]);
 
-  const backgroundSvg = activeLayout 
-    ? (activeLayout.backgroundSvg || activeLayout.backgroundImageSvg) 
-    : part?.backgroundSvg;
+  const backgroundSvg = useMemo(() => {
+    return (
+      activeLayout?.backgroundSvg ||
+      activeLayout?.backgroundImageSvg ||
+      desktopLayout?.backgroundSvg ||
+      desktopLayout?.backgroundImageSvg ||
+      part?.backgroundSvg ||
+      question?.backgroundSvg ||
+      question?.metadata?.backgroundSvg ||
+      ''
+    );
+  }, [activeLayout, desktopLayout, part, question]);
 
-  const backgroundUrl = activeLayout 
-    ? (activeLayout.backgroundUrl || activeLayout.backgroundImage) 
-    : (part?.backgroundUrl || question?.backgroundImage || question?.backgroundUrl);
+  const backgroundUrl = useMemo(() => {
+    return (
+      activeLayout?.backgroundUrl ||
+      activeLayout?.backgroundImage ||
+      desktopLayout?.backgroundUrl ||
+      desktopLayout?.backgroundImage ||
+      part?.backgroundUrl ||
+      question?.backgroundImage ||
+      question?.backgroundUrl ||
+      ''
+    );
+  }, [activeLayout, desktopLayout, part, question]);
 
-  const canvasWidth = activeLayout?.canvasWidth ?? (part?.canvasWidth || 360);
-  const canvasHeight = activeLayout?.canvasHeight ?? (part?.canvasHeight || 300);
-  const hotspots = activeLayout?.hotspots ?? (part?.hotspots || []);
+  const hotspots = useMemo(() => {
+    if (activeLayout?.hotspots && activeLayout.hotspots.length > 0) {
+      return activeLayout.hotspots;
+    }
+    if (desktopLayout?.hotspots && desktopLayout.hotspots.length > 0) {
+      return desktopLayout.hotspots;
+    }
+    return part?.hotspots || question?.hotspots || question?.metadata?.hotspots || [];
+  }, [activeLayout, desktopLayout, part, question]);
+
+  const canvasWidth = activeLayout?.canvasWidth ?? (desktopLayout?.canvasWidth || part?.canvasWidth || 800);
+  const canvasHeight = activeLayout?.canvasHeight ?? (desktopLayout?.canvasHeight || part?.canvasHeight || 465);
 
   const hasImages = useMemo(() => {
     return (hotspots || []).some(hs => {

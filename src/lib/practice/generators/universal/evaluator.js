@@ -3,6 +3,7 @@ import { interpolateString, getCleanNameFromUrl, parseLabeledEntry, resolveLabel
 import { COMPONENT_REGISTRY } from './components/index.js';
 import { drawVisualChoicePanel } from './components/VisualChoice.js';
 import { generateDynamicSceneSvg } from './components/SceneComposer.js';
+import { sanitizeLatexMathText } from '../latexSanitizer.js';
 
 
 // Seeded RNG
@@ -420,18 +421,18 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     throw new Error('Template document is invalid.');
   }
 
-  let currentLevel = 3; // default fallback
+  let currentLevel = 1; // default fallback (starts at L1 Easy)
   if (difficultyContext) {
     const historyContext = difficultyContext.historyContext || {};
     const searchParams = difficultyContext.searchParams;
     const difficulty = difficultyContext.difficulty || 'adaptive';
 
     if (historyContext.practiceLevel) {
-      currentLevel = Number(historyContext.practiceLevel) || 3;
+      currentLevel = Number(historyContext.practiceLevel) || 1;
     } else if (searchParams) {
       const levelParam = searchParams.get('practiceLevel') || searchParams.get('level');
       if (levelParam) {
-        currentLevel = Number(levelParam) || 3;
+        currentLevel = Number(levelParam) || 1;
       } else {
         const diffVal = searchParams.get('difficulty');
         if (diffVal && !isNaN(Number(diffVal))) {
@@ -459,6 +460,43 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       currentLevel = 2;
     } else if (difficulty === 'hard') {
       currentLevel = 3;
+    }
+  }
+
+  // Level Pool Length helper for sequential progression (L1 -> L2 -> L3 -> L4)
+  const getLevelPoolLen = (lvl) => {
+    const varName = `index_l${lvl}`;
+    if (Array.isArray(originalTemplate.variables)) {
+      const v = originalTemplate.variables.find(x => (x?.name || x?.id) === varName);
+      if (Array.isArray(v)) return v.length;
+      return (v && Array.isArray(v.values || v.value)) ? (v.values || v.value).length : 0;
+    } else if (originalTemplate.variables && typeof originalTemplate.variables === 'object') {
+      const v = originalTemplate.variables[varName];
+      if (Array.isArray(v)) return v.length;
+      return (v && Array.isArray(v?.values || v?.value)) ? (v.values || v.value).length : 0;
+    }
+    return 0;
+  };
+
+  const l1Len = getLevelPoolLen(1);
+  const l2Len = getLevelPoolLen(2);
+  const l3Len = getLevelPoolLen(3);
+  const l4Len = getLevelPoolLen(4);
+
+  const searchParams = difficultyContext?.searchParams;
+  const qnRaw = difficultyContext?.qn !== undefined && difficultyContext?.qn !== null ? difficultyContext.qn : searchParams?.get?.('qn');
+  const qnNum = (qnRaw !== undefined && qnRaw !== null && qnRaw !== '') ? parseInt(qnRaw, 10) : null;
+
+  // If question number (qn) is provided and level pools exist, map qn to currentLevel (L1 -> L2 -> L3 -> L4)
+  if (qnNum !== null && !isNaN(qnNum) && qnNum > 0 && l1Len > 0) {
+    if (qnNum <= l1Len) {
+      currentLevel = 1;
+    } else if (qnNum <= l1Len + l2Len) {
+      currentLevel = 2;
+    } else if (qnNum <= l1Len + l2Len + l3Len) {
+      currentLevel = 3;
+    } else {
+      currentLevel = 4;
     }
   }
 
@@ -597,8 +635,6 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   const resolveIndexVariable = (pool) => {
     if (!Array.isArray(pool) || pool.length === 0) return 0;
 
-    const searchParams = difficultyContext?.searchParams;
-    const qnParam = searchParams?.get?.('qn') || difficultyContext?.qn;
     const isOrderedMode = Boolean(
       template?.isSequential === true ||
       template?.isOrdered === true ||
@@ -610,11 +646,14 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       searchParams?.get?.('isOrdered') === 'true'
     );
 
-    if (qnParam !== undefined && qnParam !== null && qnParam !== '') {
-      const parsed = parseInt(qnParam, 10);
-      if (!isNaN(parsed) && parsed > 0) {
-        return pool[(parsed - 1) % pool.length];
-      }
+    if (qnNum !== null && !isNaN(qnNum) && qnNum > 0) {
+      let poolOffset = 0;
+      if (currentLevel === 2) poolOffset = l1Len;
+      else if (currentLevel === 3) poolOffset = l1Len + l2Len;
+      else if (currentLevel === 4) poolOffset = l1Len + l2Len + l3Len;
+
+      const idxInPool = Math.max(0, qnNum - 1 - poolOffset);
+      return pool[idxInPool % pool.length];
     } else if (isOrderedMode) {
       return pool[0];
     }
@@ -631,12 +670,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       if (varName === 'index') {
         let levelVarName = `index_l${currentLevel}`;
         const foundLvlVar = activeTemplate.variables.find(x => (x?.name || x?.id) === levelVarName);
-        const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
+        const levelPool = Array.isArray(foundLvlVar) ? foundLvlVar : (foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null);
         if (Array.isArray(levelPool) && levelPool.length > 0) {
           resolvedVariables[varName] = resolveIndexVariable(levelPool);
           continue;
         }
-        const selfPool = v.values || v.value;
+        const selfPool = Array.isArray(v) ? v : (v ? (v.values || v.value) : null);
         if (Array.isArray(selfPool) && selfPool.length > 0) {
           resolvedVariables[varName] = resolveIndexVariable(selfPool);
           continue;
@@ -657,12 +696,12 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       if (varName === 'index') {
         let levelVarName = `index_l${currentLevel}`;
         const foundLvlVar = activeTemplate.variables[levelVarName];
-        const levelPool = foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null;
+        const levelPool = Array.isArray(foundLvlVar) ? foundLvlVar : (foundLvlVar ? (foundLvlVar.values || foundLvlVar.value) : null);
         if (Array.isArray(levelPool) && levelPool.length > 0) {
           resolvedVariables[varName] = resolveIndexVariable(levelPool);
           continue;
         }
-        const selfPool = v.values || v.value;
+        const selfPool = Array.isArray(v) ? v : (v ? (v.values || v.value) : null);
         if (Array.isArray(selfPool) && selfPool.length > 0) {
           resolvedVariables[varName] = resolveIndexVariable(selfPool);
           continue;
@@ -675,6 +714,40 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       }
 
       resolvedVariables[varName] = resolveVariableValue(normalizedVar, resolvedVariables, dataSourceMap, rng);
+    }
+  }
+
+  // 1.25 Populate row data and derivations into resolvedVariables
+  let activeIdx = resolvedVariables['index'];
+  if (Array.isArray(activeTemplate.rows) && activeTemplate.rows.length > 0) {
+    if (activeIdx === undefined || isNaN(activeIdx) || activeIdx < 0 || activeIdx >= activeTemplate.rows.length) {
+      activeIdx = pickUnseenIndex(Array.from({ length: activeTemplate.rows.length }, (_, i) => i), activeTemplate.variables, difficultyContext, rng);
+      resolvedVariables['index'] = activeIdx;
+    }
+    const rowObj = activeTemplate.rows[activeIdx];
+    if (rowObj) {
+      for (const [rk, rv] of Object.entries(rowObj)) {
+        if (rk === '_level' || rk === 'id' || rk === '_id') continue;
+        if (rv !== undefined && rv !== null && String(rv).trim() !== '') {
+          resolvedVariables[rk] = rv;
+        }
+      }
+    }
+  }
+
+  const derivations = activeTemplate.derivations || activeTemplate.config?.derivations;
+  if (derivations && typeof derivations === 'object') {
+    for (const [dk, dexpr] of Object.entries(derivations)) {
+      if (typeof dexpr === 'string') {
+        let resolved = resolveExpression(dexpr, resolvedVariables);
+        // Sanitize: strip trailing \" artifact from template editor bug, unescape \n
+        if (typeof resolved === 'string') {
+          resolved = resolved.replace(/\\"/g, '').replace(/\\n/g, '\n');
+        }
+        resolvedVariables[dk] = resolved;
+      } else if (resolvedVariables[dk] === undefined) {
+        resolvedVariables[dk] = dexpr;
+      }
     }
   }
 
@@ -876,9 +949,10 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
   }
 
   // 2. Interpolate question texts
-  let rawQuestionText = template.questionText || template.questionTemplate || template.questionPattern || template.blueprint || '';
+  let rawQuestionText = template.questionText || template.questionTemplate || template.questionPattern || template.blueprint ||
+    resolvedVariables.questionText || resolvedVariables.questionTemplate || resolvedVariables.prompt || resolvedVariables.title || resolvedVariables.name || resolvedVariables.blueprint || '';
+  let blankCounter = 0;
   if (template.optionsType === 'fillInTheBlank' || String(template.interaction?.engine || '').toLowerCase() === 'fill_blank') {
-    let blankCounter = 0;
     const existingBlanksRegex = /\[\[blank(\d+)\]\]/g;
     let matchBlank;
     while ((matchBlank = existingBlanksRegex.exec(rawQuestionText)) !== null) {
@@ -892,7 +966,10 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       return `[[blank${blankCounter}]]`;
     });
   }
-  const questionText = interpolateString(rawQuestionText, resolvedVariables);
+  let questionText = interpolateString(rawQuestionText, resolvedVariables);
+  if (!questionText.trim()) {
+    questionText = String(resolvedVariables.questionText || resolvedVariables.questionTemplate || resolvedVariables.prompt || resolvedVariables.title || resolvedVariables.name || template.title || template.name || '');
+  }
   
   let explanationContent = '';
   if (resolvedVariables.explanation) {
@@ -901,6 +978,9 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     explanationContent = interpolateString(resolvedVariables.Explanation, resolvedVariables);
   } else if (template.explanation?.sections?.[0]?.content) {
     explanationContent = interpolateString(template.explanation.sections[0].content, resolvedVariables);
+  } else if (template.explanationTemplate) {
+    // Used by JNVST / competitive-exam templates (config.explanationTemplate)
+    explanationContent = interpolateString(template.explanationTemplate, resolvedVariables);
   }
 
   // 3. Resolve options and determine correctness
@@ -1572,18 +1652,24 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
     || resolvedVariables.answer_letter
     || (resolvedVariables.index !== undefined ? `idx_${resolvedVariables.index}` : undefined);
 
+  const actualLevel = Number(resolvedVariables.questionLevel || resolvedVariables.level) || currentLevel;
+
   const questionPayload = {
     itemId: resolvedItemId,
+    level: actualLevel,
+    difficulty: `Level ${actualLevel}`,
     type: isOrdering ? 'sentence_ordering' : (isVisualChoice ? 'visual_choice' : (template.type || template.optionsType || 'mcq')),
     interaction: template.interaction && typeof template.interaction === 'object'
       ? template.interaction
       : (isOrdering ? 'sentence_ordering' : (template.optionsType || (isVisualChoice ? 'visual_choice' : 'mcq'))),
-    questionText: String(questionText || '')
-      .replace(/(\\n|\/n|\n)\s*(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
-      .replace(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
-      .replace(/\\n/g, '\n')
-      .replace(/\/n/g, '\n')
-      .trim(),
+    questionText: sanitizeLatexMathText(
+      String(questionText || '')
+        .replace(/(\\n|\/n|\n)\s*(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
+        .replace(/(\/api\/tts\?[^\s\n"']+|\S+\.(?:mp3|wav|ogg))/gi, '')
+        .replace(/\\n/g, '\n')
+        .replace(/\/n/g, '\n')
+        .trim()
+    ),
     parts,
     soundUrl: template.soundUrl ? interpolateString(template.soundUrl, resolvedVariables) : undefined,
     soundText: template.soundText ? interpolateString(template.soundText, resolvedVariables) : undefined,
@@ -1592,7 +1678,7 @@ export function evaluateTemplate(originalTemplate, seed, difficultyContext = nul
       ? visualPanels.map((p, idx) => ({ id: `panel_${idx}`, label: String(p.count), isPanel: true }))
       : optionsList.map((o, idx) => ({
         id: o.id || `opt_${idx}`,
-        label: o.label,
+        label: typeof o.label === 'string' ? sanitizeLatexMathText(o.label) : o.label,
         svg: o.svg || null,
         imageUrl: o.imageUrl || null,
         audioUrl: o.audioUrl || (o.label ? `/api/tts?voice=${template.voice || 'Puck'}&text=${encodeURIComponent(o.label)}` : null),

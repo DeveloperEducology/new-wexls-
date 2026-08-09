@@ -4558,9 +4558,12 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
       }))
     };
     
+    const resolvedBgImage = nextConfig.backgroundImage || updatedLayouts.desktop?.backgroundImage || backgroundImage || '';
+    const resolvedBgSvg = nextConfig.backgroundSvg || updatedLayouts.desktop?.backgroundSvg || backgroundSvg || '';
+
     setActivePreviewDevice(nextDevice);
-    setBackgroundImage(nextConfig.backgroundImage || '');
-    setBackgroundSvg(nextConfig.backgroundSvg || '');
+    setBackgroundImage(resolvedBgImage);
+    setBackgroundSvg(resolvedBgSvg);
     setCanvas({ width: nextConfig.canvasWidth, height: nextConfig.canvasHeight });
     
     if (nextConfig.hotspots && nextConfig.hotspots.length === hotspots.length) {
@@ -6626,6 +6629,14 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
         })
       };
 
+      // Ensure mobile layout inherits desktop backgroundSvg & backgroundImage if missing
+      if (!finalLayouts.mobile.backgroundSvg && finalLayouts.desktop.backgroundSvg) {
+        finalLayouts.mobile.backgroundSvg = finalLayouts.desktop.backgroundSvg;
+      }
+      if (!finalLayouts.mobile.backgroundImage && finalLayouts.desktop.backgroundImage) {
+        finalLayouts.mobile.backgroundImage = finalLayouts.desktop.backgroundImage;
+      }
+
       // Ensure that if mobile hotspots have no items but desktop does, we copy options & correct tags
       if (finalLayouts.desktop.hotspots.length > 0 && finalLayouts.mobile.hotspots.length === 0) {
         finalLayouts.mobile.hotspots = finalLayouts.desktop.hotspots.map(hs => ({
@@ -8020,6 +8031,20 @@ export default function AdminConsolePage({ forceTab = null, hideHeader = false, 
           hotspots: []
         })
       };
+
+      if (!finalLayouts.mobile.backgroundSvg && finalLayouts.desktop.backgroundSvg) {
+        finalLayouts.mobile.backgroundSvg = finalLayouts.desktop.backgroundSvg;
+      }
+      if (!finalLayouts.mobile.backgroundImage && finalLayouts.desktop.backgroundImage) {
+        finalLayouts.mobile.backgroundImage = finalLayouts.desktop.backgroundImage;
+      }
+      if (finalLayouts.desktop.hotspots.length > 0 && finalLayouts.mobile.hotspots.length === 0) {
+        finalLayouts.mobile.hotspots = finalLayouts.desktop.hotspots.map(hs => ({
+          ...hs,
+          width: Math.min(30, hs.width * 2),
+          height: Math.min(15, hs.height * 2)
+        }));
+      }
 
       const serializedDesktopHotspots = finalLayouts.desktop.hotspots.map((hs, idx) => ({
         optionIndex: hs.optionIndex ?? idx,

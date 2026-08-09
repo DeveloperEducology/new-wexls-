@@ -513,7 +513,8 @@ export default function AdminQuestionsManager() {
                 <select className="select-input" value={section} onChange={(e) => setSection(e.target.value)}>
                   <option value="">All Sections</option>
                   <option value="mat">Mental Ability (MAT)</option>
-                  <option value="arithmetic">Arithmetic</option>
+                  <option value="evs">Environmental Studies (EVS)</option>
+                  <option value="arithmetic">Arithmetic (Math)</option>
                   <option value="language">Language</option>
                 </select>
               </div>

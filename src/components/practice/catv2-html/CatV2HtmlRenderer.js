@@ -139,8 +139,8 @@ const renderCubeSvg = ({ color, stroke, size = 48, hasRightPeg = true }) => {
 };
 
 function CategorySortLayout({
-  categories,
-  items,
+  categories: rawCategories = [],
+  items: rawItems = [],
   cardStyle,
   hideItemLabels = false,
   isCopiable = false,
@@ -152,6 +152,9 @@ function CategorySortLayout({
   showItemBorders,
   borderlessItems,
 }) {
+  const categories = Array.isArray(rawCategories) ? rawCategories : [];
+  const items = Array.isArray(rawItems) ? rawItems : [];
+
   const [zones, setZones] = useState({});
   const [copyZones, setCopyZones] = useState({});
   const [removedZones, setRemovedZones] = useState({});
@@ -159,10 +162,10 @@ function CategorySortLayout({
   const [draggingId, setDraggingId] = useState(null);
   const [dragState, setDragState] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
-  const [sourceSlots, setSourceSlots] = useState(() => items.map((item) => item.id));
+  const [sourceSlots, setSourceSlots] = useState(() => items.map((item) => item?.id || ''));
   
-  const hasGridCategory = categories.some((cat) => cat.isGrid === true || (Number(cat.rows) > 0 && Number(cat.columns) > 0));
-  const isCubeTrain = !hasGridCategory && (categories.some((cat) => cat.id === 'cube_train') || items.some((item) => item.visual === 'cube'));
+  const hasGridCategory = categories.some((cat) => cat?.isGrid === true || (Number(cat?.rows) > 0 && Number(cat?.columns) > 0));
+  const isCubeTrain = !hasGridCategory && (categories.some((cat) => cat?.id === 'cube_train') || items.some((item) => item?.visual === 'cube'));
   const dragMetaRef = useRef(null);
 
   const cardWidth = 174;
@@ -2040,7 +2043,7 @@ export default function CatV2HtmlRenderer({
         rawItems = [];
       }
     }
-    return rawItems;
+    return Array.isArray(rawItems) ? rawItems : [];
   }, [effectiveQuestion, categories]);
 
   const useHtmlRenderer = effectiveQuestion.renderer === 'html' || effectiveQuestion.type === 'categorizationv2' || effectiveQuestion.type === 'grid_fill';

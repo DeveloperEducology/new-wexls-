@@ -28,11 +28,16 @@ function ClickToFillBridge({ question, onAnswer }) {
 
     const handleInput = (event) => {
       const val = event.target.value;
-      const opts = Array.isArray(question.options) ? question.options : [];
+      const opts = Array.isArray(question.options)
+        ? question.options
+        : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
+      const keys = Array.isArray(question.options)
+        ? question.options.map((_, i) => i)
+        : (question?.options && typeof question.options === 'object' ? Object.keys(question.options) : []);
       const matchedIdx = opts.findIndex(
         (opt, i) => String(getOptionLabel(opt, i)).trim() === String(val).trim()
       );
-      onAnswer(matchedIdx >= 0 ? matchedIdx : val);
+      onAnswer(matchedIdx >= 0 ? (keys[matchedIdx] ?? matchedIdx) : val);
     };
 
     el.addEventListener('input', handleInput);
@@ -270,7 +275,9 @@ function InlineMarkdown({ text, userAnswerLabel, userAnswerLabels }) {
 }
 
 function getGridClassName(question, optionLayout) {
-  const options = Array.isArray(question?.options) ? question.options : [];
+  const options = Array.isArray(question?.options)
+    ? question.options
+    : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
   const hasMedia = options.some((option) => hasVisualContent(option));
   const labels = options.map((option, index) => cleanText(getOptionLabel(option, index)));
   const longest = Math.max(0, ...labels.map((label) => label.length));
@@ -298,7 +305,9 @@ function getGridClassName(question, optionLayout) {
 }
 
 function getOptionLayout(question) {
-  const options = Array.isArray(question?.options) ? question.options : [];
+  const options = Array.isArray(question?.options)
+    ? question.options
+    : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
   const hasMedia = options.some((option) => hasVisualContent(option));
   const labels = options.map((option, index) => cleanText(getOptionLabel(option, index)));
   const longest = Math.max(0, ...labels.map((label) => label.length));
@@ -581,8 +590,55 @@ export default function MCQRenderer({
     return checkPreK(topic) || checkPreK(grade) || checkPreK(skillId) || checkPreK(routeSearch);
   }, [question, routeSearch]);
 
+  const optionsArray = useMemo(() => {
+    return Array.isArray(question?.options)
+      ? question.options
+      : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
+  }, [question?.options]);
+
+  const optionKeys = useMemo(() => {
+    if (Array.isArray(question?.options)) {
+      return question.options.map((_, i) => i);
+    } else if (question?.options && typeof question.options === 'object') {
+      return Object.keys(question.options);
+    }
+    return [];
+  }, [question?.options]);
+
+  const getIndexFromAnswer = useMemo(() => {
+    return (val) => {
+      if (val === null || val === undefined || val === '') return -1;
+      const num = Number(val);
+      if (Number.isFinite(num) && num >= 0 && num < optionKeys.length) {
+        return num;
+      }
+      if (typeof val === 'string') {
+        const idx = optionKeys.findIndex(k => String(k).toUpperCase() === val.toUpperCase());
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+  }, [optionKeys]);
+
+  const getAnswerValue = useMemo(() => {
+    return (idxOrArray) => {
+      if (Array.isArray(idxOrArray)) {
+        return idxOrArray.map(idx => {
+          if (Array.isArray(question?.options)) return idx;
+          if (question?.options && typeof question.options === 'object') return optionKeys[idx] ?? idx;
+          return idx;
+        });
+      }
+      const idx = idxOrArray;
+      if (Array.isArray(question?.options)) return idx;
+      if (question?.options && typeof question.options === 'object') return optionKeys[idx] ?? idx;
+      return idx;
+    };
+  }, [question?.options, optionKeys]);
+
   const isMultiSelect = question.interaction === 'multi_select' || question.multiSelect === true ||
     question.optionsType === 'msq' ||
+    question.questionMode === 'msq' ||
     (typeof question.interaction === 'object'
       ? (question.interaction?.engine === 'msq' || question.interaction?.inputMode === 'multi-choice')
       : (question.interaction === 'msq' || question.interaction === 'multi-choice'));
@@ -590,6 +646,7 @@ export default function MCQRenderer({
   const isTapToFill = question.type === 'tap_to_fill' ||
     question.interaction === 'tap_to_fill' ||
     question.optionsType === 'tap_to_fill' ||
+    question.questionMode === 'tap_to_fill' ||
     (typeof question.interaction === 'object'
       ? (question.interaction?.engine === 'tap_to_fill' || question.interaction?.type === 'tap_to_fill')
       : (question.interaction === 'tap_to_fill'));
@@ -601,7 +658,7 @@ export default function MCQRenderer({
     question?.layoutConfig?.autoSubmit
   );
   const displayOptions = useMemo(() => {
-    const rawOptions = Array.isArray(question?.options) ? [...question.options] : [];
+    const rawOptions = optionsArray;
     
     // Check if options have A/B/C/D letter prefixes
     const hasAlphaPrefixes = rawOptions.length > 0 && rawOptions.every(opt => {
@@ -610,7 +667,7 @@ export default function MCQRenderer({
     });
 
     if (hasAlphaPrefixes) {
-      return rawOptions.sort((a, b) => {
+      return [...rawOptions].sort((a, b) => {
         const labelA = String(typeof a === 'object' && a !== null ? (a.label || a.text || a.value || '') : a).trim();
         const labelB = String(typeof b === 'object' && b !== null ? (b.label || b.text || b.value || '') : b).trim();
         return labelA.localeCompare(labelB);
@@ -618,56 +675,58 @@ export default function MCQRenderer({
     }
 
     return rawOptions;
-  }, [question?.options]);
+  }, [optionsArray]);
 
   const selectedIndices = useMemo(() => {
     if (!isMultiSelect && !isTapToFill) return [];
+    let rawAnswers = [];
     if (Array.isArray(userAnswer)) {
-      return userAnswer.map(item => typeof item === 'object' ? Number(item?.selectedIndex ?? item?.index) : Number(item)).filter(Number.isFinite);
+      rawAnswers = userAnswer.map(item => typeof item === 'object' ? (item?.selectedIndex ?? item?.index ?? item) : item);
     } else if (userAnswer && typeof userAnswer === 'object') {
       if ('selectedIndex' in userAnswer || 'index' in userAnswer) {
-        const val = Number(userAnswer.selectedIndex ?? userAnswer.index);
-        return Number.isFinite(val) ? [val] : [];
+        rawAnswers = [userAnswer.selectedIndex ?? userAnswer.index];
+      } else {
+        return Object.entries(userAnswer)
+          .filter(([_, val]) => Boolean(val))
+          .map(([key]) => key);
       }
-      return Object.entries(userAnswer)
-        .filter(([_, val]) => Boolean(val))
-        .map(([key]) => Number(key));
     } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
-      const val = Number(userAnswer);
-      return Number.isFinite(val) ? [val] : [];
+      rawAnswers = [userAnswer];
     }
-    return [];
-  }, [userAnswer, isMultiSelect, isTapToFill]);
+    return rawAnswers.map(getIndexFromAnswer).filter(idx => idx >= 0);
+  }, [userAnswer, isMultiSelect, isTapToFill, getIndexFromAnswer]);
 
   const selectedIndex = useMemo(() => {
     if (userAnswer === null || userAnswer === undefined || userAnswer === '') return -1;
     if (Array.isArray(userAnswer)) {
       if (userAnswer.length === 0) return -1;
       const first = userAnswer[0];
-      return typeof first === 'object' ? Number(first?.selectedIndex ?? first?.index ?? -1) : Number(first);
+      const val = typeof first === 'object' ? (first?.selectedIndex ?? first?.index ?? first) : first;
+      return getIndexFromAnswer(val);
     }
     if (typeof userAnswer === 'object' && userAnswer !== null) {
-      return Number(userAnswer.selectedIndex ?? userAnswer.index ?? -1);
+      const val = userAnswer.selectedIndex ?? userAnswer.index;
+      return getIndexFromAnswer(val);
     }
-    return Number(userAnswer);
-  }, [userAnswer]);
+    return getIndexFromAnswer(userAnswer);
+  }, [userAnswer, getIndexFromAnswer]);
 
   const selectedOptionLabel = useMemo(() => {
-    if (Number.isFinite(selectedIndex) && Array.isArray(question.options) && selectedIndex >= 0 && selectedIndex < question.options.length) {
-      return getOptionLabel(question.options[selectedIndex], selectedIndex);
+    if (Number.isFinite(selectedIndex) && selectedIndex >= 0 && selectedIndex < optionsArray.length) {
+      return getOptionLabel(optionsArray[selectedIndex], selectedIndex);
     }
     if (typeof userAnswer === 'string' && userAnswer.trim() !== '') {
       return userAnswer.trim();
     }
     return null;
-  }, [selectedIndex, question.options, userAnswer]);
+  }, [selectedIndex, optionsArray, userAnswer]);
 
   const selectedOptionLabels = useMemo(() => {
     if (Array.isArray(userAnswer)) {
       return userAnswer.map(item => {
-        const idx = typeof item === 'object' ? Number(item?.selectedIndex ?? item?.index) : Number(item);
-        if (Number.isFinite(idx) && Array.isArray(question.options) && idx >= 0 && idx < question.options.length) {
-          return getOptionLabel(question.options[idx], idx);
+        const idx = typeof item === 'object' ? Number(item?.selectedIndex ?? item?.index) : getIndexFromAnswer(item);
+        if (Number.isFinite(idx) && idx >= 0 && idx < optionsArray.length) {
+          return getOptionLabel(optionsArray[idx], idx);
         }
         return String(item || '');
       }).filter(Boolean);
@@ -676,44 +735,46 @@ export default function MCQRenderer({
       return [selectedOptionLabel];
     }
     return [];
-  }, [userAnswer, selectedOptionLabel, question.options]);
+  }, [userAnswer, selectedOptionLabel, optionsArray, getIndexFromAnswer]);
 
   const handleSelectOptionIndex = (index) => {
     if (isMultiSelect) {
       const nextSelected = selectedIndices.includes(index)
         ? selectedIndices.filter((i) => i !== index)
         : [...selectedIndices, index].sort((a, b) => a - b);
-      onAnswer(nextSelected);
+      onAnswer(getAnswerValue(nextSelected));
     } else if (isTapToFill) {
       const fullText = (question.questionText || '') + ' ' + (question.parts || []).map(p => p.content || p.text || '').join(' ');
       const blanksCount = (fullText.match(/(_+|\[\]|\[\[blank\d*\]\]|\{\{blank\}\})/g) || []).length || 1;
 
       if (blanksCount <= 1) {
-        onAnswer(index);
+        onAnswer(getAnswerValue(index));
         if (shouldAutoSubmit && onSubmit) {
-          onSubmit(index);
+          onSubmit(getAnswerValue(index));
         }
       } else {
         let currentArr = Array.isArray(userAnswer)
           ? [...userAnswer]
           : (userAnswer !== null && userAnswer !== undefined && userAnswer !== '' ? [userAnswer] : []);
         
-        const nextSelected = [...currentArr, index];
-        onAnswer(nextSelected);
+        const currentIndices = currentArr.map(getIndexFromAnswer).filter(idx => idx >= 0);
+        const nextIndices = [...currentIndices, index];
+        const nextSelectedAnswers = getAnswerValue(nextIndices);
+        onAnswer(nextSelectedAnswers);
 
-        if (nextSelected.length >= blanksCount && onSubmit) {
-          onSubmit(nextSelected);
+        if (nextSelectedAnswers.length >= blanksCount && onSubmit) {
+          onSubmit(nextSelectedAnswers);
         }
       }
     } else {
-      onAnswer(index);
+      onAnswer(getAnswerValue(index));
       if (shouldAutoSubmit && onSubmit) {
-        onSubmit(index);
+        onSubmit(getAnswerValue(index));
       }
     }
   };
   const optionLayout = getOptionLayout(question);
-  const hasMedia = (question.options || []).some((option) => hasVisualContent(option));
+  const hasMedia = optionsArray.some((option) => hasVisualContent(option));
   const gridClassName = getGridClassName(question, optionLayout);
   const gridStyle = getGridStyle(optionLayout);
   const isVisualAnswerSplit = !isPreK && question?.layoutConfig?.workspace === 'visual_answer_split';
@@ -1262,7 +1323,7 @@ export default function MCQRenderer({
             padding: '8px 0',
           }}
         >
-          {(question.options || []).map((option, index) => {
+          {optionsArray.map((option, index) => {
             const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
             return (
               <PictographTableOption
@@ -1272,9 +1333,9 @@ export default function MCQRenderer({
                 selected={selected}
                 isAnswered={isAnswered}
                 onSelect={() => {
-                  onAnswer(index);
+                  onAnswer(getAnswerValue(index));
                   if (!isMultiSelect && shouldAutoSubmit && onSubmit) {
-                    onSubmit(index);
+                    onSubmit(getAnswerValue(index));
                   }
                 }}
               />
@@ -1299,7 +1360,7 @@ export default function MCQRenderer({
             boxShadow: 'inset 0 2px 5px rgba(15, 23, 42, 0.08)',
           }}
         >
-          {(question.options || []).map((option, index) => {
+          {optionsArray.map((option, index) => {
             const selected = isMultiSelect
               ? selectedIndices.includes(index)
               : Number.isFinite(selectedIndex) && selectedIndex === index;
@@ -1358,7 +1419,7 @@ export default function MCQRenderer({
             border: '1px solid rgba(15, 23, 42, 0.04)'
           }}
         >
-          {(question.options || []).map((option, index) => {
+          {optionsArray.map((option, index) => {
             const selected = isMultiSelect 
               ? selectedIndices.includes(index)
               : Number.isFinite(selectedIndex) && selectedIndex === index;
@@ -1417,7 +1478,13 @@ export default function MCQRenderer({
               // Visual Choice Panels rendering
               visualPanels.map((panel, index) => {
                 const selected = Number.isFinite(selectedIndex) && selectedIndex === index;
-                const isCorrectChoice = index === question.correctAnswerIndex;
+                const isCorrectChoice = (() => {
+                  if (Number.isFinite(question.correctAnswerIndex) && question.correctAnswerIndex === index) return true;
+                  if (Number.isFinite(question.correct_answer_index) && question.correct_answer_index === index) return true;
+                  const key = optionKeys[index];
+                  if (key !== undefined && question.correctOption && String(question.correctOption).toUpperCase() === String(key).toUpperCase()) return true;
+                  return false;
+                })();
                 
                 let borderStyle = '3px solid #cbd5e1';
                 let shadowStyle = '0 2px 8px rgba(15, 23, 42, 0.08)';
@@ -1517,7 +1584,7 @@ export default function MCQRenderer({
             ) : (
               // Standard MCQ Options rendering
               (displayOptions || []).map((option, index) => {
-                const originalIndex = (question.options || []).indexOf(option);
+                const originalIndex = optionsArray.indexOf(option);
                 const activeIndex = originalIndex >= 0 ? originalIndex : index;
                 const selected = isMultiSelect
                   ? selectedIndices.includes(activeIndex)

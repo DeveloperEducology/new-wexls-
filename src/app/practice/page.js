@@ -1177,22 +1177,87 @@ function DiagnosticSummaryCard({ result, sourceConfig, onStartSkill, onRetry }) 
   );
 }
 
-function PracticePageContent() {
+export function isSmartSkillMatch(optValue, optLabel, routeSkl, routeGrade) {
+  if (!optValue || !routeSkl) return false;
+  const val = String(optValue).toLowerCase();
+  const lbl = String(optLabel || '').toLowerCase();
+  const skl = String(routeSkl).toLowerCase();
+  const grade = String(routeGrade || '').toLowerCase();
+
+  if (val === skl) return true;
+  if (val === `${grade}-${skl}`) return true;
+  if (val.endsWith('-' + skl)) return true;
+
+  // strip prefixes like ukg-, lkg-, ukg-english-, template-
+  const cleanVal = val.replace(/^(ukg|lkg|prek|english|template|eng)-/g, '').replace(/^(ukg|lkg|prek|english|template|eng)-/g, '');
+  const cleanSkl = skl.replace(/^(ukg|lkg|prek|english|template|eng)-/g, '').replace(/^(ukg|lkg|prek|english|template|eng)-/g, '');
+
+  if (cleanVal === cleanSkl) return true;
+  if (cleanVal.endsWith(cleanSkl) || cleanSkl.endsWith(cleanVal)) return true;
+
+  // Token match for short vowels/consonants/word recognition
+  const excludeTokens = ['ukg', 'lkg', 'prek', 'english', 'template', 'the', 'of', 'word', 'words', 'eng', 'to', 'in', 'a', 'an'];
+  const valTokens = val.split(/[-_\s]/).filter(t => t && !excludeTokens.includes(t));
+  const sklTokens = skl.split(/[-_\s]/).filter(t => t && !excludeTokens.includes(t));
+
+  if (valTokens.length > 0 && sklTokens.length > 0) {
+    const intersect = valTokens.filter(t => sklTokens.includes(t));
+    if (intersect.length >= 2) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function PracticePageContent({ routeParams = null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const submittingRef = useRef(false);
   const loadingRef = useRef(false);
   const fetchRequestIdRef = useRef(0);
   const seedUsedRef = useRef(false);
-  const urlSubject = resolveSearchValue(searchParams, 'subject');
-  const urlTopic = resolveSearchValue(searchParams, 'topic');
-  const urlSkill = resolveSearchValue(searchParams, 'skill');
+
+  // Dynamic route segments
+  const routeGrade = routeParams?.grade || null;
+  const routeSub = routeParams?.subject || null;
+  const routeTop = routeParams?.topic || null;
+  const routeSkl = routeParams?.skill || null;
+
+  const urlSubject = routeSub || resolveSearchValue(searchParams, 'subject');
+  
+  let urlTopic = resolveSearchValue(searchParams, 'topic');
+  if (routeTop) {
+    urlTopic = routeTop;
+    if (routeGrade && !routeTop.startsWith(routeGrade + '-')) {
+      const candidate = routeGrade + '-' + routeTop;
+      const resolvedCandidate = sourceFromSubjectTopic(urlSubject, candidate, candidate);
+      if (SOURCE_CONFIGS[resolvedCandidate] || SOURCE_CONFIGS[candidate] || SOURCE_CONFIGS[routeTop]) {
+        urlTopic = candidate;
+      }
+    }
+  }
+
+  let urlSkill = resolveSearchValue(searchParams, 'skill');
+  if (routeSkl) {
+    urlSkill = routeSkl;
+    const resolvedTopic = sourceFromSubjectTopic(urlSubject, urlTopic, urlTopic);
+    const config = SOURCE_CONFIGS[resolvedTopic];
+    if (config && Array.isArray(config.options)) {
+      const match = config.options.find(
+        opt => isSmartSkillMatch(opt.value, opt.label, routeSkl, routeGrade)
+      );
+      if (match) {
+        urlSkill = match.value;
+      }
+    }
+  }
+
   const urlQn = resolveSearchValue(searchParams, 'qn')
     || resolveSearchValue(searchParams, 'questionId')
     || resolveSearchValue(searchParams, 'id');
   const urlIit = resolveSearchValue(searchParams, 'iit') === 'true';
   const urlImo = resolveSearchValue(searchParams, 'imo') === 'true';
-  // practiceMode lives in the URL as ?mode=adaptive|static — tied to the skill ID
   const practiceMode = resolveSearchValue(searchParams, 'mode') === 'static' ? 'static' : 'adaptive';
   const initialSource = resolveSearchValue(searchParams, 'source', 'addition-topic');
   const resolvedInitialSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
@@ -1242,6 +1307,22 @@ function PracticePageContent() {
   const [sourceKey, setSourceKey] = useState(resolvedInitialSource);
   const [logicType, setLogicType] = useState(initialLogicType || 'addition-g1-e3-model-match-to-10');
   const [question, setQuestion] = useState(null);
+
+  useEffect(() => {
+    if (curriculumLoading) return;
+    if (routeSkl) {
+      const resolvedTopic = sourceFromSubjectTopic(urlSubject, urlTopic, urlTopic);
+      const config = mergedConfigs[resolvedTopic];
+      if (config && Array.isArray(config.options)) {
+        const match = config.options.find(
+          opt => isSmartSkillMatch(opt.value, opt.label, routeSkl, routeGrade)
+        );
+        if (match && match.value !== logicType) {
+          setLogicType(match.value);
+        }
+      }
+    }
+  }, [curriculumLoading, routeSkl, routeGrade, urlSubject, urlTopic, mergedConfigs, logicType]);
   const isPreK = useMemo(() => {
     const skillGrade = question?.metadata?.grade || question?.grade || question?.metadata?.estimatedGrade || question?.estimatedGrade;
     const g = String(skillGrade || (searchParams ? searchParams.get('grade') : '') || '').toLowerCase().trim();
@@ -2013,7 +2094,23 @@ function PracticePageContent() {
   useEffect(() => {
     if (curriculumLoading) return;
     let nextSource = sourceFromSubjectTopic(urlSubject, urlTopic, initialSource);
-    const nextLogicType = urlSkill
+    
+    let resolvedSkill = urlSkill;
+    if (routeSkl && mergedConfigs[nextSource]) {
+      const config = mergedConfigs[nextSource];
+      if (config && Array.isArray(config.options)) {
+        const match = config.options.find(
+          opt => opt.value === routeSkl || 
+                 opt.value === `${routeGrade}-${routeSkl}` || 
+                 opt.value.endsWith('-' + routeSkl)
+        );
+        if (match) {
+          resolvedSkill = match.value;
+        }
+      }
+    }
+
+    const nextLogicType = resolvedSkill
       || resolveSearchValue(searchParams, 'forcedTask')
       || resolveSearchValue(searchParams, 'logic_type')
       || (mergedConfigs[nextSource] || mergedConfigs['addition-topic']).defaultLogicType;
@@ -2026,7 +2123,7 @@ function PracticePageContent() {
 
     setSourceKey(nextSource);
     setLogicType(nextLogicType);
-  }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource, curriculumLoading, mergedConfigs]);
+  }, [urlSubject, urlTopic, urlSkill, searchParams, initialSource, curriculumLoading, mergedConfigs, routeSkl, routeGrade]);
 
   useEffect(() => {
     seedUsedRef.current = false;
@@ -3072,6 +3169,10 @@ function PracticePageContent() {
     const timelineOptions = activeGroupOptions.length > 0 ? activeGroupOptions : sourceConfig.options;
     const activeIndex = timelineOptions.findIndex(opt => opt.value === logicType);
 
+    const activeGrade = routeGrade || question?.metadata?.grade || question?.grade || 'ukg';
+    const activeSubject = urlSubject || sourceConfig.subject || 'math';
+    const activeTopic = urlTopic || sourceConfig.topic || 'counting';
+
     return (
       <div className={styles.standardLeftPanelStack}>
         <div className={`${styles.panel} ${styles.learningPathPanel}`} style={{ padding: '20px', borderRadius: '24px' }}>
@@ -3219,6 +3320,38 @@ function PracticePageContent() {
               );
             })}
           </div>
+        </div>
+
+        {/* Dynamic PDF Worksheet Download Button */}
+        <div className={styles.panel} style={{ padding: '16px 20px', borderRadius: '24px', background: '#f8fafc', border: '2px dashed #cbd5e1' }}>
+          <div style={{ fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Worksheet
+          </div>
+          <a
+            href={`/api/worksheets/${activeGrade}/${activeSubject}/${activeTopic}/${logicType}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '12px 16px',
+              borderRadius: '16px',
+              backgroundColor: '#4f46e5',
+              color: '#ffffff',
+              fontWeight: '800',
+              fontSize: '13px',
+              textDecoration: 'none',
+              textAlign: 'center',
+              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.15)',
+              transition: 'transform 0.1s ease',
+            }}
+            onMouseDown={(e) => e.target.style.transform = 'scale(0.98)'}
+            onMouseUp={(e) => e.target.style.transform = 'scale(1)'}
+          >
+            <span>📄</span> Download PDF Worksheet
+          </a>
         </div>
 
         {/* Daily Goal Widget */}

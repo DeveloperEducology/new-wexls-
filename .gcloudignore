@@ -1,0 +1,15 @@
+.gcloudignore
+.git
+.gitignore
+.next
+node_modules
+android
+.env
+.env.local
+.env*.local
+scratch
+*.log
+*.wav
+*.pdf
+redeploy.sh
+deploy.sh

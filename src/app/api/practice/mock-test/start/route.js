@@ -4,6 +4,7 @@ import { createSession } from '../../../../../lib/exam/session-store.js';
 import { getAdaptiveCandidates, generateFromTemplates } from '../../../../../lib/exam/question-store.js';
 import { resolveUserId } from '../../../../../lib/auth/getAuthUser.js';
 import { getMockTestById } from '../../../../../lib/exam/test-series-store.js';
+import { JNVST_2025_PYQ_TEMPLATE } from '../../../../../lib/exam/jnvst2025PyqData.js';
 
 export async function POST(req) {
   try {
@@ -93,17 +94,38 @@ export async function POST(req) {
 
     const targetSpreadsheetId = templateId || spreadsheetId || mockTestId;
     if (targetSpreadsheetId) {
-      let sheetDoc = await db.collection('dynamic_templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
-      if (!sheetDoc || !Array.isArray(sheetDoc.rows) || sheetDoc.rows.length === 0) {
-        sheetDoc = await db.collection('templates').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
-      }
-      if (!sheetDoc) {
-        sheetDoc = await db.collection('mock_tests').findOne({ $or: [{ id: targetSpreadsheetId }, { _id: targetSpreadsheetId }] });
-      }
+      const queryFilter = {
+        $or: [
+          { id: String(targetSpreadsheetId) },
+          { _id: String(targetSpreadsheetId) },
+          { id: new RegExp(`^${targetSpreadsheetId}$`, 'i') }
+        ]
+      };
 
-      const rawRows = (sheetDoc && Array.isArray(sheetDoc.rows) && sheetDoc.rows.length > 0)
+      const [dynDocs, tplDocs, mockDocs] = await Promise.all([
+        db.collection('dynamic_templates').find(queryFilter).sort({ updatedAt: -1 }).toArray(),
+        db.collection('templates').find(queryFilter).sort({ updatedAt: -1 }).toArray(),
+        db.collection('mock_tests').find(queryFilter).sort({ updatedAt: -1 }).toArray()
+      ]);
+
+      const candidates = [...dynDocs, ...tplDocs, ...mockDocs];
+
+      // Sort by most recent updatedAt timestamp
+      candidates.sort((a, b) => {
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      const sheetDoc = candidates.find(c => (Array.isArray(c.rows) && c.rows.length > 0) || (c.config && Array.isArray(c.config.rows) && c.config.rows.length > 0));
+
+      let rawRows = (sheetDoc && Array.isArray(sheetDoc.rows) && sheetDoc.rows.length > 0)
         ? sheetDoc.rows
         : (sheetDoc && sheetDoc.config && Array.isArray(sheetDoc.config.rows) ? sheetDoc.config.rows : []);
+
+      if (rawRows.length === 0 && (String(targetSpreadsheetId).includes('2025-jnvst-official-pyq-template') || String(targetSpreadsheetId) === '2025')) {
+        rawRows = JNVST_2025_PYQ_TEMPLATE.rows;
+      }
 
       if (rawRows.length > 0) {
         all80Questions = rawRows.map((row, idx) => {
@@ -113,19 +135,19 @@ export async function POST(req) {
 
           const text = row.questionText || row.question || row.Question || row.questionPattern || row.blueprint || `Question #${qNum}`;
           
-          const optA = row.optionA || row.A || row.Option1 || row.Distractor1 || '';
-          const optB = row.optionB || row.B || row.Option2 || row.Distractor2 || '';
-          const optC = row.optionC || row.C || row.Option3 || row.Distractor3 || '';
-          const optD = row.optionD || row.D || row.Option4 || row.Result || '';
+          const optA = row.optionA ?? row.A ?? row.Option1 ?? row.Distractor1 ?? '';
+          const optB = row.optionB ?? row.B ?? row.Option2 ?? row.Distractor2 ?? '';
+          const optC = row.optionC ?? row.C ?? row.Option3 ?? row.Distractor3 ?? '';
+          const optD = row.optionD ?? row.D ?? row.Option4 ?? row.Result ?? '';
 
           const ans = row.answer || row.correctOption || row.correct || 'A';
           const exp = row.explanationText || row.explanation || row.Solution || '';
 
-          const qImg = row.questionImage || row.image || row.imageUrl || row.q_image || row.figure_image || '';
-          const optAImg = row.optionAImage || row.A_image || '';
-          const optBImg = row.optionBImage || row.B_image || '';
-          const optCImg = row.optionCImage || row.C_image || '';
-          const optDImg = row.optionDImage || row.D_image || '';
+          const qImg = row.questionImage || row.questionImageUrl || row.image || row.imageUrl || row.q_image || row.figure_image || row.figureImage || row.figure || '';
+          const optAImg = row.optionAImage || row.optionA_image || row.A_image || row.a_image || '';
+          const optBImg = row.optionBImage || row.optionB_image || row.B_image || row.b_image || '';
+          const optCImg = row.optionCImage || row.optionC_image || row.C_image || row.c_image || '';
+          const optDImg = row.optionDImage || row.optionD_image || row.D_image || row.d_image || '';
 
           return {
             qNumber: qNum,

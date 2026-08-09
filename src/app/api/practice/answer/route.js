@@ -43,38 +43,40 @@ export async function POST(req) {
     const answeredCount = session.responses.length + 1;
     // Use session's own length (set at start — dynamic for PYQs, 15 for adaptive)
     const sessionLength = session.sessionLength || DEFAULT_SESSION_LENGTH;
-    const isSessionComplete = answeredCount >= sessionLength;
+    const isSessionComplete = !session.templateId && (answeredCount >= sessionLength);
 
     let nextQuestion = null;
     let report = null;
 
     if (!isSessionComplete) {
-      // Get used question IDs (including current)
-      const usedIds = [...session.responses.map(r => r.questionId), questionId];
-      let candidates = await getAdaptiveCandidates({
-        examId: session.examId,
-        section: session.section,
-        topic: session.topic || null,
-        templateId: session.templateId || null,
-        theta: newTheta,
-        usedIds,
-        limit: 30,
-      });
-
-      // If bank is thin or template-based drill (On-The-Fly Mode), generate next candidate variations!
-      if (candidates.length < 3 && session.templateId) {
+      if (session.templateId) {
+        const nextQnIndex = (answeredCount % sessionLength) + 1;
         const generated = await generateFromTemplates({
           examId: session.examId,
           section: session.section,
           topic: session.topic || null,
-          templateId: session.templateId
+          templateId: session.templateId,
+          qnIndex: nextQnIndex,
         });
-        const unusedGenerated = generated.filter(g => !usedIds.includes(g._id) && !usedIds.includes(g.id));
-        candidates = unusedGenerated.length > 0 ? unusedGenerated : generated;
-      }
+        if (generated.length > 0) {
+          nextQuestion = sanitizeQuestion(generated[0]);
+        }
+      } else {
+        // Get used question IDs (including current)
+        const usedIds = [...session.responses.map(r => r.questionId), questionId];
+        let candidates = await getAdaptiveCandidates({
+          examId: session.examId,
+          section: session.section,
+          topic: session.topic || null,
+          templateId: session.templateId || null,
+          theta: newTheta,
+          usedIds,
+          limit: 30,
+        });
 
-      const next = selectNextQuestion(newTheta, newTopicMastery, candidates);
-      if (next) nextQuestion = sanitizeQuestion(next);
+        const next = selectNextQuestion(newTheta, newTopicMastery, candidates);
+        if (next) nextQuestion = sanitizeQuestion(next);
+      }
     } else {
       // Build report
       const allResponses = [
@@ -126,7 +128,8 @@ function sanitizeQuestion(q) {
     parts:             n.parts,
     questionMode:      n.questionMode,
     topic:             n.topic,
-    difficulty:        n.difficulty,
+    difficulty:        q?.difficulty || n.difficulty,
+    level:             q?.level || n.level,
     section:           n.section,
     cognitiveLevel:    n.cognitiveLevel,
     metadata:          n.metadata,

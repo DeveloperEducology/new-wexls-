@@ -9,16 +9,18 @@ import SiteHeader from '../../../../../../components/layout/SiteHeader';
 
 function parseMathAndText(text) {
   if (!text) return '';
-  const trimmed = typeof text === 'string' ? text.trim() : '';
+  let str = typeof text === 'string' ? text : String(text);
+  str = str.replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+  const trimmed = str.trim();
   if (trimmed.startsWith('<svg') || trimmed.startsWith('<div')) {
     return (
       <div
-        dangerouslySetInnerHTML={{ __html: text }}
+        dangerouslySetInnerHTML={{ __html: str }}
         style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center', padding: '4px' }}
       />
     );
   }
-  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
+  const parts = str.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
   return parts.map((part, i) => {
     if (part.startsWith('\\(') && part.endsWith('\\)')) {
       const formula = part.slice(2, -2);
@@ -48,6 +50,7 @@ function parseMathAndText(text) {
     let processed = part;
     processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    processed = processed.replace(/\n/g, '<br />');
     return <span key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
   });
 }

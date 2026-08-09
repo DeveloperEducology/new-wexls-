@@ -50,11 +50,13 @@ const RENDERERS = {
   audio_mcq: MCQRenderer,
   multiselect: MCQRenderer,
   multi_select: MCQRenderer,
+  msq: MCQRenderer,
   hotspot: MCQRenderer,
   hotspot_select: MCQRenderer,
   fillintheblank: FillInTheBlankRenderer,
   fillInTheBlank: FillInTheBlankRenderer,
   fill_in_the_blank: FillInTheBlankRenderer,
+  fill_blank: FillInTheBlankRenderer,
   gridArithmetic: FillInTheBlankRenderer,
   vertical_arithmetic: FillInTheBlankRenderer,
   categorization: CategorizationRenderer,
@@ -87,11 +89,12 @@ export default function QuestionRenderer({
 }) {
   const schemaEngine = typeof question?.interaction === 'object'
     ? question.interaction.engine || question.interaction.type
-    : question?.interactionConfig?.engine || question?.schema?.interaction?.engine || question?.universalSchema?.interaction?.engine;
+    : question?.interactionConfig?.engine || question?.schema?.interaction?.engine || question?.universalSchema?.interaction?.engine || question?.questionMode;
   const isTapToFillType = question?.type === 'tap_to_fill' ||
     question?.optionsType === 'tap_to_fill' ||
     schemaEngine === 'tap_to_fill' ||
-    question?.interaction === 'tap_to_fill';
+    question?.interaction === 'tap_to_fill' ||
+    question?.questionMode === 'tap_to_fill';
 
   const usesUniversalSchema = !isTapToFillType && Boolean(
     question?.schema
@@ -118,8 +121,8 @@ export default function QuestionRenderer({
     );
   }
 
-  const normalizedType = String(question?.type || '').trim();
-  const normalizedInteraction = String(question?.interaction || '').trim().toLowerCase();
+  const normalizedType = String(question?.type || question?.questionMode || '').trim();
+  const normalizedInteraction = String(question?.interaction || question?.questionMode || '').trim().toLowerCase();
   // interactionConfig (set by parameterized FIB templates) takes priority
   const interactionConfigEngine = String(question?.interactionConfig?.engine || '').toLowerCase();
   if (interactionConfigEngine === 'fillintheblank' || question?.correctOption === 'fib') {
@@ -167,14 +170,14 @@ export default function QuestionRenderer({
     ? MCQRenderer
     : isCategorizationInteraction
     ? CategorizationRenderer
-    : RENDERERS[schemaEngine] || RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()];
+    : RENDERERS[schemaEngine] || RENDERERS[normalizedType] || RENDERERS[normalizedType.toLowerCase()] || RENDERERS[question?.questionMode];
 
   if (!question) return null;
 
   if (!Renderer) {
     return (
       <div style={{ padding: 24, color: '#991b1b', fontWeight: 800 }}>
-        Unsupported question type: {normalizedType || 'unknown'}
+        Unsupported question type: {normalizedType || question?.questionMode || 'unknown'}
       </div>
     );
   }

@@ -65,29 +65,39 @@ export default function RowEditorModal({
     }
   }, [rowIndex, rows]);
 
-  if (!isOpen || rowIndex === null || !editedRow) return null;
+  const [saveError, setSaveError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const handleFieldChange = (colKey, value) => {
     setEditedRow(prev => ({ ...prev, [colKey]: value }));
   };
 
-  const handleSave = () => {
-    const updated = [...rows];
-    updated[rowIndex] = editedRow;
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = [...rows];
+      const newKeys = Object.keys(editedRow).filter(k => !k.startsWith('_') && !columns.includes(k));
+      if (newKeys.length > 0 && typeof setColumns === 'function') {
+        setColumns(prev => [...prev, ...newKeys]);
+      }
 
-    // Auto-discover and append any new image/data columns to grid columns
-    const newKeys = Object.keys(editedRow).filter(k => !k.startsWith('_') && !columns.includes(k));
-    if (newKeys.length > 0 && typeof setColumns === 'function') {
-      setColumns(prev => [...prev, ...newKeys]);
+      updated[rowIndex] = editedRow;
+      if (typeof onSaveRow === 'function') {
+        const res = await onSaveRow(updated);
+        if (res && res.ok === false) {
+          setSaveError(res.error || 'Failed to save row changes to database.');
+          return;
+        }
+      } else {
+        setRows(updated);
+      }
+      onClose();
+    } catch (err) {
+      setSaveError(err.message || 'Unexpected save error occurred.');
+    } finally {
+      setSaving(false);
     }
-
-    updated[rowIndex] = editedRow;
-    if (typeof onSaveRow === 'function') {
-      onSaveRow(updated);
-    } else {
-      setRows(updated);
-    }
-    onClose();
   };
 
   const handleAiFixRow = async () => {
@@ -178,6 +188,8 @@ export default function RowEditorModal({
     }
   };
 
+  if (!isOpen || !editedRow) return null;
+
   // Classify Columns into Smart Layout Groups
   const isMetaCol = (c) => /^(section|sectionName|qNumber|grade|topic|subject|tags|isPYQ|pyqYear|examId|id)$/i.test(c);
   const isTextCol = (c) => /^(questionText|target_word|number_to_factor|prompt|title|stem|question)$/i.test(c);
@@ -240,6 +252,18 @@ export default function RowEditorModal({
                 Next Row ▶
               </button>
               <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  background: saving ? '#94a3b8' : '#10b981', color: '#fff', border: 'none', padding: '6px 16px',
+                  borderRadius: '8px', fontWeight: 900, fontSize: '0.82rem', cursor: saving ? 'not-allowed' : 'pointer',
+                  boxShadow: saving ? 'none' : '0 3px 10px rgba(16, 185, 129, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}
+              >
+                {saving ? '⏳ Saving...' : '💾 Save Row'}
+              </button>
+              <button
                 onClick={onClose}
                 style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b', marginLeft: '6px' }}
               >
@@ -247,6 +271,33 @@ export default function RowEditorModal({
               </button>
             </div>
           </div>
+
+          {/* Explicit Error Alert Banner */}
+          {saveError && (
+            <div style={{
+              background: '#fef2f2',
+              border: '1.5px solid #ef4444',
+              color: '#991b1b',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+            }}>
+              <span>⚠️ <strong>Database Save Error:</strong> {saveError}</span>
+              <button
+                type="button"
+                onClick={() => setSaveError(null)}
+                style={{ background: 'none', border: 'none', color: '#991b1b', fontWeight: 900, cursor: 'pointer', fontSize: '1.1rem' }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* Difficulty Level Selector */}
           <div style={{ marginBottom: '20px', background: '#f8fafc', padding: '12px 16px', borderRadius: '14px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -608,13 +659,14 @@ export default function RowEditorModal({
             <button
               type="button"
               onClick={handleSave}
+              disabled={saving}
               style={{
-                background: '#10b981', color: '#fff', border: 'none', padding: '10px 24px',
-                borderRadius: '10px', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                background: saving ? '#94a3b8' : '#10b981', color: '#fff', border: 'none', padding: '10px 24px',
+                borderRadius: '10px', fontWeight: 800, fontSize: '0.88rem', cursor: saving ? 'not-allowed' : 'pointer',
+                boxShadow: saving ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)'
               }}
             >
-              Save Row Changes
+              {saving ? '⏳ Saving to DB...' : 'Save Row Changes'}
             </button>
           </div>
 

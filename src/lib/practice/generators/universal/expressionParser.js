@@ -170,6 +170,54 @@ const drawingHelpers = {
   },
   drawPriceTagCompare: (itemA, priceA, itemB, priceB) => {
     return COMPONENT_REGISTRY.PriceTagCompare({ itemA, priceA, itemB, priceB });
+  },
+
+  drawIndianPlaceValueTable: (numberStr) => {
+    const digits = String(numberStr || '').replace(/[,\s]/g, '');
+    // Pad to 9 digits (max: Ten Crore position)
+    const padded = digits.padStart(9, ' ');
+    const d = padded.split(''); // d[0]=Ten Crore ... d[8]=One
+
+    const BASE = 'font-family:inherit;';
+    const thGroup = `style="${BASE}padding:8px 6px;text-align:center;font-weight:800;font-size:0.82rem;background:#1e3a5f;color:#fff;border:1px solid rgba(255,255,255,0.25);letter-spacing:0.3px;"`;
+    const thSub = `style="${BASE}padding:6px 4px;text-align:center;font-weight:600;font-size:0.7rem;background:#2d5986;color:#e8f0fe;border:1px solid rgba(255,255,255,0.18);line-height:1.3;"`;
+    const tdCell = (digit) => {
+      const empty = digit.trim() === '';
+      return `<td style="${BASE}padding:10px 6px;text-align:center;border:1px solid #cbd5e1;font-size:1.05rem;font-weight:700;color:${empty ? '#aaa' : '#1e3a5f'};background:#f8fafc;">${empty ? '' : digit}</td>`;
+    };
+
+    const places = [
+      { name: 'Ten Crore',     val: '10,00,00,000' },
+      { name: 'Crore',         val: '1,00,00,000'  },
+      { name: 'Ten Lakh',      val: '10,00,000'    },
+      { name: 'Lakh',          val: '1,00,000'     },
+      { name: 'Ten Thousand',  val: '10,000'       },
+      { name: 'Thousand',      val: '1,000'        },
+      { name: 'Hundred',       val: '100'          },
+      { name: 'Ten',           val: '10'           },
+      { name: 'One',           val: '1'            },
+    ];
+
+    return `<div style="overflow-x:auto;margin:14px 0;font-family:inherit;">
+  <table style="border-collapse:collapse;width:100%;border:2px solid #94a3b8;border-radius:6px;overflow:hidden;min-width:480px;">
+    <thead>
+      <tr>
+        <th colspan="2" ${thGroup}>Crores</th>
+        <th colspan="2" ${thGroup}>Lakhs</th>
+        <th colspan="2" ${thGroup}>Thousands</th>
+        <th colspan="3" ${thGroup}>Ones</th>
+      </tr>
+      <tr>
+        ${places.map(p => `<th ${thSub}>${p.name}<br/><span style="font-weight:400;font-size:0.62rem;opacity:0.8;">${p.val}</span></th>`).join('\n        ')}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        ${d.map(digit => tdCell(digit)).join('\n        ')}
+      </tr>
+    </tbody>
+  </table>
+</div>`;
   }
 };
 

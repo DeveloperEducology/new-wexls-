@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import SiteHeader from '../../../components/layout/SiteHeader';
+import SiteHeader from '@/components/layout/SiteHeader';
 import PracticeGate from '../../../components/exam/PracticeGate';
+import { formatPracticeUrl } from '../../../lib/curriculum/urlHelpers';
 
 export default function JnvstDashboard({ params }) {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function JnvstDashboard({ params }) {
   const [activeTab, setActiveTab] = useState('mat');
   const [templates, setTemplates] = useState([]);
   const [expandedTopics, setExpandedTopics] = useState({});
+  const [studentStats, setStudentStats] = useState(null);
+  const [daysLeft, setDaysLeft] = useState(0);
 
   const toggleTopic = (topicId) => {
     setExpandedTopics(prev => ({
@@ -29,11 +32,38 @@ export default function JnvstDashboard({ params }) {
     }));
   };
 
+  // Restore active tab from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedTab = localStorage.getItem(`activeTab_${examId}`);
+      if (storedTab) {
+        setActiveTab(storedTab);
+      }
+    }
+  }, [examId]);
+
+  // Persist active tab to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeTab) {
+      localStorage.setItem(`activeTab_${examId}`, activeTab);
+    }
+  }, [activeTab, examId]);
+
+  // Set default active tab if not set
   useEffect(() => {
     if (exam?.sections?.length > 0 && !activeTab) {
       setActiveTab(exam.sections[0].id);
     }
   }, [exam, activeTab]);
+
+  // Compute countdown timer
+  useEffect(() => {
+    const examDate = new Date('2027-01-16T00:00:00');
+    const today = new Date();
+    const diffTime = examDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    setDaysLeft(diffDays > 0 ? diffDays : 0);
+  }, []);
 
   // 1. Load User Session
   useEffect(() => {
@@ -84,6 +114,17 @@ export default function JnvstDashboard({ params }) {
           setTemplates(templatesData.templates || []);
         }
 
+        try {
+          const statsRes = await fetch(`/api/dashboard/student?userId=${session.userId}`);
+          const statsData = await statsRes.json();
+          if (statsData.success) {
+            setStudentStats(statsData);
+          }
+        } catch (statsErr) {
+          console.error("Failed to load student stats:", statsErr);
+        }
+
+
       } catch (e) {
         console.error("Failed to load dashboard data:", e);
       } finally {
@@ -100,7 +141,7 @@ export default function JnvstDashboard({ params }) {
       setSelectedGateSection({ id: sectionId, name: sectionName });
       setShowGate(true);
     } else {
-      router.push(`/exam-prep/${examId}/practice/${sectionId}?userId=${session?.userId || 'guest_child'}`);
+      router.push(formatPracticeUrl({ examId, section: sectionId, userId: session?.userId }));
     }
   };
 
@@ -110,7 +151,7 @@ export default function JnvstDashboard({ params }) {
       setSelectedGateSection({ id: sectionId, name: sectionName });
       setShowGate(true);
     } else {
-      router.push(`/exam-prep/${examId}/practice/${sectionId}?userId=${session?.userId || 'guest_child'}&topic=${topicId}`);
+      router.push(formatPracticeUrl({ examId, section: sectionId, topicId, userId: session?.userId }));
     }
   };
 
@@ -120,7 +161,7 @@ export default function JnvstDashboard({ params }) {
       setSelectedGateSection({ id: sectionId, name: sectionName });
       setShowGate(true);
     } else {
-      router.push(`/exam-prep/${examId}/practice/${sectionId}?userId=${session?.userId || 'guest_child'}&topic=${topicId}&templateId=${templateId}`);
+      router.push(formatPracticeUrl({ examId, section: sectionId, topicId, skillId: templateId, userId: session?.userId }));
     }
   };
 
@@ -177,11 +218,11 @@ export default function JnvstDashboard({ params }) {
   }
 
   // Calculate estimated readiness percentage
-  const matTheta = profile?.sectionTheta?.mat ?? 0.65;
-  const arithTheta = profile?.sectionTheta?.arithmetic ?? 0.55;
-  const langTheta = profile?.sectionTheta?.language ?? 0.70;
+  const matTheta = profile?.sectionTheta?.mat ?? 0.5;
+  const arithTheta = profile?.sectionTheta?.arithmetic ?? 0.5;
+  const langTheta = profile?.sectionTheta?.language ?? 0.5;
   const avgTheta = (matTheta + arithTheta + langTheta) / 3;
-  const jnvstReadiness = Math.round(((avgTheta - 0.05) / 0.9) * 100) || 67;
+  const jnvstReadiness = Math.min(100, Math.max(0, Math.round(((avgTheta - 0.05) / 0.9) * 100)));
 
   const weakTopics = profile?.weakTopics || [];
   const strongTopics = profile?.strongTopics || [];
@@ -195,7 +236,7 @@ export default function JnvstDashboard({ params }) {
       bgColor: '#f3e8ff',
       iconColor: '#9333ea',
       barColor: '#a855f7',
-      progress: Math.round(((matTheta - 0.05) / 0.9) * 100) || 67
+      progress: Math.min(100, Math.max(0, Math.round(((matTheta - 0.05) / 0.9) * 100)))
     },
     {
       id: 'arithmetic',
@@ -204,7 +245,7 @@ export default function JnvstDashboard({ params }) {
       bgColor: '#dcfce7',
       iconColor: '#16a34a',
       barColor: '#22c55e',
-      progress: Math.round(((arithTheta - 0.05) / 0.9) * 100) || 100
+      progress: Math.min(100, Math.max(0, Math.round(((arithTheta - 0.05) / 0.9) * 100)))
     },
     {
       id: 'language',
@@ -213,7 +254,7 @@ export default function JnvstDashboard({ params }) {
       bgColor: '#ffedd5',
       iconColor: '#ea580c',
       barColor: '#f97316',
-      progress: Math.round(((langTheta - 0.05) / 0.9) * 100) || 72
+      progress: Math.min(100, Math.max(0, Math.round(((langTheta - 0.05) / 0.9) * 100)))
     },
     {
       id: 'previous-papers',
@@ -284,15 +325,95 @@ export default function JnvstDashboard({ params }) {
           padding-bottom: 60px;
         }
 
-        .dash-topbar {
+        .dash-header {
           background: #ffffff;
-          border-bottom: 1px solid #f1f5f9;
-          padding: 16px 36px;
+          border-bottom: 1px solid #e2e8f0;
+          padding: 0 36px;
+          height: 64px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          position: sticky;
+          top: 0;
+          z-index: 100;
         }
+
+        .logo-container a {
+          text-decoration: none;
+        }
+
+        .logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 22px;
+          font-weight: 900;
+          color: #0f172a;
+          letter-spacing: -0.5px;
+        }
+
+        .logo-accent {
+          color: #6366f1;
+        }
+
+        .unified-nav-links {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+        }
+
+        .unified-nav-links .nav-link {
+          text-decoration: none;
+          color: #475569;
+          font-size: 14px;
+          font-weight: 700;
+          transition: color 0.15s ease;
+        }
+
+        .unified-nav-links .nav-link:hover {
+          color: #6366f1;
+        }
+
+        .unified-nav-links .nav-link.active {
+          color: #6366f1;
+          border-bottom: 2px solid #6366f1;
+          padding-bottom: 20px;
+          margin-bottom: -20px;
+        }
+
+        .unified-nav-links .nav-link-primary {
+          background: #6366f1;
+          color: #ffffff !important;
+          padding: 8px 16px;
+          border-radius: 10px;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+          transition: all 0.2s ease;
+        }
+
+        .unified-nav-links .nav-link-primary:hover {
+          background: #4f46e5;
+          transform: translateY(-1px);
+        }
+
+        .nav-sep {
+          color: #e2e8f0;
+          font-weight: 300;
+        }
+
+        .exam-countdown-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1e40af;
+          padding: 6px 14px;
+          border-radius: 999px;
+          font-size: 13px;
+          font-weight: 700;
+          margin-top: 4px;
+          box-shadow: 0 2px 6px rgba(59, 130, 246, 0.08);
+        }
+
 
         .topbar-user {
           display: flex;
@@ -342,27 +463,34 @@ export default function JnvstDashboard({ params }) {
         }
 
         .dash-content {
-          max-width: 1240px;
+          max-width: 1600px;
           margin: 0 auto;
-          padding: 32px 24px;
+          padding: 28px 48px;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .greeting-header {
           margin-bottom: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .greeting-title {
-          font-size: 28px;
-          font-weight: 800;
+          font-size: 32px;
+          font-weight: 900;
           color: #0f172a;
           margin: 0;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .greeting-sub {
-          font-size: 15px;
+          font-size: 16px;
           color: #64748b;
           margin: 4px 0 0 0;
         }
@@ -370,8 +498,8 @@ export default function JnvstDashboard({ params }) {
         /* Main Grid */
         .dash-grid {
           display: grid;
-          grid-template-columns: 1fr 400px;
-          gap: 28px;
+          grid-template-columns: 1fr 380px;
+          gap: 32px;
         }
 
         @media (max-width: 1024px) {
@@ -1118,37 +1246,51 @@ export default function JnvstDashboard({ params }) {
         </defs>
       </svg>
 
-      {/* Top Navbar */}
-      <div className="dash-topbar">
-        <Link href="/exam-prep" style={{ textDecoration: 'none', color: '#6366f1', fontWeight: 800, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          ← Back to Exams
-        </Link>
-
+      {/* Unified JNVST Header */}
+      <header className="dash-header">
+        <div className="logo-container">
+          <Link href="/">
+            <span className="logo-text">Klass<span className="logo-accent">Champ</span></span>
+          </Link>
+        </div>
+        <nav className="unified-nav-links">
+          <Link href={`/exam-prep/${examId}`} className="nav-link active">Dashboard</Link>
+          <Link href={`/exam-prep/${examId}/topics`} className="nav-link">Practice</Link>
+          <Link href={`/exam-prep/${examId}/mock-test`} className="nav-link nav-link-primary">Mock Test</Link>
+          <span className="nav-sep">|</span>
+          <Link href="/exam-prep" className="nav-link">← All Exams</Link>
+        </nav>
+        
         <div className="topbar-user">
           <div className="nav-bell" title="Notifications">
             🔔
             <span className="nav-bell-dot"></span>
           </div>
-
           <button className="user-avatar-btn">
             <img 
-              src="https://api.dicebear.com/7.x/bottts/svg?seed=Rahul" 
+              src={`https://api.dicebear.com/7.x/bottts/svg?seed=${studentFirstName}`} 
               alt="User Avatar"
               className="user-avatar-img"
             />
-            <span style={{ fontSize: '12px', color: '#64748b' }}>▼</span>
           </button>
         </div>
-      </div>
+      </header>
 
       <main className="dash-content">
         {/* Header Greeting */}
         <div className="greeting-header">
-          <h1 className="greeting-title">
-            Good Morning, {studentFirstName} 👋
-          </h1>
-          <p className="greeting-sub">Let's continue your JNVST preparation.</p>
+          <div>
+            <h1 className="greeting-title">
+              Good Morning, {studentFirstName} 👋
+            </h1>
+            <p className="greeting-sub">Let's continue your JNVST preparation.</p>
+          </div>
+          <div className="exam-countdown-badge">
+            <span className="countdown-icon">⏳</span>
+            <span><strong>{daysLeft} Days</strong> until JNVST Exam (Jan 16, 2027)</span>
+          </div>
         </div>
+
 
         {/* Main Grid */}
         <div className="dash-grid">
@@ -1243,13 +1385,18 @@ export default function JnvstDashboard({ params }) {
                 {subjectCards.map((sub) => (
                   <div 
                     key={sub.id}
-                    className="subject-card"
+                    className={`subject-card ${activeTab === sub.id ? 'active' : ''}`}
                     onClick={() => {
                       if (sub.id === 'previous-papers') {
                         router.push(`/exam-prep/${examId}/practice/mat?mode=papers`);
                       } else {
+                        setActiveTab(sub.id);
                         scrollToTopicsSection(sub.id);
                       }
+                    }}
+                    style={{
+                      border: activeTab === sub.id ? '2px solid #6366f1' : '1px solid #f1f5f9',
+                      boxShadow: activeTab === sub.id ? '0 8px 24px rgba(99, 102, 241, 0.15)' : 'none'
                     }}
                   >
                     <div className="subject-icon-box" style={{ background: sub.bgColor, color: sub.iconColor }}>
@@ -1501,7 +1648,7 @@ export default function JnvstDashboard({ params }) {
                 <div className="stat-item">
                   <span className="stat-icon-wrap">🔥</span>
                   <div>
-                    <div className="stat-num">18</div>
+                    <div className="stat-num">{studentStats?.kpis?.streakDays ?? 0}</div>
                     <div className="stat-lbl">Day Streak</div>
                   </div>
                 </div>
@@ -1509,7 +1656,7 @@ export default function JnvstDashboard({ params }) {
                 <div className="stat-item">
                   <span className="stat-icon-wrap">⭐</span>
                   <div>
-                    <div className="stat-num">1240</div>
+                    <div className="stat-num">{studentStats?.kpis?.smartScore ?? 0}</div>
                     <div className="stat-lbl">XP Earned</div>
                   </div>
                 </div>
@@ -1517,7 +1664,7 @@ export default function JnvstDashboard({ params }) {
                 <div className="stat-item">
                   <span className="stat-icon-wrap">🏆</span>
                   <div>
-                    <div className="stat-num">#43</div>
+                    <div className="stat-num">#{Math.max(1, 100 - Math.floor((studentStats?.kpis?.smartScore ?? 0) / 25))}</div>
                     <div className="stat-lbl">Your Rank</div>
                   </div>
                 </div>
@@ -1530,16 +1677,22 @@ export default function JnvstDashboard({ params }) {
 
               <div className="mission-list">
                 <div className="mission-item">
-                  <div className="mission-check checked">✓</div>
-                  <span>5 Analogies</span>
+                  <div className={`mission-check ${(studentStats?.kpis?.questionsAttempted ?? 0) >= 5 ? 'checked' : 'unchecked'}`}>
+                    {(studentStats?.kpis?.questionsAttempted ?? 0) >= 5 ? '✓' : ''}
+                  </div>
+                  <span>Solve 5 Questions ({(studentStats?.kpis?.questionsAttempted ?? 0)} / 5)</span>
                 </div>
                 <div className="mission-item">
-                  <div className="mission-check checked">✓</div>
-                  <span>10 Coding-Decoding</span>
+                  <div className={`mission-check ${(studentStats?.kpis?.accuracyPercent ?? 0) >= 80 ? 'checked' : 'unchecked'}`}>
+                    {(studentStats?.kpis?.accuracyPercent ?? 0) >= 80 ? '✓' : ''}
+                  </div>
+                  <span>Reach 80% accuracy ({(studentStats?.kpis?.accuracyPercent ?? 0)}%)</span>
                 </div>
                 <div className="mission-item">
-                  <div className="mission-check unchecked"></div>
-                  <span>8 Arithmetic</span>
+                  <div className={`mission-check ${(studentStats?.kpis?.practiceMinutes ?? 0) >= 10 ? 'checked' : 'unchecked'}`}>
+                    {(studentStats?.kpis?.practiceMinutes ?? 0) >= 10 ? '✓' : ''}
+                  </div>
+                  <span>Practice for 10 mins ({(studentStats?.kpis?.practiceMinutes ?? 0)} / 10m)</span>
                 </div>
               </div>
 
@@ -1556,18 +1709,28 @@ export default function JnvstDashboard({ params }) {
             <div className="white-card">
               <div className="card-header-row" style={{ marginBottom: '16px' }}>
                 <h3 className="card-title">Recent Achievement</h3>
-                <span className="view-all-link" onClick={() => scrollToTopicsSection('mat')}>View All</span>
               </div>
 
-              <div className="recent-achieve-box">
-                <span className="achieve-badge-art">🎖️</span>
-                <div className="achieve-details">
-                  <div className="achieve-title">Mirror Image Mastered</div>
-                  <p className="achieve-sub">You scored 100% in Mirror Image<br/>Yesterday</p>
+              {(studentStats?.kpis?.questionsAttempted ?? 0) > 0 ? (
+                <div className="recent-achieve-box">
+                  <span className="achieve-badge-art">🎖️</span>
+                  <div className="achieve-details">
+                    <div className="achieve-title">Practice Champ</div>
+                    <p className="achieve-sub">You solved {studentStats.kpis.questionsAttempted} questions with {studentStats.kpis.accuracyPercent}% accuracy</p>
+                  </div>
+                  <span className="achieve-xp">+{studentStats.kpis.smartScore} XP</span>
                 </div>
-                <span className="achieve-xp">+120 XP</span>
-              </div>
+              ) : (
+                <div className="recent-achieve-box" style={{ background: '#f8fafc', border: '1px dashed #e2e8f0', boxShadow: 'none' }}>
+                  <span className="achieve-badge-art">🎯</span>
+                  <div className="achieve-details">
+                    <div className="achieve-title">Ready for Action</div>
+                    <p className="achieve-sub">Solve your first question to unlock achievements!</p>
+                  </div>
+                </div>
+              )}
             </div>
+
 
           </div>
         </div>

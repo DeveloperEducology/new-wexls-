@@ -4,7 +4,7 @@ export default async function sitemap() {
   const baseUrl = 'https://klasschamp.com'; // Change to production domain
 
   // 1. Static public paths
-  const staticPaths = ['', '/grades', '/science', '/blog'].map(route => ({
+  const staticPaths = ['', '/grades-v2', '/science', '/blog'].map(route => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
     changeFrequency: 'weekly',

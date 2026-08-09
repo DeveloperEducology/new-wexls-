@@ -1,4 +1,5 @@
 import { getMongoDb, hasMongoConfig } from '../../db/mongo.js';
+import { JNVST_2025_PYQ_TEMPLATE } from '../../exam/jnvst2025PyqData.js';
 
 const DEFAULT_COLLECTION = 'dynamic_templates';
 const templateCache = new Map();
@@ -18,11 +19,17 @@ export async function findDynamicTemplateById(templateId) {
     return templateCache.get(templateId);
   }
 
-  if (!hasMongoConfig()) return null;
+  if (!hasMongoConfig()) {
+    if (String(templateId).includes('2025')) return JNVST_2025_PYQ_TEMPLATE;
+    return null;
+  }
 
   try {
     const db = await getMongoDb();
-    if (!db) return null;
+    if (!db) {
+      if (String(templateId).includes('2025')) return JNVST_2025_PYQ_TEMPLATE;
+      return null;
+    }
 
     const collection = db.collection(DEFAULT_COLLECTION);
     const idsToTry = [templateId];
@@ -33,8 +40,15 @@ export async function findDynamicTemplateById(templateId) {
         idsToTry.push(`ukg-english-${templateId}`);
       }
     }
-    const doc = await collection.findOne({ id: { $in: idsToTry } });
-    if (!doc) return null;
+    let doc = await collection.findOne({ id: { $in: idsToTry } });
+    if (!doc) {
+      doc = await db.collection('templates').findOne({ $or: [{ id: templateId }, { _id: templateId }] });
+    }
+
+    if (!doc) {
+      if (String(templateId).includes('2025')) return JNVST_2025_PYQ_TEMPLATE;
+      return null;
+    }
 
     // Remove mongo fields
     const { _id, ...template } = doc;
@@ -45,6 +59,7 @@ export async function findDynamicTemplateById(templateId) {
     return cleaned;
   } catch (error) {
     console.warn(`Mongo dynamic template lookup for ${templateId} failed:`, error.message);
+    if (String(templateId).includes('2025')) return JNVST_2025_PYQ_TEMPLATE;
     return null;
   }
 }

@@ -252,18 +252,18 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     config = { ...template, ...template.config };
   }
 
-  let currentLevel = 3; // default fallback
+  let currentLevel = 1; // default fallback (starts at L1 Easy)
   if (difficultyContext) {
     const historyContext = difficultyContext.historyContext || {};
     const searchParams = difficultyContext.searchParams;
     const difficulty = difficultyContext.difficulty || 'adaptive';
 
     if (historyContext.practiceLevel) {
-      currentLevel = Number(historyContext.practiceLevel) || 3;
+      currentLevel = Number(historyContext.practiceLevel) || 1;
     } else if (searchParams) {
       const levelParam = searchParams.get('practiceLevel') || searchParams.get('level');
       if (levelParam) {
-        currentLevel = Number(levelParam) || 3;
+        currentLevel = Number(levelParam) || 1;
       } else {
         const diffVal = searchParams.get('difficulty');
         if (diffVal && !isNaN(Number(diffVal))) {
@@ -294,7 +294,7 @@ export function evaluateTemplate(template, seed, difficultyContext = null) {
     }
   }
 
-  if (template?.type === 'universal' || config.type === 'universal' || template?.generatorType === 'spreadsheet-grid' || config.generatorType === 'spreadsheet-grid' || template?.optionsType === 'sentence_ordering' || config.optionsType === 'sentence_ordering' || template?.type === 'sentence_ordering' || config.type === 'sentence_ordering') {
+  if (template?.type === 'universal' || config.type === 'universal' || template?.generatorType === 'spreadsheet-grid' || config.generatorType === 'spreadsheet-grid' || Array.isArray(config.rows) || Array.isArray(template?.rows) || template?.optionsType === 'sentence_ordering' || config.optionsType === 'sentence_ordering' || template?.type === 'sentence_ordering' || config.type === 'sentence_ordering') {
     return baseEvaluateTemplate(config, seed, difficultyContext);
   }
 

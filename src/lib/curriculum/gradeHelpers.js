@@ -194,7 +194,42 @@ export function countSkills(topic) {
 }
 
 export function practiceHref(topic, skill) {
-  return `/practice?subject=${topic.subject || 'math'}&topic=${topic.topic || topic.id}&skill=${skill}`;
+  const subjectId = topic.subject || 'math';
+  const unitId = topic.topic || topic.id || '';
+  const skillId = skill || '';
+
+  let resolvedGrade = null;
+  const targetStr = `${skillId} ${unitId}`.toLowerCase();
+  if (targetStr.includes('lkg')) {
+    resolvedGrade = 'lkg';
+  } else if (targetStr.includes('ukg')) {
+    resolvedGrade = 'ukg';
+  } else if (targetStr.includes('prek')) {
+    resolvedGrade = 'prek';
+  } else {
+    const match = targetStr.match(/(?:-g|grade[- ]|g)([0-9a-zA-Z])/);
+    if (match) {
+      resolvedGrade = match[1];
+    } else {
+      resolvedGrade = '3';
+    }
+  }
+
+  let cleanTopic = unitId;
+  let cleanSkill = skillId;
+
+  if (resolvedGrade) {
+    const prefix = `${resolvedGrade}-`;
+    if (cleanTopic.startsWith(prefix)) {
+      cleanTopic = cleanTopic.slice(prefix.length);
+    }
+    if (cleanSkill.startsWith(prefix)) {
+      cleanSkill = cleanSkill.slice(prefix.length);
+    }
+    cleanSkill = cleanSkill.replace(/^(size|positions|count\d+|g\d+)-/, '');
+  }
+
+  return `/practice/${resolvedGrade}/${subjectId}/${cleanTopic}/${cleanSkill}`;
 }
 
 export function getStandardizedGrade(title, topicId, gradeVal) {

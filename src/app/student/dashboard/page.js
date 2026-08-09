@@ -301,6 +301,45 @@ function getSkillIcon(group = '') {
   return '⭐️';
 }
 
+function getPracticeUrl(subject, topic, skillId) {
+  const subjectId = subject || 'math';
+  const unitId = topic || '';
+  const id = skillId || '';
+
+  let resolvedGrade = null;
+  const targetStr = `${id} ${unitId}`.toLowerCase();
+  if (targetStr.includes('lkg')) {
+    resolvedGrade = 'lkg';
+  } else if (targetStr.includes('ukg')) {
+    resolvedGrade = 'ukg';
+  } else if (targetStr.includes('prek')) {
+    resolvedGrade = 'prek';
+  } else {
+    const match = targetStr.match(/(?:-g|grade[- ]|g)([0-9a-zA-Z])/);
+    if (match) {
+      resolvedGrade = match[1];
+    } else {
+      resolvedGrade = '3';
+    }
+  }
+
+  let cleanTopic = unitId;
+  let cleanSkill = id;
+
+  if (resolvedGrade) {
+    const prefix = `${resolvedGrade}-`;
+    if (cleanTopic.startsWith(prefix)) {
+      cleanTopic = cleanTopic.slice(prefix.length);
+    }
+    if (cleanSkill.startsWith(prefix)) {
+      cleanSkill = cleanSkill.slice(prefix.length);
+    }
+    cleanSkill = cleanSkill.replace(/^(size|positions|count\d+|g\d+)-/, '');
+  }
+
+  return `/practice/${resolvedGrade}/${subjectId}/${cleanTopic}/${cleanSkill}`;
+}
+
 export default function StudentDashboardPortal() {
   const [studentName, setStudentName] = useState('Alex');
   const [userId, setUserId] = useState('');
@@ -800,7 +839,7 @@ export default function StudentDashboardPortal() {
                     {/* Render all nodes */}
                     {roadmapNodes.map((node, idx) => {
                       const skillTitle = node.title;
-                      const practiceHref = `/practice?subject=${activeCurriculum.subject}&topic=${activeCurriculum.topic}&skill=${node.skillId}`;
+                      const practiceHref = getPracticeUrl(activeCurriculum.subject, activeCurriculum.topic, node.skillId);
 
                       // Group banner: show topic name only for first node in each group
                       const isGroupStart = idx === 0 || roadmapNodes[idx - 1].group !== node.group;
@@ -959,7 +998,7 @@ export default function StudentDashboardPortal() {
                       const firstThreeSkillTitles = group.skills.slice(0, 3).map(s => s.title).join(', ');
                       
                       const isGroupUnlocked = group.skills.some(s => s.isUnlocked);
-                      const practiceHref = `/practice?subject=${activeCurriculum.subject}&topic=${activeCurriculum.topic}&skill=${activeSkill.skillId}`;
+                      const practiceHref = getPracticeUrl(activeCurriculum.subject, activeCurriculum.topic, activeSkill.skillId);
                       
                       const cardContent = (
                         <div 
@@ -1074,7 +1113,7 @@ export default function StudentDashboardPortal() {
                     Recommended next step for your math curriculum.
                   </p>
                   
-                  <Link href="/practice?subject=math&topic=dynamic-templetes&skill=place-value-word-to-digits-multi-input" className={styles.btn} style={{ width: 'fit-content', marginTop: '0.5rem', textDecoration: 'none', textAlign: 'center' }}>
+                  <Link href={getPracticeUrl('math', 'dynamic-templetes', 'place-value-word-to-digits-multi-input')} className={styles.btn} style={{ width: 'fit-content', marginTop: '0.5rem', textDecoration: 'none', textAlign: 'center' }}>
                     🚀 Start Practice
                   </Link>
                 </div>

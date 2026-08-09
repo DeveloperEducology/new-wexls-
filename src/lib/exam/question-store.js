@@ -4,6 +4,7 @@ import { instantiateSvgTemplate, isSvgTemplate } from './svg-template-engine.js'
 import { instantiateVisualTransformationTemplate } from './visual-transformation-engine.js';
 import { evaluateTemplate } from '../practice/generators/universalEvaluator.js';
 import { normalizeQuestion, buildQuestion, normalizeOptions } from './question-schema.js';
+import { JNVST_2025_PYQ_TEMPLATE } from './jnvst2025PyqData.js';
 
 const GENERATE_COUNT = 30;
 
@@ -70,66 +71,124 @@ export async function insertQuestions(questions) {
   return result;
 }
 
-export async function getQuestion(id) {
-  const db = await getMongoDb();
-  if (!db) return null;
-  const { ObjectId } = await import('mongodb');
-  let query = {};
-  try {
-    query = { _id: new ObjectId(id) };
-  } catch (err) {
-    query = { $or: [{ _id: id }, { id: id }] };
+// High-performance in-memory cache for on-the-fly generated questions (Free Tier / Dynamic Drills)
+const IN_MEMORY_QUESTION_CACHE = new Map();
+
+export function cacheQuestionInMemory(q) {
+  if (!q) return;
+  const key = String(q._id || q.id || '');
+  if (!key) return;
+  IN_MEMORY_QUESTION_CACHE.set(key, q);
+  if (IN_MEMORY_QUESTION_CACHE.size > 3000) {
+    const firstKey = IN_MEMORY_QUESTION_CACHE.keys().next().value;
+    IN_MEMORY_QUESTION_CACHE.delete(firstKey);
   }
-  let q = await db.collection('questions').findOne(query);
-  if (q) return normalizeQuestion(q);
+}
+
+export async function getQuestion(id) {
+  if (!id) return null;
+  const strId = String(id);
+  if (IN_MEMORY_QUESTION_CACHE.has(strId)) {
+    return normalizeQuestion(IN_MEMORY_QUESTION_CACHE.get(strId));
+  }
+
+  const db = await getMongoDb();
+  if (db) {
+    try {
+      const { ObjectId } = await import('mongodb');
+      let query = {};
+      try {
+        query = { _id: new ObjectId(id) };
+      } catch (err) {
+        query = { $or: [{ _id: id }, { id: id }] };
+      }
+      let q = await db.collection('questions').findOne(query);
+      if (q) {
+        const norm = normalizeQuestion(q);
+        cacheQuestionInMemory(norm);
+        return norm;
+      }
+    } catch (e) {}
+  }
 
   // Dynamic on-the-fly evaluation fallback for un-inserted template questions (Free Tier / On-The-Fly Mode)
   if (typeof id === 'string' && id.includes('_')) {
     const parts = id.split('_');
     if (parts.length >= 3) {
-      const seed = parseInt(parts[parts.length - 2], 10);
+      const lastPart = parseInt(parts[parts.length - 1], 10);
+      const seedPart = parseInt(parts[parts.length - 2], 10);
+      const seed = !isNaN(seedPart) ? seedPart : Math.floor(Math.random() * 1000000);
+      const qnIndex = !isNaN(lastPart) ? (lastPart + 1) : 1;
       const templateId = parts.slice(0, parts.length - 2).join('_');
 
-      if (!isNaN(seed) && templateId) {
-        let tpl = await db.collection('templates').findOne({ $or: [{ id: templateId }, { _id: templateId }] });
-        if (tpl || dynTpl) {
-          const tplTime = tpl ? new Date(tpl.updatedAt || tpl.createdAt || 0).getTime() : 0;
-          const dynTime = dynTpl ? new Date(dynTpl.updatedAt || dynTpl.createdAt || 0).getTime() : 0;
-          const chosen = (dynTime > tplTime) ? dynTpl : (tpl || dynTpl);
-          const evalQ = evaluateTemplate(chosen, seed);
-          if (evalQ) {
-            let optionsDict = {};
-            let correctKey = 'A';
-            if (Array.isArray(evalQ.options)) {
-              const letters = ['A', 'B', 'C', 'D'];
-              evalQ.options.forEach((opt, idx) => {
-                const letter = letters[idx] || `OPT_${idx + 1}`;
-                const label = typeof opt === 'object' ? (opt.label || opt.content || '') : String(opt);
-                optionsDict[letter] = label;
-                if (opt.isCorrect || label === evalQ.answer || letter === evalQ.answer) {
-                  correctKey = letter;
-                }
-              });
-            } else if (typeof evalQ.options === 'object' && evalQ.options !== null) {
-              optionsDict = evalQ.options;
-              correctKey = typeof evalQ.answer === 'string' && evalQ.answer.length === 1 ? evalQ.answer : (evalQ.correctOption || 'A');
-            }
+      let chosen = null;
+      if (db && templateId) {
+        try {
+          const { ObjectId } = await import('mongodb');
+          let objectId = null;
+          try { objectId = new ObjectId(templateId); } catch {}
+          const tplFilter = {
+            $or: [
+              { id: templateId },
+              { _id: templateId },
+              ...(objectId ? [{ _id: objectId }] : [])
+            ]
+          };
+          let tpl = await db.collection('templates').findOne(tplFilter);
+          let dynTpl = await db.collection('dynamic_templates').findOne(tplFilter);
 
-            return {
-              _id: id,
-              templateId,
-              questionText: evalQ.questionText || merged.name || merged.id || 'Practice Drill',
-              parts: evalQ.parts || [{ type: 'text', content: evalQ.questionText || '' }],
-              options: optionsDict,
-              optionsType: evalQ.optionsType || merged.optionsType || 'mcq',
-              interaction: evalQ.interaction || merged.interaction || 'mcq',
-              type: evalQ.type || merged.type || 'mcq',
-              answer: correctKey,
-              correctOption: correctKey,
-              explanationText: typeof evalQ.explanation === 'object' ? (evalQ.explanation?.sections?.[0]?.content || '') : (evalQ.explanation || ''),
-              generatorType: 'spreadsheet-grid'
-            };
+          if (tpl || dynTpl) {
+            const tplTime = tpl ? new Date(tpl.updatedAt || tpl.createdAt || 0).getTime() : 0;
+            const dynTime = dynTpl ? new Date(dynTpl.updatedAt || dynTpl.createdAt || 0).getTime() : 0;
+            chosen = (dynTime > tplTime) ? dynTpl : (tpl || dynTpl);
           }
+        } catch (e) {}
+      }
+
+      if (!chosen) {
+        chosen = JNVST_2025_PYQ_TEMPLATE;
+      }
+
+      if (chosen) {
+        const evalQ = evaluateTemplate(chosen, seed, { qn: qnIndex });
+        if (evalQ) {
+          let optionsDict = {};
+          let correctKey = 'A';
+          if (Array.isArray(evalQ.options)) {
+            const letters = ['A', 'B', 'C', 'D'];
+            evalQ.options.forEach((opt, idx) => {
+              const letter = letters[idx] || `OPT_${idx + 1}`;
+              const label = typeof opt === 'object' ? (opt.label || opt.content || '') : String(opt);
+              optionsDict[letter] = label;
+              if (opt.isCorrect || label === evalQ.answer || letter === evalQ.answer) {
+                correctKey = letter;
+              }
+            });
+          } else if (typeof evalQ.options === 'object' && evalQ.options !== null) {
+            optionsDict = evalQ.options;
+            correctKey = typeof evalQ.answer === 'string' && evalQ.answer.length === 1 ? evalQ.answer : (evalQ.correctOption || 'A');
+          }
+
+          const qText = evalQ.questionText || evalQ.questionTemplate || evalQ.prompt || evalQ.title || evalQ.name || (Array.isArray(evalQ.parts) && evalQ.parts[0]?.content) || chosen.title || chosen.name || chosen.id || 'Practice Drill';
+
+          const built = normalizeQuestion({
+            _id: id,
+            id: id,
+            templateId: chosen.id || String(chosen._id),
+            questionText: qText,
+            parts: (evalQ.parts && evalQ.parts.length > 0) ? evalQ.parts : [{ type: 'text', content: qText }],
+            options: optionsDict,
+            optionsType: evalQ.optionsType || chosen.optionsType || 'mcq',
+            interaction: evalQ.interaction || chosen.interaction || 'mcq',
+            type: evalQ.type || chosen.type || 'mcq',
+            answer: correctKey,
+            correctOption: correctKey,
+            explanationText: typeof evalQ.explanation === 'object' ? (evalQ.explanation?.sections?.[0]?.content || '') : (evalQ.explanation || ''),
+            generatorType: 'spreadsheet-grid'
+          });
+
+          cacheQuestionInMemory(built);
+          return built;
         }
       }
     }
@@ -142,9 +201,8 @@ export async function getQuestion(id) {
  * Fetch candidate questions for adaptive selection.
  * Returns questions near `theta` difficulty, excluding already-used IDs.
  */
-export async function generateFromTemplates({ examId, section, topic, templateId = null }) {
+export async function generateFromTemplates({ examId, section, topic, templateId = null, qnIndex = null }) {
   const db = await getMongoDb();
-  if (!db) return [];
 
   let templateIds = null;
   let objectIds = [];
@@ -156,60 +214,88 @@ export async function generateFromTemplates({ examId, section, topic, templateId
     } else {
       templateIds = [templateId];
     }
-    const { ObjectId } = await import('mongodb');
-    for (const id of templateIds) {
-      try {
-        objectIds.push(new ObjectId(id));
-      } catch {}
-    }
+    try {
+      const { ObjectId } = await import('mongodb');
+      for (const id of templateIds) {
+        try {
+          objectIds.push(new ObjectId(id));
+        } catch {}
+      }
+    } catch (e) {}
   }
 
-  // Find matching templates (supporting parameterized, svg-figure, visual-transformation, and spreadsheet-grid)
-  const filter = {
-    examId,
-    status: { $ne: 'inactive' },
-    ...(!templateIds ? { section } : {}),
-    ...(!templateIds && topic ? { topic } : {}),
-    ...(templateIds ? {
-      $or: [
-        { id: { $in: templateIds } },
-        { _id: { $in: templateIds } },
-        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
-      ]
-    } : {})
-  };
+  let templates = [];
+  if (db) {
+    try {
+      const filter = {
+        examId,
+        status: { $ne: 'inactive' },
+        ...(!templateIds ? { section } : {}),
+        ...(!templateIds && topic ? { topic } : {}),
+        ...(templateIds ? {
+          $or: [
+            { id: { $in: templateIds } },
+            { _id: { $in: templateIds } },
+            ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
+          ]
+        } : {})
+      };
 
-  let templates = await db.collection('templates').find(filter).limit(10).toArray();
-  if (templateIds) {
-    const dynFilter = {
-      $or: [
-        { id: { $in: templateIds } },
-        { _id: { $in: templateIds } },
-        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
-      ]
-    };
-    const dynTemplates = await db.collection('dynamic_templates').find(dynFilter).limit(10).toArray();
-    for (const dynTpl of dynTemplates) {
-      const existingIdx = templates.findIndex(t => (t.id || String(t._id)) === (dynTpl.id || String(dynTpl._id)));
-      if (existingIdx !== -1) {
-        const existingTpl = templates[existingIdx];
-        const tplTime = new Date(existingTpl.updatedAt || existingTpl.createdAt || 0).getTime();
-        const dynTime = new Date(dynTpl.updatedAt || dynTpl.createdAt || 0).getTime();
-        if (dynTime > tplTime) {
-          templates[existingIdx] = dynTpl;
+      templates = await db.collection('templates').find(filter).limit(10).toArray();
+      if (templateIds) {
+        const dynFilter = {
+          $or: [
+            { id: { $in: templateIds } },
+            { _id: { $in: templateIds } },
+            ...(objectIds.length ? [{ _id: { $in: objectIds } }] : [])
+          ]
+        };
+        const dynTemplates = await db.collection('dynamic_templates').find(dynFilter).limit(10).toArray();
+        for (const dynTpl of dynTemplates) {
+          const existingIdx = templates.findIndex(t => (t.id || String(t._id)) === (dynTpl.id || String(dynTpl._id)));
+          if (existingIdx !== -1) {
+            const existingTpl = templates[existingIdx];
+            const tplTime = new Date(existingTpl.updatedAt || existingTpl.createdAt || 0).getTime();
+            const dynTime = new Date(dynTpl.updatedAt || dynTpl.createdAt || 0).getTime();
+            if (dynTime > tplTime) {
+              templates[existingIdx] = dynTpl;
+            }
+          } else {
+            templates.push(dynTpl);
+          }
         }
-      } else {
-        templates.push(dynTpl);
+      }
+    } catch (e) {}
+  }
+
+  if (templates.length === 0 && templateIds) {
+    for (const tId of templateIds) {
+      if (tId && tId.includes('2025-jnvst')) {
+        templates.push(JNVST_2025_PYQ_TEMPLATE);
       }
     }
   }
 
-  if (templates.length === 0 && topic && !templateId) {
-    const allSection = await db.collection('templates').find({
-      examId, section,
-      status: { $ne: 'inactive' }
-    }).limit(10).toArray();
-    templates.push(...allSection);
+  if (templates.length === 0 && db) {
+    try {
+      const fallbackTemplates = await db.collection('templates').find({
+        ...(examId ? { examId } : {}),
+        ...(section ? { section } : {}),
+        status: { $ne: 'inactive' }
+      }).limit(10).toArray();
+      if (fallbackTemplates.length > 0) {
+        templates.push(...fallbackTemplates);
+      } else {
+        const fallbackDyn = await db.collection('dynamic_templates').find({
+          status: { $ne: 'inactive' }
+        }).limit(10).toArray();
+        if (fallbackDyn.length > 0) templates.push(...fallbackDyn);
+      }
+    } catch (e) {}
+  }
+
+  if (templates.length === 0) {
+    templates.push(JNVST_2025_PYQ_TEMPLATE);
   }
 
   const allGenerated = [];
@@ -223,11 +309,29 @@ export async function generateFromTemplates({ examId, section, topic, templateId
                                 (Array.isArray(tpl.rows) && tpl.rows.length > 0);
 
       if (isSpreadsheetGrid) {
-        for (let i = 0; i < GENERATE_COUNT; i++) {
+        let countToGenerate = GENERATE_COUNT;
+        let pool = null;
+        if (Array.isArray(tpl.variables)) {
+          const indexVar = tpl.variables.find(v => (v?.name || v?.id) === 'index');
+          pool = Array.isArray(indexVar) ? indexVar : (indexVar ? (indexVar.values || indexVar.value) : null);
+        } else if (tpl.variables && typeof tpl.variables === 'object') {
+          const indexVar = tpl.variables.index;
+          pool = Array.isArray(indexVar) ? indexVar : (indexVar ? (indexVar.values || indexVar.value) : null);
+        }
+        if (Array.isArray(pool) && pool.length > 0) {
+          countToGenerate = pool.length;
+        } else if (Array.isArray(tpl.rows) && tpl.rows.length > 0) {
+          countToGenerate = tpl.rows.length;
+        }
+
+        if (qnIndex !== null) countToGenerate = 1;
+
+        for (let i = 0; i < countToGenerate; i++) {
+          const currentQn = qnIndex !== null ? qnIndex : (i + 1);
           const seed = Math.floor(Math.random() * 1000000);
           let evalQ = null;
           try {
-            evalQ = evaluateTemplate(tpl, seed, { qn: i + 1, seenItems: allGenerated.map((_, idx) => idx) });
+            evalQ = evaluateTemplate(tpl, seed, { qn: currentQn, seenItems: allGenerated.map((_, idx) => idx) });
           } catch (e) {
             console.warn(`[evaluateTemplate] Error for ${tpl.id || tpl._id}:`, e.message);
           }
@@ -252,16 +356,20 @@ export async function generateFromTemplates({ examId, section, topic, templateId
               correctKey = typeof evalQ.answer === 'string' && evalQ.answer.length === 1 ? evalQ.answer : (evalQ.correctOption || 'A');
             }
 
+            const qText = evalQ.questionText || evalQ.questionTemplate || evalQ.prompt || evalQ.title || evalQ.name || (Array.isArray(evalQ.parts) && evalQ.parts[0]?.content) || tpl.title || tpl.name || tpl.id || 'Practice Drill';
+
             allGenerated.push(buildQuestion({
               _id: `${tpl.id || tpl._id}_${seed}_${i}`,
+              id: `${tpl.id || tpl._id}_${seed}_${i}`,
               templateId: tpl.id || String(tpl._id),
               examId: tpl.examId || examId,
               section: tpl.section || section,
               topic: tpl.topic || topic || 'general',
-              difficulty: tpl.bFactor !== undefined ? Math.min(1, Math.max(0, (tpl.bFactor + 3) / 6)) : 0.5,
+              level: evalQ?.level || (i < 8 ? 1 : i < 13 ? 2 : i < 18 ? 3 : 4),
+              difficulty: evalQ?.difficulty || (tpl.bFactor !== undefined ? Math.min(1, Math.max(0, (tpl.bFactor + 3) / 6)) : 0.5),
               bFactor: tpl.bFactor !== undefined ? tpl.bFactor : 0.0,
-              questionText: evalQ.questionText || tpl.name || tpl.id || 'Practice Drill',
-              parts: evalQ.parts || [{ type: 'text', content: evalQ.questionText || '' }],
+              questionText: qText,
+              parts: (evalQ.parts && evalQ.parts.length > 0) ? evalQ.parts : [{ type: 'text', content: qText }],
               options: evalQ.options,
               answer: typeof evalQ.answer === 'string' ? evalQ.answer : null,
               correctOption: (() => { const { correctOption } = normalizeOptions(evalQ.options, evalQ.correctOption || null, evalQ.answer ?? null); return correctOption; })(),
@@ -293,6 +401,7 @@ export async function generateFromTemplates({ examId, section, topic, templateId
     }
   }
 
+  allGenerated.forEach(q => cacheQuestionInMemory(q));
   return allGenerated;
 }
 
@@ -385,7 +494,9 @@ export async function getAdaptiveCandidates({ examId, section, topic = null, tem
     resolvedQuestions.push(q);
   }
 
-  return resolvedQuestions.map(normalizeQuestion);
+  const normalizedList = resolvedQuestions.map(normalizeQuestion);
+  normalizedList.forEach(q => cacheQuestionInMemory(q));
+  return normalizedList;
 }
 
 export async function listQuestions({ examId, section, topic, status, isPYQ, limit = 50, skip = 0 } = {}) {

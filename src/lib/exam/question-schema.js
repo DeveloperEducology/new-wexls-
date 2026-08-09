@@ -140,9 +140,9 @@ export function normalizeQuestion(doc) {
     parts = text ? [{ type: 'text', content: text }] : [];
   }
 
-  const questionText = typeof doc.questionText === 'string'
+  const questionText = (typeof doc.questionText === 'string' && doc.questionText.trim())
     ? doc.questionText
-    : (parts[0]?.content || '');
+    : (doc.questionTemplate || doc.title || doc.name || doc.prompt || parts[0]?.content || '');
 
   let explanationText = doc.explanationText ||
     (typeof doc.explanation === 'string' ? doc.explanation : doc.explanation?.sections?.[0]?.content) || null;
@@ -255,6 +255,8 @@ export function buildQuestion(payload) {
 
   const doc = {
     schemaVersion: 2,
+    ...(payload._id && { _id: payload._id }),
+    ...(payload.id  && { id:  payload.id  }),
     ...(payload.examId      && { examId:      payload.examId      }),
     ...(payload.subject     && { subject:     payload.subject     }),
     ...(payload.topic       && { topic:       payload.topic       }),

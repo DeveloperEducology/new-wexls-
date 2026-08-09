@@ -82,6 +82,459 @@ const DEFAULT_ROWS = [
 
 const GRID_PRESETS = [
   {
+  "id": "class-6-science-ch2-diversity",
+  "name": "🌱 Class 6 Science Ch-2: Diversity in Living World (ELI5 Full Chapter)",
+  "title": "Class 6 Science Chapter 2: Diversity in the Living World",
+  "type": "universal",
+  "generatorType": "spreadsheet-grid",
+  "targetCollection": "dynamic_templates",
+  "subject": "science",
+  "topic": "diversity-living-world",
+  "grade": "6",
+  "options": [
+    { "label": "[Result]", "isCorrect": true },
+    { "label": "[Distractor1]", "isCorrect": false },
+    { "label": "[Distractor2]", "isCorrect": false },
+    { "label": "[Distractor3]", "isCorrect": false }
+  ],
+  "columns": [
+    "questionText",
+    "Result",
+    "Distractor1",
+    "Distractor2",
+    "Distractor3",
+    "explanation",
+    "topic",
+    "difficulty"
+  ],
+  "rows": [
+    {
+      "_level": "l1",
+      "questionText": "What is \"Biodiversity\"?",
+      "Result": "Having lots of different plants and animals living in nature",
+      "Distractor1": "A type of robot toy",
+      "Distractor2": "Only one single type of flower",
+      "Distractor3": "A giant rock in space",
+      "explanation": "Biodiversity means nature has a huge variety of different plant and animal friends!",
+      "topic": "Biodiversity Concept",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l1",
+      "questionText": "Which plant is a \"Herb\" with a soft green stem?",
+      "Result": "Tomato Plant",
+      "Distractor1": "Big Mango Tree",
+      "Distractor2": "Rose Bush",
+      "Distractor3": "Tall Banyan Tree",
+      "explanation": "Herbs are small plants with soft, green stems like Tomato, Mint, and Grass!",
+      "topic": "Plant Grouping: Herbs",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l1",
+      "questionText": "What is a \"Shrub\"?",
+      "Result": "A medium-sized plant with thin woody stems branching near the ground, like a Rose",
+      "Distractor1": "A giant tree with a thick trunk",
+      "Distractor2": "A fish swimming in water",
+      "Distractor3": "A tiny plant with no stem",
+      "explanation": "Shrubs are medium-sized bushy plants with thin woody stems starting close to the ground.",
+      "topic": "Plant Grouping: Shrubs",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l1",
+      "questionText": "Which plant has a thick, hard, brown woody trunk?",
+      "Result": "Mango Tree",
+      "Distractor1": "Grass",
+      "Distractor2": "Tulsi",
+      "Distractor3": "Mint",
+      "explanation": "Trees are tall and strong with thick brown trunks and high branches!",
+      "topic": "Plant Grouping: Trees",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l2",
+      "questionText": "Which features belong to a Monocot plant like Grass or Maize?",
+      "Result": "Parallel leaf lines, Fibrous roots, and 1 seed piece",
+      "Distractor1": "Net-like leaf lines, Taproot, and 2 seed pieces",
+      "Distractor2": "Thick woody trunk and zero roots",
+      "Distractor3": "Fins for swimming underwater",
+      "explanation": "Monocots have 1 seed piece, parallel leaf lines, and fibrous roots!",
+      "topic": "Leaf Venation & Roots",
+      "difficulty": "Medium"
+    },
+    {
+      "_level": "l2",
+      "questionText": "Which features belong to a Dicot plant like Chana (Chickpea) or Hibiscus?",
+      "Result": "Seed splits into 2 halves, Net-like leaf lines, and Taproot",
+      "Distractor1": "Parallel leaf lines and Fibrous roots",
+      "Distractor2": "Single seed piece and zero leaves",
+      "Distractor3": "Feathers and wings for flying",
+      "explanation": "Dicots have 2 seed pieces, net-like leaf lines, and a big taproot!",
+      "topic": "Leaf Venation & Roots",
+      "difficulty": "Medium"
+    },
+    {
+      "_level": "l1",
+      "questionText": "Why does a hot desert camel have long legs and wide flat feet?",
+      "Result": "To stay high above hot sand and walk without sinking",
+      "Distractor1": "To swim fast in deep ocean water",
+      "Distractor2": "To fly high above mountain tops",
+      "Distractor3": "To hide inside tree hollows",
+      "explanation": "Long legs keep the camel far above burning sand, and wide hooves stop it from sinking into sandy ground!",
+      "topic": "Animal Adaptations: Desert",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l2",
+      "questionText": "How is a cold desert camel in Ladakh different from a hot desert camel?",
+      "Result": "It has 2 humps, shorter legs, and thick fluffy hair",
+      "Distractor1": "It has wings to fly",
+      "Distractor2": "It lives underwater",
+      "Distractor3": "It has green leaves instead of fur",
+      "explanation": "Ladakh cold desert camels have 2 humps, short legs to walk on rocky mountains, and thick hair for cold winters!",
+      "topic": "Animal Adaptations: Desert",
+      "difficulty": "Medium"
+    },
+    {
+      "_level": "l1",
+      "questionText": "How does a Cactus survive in the dry desert?",
+      "Result": "It has a thick fleshy stem that stores water",
+      "Distractor1": "It grows huge thin leaves to catch rain",
+      "Distractor2": "It swims in rivers",
+      "Distractor3": "It moves around on legs",
+      "explanation": "The fleshy green stem of a cactus works like a water bottle to hold water in the desert!",
+      "topic": "Plant Adaptations: Desert",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l1",
+      "questionText": "Why is a mountain Deodar tree shaped like a cone with sloping branches?",
+      "Result": "So heavy snow slides off easily without breaking branches",
+      "Distractor1": "To catch fish in rivers",
+      "Distractor2": "To block sunlight from reaching the ground",
+      "Distractor3": "To look like a birthday cake",
+      "explanation": "The cone shape and sloping branches let snow slide right off during mountain blizzards!",
+      "topic": "Plant Adaptations: Mountains",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l1",
+      "questionText": "What body features help a fish swim easily underwater?",
+      "Result": "Streamlined body and fins",
+      "Distractor1": "Feathers and wings",
+      "Distractor2": "Long hooves and fur",
+      "Distractor3": "Thick bark and leaves",
+      "explanation": "A boat-shaped (streamlined) body cuts through water, and fins help steering!",
+      "topic": "Animal Adaptations: Aquatic",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l2",
+      "questionText": "Which animals are Amphibians that can live BOTH on land and in water?",
+      "Result": "Frog, Crocodile, and Tortoise",
+      "Distractor1": "Monkey, Cow, and Pigeon",
+      "Distractor2": "Camel, Desert Lizard, and Crow",
+      "Distractor3": "Whale, Shark, and Goldfish",
+      "explanation": "Frogs, tortoises, and crocodiles can live on land and move in water!",
+      "topic": "Habitats: Terrestrial vs Aquatic",
+      "difficulty": "Medium"
+    },
+    {
+      "_level": "l2",
+      "questionText": "Who was Dr. Janaki Ammal?",
+      "Result": "A famous Indian female botanist who helped save the Silent Valley forest",
+      "Distractor1": "An astronaut who flew to Mars",
+      "Distractor2": "A chef who invented pizza",
+      "Distractor3": "A famous cricket player",
+      "explanation": "Janaki Ammal was a pioneering Indian botanist dedicated to saving plant biodiversity and Silent Valley!",
+      "topic": "Conservation & Scientists",
+      "difficulty": "Medium"
+    },
+    {
+      "_level": "l1",
+      "questionText": "Why is Salim Ali famous as the \"Birdman of India\"?",
+      "Result": "He studied birds, mapped their travel routes, and wrote 10 books to protect them",
+      "Distractor1": "He built a giant wooden bird that flies",
+      "Distractor2": "He ran a tiger sanctuary",
+      "Distractor3": "He invented binoculars",
+      "explanation": "Salim Ali devoted his life to observing, documenting, and protecting birds across India!",
+      "topic": "Conservation & Scientists",
+      "difficulty": "Easy"
+    },
+    {
+      "_level": "l3",
+      "questionText": "How do communities and governments protect plant and animal biodiversity in India?",
+      "Result": "Sacred Groves, Project Tiger (1973), and Project Cheetah (2022)",
+      "Distractor1": "Cutting down all trees in national parks",
+      "Distractor2": "Building dams inside all forests",
+      "Distractor3": "Hunting rare animals",
+      "explanation": "Sacred groves, Project Tiger, and Project Cheetah protect natural homes of plants and animals!",
+      "topic": "Conservation & Sacred Groves",
+      "difficulty": "Hard"
+    }
+  ],
+  "blueprint": "{{questionText}}",
+  "solution": "{{explanation}}",
+  "optionsBinding": [
+    {
+      "column": "Result",
+      "isCorrect": true
+    },
+    {
+      "column": "Distractor1",
+      "isCorrect": false
+    },
+    {
+      "column": "Distractor2",
+      "isCorrect": false
+    },
+    {
+      "column": "Distractor3",
+      "isCorrect": false
+    }
+  ]
+},
+  {
+  "id": "class-6-science-ch2-diversity",
+  "name": "🌱 Class 6 Science Ch-2: Diversity in Living World (ELI5 MCQs & MSQs)",
+  "title": "Class 6 Science Chapter 2: Diversity in the Living World",
+  "targetCollection": "dynamic_templates",
+  "subject": "science",
+  "topic": "diversity-living-world",
+  "grade": "6",
+  "columns": [
+    "id",
+    "topic",
+    "questionType",
+    "questionText",
+    "optionA",
+    "optionB",
+    "optionC",
+    "optionD",
+    "correctAnswer",
+    "explanation",
+    "difficulty"
+  ],
+  "rows": [
+    {
+      "id": "Q1",
+      "topic": "Biodiversity Concept",
+      "questionType": "mcq",
+      "questionText": "What is \"Biodiversity\"?",
+      "optionA": "Having lots of different plants and animals living in nature",
+      "optionB": "A type of robot toy",
+      "optionC": "Only one single type of flower",
+      "optionD": "A giant rock in space",
+      "correctAnswer": "A",
+      "explanation": "Biodiversity means nature has a huge variety of different plant and animal friends!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q2",
+      "topic": "Plant Grouping: Herbs",
+      "questionType": "mcq",
+      "questionText": "Which plant is a \"Herb\" with a soft green stem?",
+      "optionA": "Big Mango Tree",
+      "optionB": "Tomato Plant",
+      "optionC": "Rose Bush",
+      "optionD": "Tall Banyan Tree",
+      "correctAnswer": "B",
+      "explanation": "Herbs are small plants with soft, green stems like Tomato, Mint, and Grass!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q3",
+      "topic": "Plant Grouping: Shrubs",
+      "questionType": "mcq",
+      "questionText": "What is a \"Shrub\"?",
+      "optionA": "A medium-sized plant with thin woody stems branching near the ground, like a Rose",
+      "optionB": "A giant tree with a thick trunk",
+      "optionC": "A fish swimming in water",
+      "optionD": "A tiny plant with no stem",
+      "correctAnswer": "A",
+      "explanation": "Shrubs are medium-sized bushy plants with thin woody stems starting close to the ground.",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q4",
+      "topic": "Plant Grouping: Trees",
+      "questionType": "mcq",
+      "questionText": "Which plant has a thick, hard, brown woody trunk?",
+      "optionA": "Grass",
+      "optionB": "Tulsi",
+      "optionC": "Mango Tree",
+      "optionD": "Mint",
+      "correctAnswer": "C",
+      "explanation": "Trees are tall and strong with thick brown trunks and high branches!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q5",
+      "topic": "Leaf Venation & Roots",
+      "questionType": "msq",
+      "questionText": "Select ALL features that belong to a Monocot plant like Grass or Maize:",
+      "optionA": "Parallel lines on leaves (Parallel Venation)",
+      "optionB": "Bushy bunch of thin roots (Fibrous Roots)",
+      "optionC": "Seeds with only 1 cotyledon",
+      "optionD": "Net-like web lines on leaves",
+      "correctAnswer": "A,B,C",
+      "explanation": "Monocots have 1 seed piece, parallel leaf lines, and fibrous roots!",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "Q6",
+      "topic": "Leaf Venation & Roots",
+      "questionType": "msq",
+      "questionText": "Select ALL features that belong to a Dicot plant like Chana (Chickpea) or Hibiscus:",
+      "optionA": "Seed splits into 2 halves (2 Cotyledons)",
+      "optionB": "Net-like web pattern on leaves (Reticulate Venation)",
+      "optionC": "One big carrot-like main root (Taproot)",
+      "optionD": "Straight parallel leaf lines",
+      "correctAnswer": "A,B,C",
+      "explanation": "Dicots have 2 seed pieces, net-like leaf lines, and a big taproot!",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "Q7",
+      "topic": "Animal Adaptations: Desert",
+      "questionType": "mcq",
+      "questionText": "Why does a hot desert camel have long legs and wide flat feet?",
+      "optionA": "To stay high above hot sand and walk without sinking",
+      "optionB": "To swim fast in deep ocean water",
+      "optionC": "To fly high above mountain tops",
+      "optionD": "To hide inside tree hollows",
+      "correctAnswer": "A",
+      "explanation": "Long legs keep the camel far above burning sand, and wide hooves stop it from sinking into sandy ground!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q8",
+      "topic": "Animal Adaptations: Desert",
+      "questionType": "mcq",
+      "questionText": "How is a cold desert camel in Ladakh different from a hot desert camel?",
+      "optionA": "It has 2 humps, shorter legs, and thick fluffy hair",
+      "optionB": "It has wings to fly",
+      "optionC": "It lives underwater",
+      "optionD": "It has green leaves instead of fur",
+      "correctAnswer": "A",
+      "explanation": "Ladakh cold desert camels have 2 humps, short legs to walk on rocky mountains, and thick hair for cold winters!",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "Q9",
+      "topic": "Plant Adaptations: Desert",
+      "questionType": "mcq",
+      "questionText": "How does a Cactus survive in the dry desert?",
+      "optionA": "It has a thick fleshy stem that stores water",
+      "optionB": "It grows huge thin leaves to catch rain",
+      "optionC": "It swims in rivers",
+      "optionD": "It moves around on legs",
+      "correctAnswer": "A",
+      "explanation": "The fleshy green stem of a cactus works like a water bottle to hold water in the desert!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q10",
+      "topic": "Plant Adaptations: Mountains",
+      "questionType": "mcq",
+      "questionText": "Why is a mountain Deodar tree shaped like a cone with sloping branches?",
+      "optionA": "So heavy snow slides off easily without breaking branches",
+      "optionB": "To catch fish in rivers",
+      "optionC": "To block sunlight from reaching the ground",
+      "optionD": "To look like a birthday cake",
+      "correctAnswer": "A",
+      "explanation": "The cone shape and sloping branches let snow slide right off during mountain blizzards!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q11",
+      "topic": "Animal Adaptations: Aquatic",
+      "questionType": "mcq",
+      "questionText": "What body features help a fish swim easily underwater?",
+      "optionA": "Streamlined body and fins",
+      "optionB": "Feathers and wings",
+      "optionC": "Long hooves and fur",
+      "optionD": "Thick bark and leaves",
+      "correctAnswer": "A",
+      "explanation": "A boat-shaped (streamlined) body cuts through water, and fins help steering!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q12",
+      "topic": "Habitats: Terrestrial vs Aquatic",
+      "questionType": "msq",
+      "questionText": "Select ALL animals that can live BOTH on land and in water (Amphibians):",
+      "optionA": "Frog",
+      "optionB": "Crocodile",
+      "optionC": "Monkey",
+      "optionD": "Tortoise",
+      "correctAnswer": "A,B,D",
+      "explanation": "Frogs, tortoises, and crocodiles can live on land and move in water!",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "Q13",
+      "topic": "Conservation & Scientists",
+      "questionType": "mcq",
+      "questionText": "Who was Dr. Janaki Ammal?",
+      "optionA": "A famous Indian female botanist who helped save the Silent Valley forest",
+      "optionB": "An astronaut who flew to Mars",
+      "optionC": "A chef who invented pizza",
+      "optionD": "A famous cricket player",
+      "correctAnswer": "A",
+      "explanation": "Janaki Ammal was a pioneering Indian botanist dedicated to saving plant biodiversity and Silent Valley!",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "Q14",
+      "topic": "Conservation & Scientists",
+      "questionType": "mcq",
+      "questionText": "Why is Salim Ali famous as the \"Birdman of India\"?",
+      "optionA": "He studied birds, mapped their travel routes, and wrote 10 books to protect them",
+      "optionB": "He built a giant wooden bird that flies",
+      "optionC": "He ran a tiger sanctuary",
+      "optionD": "He invented binoculars",
+      "correctAnswer": "A",
+      "explanation": "Salim Ali devoted his life to observing, documenting, and protecting birds across India!",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "Q15",
+      "topic": "Conservation & Sacred Groves",
+      "questionType": "msq",
+      "questionText": "Select ALL ways communities and governments protect plant and animal biodiversity in India:",
+      "optionA": "Sacred Groves (Community protected forest patches)",
+      "optionB": "Project Tiger (Started in 1973)",
+      "optionC": "Cheetah Reintroduction Project (Started in 2022)",
+      "optionD": "Cutting down all trees in national parks",
+      "correctAnswer": "A,B,C",
+      "explanation": "Sacred groves, Project Tiger, and Project Cheetah protect natural homes of plants and animals!",
+      "difficulty": "Hard"
+    }
+  ],
+  "blueprint": "{{questionText}}",
+  "solution": "{{explanation}}",
+  "optionsBinding": [
+    {
+      "column": "optionA",
+      "isCorrect": false
+    },
+    {
+      "column": "optionB",
+      "isCorrect": false
+    },
+    {
+      "column": "optionC",
+      "isCorrect": false
+    },
+    {
+      "column": "optionD",
+      "isCorrect": false
+    }
+  ]
+},
+  {
     id: 'tap-to-fill-preposition',
     name: '✏️ English: Tap-to-Fill Preposition Sentence (Location Words)',
     title: 'Choose the best location word to match the picture',
@@ -736,7 +1189,7 @@ function buildExplanationFromSections(cleanSolutionText, sections, columns) {
   };
 }
 
-export default function SpreadsheetTemplateCreator() {
+export default function SpreadsheetTemplateCreator({ initialMode = 'school', editorTitle }) {
   const blueprintRef = useRef(null);
   const solutionRef = useRef(null);
 
@@ -820,13 +1273,14 @@ export default function SpreadsheetTemplateCreator() {
   // Auto-Fix handlers for Dataset Health Audit
   const handleAutoBalanceLevels = () => {
     const levels = ['l1', 'l2', 'l3', 'l4'];
-    setRows(prev => prev.map((r, i) => ({ ...r, _level: levels[i % 4] })));
+    setRows(prev => prev.filter(Boolean).map((r, i) => ({ ...(r || {}), _level: levels[i % 4] })));
   };
 
   const handleRemoveDuplicateRows = () => {
     setRows(prev => {
       const seen = new Set();
       return prev.filter(r => {
+        if (!r) return false;
         const key = JSON.stringify(Object.keys(r).filter(k => k !== '_id' && k !== '_level').map(k => String(r[k] || '').trim().toLowerCase()));
         if (seen.has(key)) return false;
         seen.add(key);
@@ -881,10 +1335,10 @@ export default function SpreadsheetTemplateCreator() {
   const [grade, setGrade] = useState('5');
   const [skillId, setSkillId] = useState('');
   const [customTemplateId, setCustomTemplateId] = useState('');
-  const [targetCollection, setTargetCollection] = useState('dynamic_templates');
+  const [targetCollection, setTargetCollection] = useState(initialMode === 'examprep' ? 'templates' : 'dynamic_templates');
   const [selectedExamId, setSelectedExamId] = useState('jnvst');
-  const [jnvstSection, setJnvstSection] = useState('arithmetic');
-  const [jnvstTopic, setJnvstTopic] = useState('simplification');
+  const [jnvstSection, setJnvstSection] = useState('mock-test');
+  const [jnvstTopic, setJnvstTopic] = useState('mock-test-1');
   const [jnvstDifficulty, setJnvstDifficulty] = useState(0.5);
 
   const [imageHasAudio, setImageHasAudio] = useState(false);
@@ -933,8 +1387,8 @@ export default function SpreadsheetTemplateCreator() {
             const keys = Object.keys(parsed[0]).filter(k => k !== '_level' && k !== 'explanation');
             
             // Map rows to include _level if not present
-            const loadedRows = parsed.map((row, idx) => ({
-              _level: row._level || (idx % 2 === 0 ? 'l1' : 'l2'),
+            const loadedRows = parsed.filter(Boolean).map((row, idx) => ({
+              _level: row?._level || (idx % 2 === 0 ? 'l1' : 'l2'),
               ...row
             }));
             
@@ -1110,16 +1564,30 @@ export default function SpreadsheetTemplateCreator() {
     setAiError(null);
     setAiSuccess(null);
     try {
+      const effectiveSubject = targetCollection === 'jnvst' ? (jnvstSection || 'evs') : subject;
+      const effectiveTopic = targetCollection === 'jnvst' ? (jnvstTopic || 'general') : topic;
+
       const payload = aiMode === 'skill'
         ? {
             skillId: skillId || aiSkillDesc.slice(0, 40),
             skillDescription: aiSkillDesc,
-            subject, topic, grade,
+            subject: effectiveSubject,
+            topic: effectiveTopic,
+            grade,
+            targetCollection,
+            jnvstExamId: 'jnvst',
+            jnvstSection,
+            jnvstTopic,
             rowsPerLevel: aiRowsPerLevel
           }
         : {
             questionText: aiQuestion,
-            subject, topic
+            subject: effectiveSubject,
+            topic: effectiveTopic,
+            targetCollection,
+            jnvstExamId: 'jnvst',
+            jnvstSection,
+            jnvstTopic
           };
 
       const res = await fetch('/api/admin/templates/generate-grid', {
@@ -1137,10 +1605,13 @@ export default function SpreadsheetTemplateCreator() {
       if (tpl.subject) setSubject(tpl.subject);
       if (tpl.topic)   setTopic(tpl.topic);
       if (tpl.grade)   setGrade(tpl.grade);
+      if (targetCollection === 'jnvst' && jnvstSection) {
+        setJnvstSection(jnvstSection);
+      }
       if (tpl.targetCollection) setTargetCollection(tpl.targetCollection);
       if (tpl.columns) setColumns(tpl.columns.filter(c => c !== '_level'));
       if (tpl.rows) {
-        const normalized = tpl.rows.map(r => ({ _level: 'l1', ...r }));
+        const normalized = tpl.rows.filter(Boolean).map(r => ({ _level: 'l1', ...(r || {}) }));
         setRows(normalized);
       }
       if (tpl.blueprint) setBlueprint(tpl.blueprint);
@@ -1174,6 +1645,16 @@ export default function SpreadsheetTemplateCreator() {
   const [existingTemplates, setExistingTemplates] = useState([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState(initialMode || 'school'); // 'all' | 'school' | 'examprep'
+
+  const isExamPrepTemplate = (t) => {
+    if (!t) return false;
+    if (t.targetCategory === 'examprep' || t.category === 'examprep' || t.type === 'examprep' || t.targetCollection === 'jnvst' || t.examId === 'jnvst') return true;
+    const str = `${t.id || ''} ${t.title || ''} ${t.name || ''} ${t.topic || ''} ${t.subject || ''} ${t.section || ''} ${t.targetCollection || ''} ${t.examId || ''}`.toLowerCase();
+    return str.includes('jnvst') || str.includes('mock') || str.includes('pyq') || str.includes('imo') ||
+      str.includes('nso') || str.includes('sainik') || str.includes('nstse') || str.includes('official') ||
+      str.includes('odd-man-out') || str.includes('evs') || t.subject === 'mat' || t.section === 'evs' || t.subject === 'evs' || (Array.isArray(t.rows) && t.rows.length === 80);
+  };
 
   // Handle cell edit changes
   const [mirrorTargetToResult, setMirrorTargetToResult] = useState(true);
@@ -1513,11 +1994,96 @@ export default function SpreadsheetTemplateCreator() {
     alert(`✨ Cleaned and fixed ${fixedCount} placeholder/cell value(s)!`);
   };
 
+  // Helper to sanitize LaTeX math cell strings
+  const sanitizeLatexMathCell = (cellStr) => {
+    if (typeof cellStr !== 'string' || !cellStr.trim()) return cellStr;
+    let str = cellStr.trim();
+
+    // 1. Fix common \frac syntax typos: \fracx -> \frac{x}, \fracy -> \frac{y}
+    str = str.replace(/\\frac([a-zA-Z0-9])\{/g, '\\frac{$1}{');
+    str = str.replace(/\\frac([a-zA-Z0-9])([a-zA-Z0-9])/g, '\\frac{$1}{$2}');
+    str = str.replace(/\\frac([a-zA-Z0-9])\\\b/g, '\\frac{$1}\\');
+
+    // 2. Fix \sqrt typos: \sqrt2 -> \sqrt{2}, \sqrtx -> \sqrt{x}, \sqrty -> \sqrt{y}
+    str = str.replace(/\\sqrty\b/g, '\\sqrt{y}');
+    str = str.replace(/\\sqrtx\b/g, '\\sqrt{x}');
+    str = str.replace(/\\sqrt([a-zA-Z0-9])\b/g, '\\sqrt{$1}');
+
+    // 3. Balance unclosed braces
+    const openBraces = (str.match(/\{/g) || []).length;
+    const closeBraces = (str.match(/\}/g) || []).length;
+    if (openBraces > closeBraces) {
+      str += '}'.repeat(openBraces - closeBraces);
+    }
+
+    // 4. Normalize escaped backslashes e.g. \\sqrt -> \sqrt
+    str = str.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
+
+    // 5. Smart Math & English Text Delimiter Separation
+    if (str.includes('$')) {
+      // Extract English phrases mistakenly wrapped inside $...$ so spaces are preserved
+      str = str.replace(/\$([^\$]+)\$/g, (match, inner) => {
+        let cleanInner = inner.replace(/\b(Given|find the value of|find|the value of|where|and|or|for|if|then|when|such that)\b/gi, (m) => `$$ ${m} $$`);
+        return cleanInner;
+      });
+      str = str.replace(/\$\$\s*\$\$/g, '').replace(/\$\$/g, '$');
+    } else if (str.includes('\\') || /[a-zA-Z0-9_]+\s*=\s*/.test(str)) {
+      // Wrap standalone math tokens or entire math cell in $...$
+      if (/^(\\?[a-zA-Z0-9\s\{\}\+\-\*\/\=\^\_\(\)\,\.\:\;\<\>\!]+)$/.test(str) && !/\b(Given|find|where|the|of)\b/i.test(str)) {
+        str = `$${str.trim()}$`;
+      } else {
+        // Wrap math expressions like x = 2 + \sqrt{3} or \frac{x}{...}
+        str = str.replace(/([a-zA-Z0-9_]+\s*=\s*[^,\s]+)|(\\frac\{[^\}]+\}\{[^\}]+\})|(\\sqrt\{[^\}]+\})/g, (match) => {
+          return `$${match.trim()}$`;
+        });
+      }
+    }
+
+    return str.replace(/\$\$/g, '$').replace(/\$\s+\$/g, ' ').trim();
+  };
+
+  // Auto-Fix LaTeX & Math Cells in Grid
+  const handleAutoFixLatexGrid = () => {
+    let fixedCount = 0;
+    const updatedRows = rows.map((row) => {
+      const newRow = { ...row };
+      columns.forEach((col) => {
+        const originalVal = newRow[col];
+        if (typeof originalVal === 'string' && originalVal.trim()) {
+          const cleanedVal = sanitizeLatexMathCell(originalVal);
+          if (cleanedVal !== originalVal) {
+            newRow[col] = cleanedVal;
+            fixedCount++;
+          }
+        }
+      });
+      return newRow;
+    });
+
+    if (blueprint) {
+      const cleanBp = sanitizeLatexMathCell(blueprint);
+      if (cleanBp !== blueprint) {
+        setBlueprint(cleanBp);
+        fixedCount++;
+      }
+    }
+    if (solution) {
+      const cleanSol = sanitizeLatexMathCell(solution);
+      if (cleanSol !== solution) {
+        setSolution(cleanSol);
+        fixedCount++;
+      }
+    }
+
+    setRows(updatedRows);
+    alert(`🪄 Auto-fixed and sanitized ${fixedCount} LaTeX & Math cell(s) across the spreadsheet!`);
+  };
+
   // Cycle difficulty level for a row
   const handleCycleLevel = (rowIndex) => {
     setRows(prev => prev.map((row, idx) => {
       if (idx !== rowIndex) return row;
-      const cur = row._level || 'l1';
+      const cur = row?._level || 'l1';
       const next = LEVEL_CYCLE[(LEVEL_CYCLE.indexOf(cur) + 1) % LEVEL_CYCLE.length];
       return { ...row, _level: next };
     }));
@@ -2512,19 +3078,19 @@ export default function SpreadsheetTemplateCreator() {
     const dataColumns = columns.filter(c => c !== '_level');
     dataColumns.forEach(col => {
       parallelVariables[col] = rows.map(r => {
-        const cell = String(r[col] || '').trim();
+        const cell = String(r?.[col] || '').trim();
         return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
       });
     });
 
     // Build level-separated index pools
     const indicesPool    = Array.from({ length: rows.length }, (_, i) => i);
-    const indexL1 = rows.map((r, i) => (r._level || 'l1') === 'l1' ? i : null).filter(i => i !== null);
-    const indexL2 = rows.map((r, i) => (r._level || 'l1') === 'l2' ? i : null).filter(i => i !== null);
-    const indexL3 = rows.map((r, i) => (r._level || 'l1') === 'l3' ? i : null).filter(i => i !== null);
-    const indexL4 = rows.map((r, i) => (r._level || 'l1') === 'l4' ? i : null).filter(i => i !== null);
+    const indexL1 = rows.map((r, i) => (r?._level || 'l1') === 'l1' ? i : null).filter(i => i !== null);
+    const indexL2 = rows.map((r, i) => (r?._level || 'l1') === 'l2' ? i : null).filter(i => i !== null);
+    const indexL3 = rows.map((r, i) => (r?._level || 'l1') === 'l3' ? i : null).filter(i => i !== null);
+    const indexL4 = rows.map((r, i) => (r?._level || 'l1') === 'l4' ? i : null).filter(i => i !== null);
     // questionLevel derivation: maps each row index -> 1/2/3/4
-    const levelArray   = rows.map(r => ({ l1: 1, l2: 2, l3: 3, l4: 4 }[r._level || 'l1']));
+    const levelArray   = rows.map(r => ({ l1: 1, l2: 2, l3: 3, l4: 4 }[r?._level || 'l1']));
 
     if (targetCollection === 'templates') {
       // JNVST JSON format mapping
@@ -2813,17 +3379,24 @@ export default function SpreadsheetTemplateCreator() {
       if (urlSection) setJnvstSection(urlSection);
       const urlTopic = params.get('topic');
       if (urlTopic) setJnvstTopic(urlTopic);
-    }
 
-    if (initialUrlLoadDoneRef.current) return;
-    if (existingTemplates.length === 0) return;
-    const params = new URLSearchParams(window.location.search);
-    const urlId = params.get('id') || params.get('templateId');
-    if (urlId) {
-      const matched = existingTemplates.find(t => t.id === urlId || String(t._id) === urlId);
-      if (matched) {
-        initialUrlLoadDoneRef.current = true;
-        loadTemplateIntoEditor(matched);
+      if (initialUrlLoadDoneRef.current) return;
+      const urlId = params.get('id') || params.get('templateId');
+      if (urlId) {
+        const presetMatched = GRID_PRESETS.find(p => p.id === urlId);
+        if (presetMatched) {
+          initialUrlLoadDoneRef.current = true;
+          loadTemplateIntoEditor(presetMatched);
+          return;
+        }
+
+        if (existingTemplates.length > 0) {
+          const matched = existingTemplates.find(t => t.id === urlId || String(t._id) === urlId);
+          if (matched) {
+            initialUrlLoadDoneRef.current = true;
+            loadTemplateIntoEditor(matched);
+          }
+        }
       }
     }
   }, [existingTemplates]);
@@ -2905,8 +3478,8 @@ export default function SpreadsheetTemplateCreator() {
           }
           return 'l1';
         };
-        const mappedRows = savedRows.map(row => {
-          const rowObj = { _level: cleanLevel(row._level) };
+        const mappedRows = savedRows.filter(Boolean).map(row => {
+          const rowObj = { _level: cleanLevel(row?._level) };
           keys.forEach(col => {
             rowObj[col] = row[col] !== undefined ? String(row[col]) : '';
           });
@@ -2926,7 +3499,7 @@ export default function SpreadsheetTemplateCreator() {
             });
             compiledRows.push(rowObj);
           }
-          compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
+          compiledRows.forEach(r => { if (r && !r._level) r._level = 'l1'; });
           setRows(compiledRows);
         } else if (vars && typeof vars === 'object' && !Array.isArray(vars)) {
           const varKeys = Object.keys(vars);
@@ -3051,7 +3624,7 @@ export default function SpreadsheetTemplateCreator() {
           compiledRows.push(rowObj);
         }
         // ensure every loaded row has a _level
-      compiledRows.forEach(r => { if (!r._level) r._level = 'l1'; });
+      compiledRows.forEach(r => { if (r && !r._level) r._level = 'l1'; });
       setRows(compiledRows);
       }
 
@@ -3148,7 +3721,7 @@ export default function SpreadsheetTemplateCreator() {
         const parallelVariables = {};
         columns.forEach(col => {
           parallelVariables[col] = rows.map(r => {
-            const cell = String(r[col] || '').trim();
+            const cell = String(r?.[col] || '').trim();
             return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
           });
         });
@@ -3325,7 +3898,7 @@ export default function SpreadsheetTemplateCreator() {
       const parallelVariables = {};
       columns.forEach(col => {
         parallelVariables[col] = rows.map(r => {
-          const cell = String(r[col] || '').trim();
+          const cell = String(r?.[col] || '').trim();
           return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
         });
       });
@@ -3784,12 +4357,74 @@ export default function SpreadsheetTemplateCreator() {
         }
       ` }} />
 
+      {/* Floating Toast Notification Banner */}
+      {saveRowsStatus && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 99999,
+          background: saveRowsStatus.ok ? (saveRowsStatus.isDb ? '#065f46' : '#1e3a8a') : '#991b1b',
+          color: '#ffffff',
+          padding: '14px 22px',
+          borderRadius: '14px',
+          boxShadow: '0 20px 30px -10px rgba(0, 0, 0, 0.45)',
+          border: `1.5px solid ${saveRowsStatus.ok ? (saveRowsStatus.isDb ? '#34d399' : '#60a5fa') : '#fca5a5'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          fontSize: '0.92rem',
+          fontWeight: 800,
+          fontFamily: 'Inter, system-ui, sans-serif'
+        }}>
+          <span>{saveRowsStatus.msg}</span>
+          <button
+            onClick={() => setSaveRowsStatus(null)}
+            style={{
+              background: 'none', border: 'none', color: '#fff', cursor: 'pointer',
+              fontSize: '1.2rem', fontWeight: 900, lineHeight: 1, padding: '0 0 0 6px'
+            }}
+          >✕</button>
+        </div>
+      )}
+
       {/* Header bar */}
       <div className="grid-top-bar">
         <Link href="/admin-v2" className="grid-top-brand">
-          🟢 KlassChamp Spreadsheet Editor
+          {editorTitle || (initialMode === 'examprep' ? '🏆 Exam Prep Mock Test Spreadsheet Editor' : '🏫 School Practice Spreadsheet Editor')}
           <span>Grid Mode v1.0</span>
         </Link>
+
+        {/* Top Editor Switcher Tabs */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: '12px' }}>
+          <a
+            href="/template-generator-grid"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '5px 12px', borderRadius: '16px', fontSize: '0.78rem', fontWeight: 800, textDecoration: 'none',
+              border: (initialMode === 'school' || !initialMode) ? '1.5px solid #059669' : '1px solid #cbd5e1',
+              background: (initialMode === 'school' || !initialMode) ? '#ecfdf5' : '#fff',
+              color: (initialMode === 'school' || !initialMode) ? '#047857' : '#475569',
+              boxShadow: (initialMode === 'school' || !initialMode) ? '0 2px 6px rgba(5, 150, 105, 0.2)' : 'none'
+            }}
+          >
+            🏫 School Practice Editor
+          </a>
+          <a
+            href="/exam-prep-grid"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '5px 12px', borderRadius: '16px', fontSize: '0.78rem', fontWeight: 900, textDecoration: 'none',
+              border: initialMode === 'examprep' ? '1.5px solid #e11d48' : '1px solid #cbd5e1',
+              background: initialMode === 'examprep' ? '#fff1f2' : '#fff',
+              color: initialMode === 'examprep' ? '#be123c' : '#475569',
+              boxShadow: initialMode === 'examprep' ? '0 2px 6px rgba(225, 29, 72, 0.2)' : 'none'
+            }}
+          >
+            🏆 Exam Prep Editor
+          </a>
+        </div>
+
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button
             type="button"
@@ -3808,7 +4443,11 @@ export default function SpreadsheetTemplateCreator() {
               gap: '6px'
             }}
           >
-            📂 Class & Subject Catalog ({existingTemplates.length})
+            {initialMode === 'examprep' || templateCategoryFilter === 'examprep'
+              ? `🏆 Exam Prep Catalog (${existingTemplates.filter(isExamPrepTemplate).length})`
+              : initialMode === 'school' || templateCategoryFilter === 'school'
+                ? `🏫 School Practice Catalog (${existingTemplates.filter(t => !isExamPrepTemplate(t)).length})`
+                : `📂 Template Catalog (${existingTemplates.length})`}
           </button>
           <Link href="/template-generator-v2" className="grid-shuffle-btn" style={{ textDecoration: 'none' }}>
             🔙 Back to IDE
@@ -3822,6 +4461,8 @@ export default function SpreadsheetTemplateCreator() {
         {showSidebar && (
           <TemplateSidebar
             templates={existingTemplates}
+            mode={templateCategoryFilter || initialMode || 'school'}
+            isExamPrepTemplate={isExamPrepTemplate}
             onSelectTemplate={(tpl) => loadTemplateIntoEditor(tpl)}
             onClose={() => setShowSidebar(false)}
             activeTemplateId={customTemplateId || title}
@@ -3888,6 +4529,47 @@ export default function SpreadsheetTemplateCreator() {
                 <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#2563eb', display: 'block', marginBottom: '6px' }}>
                   B. Load existing template from database to edit
                 </label>
+
+                {/* Category Switcher Tabs */}
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateCategoryFilter('all')}
+                    style={{
+                      padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
+                      border: templateCategoryFilter === 'all' ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                      background: templateCategoryFilter === 'all' ? '#eff6ff' : '#fff',
+                      color: templateCategoryFilter === 'all' ? '#1d4ed8' : '#475569'
+                    }}
+                  >
+                    🌐 All ({existingTemplates.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateCategoryFilter('school')}
+                    style={{
+                      padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
+                      border: templateCategoryFilter === 'school' ? '1.5px solid #059669' : '1px solid #cbd5e1',
+                      background: templateCategoryFilter === 'school' ? '#ecfdf5' : '#fff',
+                      color: templateCategoryFilter === 'school' ? '#047857' : '#475569'
+                    }}
+                  >
+                    🏫 School Practice ({existingTemplates.filter(t => !isExamPrepTemplate(t)).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateCategoryFilter('examprep')}
+                    style={{
+                      padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 900, cursor: 'pointer',
+                      border: templateCategoryFilter === 'examprep' ? '1.5px solid #e11d48' : '1px solid #cbd5e1',
+                      background: templateCategoryFilter === 'examprep' ? '#fff1f2' : '#fff',
+                      color: templateCategoryFilter === 'examprep' ? '#be123c' : '#475569'
+                    }}
+                  >
+                    🏆 Exam Prep / Mock Tests ({existingTemplates.filter(t => isExamPrepTemplate(t)).length})
+                  </button>
+                </div>
+
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                   <input
                     className="grid-input"
@@ -3907,6 +4589,8 @@ export default function SpreadsheetTemplateCreator() {
                   <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>
                     {(() => {
                       const filtered = existingTemplates.filter(t => {
+                        if (templateCategoryFilter === 'school' && isExamPrepTemplate(t)) return false;
+                        if (templateCategoryFilter === 'examprep' && !isExamPrepTemplate(t)) return false;
                         if (!templateSearch.trim()) return true;
                         const q = templateSearch.toLowerCase();
                         return (t.title || t.name || t.id || '').toLowerCase().includes(q) ||
@@ -3929,6 +4613,8 @@ export default function SpreadsheetTemplateCreator() {
                   }}
                   defaultValue=""
                   size={Math.min(8, existingTemplates.filter(t => {
+                    if (templateCategoryFilter === 'school' && isExamPrepTemplate(t)) return false;
+                    if (templateCategoryFilter === 'examprep' && !isExamPrepTemplate(t)) return false;
                     if (!templateSearch.trim()) return true;
                     const q = templateSearch.toLowerCase();
                     return (t.title || t.name || t.id || '').toLowerCase().includes(q) ||
@@ -3941,17 +4627,22 @@ export default function SpreadsheetTemplateCreator() {
                   </option>
                   {existingTemplates
                     .filter(t => {
+                      if (templateCategoryFilter === 'school' && isExamPrepTemplate(t)) return false;
+                      if (templateCategoryFilter === 'examprep' && !isExamPrepTemplate(t)) return false;
                       if (!templateSearch.trim()) return true;
                       const q = templateSearch.toLowerCase();
                       return (t.title || t.name || t.id || '').toLowerCase().includes(q) ||
                         (t.topic || '').toLowerCase().includes(q) ||
                         (t.subject || '').toLowerCase().includes(q);
                     })
-                    .map((tpl, idx) => (
-                      <option key={(tpl._id || tpl.id || '') + '-' + idx} value={tpl.id || tpl._id}>
-                        {tpl.title || tpl.name || tpl.id} · {tpl.subject || 'math'} / {tpl.topic || 'general'} · {tpl.grade ? `Grade ${tpl.grade}` : ''}
-                      </option>
-                    ))}
+                    .map((tpl, idx) => {
+                      const isExam = isExamPrepTemplate(tpl);
+                      return (
+                        <option key={(tpl._id || tpl.id || '') + '-' + idx} value={tpl.id || tpl._id}>
+                          {isExam ? '🏆 [Exam Prep] ' : '🏫 [School] '} {tpl.title || tpl.name || tpl.id} · {tpl.subject || 'math'} / {tpl.topic || 'general'} · {tpl.grade ? `Grade ${tpl.grade}` : ''}
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
             </div>
@@ -3997,22 +4688,28 @@ export default function SpreadsheetTemplateCreator() {
             {targetCollection === 'templates' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label className="mc-dev-label">Exam Catalog</label>
+                  <label className="mc-dev-label">Target Exam</label>
                   <select className="grid-select" value={selectedExamId} onChange={(e) => setSelectedExamId(e.target.value)}>
                     <option value="jnvst">Jawahar Navodaya (JNVST)</option>
-                    <option value="ssc">Staff Selection (SSC)</option>
+                    <option value="aissee">Sainik School (AISSEE)</option>
+                    <option value="imo">Math Olympiad (IMO)</option>
+                    <option value="nso">Science Olympiad (NSO)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mc-dev-label">Section</label>
+                  <label className="mc-dev-label">Subject / Exam Section</label>
                   <select className="grid-select" value={jnvstSection} onChange={(e) => setJnvstSection(e.target.value)}>
-                    <option value="arithmetic">Arithmetic</option>
-                    <option value="mat">Mental Ability (MAT)</option>
+                    <option value="mock-test">🏆 Full Selection Mock Test (mock-test)</option>
+                    <option value="previous-papers">📄 Previous Year Paper (previous-papers)</option>
+                    <option value="mat">🧠 Mental Ability Test (mat)</option>
+                    <option value="evs">🌱 Environmental Studies (evs)</option>
+                    <option value="arithmetic">🔢 Arithmetic Test (arithmetic)</option>
+                    <option value="language">📝 Language Test (language)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mc-dev-label">Topic</label>
-                  <input className="grid-input" value={jnvstTopic} onChange={(e) => setJnvstTopic(e.target.value)} />
+                  <label className="mc-dev-label">Topic / Skill Slug</label>
+                  <input className="grid-input" value={jnvstTopic} onChange={(e) => setJnvstTopic(e.target.value)} placeholder="e.g. odd-man-out / mock-test-4" />
                 </div>
               </div>
             ) : (
@@ -4028,6 +4725,73 @@ export default function SpreadsheetTemplateCreator() {
                 <div>
                   <label className="mc-dev-label">Target Grade</label>
                   <input className="grid-input" value={grade} onChange={(e) => setGrade(e.target.value)} />
+                </div>
+              </div>
+            )}
+
+            {/* JNVST validation logic panel */}
+            {targetCollection === 'templates' && selectedExamId === 'jnvst' && (
+              <div style={{ marginTop: '16px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 10px 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📋 JNVST Spreadsheet Blueprint Requirements Checklist</span>
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: rows.length >= 3 ? '#22c55e' : '#e11d48', fontWeight: 'bold' }}>
+                      {rows.length >= 3 ? '✅' : '❌'}
+                    </span>
+                    <span style={{ color: '#475569' }}>
+                      At least 3 template rows for randomization (Current: {rows.length})
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: columns.includes('Result') ? '#22c55e' : '#e11d48', fontWeight: 'bold' }}>
+                      {columns.includes('Result') ? '✅' : '❌'}
+                    </span>
+                    <span style={{ color: '#475569' }}>
+                      Contains <code>Result</code> column (correct answer key)
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {(() => {
+                      const dists = columns.filter(c => c.toLowerCase().includes('distractor') || c.toLowerCase().includes('option') || (c.startsWith('D') && c !== 'Difficulty'));
+                      const passed = dists.length >= 3;
+                      return (
+                        <>
+                          <span style={{ color: passed ? '#22c55e' : '#e11d48', fontWeight: 'bold' }}>
+                            {passed ? '✅' : '❌'}
+                          </span>
+                          <span style={{ color: '#475569' }}>
+                            At least 3 distractors columns (e.g. Distractor1, Distractor2, Distractor3) (Current: {dists.length})
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {(() => {
+                      const variables = (blueprint || '').match(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g) || [];
+                      const passed = variables.length > 0 && variables.every(v => columns.includes(v.replace(/\{\{\s*|\s*\}\}/g, '')));
+                      return (
+                        <>
+                          <span style={{ color: passed ? '#22c55e' : '#e11d48', fontWeight: 'bold' }}>
+                            {passed ? '✅' : '❌'}
+                          </span>
+                          <span style={{ color: '#475569' }}>
+                            Blueprint variables match spreadsheet headers (e.g. <code>{"{{variable_name}}"}</code>)
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: jnvstTopic && jnvstSection ? '#22c55e' : '#e11d48', fontWeight: 'bold' }}>
+                      {jnvstTopic && jnvstSection ? '✅' : '❌'}
+                    </span>
+                    <span style={{ color: '#475569' }}>
+                      Section (MAT, Arithmetic, Language) and Topic tag set
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -4350,7 +5114,8 @@ export default function SpreadsheetTemplateCreator() {
                 </thead>
                 <tbody>
                   {rows.map((row, rIdx) => {
-                    const lvl = row._level || 'l1';
+                    if (!row) return null;
+                    const lvl = row?._level || 'l1';
                     const safeLvl = ['l1', 'l2', 'l3', 'l4'].includes(lvl) ? lvl : 'l1';
                     const lc = LEVEL_CONFIG[safeLvl];
                     const isActive = rIdx === activeRowIndex;
@@ -4594,6 +5359,14 @@ export default function SpreadsheetTemplateCreator() {
               >
                 🧹 Auto-Clean & Fix "---" Cells
               </button>
+              <button
+                className="grid-btn-secondary"
+                style={{ background: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)', color: '#fff', border: 'none', fontWeight: 800 }}
+                onClick={handleAutoFixLatexGrid}
+                title="Automatically fix LaTeX typos (\fracx -> \frac{x}, \sqrty -> \sqrt{y}) and wrap raw math expressions in KaTeX $...$ delimiters"
+              >
+                🪄 Auto-Fix LaTeX & Math Cells
+              </button>
               <button className="grid-btn-secondary" onClick={() => setRows([rows[0]])}>Clear rows</button>
             </div>
 
@@ -4601,7 +5374,7 @@ export default function SpreadsheetTemplateCreator() {
             {(() => {
               const counts = { l1: 0, l2: 0, l3: 0, l4: 0 };
               rows.forEach(r => { 
-                const lvl = r._level || 'l1';
+                const lvl = r?._level || 'l1';
                 const safeLvl = ['l1', 'l2', 'l3', 'l4'].includes(lvl) ? lvl : 'l1';
                 counts[safeLvl]++; 
               });
@@ -5171,6 +5944,99 @@ export default function SpreadsheetTemplateCreator() {
 
         {/* Right Side: Sticky Simulator Preview panel */}
           <div className="grid-preview-panel">
+            {/* Top Action Bar: Prominent Publish Template Button above Live Preview */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              marginBottom: '12px',
+              width: '100%'
+            }}>
+              <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                <button
+                  className="grid-btn-primary"
+                  onClick={handlePublish}
+                  disabled={publishing || publishingRaw}
+                  style={{
+                    flex: 1,
+                    padding: '13px 18px',
+                    fontSize: '1.02rem',
+                    fontWeight: '700',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                    border: 'none',
+                    cursor: (publishing || publishingRaw) ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>{publishing ? '⏳ Publishing Live...' : '🚀 Publish Template Live'}</span>
+                </button>
+
+                {rawLoadedJson && (
+                  <button
+                    className="grid-btn-secondary"
+                    onClick={handlePublishRaw}
+                    disabled={publishing || publishingRaw}
+                    title="Publish the raw loaded JSON blueprint directly to DB"
+                    style={{
+                      padding: '13px 16px',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      borderRadius: '12px',
+                      background: '#f1f5f9',
+                      color: '#334155',
+                      border: '1.5px solid #cbd5e1',
+                      cursor: publishingRaw ? 'wait' : 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {publishingRaw ? '⏳ Saving...' : '📤 Publish Raw'}
+                  </button>
+                )}
+              </div>
+
+              {/* Status & Error Notification Banners over Preview */}
+              {publishStatus && (
+                <div style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: '#ecfdf5',
+                  border: '1.5px solid #6ee7b7',
+                  color: '#065f46',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>✅</span> Template Published Successfully! (ID: {publishStatus.id})
+                </div>
+              )}
+
+              {publishError && (
+                <div style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1.5px solid #fca5a5',
+                  color: '#991b1b',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>⚠️</span> {publishError}
+                </div>
+              )}
+            </div>
+
             <div className="grid-preview-box">
               <div className="grid-preview-header">
                 <span className="grid-preview-header-title">Live Row Simulator (Active: Row {activeRowIndex + 1})</span>
@@ -6477,13 +7343,22 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
         rowIndex={editingRowIndex}
         rows={rows}
         setRows={setRows}
-        onSaveRow={(updatedRows) => {
+        onSaveRow={async (updatedRows) => {
           setRows(updatedRows);
-          if (loadedTemplateId) {
+          const tId = loadedTemplateId || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('templateId')) || (customTemplateId && customTemplateId.trim() ? customTemplateId.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-') : null);
+          
+          if (!tId) {
+            const status = { ok: true, isLocal: true, msg: `ℹ️ Row #${(editingRowIndex !== null ? editingRowIndex : 0) + 1} updated in grid. (Click "Save to DB" to persist)` };
+            setSaveRowsStatus(status);
+            setTimeout(() => setSaveRowsStatus(null), 6000);
+            return status;
+          }
+
+          try {
             const parallelVariables = {};
             columns.forEach(col => {
               parallelVariables[col] = updatedRows.map(r => {
-                const cell = String(r[col] || '').trim();
+                const cell = String(r?.[col] || '').trim();
                 return Number.isFinite(Number(cell)) && cell !== '' ? Number(cell) : cell;
               });
             });
@@ -6502,17 +7377,33 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
               'config.derivations': compiledDerivations,
             };
 
-            fetch('/api/admin/templates', {
+            const res = await fetch('/api/admin/templates', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: loadedTemplateId, updates, isExam: true })
-            }).catch(() => {});
+              body: JSON.stringify({ id: tId, updates })
+            });
 
-            fetch('/api/admin/templates', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: loadedTemplateId, updates, isExam: false })
-            }).catch(() => {});
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+              const errMsg = `DB Update Failed (${res.status}): ${data.error || data.message || 'API error'}`;
+              setSaveRowsStatus({ ok: false, msg: `❌ ${errMsg}` });
+              return { ok: false, error: errMsg };
+            }
+
+            if (data.templatesMatched === 0 && data.dynamicMatched === 0) {
+              const errMsg = `Template ID "${tId}" not found in database. Click "Save to DB" to create it.`;
+              setSaveRowsStatus({ ok: false, msg: `⚠️ ${errMsg}` });
+              return { ok: false, error: errMsg };
+            }
+
+            const status = { ok: true, isDb: true, msg: `🎉 Saved Row #${(editingRowIndex !== null ? editingRowIndex : 0) + 1} changes directly to MongoDB ("${tId}")` };
+            setSaveRowsStatus(status);
+            setTimeout(() => setSaveRowsStatus(null), 6000);
+            return status;
+          } catch (err) {
+            const errMsg = `Network Error: ${err.message}`;
+            setSaveRowsStatus({ ok: false, msg: `❌ ${errMsg}` });
+            return { ok: false, error: errMsg };
           }
         }}
         columns={columns}
@@ -6532,10 +7423,29 @@ drop,https://.../drop.jpg,/api/tts?text=drop,dr,tr`}
   );
 }
 
-function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemplateId }) {
+function TemplateSidebar({ templates = [], mode = 'school', isExamPrepTemplate, onSelectTemplate, onClose, activeTemplateId }) {
   const [search, setSearch] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('All');
   const [expandedGrades, setExpandedGrades] = useState({});
+
+  const checkExamPrep = (t) => {
+    if (typeof isExamPrepTemplate === 'function') return isExamPrepTemplate(t);
+    if (!t) return false;
+    if (t.targetCategory === 'examprep' || t.category === 'examprep' || t.type === 'examprep' || t.targetCollection === 'jnvst' || t.examId === 'jnvst') return true;
+    const str = `${t.id || ''} ${t.title || ''} ${t.name || ''} ${t.topic || ''} ${t.subject || ''} ${t.section || ''}`.toLowerCase();
+    return str.includes('jnvst') || str.includes('mock') || str.includes('pyq') || str.includes('imo') ||
+      str.includes('nso') || str.includes('sainik') || str.includes('nstse') || str.includes('official') ||
+      str.includes('odd-man-out') || str.includes('evs') || t.subject === 'mat' || t.section === 'evs' || (Array.isArray(t.rows) && t.rows.length === 80);
+  };
+
+  const getExamCategory = (t) => {
+    const str = `${t.id || ''} ${t.title || ''} ${t.name || ''} ${t.topic || ''} ${t.subject || ''} ${t.section || ''}`.toLowerCase();
+    if (str.includes('jnvst') || str.includes('mat') || str.includes('evs') || str.includes('odd-man-out') || str.includes('figure')) return 'JNVST Entrance Exam';
+    if (str.includes('imo') || str.includes('math olympiad')) return 'IMO Math Olympiad';
+    if (str.includes('nso') || str.includes('science olympiad')) return 'NSO Science Olympiad';
+    if (str.includes('sainik') || str.includes('nstse')) return 'Sainik & State Mock Tests';
+    return 'General Exam Prep / Mock Tests';
+  };
 
   const getGradeCategory = (g) => {
     const grade = String(g || '').toLowerCase().trim();
@@ -6549,19 +7459,28 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
     return 'General / Unassigned';
   };
 
-  const getSubjectCategory = (s) => {
-    const sub = String(s || '').toLowerCase().trim();
+  const getSubjectCategory = (s, sec) => {
+    const sub = String(s || sec || '').toLowerCase().trim();
     if (sub.includes('eng')) return 'English';
     if (sub.includes('math')) return 'Maths';
     if (sub.includes('sci')) return 'Science';
+    if (sub.includes('mat')) return 'JNVST MAT';
+    if (sub.includes('evs') || sub.includes('environmental')) return 'EVS';
+    if (sub.includes('arithmetic')) return 'Arithmetic';
     return 'General';
   };
 
-  const filteredTemplates = templates.filter(t => {
+  const filteredByModeTemplates = React.useMemo(() => {
+    if (mode === 'examprep') return templates.filter(checkExamPrep);
+    if (mode === 'school') return templates.filter(t => !checkExamPrep(t));
+    return templates;
+  }, [templates, mode]);
+
+  const filteredTemplates = filteredByModeTemplates.filter(t => {
     const config = t.config || t;
     const title = config.title || t.title || t.name || t.id || '';
     const topic = config.topic || t.topic || '';
-    const subject = config.subject || t.subject || '';
+    const subject = config.subject || t.subject || config.section || t.section || '';
     const skillId = config.skillId || t.skillId || '';
 
     const matchesSearch = !search.trim() ||
@@ -6570,30 +7489,40 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
       subject.toLowerCase().includes(search.toLowerCase()) ||
       skillId.toLowerCase().includes(search.toLowerCase());
 
-    const normSub = getSubjectCategory(subject);
-    const matchesSubject = selectedSubjectFilter === 'All' || normSub === selectedSubjectFilter;
+    const normSub = getSubjectCategory(subject, config.section || t.section);
+    const matchesSubject = selectedSubjectFilter === 'All' || normSub === selectedSubjectFilter ||
+      (mode === 'examprep' && `${title} ${topic}`.toLowerCase().includes(selectedSubjectFilter.toLowerCase()));
 
     return matchesSearch && matchesSubject;
   });
 
   const categorized = React.useMemo(() => {
     const map = {};
-    const gradeOrder = ['Pre-K / LKG', 'Grade UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'General / Unassigned'];
-    gradeOrder.forEach(g => { map[g] = {}; });
-
-    filteredTemplates.forEach(t => {
-      const config = t.config || t;
-      const gradeCat = getGradeCategory(config.grade || t.grade);
-      const subCat = getSubjectCategory(config.subject || t.subject);
-
-      if (!map[gradeCat]) map[gradeCat] = {};
-      if (!map[gradeCat][subCat]) map[gradeCat][subCat] = [];
-
-      map[gradeCat][subCat].push(t);
-    });
-
+    if (mode === 'examprep') {
+      const examOrder = ['JNVST Entrance Exam', 'IMO Math Olympiad', 'NSO Science Olympiad', 'Sainik & State Mock Tests', 'General Exam Prep / Mock Tests'];
+      examOrder.forEach(e => { map[e] = {}; });
+      filteredTemplates.forEach(t => {
+        const config = t.config || t;
+        const examCat = getExamCategory(t);
+        const subCat = getSubjectCategory(config.subject || t.subject, config.section || t.section);
+        if (!map[examCat]) map[examCat] = {};
+        if (!map[examCat][subCat]) map[examCat][subCat] = [];
+        map[examCat][subCat].push(t);
+      });
+    } else {
+      const gradeOrder = ['Pre-K / LKG', 'Grade UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'General / Unassigned'];
+      gradeOrder.forEach(g => { map[g] = {}; });
+      filteredTemplates.forEach(t => {
+        const config = t.config || t;
+        const gradeCat = getGradeCategory(config.grade || t.grade);
+        const subCat = getSubjectCategory(config.subject || t.subject, config.section || t.section);
+        if (!map[gradeCat]) map[gradeCat] = {};
+        if (!map[gradeCat][subCat]) map[gradeCat][subCat] = [];
+        map[gradeCat][subCat].push(t);
+      });
+    }
     return map;
-  }, [filteredTemplates]);
+  }, [filteredTemplates, mode]);
 
   const toggleGrade = (g) => {
     setExpandedGrades(prev => ({ ...prev, [g]: prev[g] === undefined ? false : !prev[g] }));
@@ -6606,6 +7535,8 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
       setExpandedGrades(allExpanded);
     }
   }, [search, categorized]);
+
+  const isExam = mode === 'examprep';
 
   return (
     <aside style={{
@@ -6624,18 +7555,18 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
       <div style={{
         padding: '14px 16px',
         borderBottom: '1.5px solid #e2e8f0',
-        background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
+        background: isExam ? 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>📚</span>
+          <span style={{ fontSize: '18px' }}>{isExam ? '🏆' : '🏫'}</span>
           <div>
-            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#1e3a8a' }}>
-              Class & Subject Catalog
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: isExam ? '#9f1239' : '#1e3a8a' }}>
+              {isExam ? 'Exam Prep & Mock Tests' : 'School Practice Catalog'}
             </h3>
-            <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700' }}>
+            <span style={{ fontSize: '11px', color: isExam ? '#e11d48' : '#3b82f6', fontWeight: '700' }}>
               {filteredTemplates.length} Templates
             </span>
           </div>
@@ -6660,7 +7591,7 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
       <div style={{ padding: '10px 14px', borderBottom: '1px solid #f1f5f9' }}>
         <input
           type="text"
-          placeholder="🔍 Search class, subject, topic..."
+          placeholder={isExam ? '🔍 Search JNVST, IMO, MAT, topic...' : '🔍 Search class, subject, topic...'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -6682,7 +7613,10 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
         borderBottom: '1px solid #f1f5f9',
         overflowX: 'auto'
       }}>
-        {['All', 'English', 'Maths', 'Science'].map(sub => (
+        {(isExam
+          ? ['All', 'JNVST MAT', 'EVS', 'Arithmetic', 'IMO', 'NSO']
+          : ['All', 'English', 'Maths', 'Science', 'EVS']
+        ).map(sub => (
           <button
             key={sub}
             onClick={() => setSelectedSubjectFilter(sub)}
@@ -6694,7 +7628,7 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
               border: 'none',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
-              background: selectedSubjectFilter === sub ? '#2563eb' : '#f1f5f9',
+              background: selectedSubjectFilter === sub ? (isExam ? '#e11d48' : '#2563eb') : '#f1f5f9',
               color: selectedSubjectFilter === sub ? '#ffffff' : '#475569'
             }}
           >
@@ -6762,7 +7696,7 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '4px' }}>
-                          {items.map(tpl => {
+                          {items.map((tpl, tIdx) => {
                             const config = tpl.config || tpl;
                             const tTitle = config.title || tpl.name || tpl.id || 'Untitled Template';
                             const tId = tpl.id || String(tpl._id);
@@ -6770,7 +7704,7 @@ function TemplateSidebar({ templates = [], onSelectTemplate, onClose, activeTemp
 
                             return (
                               <div
-                                key={tId}
+                                key={`${tId}-${subName}-${tIdx}`}
                                 onClick={() => onSelectTemplate(tpl)}
                                 style={{
                                   padding: '7px 9px',

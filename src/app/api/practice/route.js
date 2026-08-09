@@ -320,20 +320,33 @@ export async function GET(request) {
   let nodeBySkill = null;
   let nodeByCombined = null;
   try {
-    const results = await Promise.all([
-      listCurriculumNodes({ skillId: skill }),
-      getCurriculumNode(skill),
-      getCurriculumNode(`${subject}-${topic}-${skill}`)
-    ]);
-    matchingNodes = results[0];
-    nodeBySkill = results[1];
-    nodeByCombined = results[2];
-    if (matchingNodes && matchingNodes.length > 0) {
-      skillNode = matchingNodes[0];
-    } else if (nodeBySkill) {
-      skillNode = nodeBySkill;
-    } else if (nodeByCombined) {
-      skillNode = nodeByCombined;
+    const candidates = [
+      skill,
+      `ukg-${skill}`,
+      `lkg-${skill}`,
+      `prek-${skill}`,
+      `ukg-eng-${skill}`,
+      `lkg-eng-${skill}`
+    ];
+    for (const cand of candidates) {
+      const results = await Promise.all([
+        listCurriculumNodes({ skillId: cand }),
+        getCurriculumNode(cand),
+        getCurriculumNode(`${subject}-${topic}-${cand}`)
+      ]);
+      matchingNodes = results[0];
+      nodeBySkill = results[1];
+      nodeByCombined = results[2];
+      if ((matchingNodes && matchingNodes.length > 0) || nodeBySkill || nodeByCombined) {
+        if (matchingNodes && matchingNodes.length > 0) {
+          skillNode = matchingNodes[0];
+        } else if (nodeBySkill) {
+          skillNode = nodeBySkill;
+        } else if (nodeByCombined) {
+          skillNode = nodeByCombined;
+        }
+        break;
+      }
     }
   } catch (error) {
     console.error('Practice DB skill node lookup error:', error);
@@ -345,7 +358,21 @@ export async function GET(request) {
       const isImo = searchParams.get('imo') === 'true';
       if (isIit) {
         const { listIitNodes } = await import('../../../lib/curriculum/storeIit.js');
-        const iitSkills = await listIitNodes('skill', { id: skill });
+        let iitSkills = await listIitNodes('skill', { id: skill });
+        if (!iitSkills || iitSkills.length === 0) {
+          const candidates = [
+            `iit-p6-${skill}`,
+            `iit-p7-${skill}`,
+            `iit-p8-${skill}`,
+            `iit-p9-${skill}`,
+            `iit-p10-${skill}`,
+            `iit-${skill}`
+          ];
+          for (const cand of candidates) {
+            iitSkills = await listIitNodes('skill', { id: cand });
+            if (iitSkills && iitSkills.length > 0) break;
+          }
+        }
         if (iitSkills && iitSkills.length > 0) {
           const iitSkill = iitSkills[0];
           
@@ -376,7 +403,24 @@ export async function GET(request) {
         }
       } else if (isImo) {
         const { listImoNodes } = await import('../../../lib/curriculum/storeImo.js');
-        const imoSkills = await listImoNodes('skill', { id: skill });
+        let imoSkills = await listImoNodes('skill', { id: skill });
+        if (!imoSkills || imoSkills.length === 0) {
+          const candidates = [
+            `imo-g3-${skill}`,
+            `imo-g4-${skill}`,
+            `imo-g5-${skill}`,
+            `imo-g6-${skill}`,
+            `imo-g7-${skill}`,
+            `imo-g8-${skill}`,
+            `imo-g9-${skill}`,
+            `imo-g10-${skill}`,
+            `imo-${skill}`
+          ];
+          for (const cand of candidates) {
+            imoSkills = await listImoNodes('skill', { id: cand });
+            if (imoSkills && imoSkills.length > 0) break;
+          }
+        }
         if (imoSkills && imoSkills.length > 0) {
           const imoSkill = imoSkills[0];
           
@@ -407,7 +451,20 @@ export async function GET(request) {
         }
       } else {
         const { listV2Nodes } = await import('../../../lib/curriculum/storeV2.js');
-        const v2Skills = await listV2Nodes('skill', { id: skill });
+        let v2Skills = await listV2Nodes('skill', { id: skill });
+        if (!v2Skills || v2Skills.length === 0) {
+          const candidates = [
+            `ukg-${skill}`,
+            `lkg-${skill}`,
+            `prek-${skill}`,
+            `ukg-eng-${skill}`,
+            `lkg-eng-${skill}`
+          ];
+          for (const cand of candidates) {
+            v2Skills = await listV2Nodes('skill', { id: cand });
+            if (v2Skills && v2Skills.length > 0) break;
+          }
+        }
         if (v2Skills && v2Skills.length > 0) {
           const v2Skill = v2Skills[0];
           

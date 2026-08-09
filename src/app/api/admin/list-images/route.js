@@ -3,18 +3,34 @@ import { listR2Images, isR2Configured } from '@/lib/r2Service';
 import { getMongoDb } from '@/lib/db/mongo';
 
 export async function GET(request) {
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      { error: 'R2 is not configured on this server' },
-      { status: 501 }
-    );
-  }
+  let images = [];
+  const isR2 = isR2Configured();
 
   try {
     const { searchParams } = new URL(request.url);
     const prefix = searchParams.get('prefix') || '';
 
-    const images = await listR2Images(prefix);
+    if (isR2) {
+      images = await listR2Images(prefix);
+    } else {
+      const fs = require('fs');
+      const path = require('path');
+      const publicDir = path.join(process.cwd(), 'public', 'uploads');
+      if (fs.existsSync(publicDir)) {
+        const files = fs.readdirSync(publicDir);
+        images = files
+          .filter(file => /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(file))
+          .map(file => {
+            const stat = fs.statSync(path.join(publicDir, file));
+            return {
+              key: `images/${file}`,
+              url: `/uploads/${file}`,
+              size: stat.size,
+              lastModified: stat.mtime
+            };
+          });
+      }
+    }
 
     // Retrieve database metadata records from MongoDB
     let mergedImages = images;

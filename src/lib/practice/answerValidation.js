@@ -106,18 +106,37 @@ function getAnswerPrimitive(value) {
 }
 
 function getSelectedOptionValue(question, userAnswer) {
-  const options = Array.isArray(question?.options) ? question.options : [];
+  const options = Array.isArray(question?.options)
+    ? question.options
+    : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
+  const optionKeys = Array.isArray(question?.options)
+    ? question.options.map((_, i) => i)
+    : (question?.options && typeof question.options === 'object' ? Object.keys(question.options) : []);
+
+  const getIndexFromAnswer = (val) => {
+    if (val === null || val === undefined || val === '') return -1;
+    const num = Number(val);
+    if (Number.isFinite(num) && num >= 0 && num < optionKeys.length) {
+      return num;
+    }
+    if (typeof val === 'string') {
+      const idx = optionKeys.findIndex(k => String(k).toUpperCase() === val.toUpperCase());
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+
   if (Array.isArray(userAnswer)) {
     const labels = userAnswer.map((item) => {
-      const idx = getValidIndex(item, options.length);
-      if (idx !== null) return getOptionValue(options[idx]);
+      const idx = getIndexFromAnswer(item);
+      if (idx >= 0) return getOptionValue(options[idx]);
       return String(item || '');
     });
     return labels.join('');
   }
   const primitive = getAnswerPrimitive(userAnswer);
-  const selectedIndex = getValidIndex(primitive, options.length);
-  if (selectedIndex === null) return primitive;
+  const selectedIndex = getIndexFromAnswer(primitive);
+  if (selectedIndex < 0) return primitive;
   return getOptionValue(options[selectedIndex]);
 }
 
@@ -137,7 +156,11 @@ function getNormalizedTypeAndInteraction(question) {
   if (interaction === 'categorisationv2') interaction = 'categorizationv2';
   if (interaction === 'categorisation') interaction = 'categorization';
 
-  if ((type === '' || type === 'parameterized') && Array.isArray(question.options)) {
+  const optionsCount = Array.isArray(question.options)
+    ? question.options.length
+    : (question?.options && typeof question.options === 'object' ? Object.keys(question.options).length : 0);
+
+  if ((type === '' || type === 'parameterized') && optionsCount > 0) {
     if (interaction === 'msq' || question.optionsType === 'msq') {
       type = 'multi_select';
     } else {
@@ -270,7 +293,26 @@ function validateRule(rule, question, userAnswer) {
     if (expectedValues.length === 0) return true;
     if (hasUnresolvedPlaceholder(expectedValues)) return true;
 
-    const options = Array.isArray(question.options) ? question.options : [];
+    const options = Array.isArray(question.options)
+      ? question.options
+      : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
+    const optionKeys = Array.isArray(question.options)
+      ? question.options.map((_, i) => i)
+      : (question?.options && typeof question.options === 'object' ? Object.keys(question.options) : []);
+
+    const getIndexFromAnswer = (val) => {
+      if (val === null || val === undefined || val === '') return -1;
+      const num = Number(val);
+      if (Number.isFinite(num) && num >= 0 && num < optionKeys.length) {
+        return num;
+      }
+      if (typeof val === 'string') {
+        const idx = optionKeys.findIndex(k => String(k).toUpperCase() === val.toUpperCase());
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
     // Resolve expected labels to option indices
     const correctIndices = options
       .map((opt, idx) => {
@@ -286,11 +328,12 @@ function validateRule(rule, question, userAnswer) {
 
     let selectedIndices = [];
     if (Array.isArray(userAnswer)) {
-      selectedIndices = userAnswer.map(Number);
+      selectedIndices = userAnswer.map(getIndexFromAnswer).filter(idx => idx >= 0);
     } else if (userAnswer && typeof userAnswer === 'object') {
       selectedIndices = Object.entries(userAnswer)
         .filter(([_, val]) => Boolean(val))
-        .map(([key]) => Number(key));
+        .map(([key]) => getIndexFromAnswer(key))
+        .filter(idx => idx >= 0);
     } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
       selectedIndices = [Number(userAnswer)];
     }
@@ -414,7 +457,9 @@ function validateCategorizationDragDrop(question, userAnswer) {
   }
 
   // 3. Validate using question.options isCorrect (correct option -> category 0, distractor -> category 1)
-  const options = Array.isArray(question.options) ? question.options : [];
+  const options = Array.isArray(question.options)
+    ? question.options
+    : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
   const categories = question.categories || question.parts?.find(p => p?.categories)?.categories || [
     { id: 'cat_long_e', label: 'Long e' },
     { id: 'cat_short_e', label: 'Short e' }
@@ -659,20 +704,40 @@ export function isAnswerCorrect(question, userAnswer) {
   }
 
   if (interaction === 'hotspot_multi_select') {
-    const options = Array.isArray(question.options) ? question.options : [];
+    const options = Array.isArray(question.options)
+      ? question.options
+      : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
+    const optionKeys = Array.isArray(question.options)
+      ? question.options.map((_, i) => i)
+      : (question?.options && typeof question.options === 'object' ? Object.keys(question.options) : []);
+
+    const getIndexFromAnswer = (val) => {
+      if (val === null || val === undefined || val === '') return -1;
+      const num = Number(val);
+      if (Number.isFinite(num) && num >= 0 && num < optionKeys.length) {
+        return num;
+      }
+      if (typeof val === 'string') {
+        const idx = optionKeys.findIndex(k => String(k).toUpperCase() === val.toUpperCase());
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
     const correctIndices = options
       .map((opt, idx) => (opt?.isCorrect ? idx : null))
       .filter((idx) => idx !== null);
 
     let selectedIndices = [];
     if (Array.isArray(userAnswer)) {
-      selectedIndices = userAnswer.map(Number);
+      selectedIndices = userAnswer.map(getIndexFromAnswer).filter(idx => idx >= 0);
     } else if (userAnswer && typeof userAnswer === 'object') {
       selectedIndices = Object.entries(userAnswer)
         .filter(([_, val]) => Boolean(val))
-        .map(([key]) => Number(key));
+        .map(([key]) => getIndexFromAnswer(key))
+        .filter(idx => idx >= 0);
     } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
-      selectedIndices = [Number(userAnswer)];
+      selectedIndices = [getIndexFromAnswer(userAnswer)].filter(idx => idx >= 0);
     }
 
     if (correctIndices.length !== selectedIndices.length) {
@@ -738,7 +803,26 @@ export function isAnswerCorrect(question, userAnswer) {
   }
 
   if (type === 'mcq' || type === 'imagechoice' || type === 'multiplechoice' || type === 'visual_choice' || type === 'picture_mcq' || type === 'picture_choice' || type === 'audio_mcq' || type === 'multi_select' || type === 'msq' || type === 'hotspot_select' || type === 'hotspot') {
-    const options = Array.isArray(question.options) ? question.options : [];
+    const options = Array.isArray(question.options)
+      ? question.options
+      : (question?.options && typeof question.options === 'object' ? Object.values(question.options) : []);
+    const optionKeys = Array.isArray(question.options)
+      ? question.options.map((_, i) => i)
+      : (question?.options && typeof question.options === 'object' ? Object.keys(question.options) : []);
+
+    const getIndexFromAnswer = (val) => {
+      if (val === null || val === undefined || val === '') return -1;
+      const num = Number(val);
+      if (Number.isFinite(num) && num >= 0 && num < optionKeys.length) {
+        return num;
+      }
+      if (typeof val === 'string') {
+        const idx = optionKeys.findIndex(k => String(k).toUpperCase() === val.toUpperCase());
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
     const isMultiSelect = question.interaction === 'multi_select' || question.interaction === 'multi-choice' ||
       question.interaction?.engine === 'msq' || question.multiSelect === true ||
       (typeof question.interaction === 'object' && question.interaction?.inputMode === 'multi-choice') ||
@@ -752,25 +836,27 @@ export function isAnswerCorrect(question, userAnswer) {
       if (correctIndices.length === 0) {
         const expected = question.correctAnswerIndices ?? question.answer ?? question.correctAnswerIndex ?? question.correctAnswer;
         if (Array.isArray(expected)) {
-          correctIndices = expected.map(Number);
+          correctIndices = expected.map(getIndexFromAnswer).filter(idx => idx >= 0);
         } else if (expected && typeof expected === 'object') {
           correctIndices = Object.entries(expected)
             .filter(([_, val]) => Boolean(val))
-            .map(([key]) => Number(key));
+            .map(([key]) => getIndexFromAnswer(key))
+            .filter(idx => idx >= 0);
         } else if (expected !== null && expected !== undefined && expected !== '') {
-          correctIndices = [Number(expected)];
+          correctIndices = [getIndexFromAnswer(expected)].filter(idx => idx >= 0);
         }
       }
 
       let selectedIndices = [];
       if (Array.isArray(userAnswer)) {
-        selectedIndices = userAnswer.map(Number);
+        selectedIndices = userAnswer.map(getIndexFromAnswer).filter(idx => idx >= 0);
       } else if (userAnswer && typeof userAnswer === 'object') {
         selectedIndices = Object.entries(userAnswer)
           .filter(([_, val]) => Boolean(val))
-          .map(([key]) => Number(key));
+          .map(([key]) => getIndexFromAnswer(key))
+          .filter(idx => idx >= 0);
       } else if (userAnswer !== null && userAnswer !== undefined && userAnswer !== '') {
-        selectedIndices = [Number(userAnswer)];
+        selectedIndices = [getIndexFromAnswer(userAnswer)].filter(idx => idx >= 0);
       }
 
       if (correctIndices.length !== selectedIndices.length) {
@@ -782,9 +868,12 @@ export function isAnswerCorrect(question, userAnswer) {
       return sortedCorrect.every((val, idx) => val === sortedSelected[idx]);
     }
 
-    const selectedIndex = typeof userAnswer === 'object'
-      ? Number(userAnswer?.selectedIndex ?? userAnswer?.index)
-      : Number(userAnswer);
+    let selectedIndex = -1;
+    if (typeof userAnswer === 'object' && userAnswer !== null) {
+      selectedIndex = getIndexFromAnswer(userAnswer?.selectedIndex ?? userAnswer?.index);
+    } else {
+      selectedIndex = getIndexFromAnswer(userAnswer);
+    }
 
     if (!Number.isFinite(selectedIndex) || selectedIndex < 0 || selectedIndex >= options.length) {
       return false;
@@ -793,12 +882,27 @@ export function isAnswerCorrect(question, userAnswer) {
     const selectedOption = options[selectedIndex];
     if (selectedOption?.isCorrect) return true;
 
+    const getOptionIndexFromKey = (val) => {
+      if (val === null || val === undefined || val === '') return null;
+      if (isNumericAnswer(val)) {
+        const num = Number(val);
+        if (Number.isInteger(num) && num >= 0 && num < options.length) return num;
+      }
+      if (typeof val === 'string') {
+        const idx = optionKeys.findIndex(k => String(k).toUpperCase() === val.toUpperCase());
+        if (idx >= 0) return idx;
+      }
+      return null;
+    };
+
     const expectedIndices = [
-      getValidIndex(question.correctAnswerIndex, options.length),
-      getValidIndex(question.correct_answer_index, options.length),
-      getValidIndex(question.answer, options.length),
-      getValidIndex(question.correctAnswer, options.length),
-      getValidIndex(question.correctAnswerText, options.length),
+      getOptionIndexFromKey(question.correctAnswerIndex),
+      getOptionIndexFromKey(question.correct_answer_index),
+      getOptionIndexFromKey(question.answer),
+      getOptionIndexFromKey(question.correctAnswer),
+      getOptionIndexFromKey(question.correctAnswerText),
+      getOptionIndexFromKey(question.correctOption),
+      getOptionIndexFromKey(question.correct_option),
     ].filter((index) => index !== null);
 
     if (expectedIndices.includes(selectedIndex)) {

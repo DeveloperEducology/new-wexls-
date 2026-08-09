@@ -12,119 +12,58 @@ function getGeminiClient() {
 }
 
 // ── Mode 1: Skill-based generation ──────────────────────────────────────────
-async function generateFromSkill(ai, { skillId, skillDescription, subject, topic, grade, rowsPerLevel }) {
+async function generateFromSkill(ai, { skillId, skillDescription, subject, topic, grade, rowsPerLevel, targetCollection, jnvstExamId, jnvstSection, jnvstTopic }) {
   const n = Number(rowsPerLevel) || 3;
-  const prompt = `
-You are a senior curriculum designer and curriculum engineer.
-Your job is to generate a complete spreadsheet-grid template for a student practice question.
+  const isCompetitive = targetCollection === 'jnvst';
+  const effectiveSection = jnvstSection || subject || 'evs';
+  const effectiveTopic = jnvstTopic || topic || 'general';
 
-Skill ID: "${skillId}"
-Skill Description: "${skillDescription}"
-Subject: "${subject || 'math'}"
-Topic: "${topic || 'general'}"
-Grade: "${grade || '3'}"
+  const prompt = `
+You are a senior curriculum designer and competitive exam expert (JNVST / Sainik School / NCERT).
+Your job is to generate a complete spreadsheet-grid template for student practice.
+
+Target Database Mode: "${isCompetitive ? 'Competitive Exam Template (JNVST)' : 'Curriculum Dynamic Template'}"
+Exam ID: "${jnvstExamId || 'jnvst'}"
+Section: "${effectiveSection}"
+Topic: "${effectiveTopic}"
+Skill ID / Slug: "${skillId}"
+Skill Instructions: "${skillDescription}"
+Grade Level: "${grade || '5'}"
 
 Generate exactly ${n * 3} rows total — ${n} rows for each difficulty level:
-  - L1 (Easy): simpler numbers or basic vocabulary, straightforward, 1-step
-  - L2 (Medium): moderate complexity, compound words, phonics patterns
-  - L3 (Hard): advanced words/math problems, tricky distractors
+  - L1 (Easy): straightforward, 1-step concept test
+  - L2 (Medium): moderate complexity, multi-step calculation or reasoning
+  - L3 (Hard): advanced problem, tricky distractors
 
 Rules:
-1. Choose meaningful column names based on the subject:
-   - For Math: e.g. "number", "Result", "Distractor1", "Distractor2", "Distractor3"
-   - For English / Phonics / Vocabulary / Spelling:
-     * "target_word": The full target word (e.g. "cat", "pencil", "pig") - NEVER use "---" or placeholders!
-     * "target_image": Image URL
-     * "target_audio": Audio TTS URL
-     * "Result": The correct answer (e.g. "c" or "cat")
-     * "Distractor1", "Distractor2", "Distractor3": WRONG options (e.g. "i", "p", "a"), NOT the letters of the target word!
-2. NEVER use "---", "n/a", or dummy dashes in any cell value. Every cell must contain a real, valid value!
-3. Always have exactly one correct option column and 2 or 3 distractor option columns.
-4. For English templates with Audio and Images:
-   - Always populate audio column values using the TTS voice synthesis format: \`/api/tts?voice=Puck&text=WORD\` (e.g. \`/api/tts?voice=Puck&text=feet\`).
-   - Populate image column values using standard R2 clipart link format: \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/WORD.jpg\` (e.g. \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/feet.jpg\` or \`https://pub-6d655d3564544704a2d99beb0760355e.r2.dev/images/lkg/things/WORD.png\`).
-5. The blueprint must use {{columnName}} placeholders. Do NOT repeat answer variables in text unless intended. For spelling, use: \`Listen to the word. Then, spell it.\n\n![{{target_word}}]({{target_image}})\`
-6. The solution must be a clear step-by-step explanation using {{columnName}} placeholders.
-7. Each row must include a "_level" field: "l1", "l2", or "l3".
+1. Base the questions strictly on the Skill Instructions ("${skillDescription}").
+2. Column naming for Competitive / EVS / Science / Math:
+   - "question_prompt": Clear question statement or parameter text (or "number", "target_word")
+   - "Result": The correct answer key
+   - "Distractor1", "Distractor2", "Distractor3": 3 WRONG choice options
+3. NEVER use "---", "n/a", or dummy dashes in any cell value. Every cell must contain real, realistic values!
+4. The blueprint must wrap variables with {{columnName}} placeholders. (e.g. "{{question_prompt}}")
+5. The solution MUST be a beautifully formatted Markdown step-by-step explanation using {{columnName}} placeholders:
+   - Include **📌 Correct Answer:** {{Result}}
+   - Include **Step-by-Step Breakdown:** with bullet points (- ) explaining the logic clearly.
+   - Include 💡 **Key Takeaway:** summary line.
+6. Each row must include a "_level" field: "l1", "l2", or "l3".
 
-
-Return ONLY valid JSON. No markdown fences. No comments. Use this exact shape:
+Return ONLY valid JSON matching this exact shape:
 
 {
   "title": "Short descriptive title",
   "skillId": "${skillId}",
-  "subject": "${subject || 'math'}",
-  "topic": "${topic || 'general'}",
-  "grade": "${grade || '3'}",
-  "targetCollection": "dynamic_templates",
-  "columns": ["col1", "col2", "Result", "Distractor1", "Distractor2"],
+  "subject": "${effectiveSection}",
+  "topic": "${effectiveTopic}",
+  "grade": "${grade || '5'}",
+  "targetCollection": "${isCompetitive ? 'jnvst' : 'dynamic_templates'}",
+  "columns": ["question_prompt", "Result", "Distractor1", "Distractor2", "Distractor3"],
   "rows": [
-    { "_level": "l1", "col1": "...", "Result": "...", "Distractor1": "...", "Distractor2": "..." }
+    { "_level": "l1", "question_prompt": "...", "Result": "...", "Distractor1": "...", "Distractor2": "...", "Distractor3": "..." }
   ],
-  "blueprint": "Question text using {{col1}} etc.",
-  "solution": "Step-by-step explanation: ... Answer: {{Result}}",
-  "optionsBinding": [
-    { "column": "Result", "imageColumn": "Result_image", "audioColumn": "Result_audio", "isCorrect": true },
-    { "column": "Distractor1", "imageColumn": "Distractor1_image", "audioColumn": "Distractor1_audio", "isCorrect": false },
-    { "column": "Distractor2", "imageColumn": "Distractor2_image", "audioColumn": "Distractor2_audio", "isCorrect": false }
-  ]
-}
-
-Note: For Math, leave "imageColumn" and "audioColumn" out of "optionsBinding" (or set to null/empty). For English, map them to the corresponding column names.
-`;
-
-  let response;
-  try {
-    response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-  } catch {
-    response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-  }
-
-  const text = response.text || '';
-  return JSON.parse(text.trim());
-}
-
-// ── Mode 2: From-question generation (existing) ──────────────────────────────
-async function generateFromQuestion(ai, { questionText, options, explanation, subject, topic }) {
-  const prompt = `
-You are a senior curriculum architect. Your task is to take a single static multiple-choice question, its choices, and its step-by-step explanation, and generalize it into a dynamic spreadsheet-compatible template.
-
-Original Static Question:
-"${questionText}"
-
-Original Choices:
-${JSON.stringify(options || [], null, 2)}
-
-Original Explanation:
-"${explanation || ''}"
-
-Target Subject: "${subject || 'math'}"
-Target Topic: "${topic || 'general'}"
-
-Return ONLY one valid JSON object. Do not wrap it in markdown. Do not include comments.
-
-The JSON object must have this exact shape:
-{
-  "title": "A short descriptive title for the template",
-  "subject": "${subject || 'math'}",
-  "topic": "${topic || 'general'}",
-  "targetCollection": "dynamic_templates",
-  "columns": ["col1", "col2", "Result", "Distractor1", "Distractor2", "Distractor3"],
-  "rows": [
-    { "_level": "l1", "col1": "value1_row1", "Result": "correct_value_row1", "Distractor1": "wrong1_row1", "Distractor2": "wrong2_row1", "Distractor3": "wrong3_row1" },
-    { "_level": "l2", "col1": "value1_row2", "Result": "correct_value_row2", "Distractor1": "wrong1_row2", "Distractor2": "wrong2_row2", "Distractor3": "wrong3_row2" },
-    { "_level": "l3", "col1": "value1_row3", "Result": "correct_value_row3", "Distractor1": "wrong1_row3", "Distractor2": "wrong2_row3", "Distractor3": "wrong3_row3" }
-  ],
-  "blueprint": "The question text with variables wrapped in double-braces like {{colName}}",
-  "solution": "The step-by-step explanation, replacing specific values with double-braces like {{colName}}",
+  "blueprint": "{{question_prompt}}",
+  "solution": "**📌 Correct Answer:** {{Result}}\n\n**Step-by-Step Breakdown:**\n- **Step 1:** Analyze the question requirement.\n- **Step 2:** {{Result}} is correct because...\n\n💡 **Key Takeaway:** Essential concept summary.",
   "optionsBinding": [
     { "column": "Result", "isCorrect": true },
     { "column": "Distractor1", "isCorrect": false },
@@ -150,7 +89,67 @@ The JSON object must have this exact shape:
   }
 
   const text = response.text || '';
-  return JSON.parse(text.trim());
+  let cleanJson = text.trim();
+  if (cleanJson.startsWith('```json')) cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  else if (cleanJson.startsWith('```')) cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  return JSON.parse(cleanJson);
+}
+
+// ── Mode 2: From-question generation ──────────────────────────────────────────────
+async function generateFromQuestion(ai, { questionText, options, explanation, subject, topic, targetCollection, jnvstSection, jnvstTopic }) {
+  const effectiveSection = jnvstSection || subject || 'evs';
+  const effectiveTopic = jnvstTopic || topic || 'general';
+
+  const prompt = `
+You are a senior curriculum architect. Take a single static multiple-choice question, its choices, and explanation, and generalize it into a dynamic spreadsheet-compatible template for section "${effectiveSection}".
+
+Original Question: "${questionText}"
+Original Choices: ${JSON.stringify(options || [], null, 2)}
+Original Explanation: "${explanation || ''}"
+
+Return ONLY one valid JSON object:
+{
+  "title": "A short descriptive title for the template",
+  "subject": "${effectiveSection}",
+  "topic": "${effectiveTopic}",
+  "targetCollection": "${targetCollection === 'jnvst' ? 'jnvst' : 'dynamic_templates'}",
+  "columns": ["question_prompt", "Result", "Distractor1", "Distractor2", "Distractor3"],
+  "rows": [
+    { "_level": "l1", "question_prompt": "value1", "Result": "correct_value", "Distractor1": "wrong1", "Distractor2": "wrong2", "Distractor3": "wrong3" },
+    { "_level": "l2", "question_prompt": "value2", "Result": "correct_value", "Distractor1": "wrong1", "Distractor2": "wrong2", "Distractor3": "wrong3" },
+    { "_level": "l3", "question_prompt": "value3", "Result": "correct_value", "Distractor1": "wrong1", "Distractor2": "wrong2", "Distractor3": "wrong3" }
+  ],
+  "blueprint": "{{question_prompt}}",
+  "solution": "Step-by-step explanation. Answer: {{Result}}",
+  "optionsBinding": [
+    { "column": "Result", "isCorrect": true },
+    { "column": "Distractor1", "isCorrect": false },
+    { "column": "Distractor2", "isCorrect": false },
+    { "column": "Distractor3", "isCorrect": false }
+  ]
+}
+`;
+
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+  } catch {
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+  }
+
+  const text = response.text || '';
+  let cleanJson = text.trim();
+  if (cleanJson.startsWith('```json')) cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  else if (cleanJson.startsWith('```')) cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  return JSON.parse(cleanJson);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
@@ -167,14 +166,12 @@ export async function POST(request) {
 
     let templateJson;
 
-    // Mode 1: skill-based
     if (body.skillId || body.skillDescription) {
       if (!body.skillId && !body.skillDescription) {
         return NextResponse.json({ success: false, error: 'skillId or skillDescription is required.' }, { status: 400 });
       }
       templateJson = await generateFromSkill(ai, body);
     } else {
-      // Mode 2: from-question
       if (!body.questionText) {
         return NextResponse.json({ success: false, error: 'questionText is required for question-to-grid mode.' }, { status: 400 });
       }

@@ -124,8 +124,25 @@ function buildGradeCurriculumIit(grades, subjects, units, chapters, skills, acti
   });
 }
 
-function practiceHrefIit(subjectId, unitId, skillId) {
-  return `/practice?subject=${subjectId}&topic=${unitId}&skill=${skillId}&iit=true`;
+function practiceHrefIit(gradeId, subjectId, unitId, skillId) {
+  let resolvedGrade = String(gradeId || 'grade-6').toLowerCase().replace(/\s+/g, '-');
+  
+  let cleanTopic = String(unitId || '').toLowerCase();
+  let cleanSkill = String(skillId || '').toLowerCase();
+
+  // Strip prefixes like "iit-p6-" or "iit-"
+  const prefixMatch = cleanSkill.match(/^iit-p\d+-/);
+  if (prefixMatch) {
+    cleanSkill = cleanSkill.slice(prefixMatch[0].length);
+  } else if (cleanSkill.startsWith('iit-')) {
+    cleanSkill = cleanSkill.slice(4);
+  }
+
+  if (cleanTopic.startsWith('iit-')) {
+    cleanTopic = cleanTopic.slice(4);
+  }
+
+  return `/practice/${resolvedGrade}/${subjectId}/${cleanTopic}/${cleanSkill}?iit=true`;
 }
 
 export default async function IitFoundationPage({ searchParams }) {
@@ -251,7 +268,7 @@ export default async function IitFoundationPage({ searchParams }) {
                             {topic.skills.map(([code, name, skillId]) => (
                               <Link 
                                 key={skillId} 
-                                href={practiceHrefIit(activeSubjectNode.id, topic.unitId || topic.id, skillId)} 
+                                href={practiceHrefIit(gradeId, activeSubjectNode.id, topic.unitId || topic.id, skillId)} 
                                 className="skill-pill"
                               >
                                 <span className="skill-code">{code}</span>

@@ -231,7 +231,8 @@ export default function SpreadsheetGrid({
           </thead>
           <tbody>
             {rows.map((row, rIdx) => {
-              const lvl = LEVEL_CONFIG[row._level || 'l1'] || LEVEL_CONFIG.l1;
+              if (!row) return null;
+              const lvl = LEVEL_CONFIG[row?._level || 'l1'] || LEVEL_CONFIG.l1;
               const isActive = rIdx === activeRowIndex;
               return (
                 <tr

@@ -51,6 +51,7 @@ export default function DatasetHealthPanel({
     let rowsWithAudio = 0;
 
     rows.forEach((row) => {
+      if (!row) return;
       // Check level
       const lvl = row._level || 'l1';
       if (levelCounts[lvl] !== undefined) levelCounts[lvl]++;

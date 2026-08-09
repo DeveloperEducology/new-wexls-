@@ -319,26 +319,36 @@ export default function TestSeriesManager({ selectedExamId = 'jnvst' }) {
                               </span>
                             )}
                           </td>
-                          <td style={{ padding: '14px 16px', color: '#64748b' }}>{test.durationMinutes} Mins</td>
-                          <td style={{ padding: '14px 16px', color: '#64748b' }}>{test.totalQuestions} Qs</td>
-                          <td style={{ padding: '14px 16px', color: '#64748b' }}>{test.totalMarks} Marks</td>
+                          <td style={{ padding: '14px 16px', color: '#64748b', fontWeight: 600 }}>{test.durationMinutes} Mins</td>
                           <td style={{ padding: '14px 16px' }}>
-                            <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            {test.totalQuestions === 80 ? (
+                              <span style={{ background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: '1px solid #bbf7d0' }}>
+                                ✅ Ready (80 Qs)
+                              </span>
+                            ) : (
+                              <span style={{ background: '#fff7ed', color: '#c2410c', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: '1px solid #fed7aa' }}>
+                                ⚠️ Incomplete ({test.totalQuestions || 0} Qs)
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 16px', color: '#64748b', fontWeight: 600 }}>{test.totalMarks} Marks</td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>
                               PUBLISHED
                             </span>
                           </td>
                           <td style={{ padding: '14px 16px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px', alignItems: 'center' }}>
                             <button
                               onClick={() => openLinkerModal(test)}
-                              style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                              style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', transition: 'background 0.15s' }}
                             >
                               🔗 Link Questions
                             </button>
                             <a
-                              href={`/exam-prep/${selectedExamId || 'jnvst'}/mock-test`}
+                              href={`/exam-prep/${selectedExamId || 'jnvst'}/mock-test?templateId=${test.mockTestId}`}
                               target="_blank"
                               rel="noreferrer"
-                              style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none', fontSize: '0.85rem' }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', color: '#2563eb', border: '1px solid #dbeafe', padding: '8px 14px', borderRadius: '8px', fontWeight: 800, textDecoration: 'none', fontSize: '0.8rem' }}
                             >
                               ▶️ Preview
                             </a>

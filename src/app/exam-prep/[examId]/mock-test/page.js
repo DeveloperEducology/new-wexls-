@@ -1,23 +1,26 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import Link from 'next/link';
 import SiteHeader from '../../../../components/layout/SiteHeader';
 
 function parseMathAndText(text) {
   if (!text) return '';
-  const trimmed = typeof text === 'string' ? text.trim() : '';
+  let str = typeof text === 'string' ? text : String(text);
+  str = str.replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+  const trimmed = str.trim();
   if (trimmed.startsWith('<svg') || trimmed.startsWith('<div')) {
     return (
       <div
-        dangerouslySetInnerHTML={{ __html: text }}
+        dangerouslySetInnerHTML={{ __html: str }}
         style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center', padding: '4px' }}
       />
     );
   }
-  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
+  const parts = str.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
   return parts.map((part, i) => {
     if (part.startsWith('\\(') && part.endsWith('\\)')) {
       const formula = part.slice(2, -2);
@@ -47,14 +50,19 @@ function parseMathAndText(text) {
     let processed = part;
     processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    processed = processed.replace(/\n/g, '<br />');
     return <span key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
   });
 }
 
 export default function FullMockTestPage({ params }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const resolvedParams = React.use(params);
   const examId = resolvedParams.examId || 'jnvst';
+
+  const templateId = searchParams?.get('templateId') || searchParams?.get('spreadsheetId') || searchParams?.get('id') || null;
+  const mockTestId = searchParams?.get('mockTestId') || null;
 
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState(null);
@@ -74,15 +82,14 @@ export default function FullMockTestPage({ params }) {
   // 1. Initialize Mock Test Session
   useEffect(() => {
     async function startMockTest() {
-      try {
-        let templateId = null;
-        let mockTestId = null;
-        if (typeof window !== 'undefined') {
-          const searchParams = new URLSearchParams(window.location.search);
-          templateId = searchParams.get('templateId') || searchParams.get('spreadsheetId') || searchParams.get('id');
-          mockTestId = searchParams.get('mockTestId');
-        }
+      setLoading(true);
+      setQuestions([]);
+      setCurrentIdx(0);
+      setUserAnswers({});
+      setMarkedForReview([]);
+      setVisited({ 1: true });
 
+      try {
         const res = await fetch('/api/practice/mock-test/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -103,7 +110,7 @@ export default function FullMockTestPage({ params }) {
       }
     }
     startMockTest();
-  }, [examId]);
+  }, [examId, templateId, mockTestId]);
 
   // 2. Countdown Timer
   useEffect(() => {
@@ -225,6 +232,11 @@ export default function FullMockTestPage({ params }) {
   const arithmeticQuestions = questions.filter(q => q.section === 'arithmetic');
   const languageQuestions = questions.filter(q => q.section === 'language');
 
+  const matAnswered = matQuestions.filter(q => userAnswers[questions.indexOf(q) + 1] !== undefined).length;
+  const arithAnswered = arithmeticQuestions.filter(q => userAnswers[questions.indexOf(q) + 1] !== undefined).length;
+  const langAnswered = languageQuestions.filter(q => userAnswers[questions.indexOf(q) + 1] !== undefined).length;
+
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, sans-serif', color: '#1e293b' }}>
       <SiteHeader />
@@ -268,32 +280,38 @@ export default function FullMockTestPage({ params }) {
       ` }} />
 
       {/* Mock Test Header Bar */}
-      <div className="mock-header-bar" style={{ background: '#0f172a', color: '#fff', padding: '16px 24px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🏆 JNVST Full Selection Mock Test</span>
-            <span style={{ fontSize: '0.75rem', background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '12px' }}>Official 80 Qs</span>
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0 0' }}>Duration: 120 Mins · Total Marks: 100 · Cutoff: 65 Marks</p>
+      <div className="mock-header-bar" style={{ background: '#ffffff', color: '#0f172a', padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Link href={`/exam-prep/${examId}`} style={{ textDecoration: 'none', color: '#6366f1', fontWeight: 800, fontSize: '0.9rem', padding: '8px 16px', background: '#f5f3ff', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            ← Back to Dashboard
+          </Link>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a' }}>
+              <span>🏆 JNVST Full Selection Mock Test</span>
+              <span style={{ fontSize: '0.75rem', background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>Official 80 Qs</span>
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 0', fontWeight: 600 }}>Duration: 120 Mins · Total Marks: 100 · Cutoff: 65 Marks</p>
+          </div>
         </div>
 
         {/* Timer Display */}
         <div className="mock-timer-wrap" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: timeLeft < 600 ? '#7f1d1d' : '#1e293b', border: `1px solid ${timeLeft < 600 ? '#ef4444' : '#475569'}`, padding: '8px 16px', borderRadius: '8px', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Time Remaining</span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: timeLeft < 600 ? '#f87171' : '#38bdf8' }}>
+          <div style={{ background: timeLeft < 600 ? '#fef2f2' : '#f8fafc', border: `1px solid ${timeLeft < 600 ? '#fca5a5' : '#e2e8f0'}`, padding: '8px 16px', borderRadius: '8px', textAlign: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Time Remaining</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: timeLeft < 600 ? '#ef4444' : '#6366f1' }}>
               {formatTime(timeLeft)}
             </span>
           </div>
 
           <button
             onClick={() => setShowSubmitModal(true)}
-            style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem' }}
+            style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25)' }}
           >
             Submit Test
           </button>
         </div>
       </div>
+
 
       {/* Section Switcher Tabs */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', display: 'flex', gap: '4px', overflowX: 'auto' }}>
@@ -325,6 +343,37 @@ export default function FullMockTestPage({ params }) {
         
         {/* Left Column: Question Player */}
         <div className="mock-player-box" style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+          {/* Section Progress Bar */}
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                <span>🧠 Mental Ability</span>
+                <span>{matAnswered}/40</span>
+              </div>
+              <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: '#a855f7', width: `${(matAnswered / 40) * 100}%`, transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                <span>🔢 Arithmetic</span>
+                <span>{arithAnswered}/20</span>
+              </div>
+              <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: '#22c55e', width: `${(arithAnswered / 20) * 100}%`, transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                <span>📖 Language</span>
+                <span>{langAnswered}/20</span>
+              </div>
+              <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: '#ea580c', width: `${(langAnswered / 20) * 100}%`, transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9' }}>
             <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 12px', borderRadius: '16px', fontSize: '0.85rem', fontWeight: 600 }}>
               Question {currentQNum} of 80 · {currentQ.sectionName}
@@ -337,6 +386,7 @@ export default function FullMockTestPage({ params }) {
               {markedForReview.includes(currentQNum) ? '🟣 Marked for Review' : '⚪ Mark for Review'}
             </button>
           </div>
+
 
           {/* Question Text */}
           <div style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.6, marginBottom: '28px', color: '#0f172a' }}>
@@ -498,132 +548,216 @@ export default function FullMockTestPage({ params }) {
             </button>
           </div>
 
-          {/* Debug Question JSON Inspector */}
-          <div style={{ marginTop: '24px', borderTop: '1px dashed #cbd5e1', paddingTop: '16px' }}>
-            <button
-              onClick={() => setShowDebugJson(!showDebugJson)}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '6px 14px',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                color: '#334155',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              🛠️ {showDebugJson ? 'Hide Debug Question JSON' : 'Show Debug Question JSON'}
-            </button>
-
-            {showDebugJson && (
-              <pre style={{
-                marginTop: '12px',
-                padding: '14px 18px',
-                background: '#0f172a',
-                color: '#38bdf8',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                maxHeight: '320px',
-                overflow: 'auto',
-                fontFamily: 'monospace',
-                lineHeight: 1.5,
-                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
-              }}>
-                {JSON.stringify(currentQ, null, 2)}
-              </pre>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Question Palette Drawer (1 to 80 Grid) */}
-        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', height: 'fit-content', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 16px' }}>Question Palette (80 Qs)</h3>
-
-          {/* Palette Legend */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.75rem', color: '#64748b', marginBottom: '20px', background: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#22c55e' }} /> Answered</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#a855f7' }} /> Marked</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#ef4444' }} /> Unanswered</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#e2e8f0' }} /> Not Visited</div>
-          </div>
-
-          {/* Palette Grid (1 to 80 Buttons) */}
-          <div className="mock-palette-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
-            {questions.map((q, idx) => {
-              const qNum = idx + 1;
-              const isAns = userAnswers[qNum] !== undefined;
-              const isMarked = markedForReview.includes(qNum);
-              const isVis = visited[qNum];
-              const isCurrent = idx === currentIdx;
-
-              let bgColor = '#f1f5f9';
-              let textColor = '#475569';
-
-              if (isMarked) {
-                bgColor = '#a855f7';
-                textColor = '#fff';
-              } else if (isAns) {
-                bgColor = '#22c55e';
-                textColor = '#fff';
-              } else if (isVis) {
-                bgColor = '#ef4444';
-                textColor = '#fff';
+      {/* Debug JSON & Clear Cache Bar */}
+      <div style={{ marginTop: '20px', borderTop: '1px dashed #e2e8f0', paddingTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowDebugJson(prev => !prev)}
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '6px 14px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              color: '#334155',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            🛠️ {showDebugJson ? 'Hide Debug Question JSON' : 'Show Debug Question JSON'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                } catch (err) {}
+                const url = new URL(window.location.href);
+                url.searchParams.set('reset', Date.now().toString());
+                window.location.href = url.toString();
               }
-
-              return (
-                <button
-                  key={qNum}
-                  onClick={() => jumpToQuestion(idx)}
-                  style={{
-                    height: '38px',
-                    borderRadius: '8px',
-                    border: isCurrent ? '2px solid #0f172a' : 'none',
-                    background: bgColor,
-                    color: textColor,
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {qNum}
-                </button>
-              );
-            })}
-          </div>
+            }}
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fca5a5',
+              borderRadius: '8px',
+              padding: '6px 14px',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              color: '#dc2626',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title="Clears local storage and re-initializes fresh questions directly from MongoDB template"
+          >
+            🔄 Clear Cache & Restart Test
+          </button>
         </div>
 
+        {showDebugJson && (
+          <pre style={{
+            marginTop: '12px',
+            padding: '14px 18px',
+            background: '#0f172a',
+            color: '#38bdf8',
+            borderRadius: '10px',
+            fontSize: '0.82rem',
+            maxHeight: '320px',
+            overflow: 'auto',
+            fontFamily: 'monospace',
+            lineHeight: 1.5,
+            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+          }}>
+            {JSON.stringify(currentQ, null, 2)}
+          </pre>
+        )}
+      </div>
+    </div>
+
+    {/* Right Column: Question Palette Drawer (1 to 80 Grid) */}
+    <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', height: 'fit-content', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>Question Palette (80 Qs)</h3>
+        <button
+          onClick={() => setShowSubmitModal(true)}
+          style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.25)' }}
+        >
+          🚀 Submit Test
+        </button>
       </div>
 
-      {/* Confirmation Modal */}
-      {showSubmitModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 12px' }}>Submit JNVST Mock Test?</h3>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', margin: '0 0 24px' }}>
-              You have answered <strong>{Object.keys(userAnswers).length}</strong> out of <strong>80 questions</strong>.
-            </p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                style={{ flex: 1, padding: '12px', border: '1px solid #cbd5e1', background: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Continue Exam
-              </button>
-              <button
-                onClick={submitMockTest}
-                disabled={submitting}
-                style={{ flex: 1, padding: '12px', border: 'none', background: '#22c55e', color: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-              >
-                {submitting ? 'Submitting...' : 'Confirm Submit'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Palette Legend */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.75rem', color: '#64748b', marginBottom: '20px', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#dcfce7', border: '1px solid #86efac' }} /> Answered</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#f3e8ff', border: '1px solid #d8b4fe' }} /> Marked</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#fee2e2', border: '1px solid #fecaca' }} /> Unanswered</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#f1f5f9', border: '1px solid #cbd5e1' }} /> Not Visited</div>
+      </div>
+
+      {/* Section Jump Quick Buttons */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+        <button
+          onClick={() => { setActiveSection('mat'); jumpToQuestion(0); }}
+          style={{ flex: 1, padding: '6px 4px', fontSize: '0.75rem', fontWeight: 700, borderRadius: '6px', border: activeSection === 'mat' ? '1.5px solid #6366f1' : '1px solid #cbd5e1', background: activeSection === 'mat' ? '#eef2ff' : '#fff', color: activeSection === 'mat' ? '#4f46e5' : '#475569', cursor: 'pointer' }}
+        >
+          MAT (1-40)
+        </button>
+        <button
+          onClick={() => { setActiveSection('arithmetic'); jumpToQuestion(40); }}
+          style={{ flex: 1, padding: '6px 4px', fontSize: '0.75rem', fontWeight: 700, borderRadius: '6px', border: activeSection === 'arithmetic' ? '1.5px solid #6366f1' : '1px solid #cbd5e1', background: activeSection === 'arithmetic' ? '#eef2ff' : '#fff', color: activeSection === 'arithmetic' ? '#4f46e5' : '#475569', cursor: 'pointer' }}
+        >
+          Arith (41-60)
+        </button>
+        <button
+          onClick={() => { setActiveSection('language'); jumpToQuestion(60); }}
+          style={{ flex: 1, padding: '6px 4px', fontSize: '0.75rem', fontWeight: 700, borderRadius: '6px', border: activeSection === 'language' ? '1.5px solid #6366f1' : '1px solid #cbd5e1', background: activeSection === 'language' ? '#eef2ff' : '#fff', color: activeSection === 'language' ? '#4f46e5' : '#475569', cursor: 'pointer' }}
+        >
+          Lang (61-80)
+        </button>
+      </div>
+
+      {/* Palette Grid (1 to 80 Buttons) */}
+      <div className="mock-palette-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', maxHeight: '440px', overflowY: 'auto', paddingRight: '4px' }}>
+        {questions.map((q, idx) => {
+          const qNum = idx + 1;
+          const isAns = userAnswers[qNum] !== undefined;
+          const isMarked = markedForReview.includes(qNum);
+          const isVis = visited[qNum];
+          const isCurrent = idx === currentIdx;
+
+          let bgColor = '#f1f5f9';
+          let textColor = '#475569';
+          let borderStyle = isCurrent ? '2px solid #0f172a' : '1px solid #cbd5e1';
+
+          if (isMarked && isAns) {
+            bgColor = '#faf5ff';
+            textColor = '#a855f7';
+            borderStyle = isCurrent ? '2px solid #0f172a' : '2px dashed #22c55e';
+          } else if (isMarked) {
+            bgColor = '#f3e8ff';
+            textColor = '#9333ea';
+            borderStyle = isCurrent ? '2px solid #0f172a' : '1px solid #d8b4fe';
+          } else if (isAns) {
+            bgColor = '#dcfce7';
+            textColor = '#16a34a';
+            borderStyle = isCurrent ? '2px solid #0f172a' : '1px solid #86efac';
+          } else if (isVis) {
+            bgColor = '#fee2e2';
+            textColor = '#dc2626';
+            borderStyle = isCurrent ? '2px solid #0f172a' : '1px solid #fecaca';
+          }
+
+          return (
+            <button
+              key={qNum}
+              onClick={() => jumpToQuestion(idx)}
+              style={{
+                height: '38px',
+                borderRadius: '8px',
+                border: borderStyle,
+                background: bgColor,
+                color: textColor,
+                fontWeight: 800,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: isCurrent ? '0 0 0 2px #6366f1' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+              title={`Question #${qNum} (${q.sectionName || q.section})`}
+            >
+              {qNum}
+            </button>
+          );
+        })}
+      </div>
     </div>
+
+  </div>
+
+  {/* Confirmation Modal */}
+  {showSubmitModal && (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+      <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', textAlign: 'center' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, margin: '0 0 12px', color: '#0f172a' }}>Submit JNVST Mock Test?</h3>
+
+        <p style={{ color: '#475569', fontSize: '0.95rem', margin: '0 0 16px', lineHeight: 1.5 }}>
+          You have answered <strong>{Object.keys(userAnswers).length}</strong> out of <strong>80 questions</strong>.
+        </p>
+        {80 - Object.keys(userAnswers).length > 0 ? (
+          <div style={{ background: '#fff5f5', border: '1px solid #fee2e2', borderRadius: '10px', padding: '12px', margin: '0 0 24px', color: '#b91c1c', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+            <span>⚠️ Warning: {80 - Object.keys(userAnswers).length} unanswered questions remaining.</span>
+          </div>
+        ) : (
+          <div style={{ background: '#f0fdf4', border: '1px solid #dcfce7', borderRadius: '10px', padding: '12px', margin: '0 0 24px', color: '#15803d', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+            <span>✅ All questions answered! Great job.</span>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => setShowSubmitModal(false)}
+            style={{ flex: 1, padding: '12px', border: '1px solid #cbd5e1', background: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Continue Exam
+          </button>
+          <button
+            onClick={submitMockTest}
+            disabled={submitting}
+            style={{ flex: 1, padding: '12px', border: 'none', background: '#22c55e', color: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            {submitting ? 'Submitting...' : 'Confirm Submit'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
   );
 }

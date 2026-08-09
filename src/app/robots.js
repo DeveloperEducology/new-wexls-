@@ -4,7 +4,7 @@ export default function robots() {
   return {
     rules: {
       userAgent: '*',
-      allow: ['/', '/grades', '/science', '/blog', '/blog/*'],
+      allow: ['/', '/grades-v2', '/science', '/blog', '/blog/*'],
       disallow: [
         '/admin/',
         '/api/',

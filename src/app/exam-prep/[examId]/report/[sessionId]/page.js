@@ -8,54 +8,49 @@ import SiteHeader from '../../../../../components/layout/SiteHeader';
 
 function parseMathAndText(text) {
   if (!text) return '';
-  if (typeof text === 'string' && text.trim().startsWith('<svg')) {
+  let str = typeof text === 'string' ? text : String(text);
+  str = str.replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+  const trimmed = str.trim();
+  if (trimmed.startsWith('<svg') || trimmed.startsWith('<div')) {
     return (
       <div 
-        dangerouslySetInnerHTML={{ __html: text }} 
-        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '6px' }} 
+        dangerouslySetInnerHTML={{ __html: str }} 
+        style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center', padding: '4px' }} 
       />
     );
   }
-  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
+  const parts = str.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
   return parts.map((part, i) => {
     if (part.startsWith('\\(') && part.endsWith('\\)')) {
       const formula = part.slice(2, -2);
       try {
         const html = katex.renderToString(formula, { displayMode: false, throwOnError: false });
         return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
-      } catch {
-        return <span key={i}>{part}</span>;
-      }
+      } catch { return <span key={i}>{part}</span>; }
     } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
       const formula = part.slice(2, -2);
       try {
         const html = katex.renderToString(formula, { displayMode: true, throwOnError: false });
         return <div key={i} dangerouslySetInnerHTML={{ __html: html }} />;
-      } catch {
-        return <div key={i}>{part}</div>;
-      }
+      } catch { return <div key={i}>{part}</div>; }
     } else if (part.startsWith('$$') && part.endsWith('$$')) {
       const formula = part.slice(2, -2);
       try {
         const html = katex.renderToString(formula, { displayMode: true, throwOnError: false });
         return <div key={i} dangerouslySetInnerHTML={{ __html: html }} />;
-      } catch {
-        return <div key={i}>{part}</div>;
-      }
+      } catch { return <div key={i}>{part}</div>; }
     } else if (part.startsWith('$') && part.endsWith('$')) {
       const formula = part.slice(1, -1);
       try {
         const html = katex.renderToString(formula, { displayMode: false, throwOnError: false });
         return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
-      } catch {
-        return <span key={i}>{part}</span>;
-      }
+      } catch { return <span key={i}>{part}</span>; }
     }
     
-    // Simple bold/italic formatting
     let processed = part;
     processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    processed = processed.replace(/\n/g, '<br />');
     
     return <span key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
   });

@@ -11,13 +11,126 @@ function getGeminiClient() {
   return new GoogleGenAI({ enterprise: true, project, location });
 }
 
+function escapeUnescapedQuotes(str) {
+  let result = '';
+  let inString = false;
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    
+    if (char === '"') {
+      let backslashes = 0;
+      let idx = i - 1;
+      while (idx >= 0 && str[idx] === '\\') {
+        backslashes++;
+        idx--;
+      }
+      const isEscaped = backslashes % 2 !== 0;
+      
+      if (isEscaped) {
+        result += char;
+        continue;
+      }
+      
+      if (!inString) {
+        inString = true;
+        result += char;
+      } else {
+        let nextIdx = i + 1;
+        while (nextIdx < str.length && /\s/.test(str[nextIdx])) {
+          nextIdx++;
+        }
+        const nextChar = str[nextIdx];
+        
+        let isClosing = false;
+        
+        if (nextChar === ':') {
+          let afterColonIdx = nextIdx + 1;
+          while (afterColonIdx < str.length && /\s/.test(str[afterColonIdx])) {
+            afterColonIdx++;
+          }
+          const afterColonChar = str[afterColonIdx];
+          if (['"', '[', '{', 't', 'f', 'n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-'].includes(afterColonChar)) {
+            isClosing = true;
+          }
+        } else if (nextChar === ',') {
+          let afterCommaIdx = nextIdx + 1;
+          while (afterCommaIdx < str.length && /\s/.test(str[afterCommaIdx])) {
+            afterCommaIdx++;
+          }
+          const afterCommaChar = str[afterCommaIdx];
+          if (['"', '}', ']', '[', '{', 't', 'f', 'n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-'].includes(afterCommaChar)) {
+            isClosing = true;
+          }
+        } else if (nextChar === '}' || nextChar === ']' || nextChar === undefined) {
+          isClosing = true;
+        }
+        
+        if (isClosing) {
+          inString = false;
+          result += char;
+        } else {
+          result += '\\"';
+        }
+      }
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
 function cleanAndParseJSON(text) {
   let cleaned = text.trim();
-  // Strip markdown code fences if present
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   }
-  return JSON.parse(cleaned);
+
+  cleaned = escapeUnescapedQuotes(cleaned);
+
+  let result = '';
+  let inString = false;
+  
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    
+    if (char === '"') {
+      let backslashes = 0;
+      let idx = i - 1;
+      while (idx >= 0 && cleaned[idx] === '\\') {
+        backslashes++;
+        idx--;
+      }
+      if (backslashes % 2 === 0) {
+        inString = !inString;
+      }
+      result += char;
+    } else if (char === '\\' && inString) {
+      const nextChar = cleaned[i + 1];
+      if (nextChar === 'n' || nextChar === '"' || nextChar === '\\') {
+        result += char;
+      } else {
+        result += '\\\\';
+      }
+    } else {
+      if (inString && (char === '\n' || char === '\r')) {
+        result += '\\n';
+      } else {
+        result += char;
+      }
+    }
+  }
+
+  let jsonString = result;
+  jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (err) {
+    console.error("JSON parsing failed. Raw string (first 500 chars):", jsonString.substring(0, 500));
+    console.error("Error details:", err);
+    throw err;
+  }
 }
 
 export async function POST(request) {

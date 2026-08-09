@@ -11,26 +11,126 @@ function getGeminiClient() {
   return new GoogleGenAI({ enterprise: true, project, location });
 }
 
+function escapeUnescapedQuotes(str) {
+  let result = '';
+  let inString = false;
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    
+    if (char === '"') {
+      let backslashes = 0;
+      let idx = i - 1;
+      while (idx >= 0 && str[idx] === '\\') {
+        backslashes++;
+        idx--;
+      }
+      const isEscaped = backslashes % 2 !== 0;
+      
+      if (isEscaped) {
+        result += char;
+        continue;
+      }
+      
+      if (!inString) {
+        inString = true;
+        result += char;
+      } else {
+        let nextIdx = i + 1;
+        while (nextIdx < str.length && /\s/.test(str[nextIdx])) {
+          nextIdx++;
+        }
+        const nextChar = str[nextIdx];
+        
+        let isClosing = false;
+        
+        if (nextChar === ':') {
+          let afterColonIdx = nextIdx + 1;
+          while (afterColonIdx < str.length && /\s/.test(str[afterColonIdx])) {
+            afterColonIdx++;
+          }
+          const afterColonChar = str[afterColonIdx];
+          if (['"', '[', '{', 't', 'f', 'n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-'].includes(afterColonChar)) {
+            isClosing = true;
+          }
+        } else if (nextChar === ',') {
+          let afterCommaIdx = nextIdx + 1;
+          while (afterCommaIdx < str.length && /\s/.test(str[afterCommaIdx])) {
+            afterCommaIdx++;
+          }
+          const afterCommaChar = str[afterCommaIdx];
+          if (['"', '}', ']', '[', '{', 't', 'f', 'n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-'].includes(afterCommaChar)) {
+            isClosing = true;
+          }
+        } else if (nextChar === '}' || nextChar === ']' || nextChar === undefined) {
+          isClosing = true;
+        }
+        
+        if (isClosing) {
+          inString = false;
+          result += char;
+        } else {
+          result += '\\"';
+        }
+      }
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
 function cleanAndParseJSON(text) {
   let cleaned = text.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   }
-  // Escape unescaped newlines inside strings
+
+  cleaned = escapeUnescapedQuotes(cleaned);
+
   let result = '';
   let inString = false;
-  let escaped = false;
+  
   for (let i = 0; i < cleaned.length; i++) {
     const char = cleaned[i];
-    if (char === '"' && !escaped) inString = !inString;
-    if (inString && (char === '\n' || char === '\r')) {
-      result += '\\n';
-    } else {
+    
+    if (char === '"') {
+      let backslashes = 0;
+      let idx = i - 1;
+      while (idx >= 0 && cleaned[idx] === '\\') {
+        backslashes++;
+        idx--;
+      }
+      if (backslashes % 2 === 0) {
+        inString = !inString;
+      }
       result += char;
+    } else if (char === '\\' && inString) {
+      const nextChar = cleaned[i + 1];
+      if (nextChar === 'n' || nextChar === '"' || nextChar === '\\') {
+        result += char;
+      } else {
+        result += '\\\\';
+      }
+    } else {
+      if (inString && (char === '\n' || char === '\r')) {
+        result += '\\n';
+      } else {
+        result += char;
+      }
     }
-    escaped = char === '\\' && !escaped;
   }
-  return JSON.parse(result);
+
+  let jsonString = result;
+  jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (err) {
+    console.error("JSON parsing failed. Raw string (first 500 chars):", jsonString.substring(0, 500));
+    console.error("Error details:", err);
+    throw err;
+  }
 }
 
 const BLOG_SYSTEM_PROMPT = `You are a world-class SEO content strategist, math educator, and educational blog writer. Your job is to write a comprehensive, long-form educational blog post in ENGLISH.
@@ -178,6 +278,86 @@ IMPORTANT:
 - practiceProblems must have different difficulty levels
 `;
 
+const BLOG_GUIDE_SYSTEM_PROMPT = `You are a world-class SEO content strategist, expert educator, and educational blog writer. Your job is to write a comprehensive, long-form educational guide/article in ENGLISH.
+
+The blog must:
+1. Be 1500-2500 words of rich content
+2. Be structured as a detailed, informative exam guide/overview (NOT a math concept tutorial/worksheet)
+3. Be optimized for Google SEO with natural keyword usage
+4. Use clear H2/H3 structure for readability
+5. Detail exam structures, registration, syllabus breakdown, marks distribution, and strategies
+6. NOT contain math worked examples, practice problems, or formula worksheets (keep these sections empty)
+
+Return ONLY a valid raw JSON object (no markdown fences) matching this EXACT schema:
+
+{
+  "seo": {
+    "title": "Full SEO page title (50-60 chars with focus keyword)",
+    "slug": "url-friendly-slug",
+    "metaDescription": "Compelling meta description (150-160 chars with keyword)",
+    "focusKeyword": "primary SEO keyword",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+  },
+  "hero": {
+    "headline": "Attention-grabbing H1 headline with keyword",
+    "subheadline": "Supporting subtitle explaining the value of this post",
+    "readTime": "8 min read",
+    "difficulty": "Beginner | Intermediate | Advanced",
+    "examRelevance": "Why this guide matters for the aspirants"
+  },
+  "introduction": "3-4 engaging paragraphs that hook the reader, explain the importance of the exam/syllabus details, and preview what they will learn. Use the focus keyword naturally 2-3 times.",
+  "conceptOverview": {
+    "title": "Exam Structure & Key Highlights",
+    "explanation": "2-3 detailed paragraphs detailing the general overview, exam pattern, eligibility, and core highlights of this topic/exam",
+    "keyFormula": "",
+    "formulaExplanation": "",
+    "realWorldAnalogy": "A relatable analogy comparing exam preparation strategy to a real-world scenario (e.g. mapping a journey, preparing for a marathon)"
+  },
+  "stepByStepGuide": {
+    "title": "Detailed Syllabus Breakdown & Weightage",
+    "intro": "A brief overview explaining the structure and marks allocation of the exam sections.",
+    "steps": [
+      {
+        "stepNumber": 1,
+        "title": "Section Title (e.g. Mental Ability Test, Arithmetic)",
+        "explanation": "Detailed paragraph breaking down the topics, chapters, and question types in this specific section.",
+        "math": "",
+        "proTip": "Preparation advice/strategy for this section"
+      }
+    ]
+  },
+  "workedExamples": [],
+  "commonMistakes": [],
+  "examTips": {
+    "title": "Strategy & Preparation Hacks",
+    "tips": [
+      "Specific score-maximizing tip 1 (e.g. section order, time allocation)",
+      "Specific score-maximizing tip 2 (e.g. shortcut tricks, skipping difficult questions)",
+      "Specific score-maximizing tip 3 (e.g. OMR bubble filling strategy, no negative marking hack)"
+    ],
+    "timeManagement": "Recommended section-wise time allocation breakdown",
+    "quickCheckMethod": "Revision strategy during the last minutes of the exam"
+  },
+  "practiceProblems": [],
+  "faq": [
+    {
+      "question": "Commonly asked student/parent question 1 about registration, eligibility, or pattern",
+      "answer": "Clear, informative answer (2-3 sentences max)"
+    },
+    {
+      "question": "Commonly asked question 2",
+      "answer": "Answer"
+    },
+    {
+      "question": "Commonly asked question 3",
+      "answer": "Answer"
+    }
+  ],
+  "conclusion": "2-3 paragraphs summarizing key takeaways, motivating the aspirant, and outlining next steps in their study plan. End with a highly motivational note.",
+  "callToAction": "A supportive CTA sentence inviting students to start practicing worksheets or mock tests."
+}
+`;
+
 export async function POST(request) {
   const ai = getGeminiClient();
   if (!ai) {
@@ -196,9 +376,23 @@ export async function POST(request) {
       grade = '6',
       shortcutDetails = '',
       additionalInstructions = '',
+      blogStyle = 'tutorial', // 'tutorial' | 'guide'
     } = await request.json();
 
-    const userPrompt = `Generate a full SEO blog post with step-by-step math for the following:
+    let userPrompt = '';
+    if (blogStyle === 'guide') {
+      userPrompt = `Generate a full SEO informative guide/overview (NOT a worksheet) for the following:
+
+- Exam: ${examName}
+- Subject: ${subject}
+- Guide Topic: ${concept || topic}
+- Target Grade: Grade ${grade}
+- Key Highlights / Strategies: ${shortcutDetails || 'Standard overview and preparation strategy'}
+${additionalInstructions ? `- Additional Instructions: ${additionalInstructions}` : ''}
+
+Provide a comprehensive exam guide (1500-2500 words equivalent in content), with a detailed syllabus section-by-section breakdown inside "stepByStepGuide.steps", 3 exam tips, and 3 FAQ entries. Leave "workedExamples", "commonMistakes", and "practiceProblems" as empty arrays.`;
+    } else {
+      userPrompt = `Generate a full SEO blog post with step-by-step math (worksheet style) for the following:
 
 - Exam: ${examName}
 - Subject: ${subject}
@@ -208,13 +402,14 @@ export async function POST(request) {
 ${additionalInstructions ? `- Additional Instructions: ${additionalInstructions}` : ''}
 
 Make the blog comprehensive (1500-2500 words equivalent in content), with at least 2 fully worked examples each having 4-6 steps with math at each step, 3 practice problems, 3 common mistakes, 3 exam tips, and 3 FAQ entries.`;
+    }
 
     const model = 'gemini-2.5-flash';
     const response = await ai.models.generateContent({
       model,
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       config: {
-        systemInstruction: BLOG_SYSTEM_PROMPT,
+        systemInstruction: blogStyle === 'guide' ? BLOG_GUIDE_SYSTEM_PROMPT : BLOG_SYSTEM_PROMPT,
         temperature: 0.7,
         maxOutputTokens: 8192,
       },

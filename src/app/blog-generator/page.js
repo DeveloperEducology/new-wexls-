@@ -189,7 +189,7 @@ function BlogRenderer({ blog }) {
                 <div className="key-formula-label">📐 Key Formula</div>
                 <div className="key-formula-math"><MathText>{conceptOverview.keyFormula}</MathText></div>
                 {conceptOverview.formulaExplanation && (
-                  <p className="formula-explanation">{conceptOverview.formulaExplanation}</p>
+                  <MathParagraph className="formula-explanation">{conceptOverview.formulaExplanation}</MathParagraph>
                 )}
               </div>
             )}
@@ -198,7 +198,7 @@ function BlogRenderer({ blog }) {
                 <span className="analogy-icon">💡</span>
                 <div>
                   <strong>Think of it this way:</strong>
-                  <p>{conceptOverview.realWorldAnalogy}</p>
+                  <MathParagraph>{conceptOverview.realWorldAnalogy}</MathParagraph>
                 </div>
               </div>
             )}
@@ -226,7 +226,7 @@ function BlogRenderer({ blog }) {
                     )}
                     {step.proTip && (
                       <div className="step-tip">
-                        <span>💡 Pro Tip:</span> {step.proTip}
+                        <span>💡 Pro Tip:</span> <MathText>{step.proTip}</MathText>
                       </div>
                     )}
                   </div>
@@ -253,7 +253,7 @@ function BlogRenderer({ blog }) {
               {ex.solution && (
                 <div className="example-solution">
                   {ex.solution.approach && (
-                    <p className="solution-approach"><em>Approach: {ex.solution.approach}</em></p>
+                    <p className="solution-approach"><em>Approach: </em><MathText>{ex.solution.approach}</MathText></p>
                   )}
                   {ex.solution.steps && ex.solution.steps.length > 0 && (
                     <div className="solution-steps">
@@ -277,7 +277,7 @@ function BlogRenderer({ blog }) {
                   )}
                   {ex.solution.checkYourWork && (
                     <div className="check-work">
-                      <span>🔍 Check:</span> {ex.solution.checkYourWork}
+                      <span>🔍 Check:</span> <MathText>{ex.solution.checkYourWork}</MathText>
                     </div>
                   )}
                 </div>
@@ -295,7 +295,7 @@ function BlogRenderer({ blog }) {
             {commonMistakes.map((m, i) => (
               <div key={i} className="mistake-card">
                 <div className="mistake-label">❌ Common Mistake #{i + 1}</div>
-                <p className="mistake-desc">{m.mistake}</p>
+                <MathParagraph className="mistake-desc">{m.mistake}</MathParagraph>
                 <div className="mistake-compare">
                   <div className="mistake-wrong">
                     <div className="compare-label wrong-label">Wrong ❌</div>
@@ -308,7 +308,7 @@ function BlogRenderer({ blog }) {
                   </div>
                 </div>
                 {m.memoryTrick && (
-                  <div className="memory-trick">🧠 <strong>Remember:</strong> {m.memoryTrick}</div>
+                  <div className="memory-trick">🧠 <strong>Remember:</strong> <MathText>{m.memoryTrick}</MathText></div>
                 )}
               </div>
             ))}
@@ -335,14 +335,14 @@ function BlogRenderer({ blog }) {
               <div className="exam-meta-box time-box">
                 <div className="exam-meta-icon">⏱️</div>
                 <div className="exam-meta-label">Time Management</div>
-                <div className="exam-meta-value">{examTips.timeManagement}</div>
+                <div className="exam-meta-value"><MathText>{examTips.timeManagement}</MathText></div>
               </div>
             )}
             {examTips.quickCheckMethod && (
               <div className="exam-meta-box check-box">
                 <div className="exam-meta-icon">⚡</div>
                 <div className="exam-meta-label">Quick Check</div>
-                <div className="exam-meta-value">{examTips.quickCheckMethod}</div>
+                <div className="exam-meta-value"><MathText>{examTips.quickCheckMethod}</MathText></div>
               </div>
             )}
           </div>
@@ -361,7 +361,7 @@ function BlogRenderer({ blog }) {
                 <MathText className="practice-question">{prob.question}</MathText>
               </div>
               {prob.hint && (
-                <div className="practice-hint">💡 Hint: {prob.hint}</div>
+                <div className="practice-hint">💡 Hint: <MathText>{prob.hint}</MathText></div>
               )}
               <button
                 className="reveal-btn"
@@ -414,7 +414,7 @@ function BlogRenderer({ blog }) {
       {/* ── CTA ── */}
       {callToAction && (
         <div className="blog-cta-box">
-          <p className="blog-cta-text">{callToAction}</p>
+          <MathParagraph className="blog-cta-text">{callToAction}</MathParagraph>
           <div className="blog-cta-actions">
             <Link href="/test-lesson" className="cta-btn primary-cta">Generate a Worksheet →</Link>
             <Link href="/blog" className="cta-btn secondary-cta">More Blog Posts</Link>
@@ -427,12 +427,26 @@ function BlogRenderer({ blog }) {
 
 // ─── Main Page ─────────────────────────────────────────────────────────
 export default function BlogGeneratorPage() {
+  // ── Mode: 'keyword' | 'text' ──
+  const [mode, setMode] = useState('keyword');
+
+  // ── Keyword mode state ──
   const [examName, setExamName] = useState('JNVST 2026');
   const [subject, setSubject] = useState('Mathematics');
+  const [customSubject, setCustomSubject] = useState('');
+  const [showCustomSubject, setShowCustomSubject] = useState(false);
   const [concept, setConcept] = useState('Fractions');
   const [grade, setGrade] = useState('6');
   const [shortcutDetails, setShortcutDetails] = useState('Using the cross-multiplication butterfly method to add and subtract fractions quickly without finding LCM');
   const [additionalInstructions, setAdditionalInstructions] = useState('');
+  const [blogStyle, setBlogStyle] = useState('tutorial'); // 'tutorial' | 'guide'
+
+  // ── Text mode state ──
+  const [rawText, setRawText] = useState('');
+  const [textExamName, setTextExamName] = useState('JNVST 2026');
+  const [textInstructions, setTextInstructions] = useState('');
+
+  // ── Shared state ──
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -440,6 +454,7 @@ export default function BlogGeneratorPage() {
   const [saveStatus, setSaveStatus] = useState(null); // { slug, url } | null
   const [savingToDb, setSavingToDb] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [previewMode, setPreviewMode] = useState('render'); // 'render' | 'json'
   const blogRef = useRef(null);
 
   const handleGenerate = async () => {
@@ -450,7 +465,15 @@ export default function BlogGeneratorPage() {
       const res = await fetch('/api/generate-blog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examName, subject, concept, grade, shortcutDetails, additionalInstructions }),
+        body: JSON.stringify({
+          examName,
+          subject: showCustomSubject ? customSubject : subject,
+          concept,
+          grade,
+          shortcutDetails,
+          additionalInstructions,
+          blogStyle
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -459,6 +482,41 @@ export default function BlogGeneratorPage() {
         setTimeout(() => blogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
       } else {
         setError(data.error || 'Generation failed.');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateFromText = async () => {
+    if (!rawText.trim() || rawText.trim().length < 20) {
+      setError('Please paste at least a few sentences of text.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setBlog(null);
+    setSaveStatus(null);
+    try {
+      const res = await fetch('/api/generate-blog-from-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText,
+          examName: textExamName,
+          additionalInstructions: textInstructions,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBlog(data.blog);
+        setUsage(data.usage || null);
+        setTimeout(() => blogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      } else {
+        setError(data.error || 'Generation failed.');
+        if (data.rawOutput) console.log('Raw AI output:', data.rawOutput);
       }
     } catch (err) {
       setError('Network error: ' + err.message);
@@ -485,14 +543,15 @@ export default function BlogGeneratorPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           blogJson: blog,
-          examName,
-          subject,
-          concept,
-          grade,
+          examName: mode === 'text' ? textExamName : examName,
+          subject: mode === 'text' ? (blog.seo?.tags?.[0] || 'general') : subject,
+          concept: mode === 'text' ? (blog.seo?.focusKeyword || blog.hero?.headline || 'Unstructured Content') : concept,
+          grade: mode === 'text' ? '6' : grade,
           usage,
         }),
       });
       const data = await res.json();
+
       if (data.success) {
         setSaveStatus({ slug: data.slug, url: data.blogUrl });
       } else {
@@ -565,6 +624,38 @@ export default function BlogGeneratorPage() {
           font-size: 1rem;
           color: #c4b5fd;
           margin: 0;
+        }
+
+        /* ── MODE TABS ── */
+        .bg-mode-tabs {
+          max-width: 900px;
+          margin: -16px auto 0;
+          position: relative;
+          z-index: 11;
+          display: flex;
+          gap: 0;
+          padding: 0 4px;
+        }
+        .bg-mode-tab {
+          padding: 10px 22px;
+          font-size: 0.88rem;
+          font-weight: 700;
+          font-family: inherit;
+          cursor: pointer;
+          border: 1px solid #e2e8f0;
+          border-bottom: none;
+          background: #f1f5f9;
+          color: #64748b;
+          border-radius: 10px 10px 0 0;
+          transition: all 0.15s ease;
+        }
+        .bg-mode-tab:first-child { margin-right: 4px; }
+        .bg-mode-tab:hover:not(.active) { background: #e2e8f0; color: #334155; }
+        .bg-mode-tab.active {
+          background: white;
+          color: #6d28d9;
+          border-color: #e2e8f0;
+          box-shadow: 0 -2px 0 0 #7c3aed inset;
         }
 
         /* ── FORM CARD ── */
@@ -1438,7 +1529,24 @@ export default function BlogGeneratorPage() {
         <p>Generate a full-length, math-rich, SEO-optimized educational blog post with Gemini AI</p>
       </div>
 
-      {/* ── FORM ── */}
+      {/* ── MODE TABS ── */}
+      <div className="bg-mode-tabs no-print">
+        <button
+          className={`bg-mode-tab ${mode === 'keyword' ? 'active' : ''}`}
+          onClick={() => { setMode('keyword'); setError(''); }}
+        >
+          🔧 Keyword Mode
+        </button>
+        <button
+          className={`bg-mode-tab ${mode === 'text' ? 'active' : ''}`}
+          onClick={() => { setMode('text'); setError(''); }}
+        >
+          ✨ Generate from Text
+        </button>
+      </div>
+
+      {/* ── FORM: KEYWORD MODE ── */}
+      {mode === 'keyword' && (
       <div className="bg-form-card no-print">
         <div className="bg-form-title">🔧 Configure Your Blog Post</div>
         <div className="bg-form-grid">
@@ -1447,15 +1555,34 @@ export default function BlogGeneratorPage() {
             <input value={examName} onChange={e => setExamName(e.target.value)} placeholder="e.g. JNVST 2026, NTSE 2026" />
           </div>
           <div className="bg-field">
-            <label>Subject</label>
-            <select value={subject} onChange={e => setSubject(e.target.value)}>
-              <option>Mathematics</option>
-              <option>Science</option>
-              <option>Physics</option>
-              <option>Chemistry</option>
-              <option>Biology</option>
-              <option>English</option>
-            </select>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <label style={{ margin: 0 }}>Subject</label>
+              <button 
+                type="button" 
+                onClick={() => setShowCustomSubject(!showCustomSubject)} 
+                style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', padding: 0 }}
+              >
+                {showCustomSubject ? '← Standard List' : '✍️ Custom Subject'}
+              </button>
+            </div>
+            {showCustomSubject ? (
+              <input 
+                type="text" 
+                value={customSubject} 
+                onChange={e => setCustomSubject(e.target.value)} 
+                placeholder="e.g. Exam Guidance / Overview" 
+                autoFocus 
+              />
+            ) : (
+              <select value={subject} onChange={e => setSubject(e.target.value)}>
+                <option>Mathematics</option>
+                <option>Science</option>
+                <option>Physics</option>
+                <option>Chemistry</option>
+                <option>Biology</option>
+                <option>English</option>
+              </select>
+            )}
           </div>
           <div className="bg-field">
             <label>Grade Level</label>
@@ -1464,16 +1591,47 @@ export default function BlogGeneratorPage() {
             </select>
           </div>
           <div className="bg-field bg-field-full">
-            <label>Concept / Topic</label>
-            <input value={concept} onChange={e => setConcept(e.target.value)} placeholder="e.g. Fractions, Linear Equations, Photosynthesis" />
+            <label style={{ marginBottom: 2 }}>Blog Format / Style</label>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, margin: 0, color: '#334155' }}>
+                <input 
+                  type="radio" 
+                  name="blogStyle" 
+                  value="tutorial" 
+                  checked={blogStyle === 'tutorial'} 
+                  onChange={() => setBlogStyle('tutorial')} 
+                  style={{ width: 'auto', margin: 0, cursor: 'pointer' }}
+                />
+                🎓 Concept Tutorial (with Examples & Practice)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, margin: 0, color: '#334155' }}>
+                <input 
+                  type="radio" 
+                  name="blogStyle" 
+                  value="guide" 
+                  checked={blogStyle === 'guide'} 
+                  onChange={() => setBlogStyle('guide')} 
+                  style={{ width: 'auto', margin: 0, cursor: 'pointer' }}
+                />
+                📖 General Guide / Overview (Details & Strategy)
+              </label>
+            </div>
           </div>
           <div className="bg-field bg-field-full">
-            <label>Shortcut / Technique to Explain</label>
+            <label>{blogStyle === 'guide' ? 'Guide Topic / Focus' : 'Concept / Topic'}</label>
+            <input 
+              value={concept} 
+              onChange={e => setConcept(e.target.value)} 
+              placeholder={blogStyle === 'guide' ? "e.g. JNVST 2026 Syllabus, Exam Pattern, and Marks Distribution" : "e.g. Fractions, Linear Equations, Photosynthesis"} 
+            />
+          </div>
+          <div className="bg-field bg-field-full">
+            <label>{blogStyle === 'guide' ? 'Key Highlights / Strategies to Detail' : 'Shortcut / Technique to Explain'}</label>
             <textarea
               value={shortcutDetails}
               onChange={e => setShortcutDetails(e.target.value)}
               rows={2}
-              placeholder="e.g. Butterfly method for adding fractions, cross-multiplication without finding LCM"
+              placeholder={blogStyle === 'guide' ? "e.g. Strategic time-management hacks, marks distribution tables, omission tactics..." : "e.g. Butterfly method for adding fractions, cross-multiplication without finding LCM"}
             />
           </div>
           <div className="bg-field bg-field-full">
@@ -1514,6 +1672,96 @@ export default function BlogGeneratorPage() {
 
         {error && <div className="bg-error">⚠️ {error}</div>}
         {saveError && <div className="bg-error">⚠️ Save failed: {saveError}</div>}
+      </div>
+      )}
+
+      {/* ── FORM: GENERATE FROM TEXT MODE ── */}
+      {mode === 'text' && (
+      <div className="bg-form-card no-print">
+        <div className="bg-form-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>✨ Generate Blog from Raw Text</span>
+          <span style={{ fontSize: '0.72rem', background: '#ede9fe', color: '#6d28d9', padding: '2px 10px', borderRadius: 9999, fontWeight: 700 }}>Gemini Vertex AI</span>
+        </div>
+        <p style={{ fontSize: '0.88rem', color: '#64748b', margin: '-8px 0 16px' }}>
+          Paste your raw notes, bullet points, textbook content, or any unstructured text — Gemini will transform it into a full SEO-optimised blog post.
+        </p>
+
+        <div className="bg-form-grid">
+          <div className="bg-field">
+            <label>Exam Context</label>
+            <input
+              value={textExamName}
+              onChange={e => setTextExamName(e.target.value)}
+              placeholder="e.g. JNVST 2026, IMO Grade 6"
+            />
+          </div>
+          <div className="bg-field">
+            <label>Additional Instructions (Optional)</label>
+            <input
+              value={textInstructions}
+              onChange={e => setTextInstructions(e.target.value)}
+              placeholder="e.g. Focus on shortcuts, add Telugu student context"
+            />
+          </div>
+          <div className="bg-field bg-field-full">
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Your Raw Text / Notes</span>
+              <span style={{ fontSize: '0.75rem', color: rawText.length < 20 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                {rawText.length} chars {rawText.length >= 20 ? '✓' : '(min 20)'}
+              </span>
+            </label>
+            <textarea
+              value={rawText}
+              onChange={e => setRawText(e.target.value)}
+              rows={10}
+              placeholder={`Paste any raw text here. For example:
+
+- LCM stands for Lowest Common Multiple
+- To find LCM of 12 and 18: list multiples of each
+  - 12: 12, 24, 36, 48...
+  - 18: 18, 36, 54...
+  - First common = 36, so LCM = 36
+- Short trick: LCM = (a × b) / HCF(a, b)
+- Appears in JNVST Section 1 almost every year
+- Common mistake: confusing LCM with HCF`}
+              style={{ minHeight: 220, fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: 1.6, letterSpacing: 0 }}
+            />
+          </div>
+        </div>
+
+        <div className="bg-generate-row">
+          <button
+            onClick={handleGenerateFromText}
+            disabled={loading || rawText.trim().length < 20}
+            className="bg-generate-btn"
+            style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #7c3aed, #4f46e5)', boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}
+          >
+            {loading
+              ? <><span className="bg-spinner" /> Generating from Text…</>
+              : '🤖 Generate Blog with Gemini AI'}
+          </button>
+
+          {blog && (
+            <button
+              onClick={handleSaveToDb}
+              disabled={savingToDb}
+              className="bg-generate-btn"
+              style={{ background: savingToDb ? '#94a3b8' : 'linear-gradient(135deg,#059669,#0d9488)', boxShadow: '0 4px 14px rgba(5,150,105,0.35)' }}
+            >
+              {savingToDb ? <><span className="bg-spinner" /> Saving…</> : '💾 Save to DB'}
+            </button>
+          )}
+
+          {usage && (
+            <span className="bg-usage-chip">
+              ⚡ {usage.totalTokens?.toLocaleString()} tokens
+            </span>
+          )}
+          {blog && <button onClick={handleCopyJson} className="bg-action-btn">📦 Copy JSON</button>}
+        </div>
+
+        {error && <div className="bg-error">⚠️ {error}</div>}
+        {saveError && <div className="bg-error">⚠️ Save failed: {saveError}</div>}
 
         {/* ── SAVED BANNER ── */}
         {saveStatus && (
@@ -1538,6 +1786,7 @@ export default function BlogGeneratorPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* ── LOADING SKELETON ── */}
       {loading && (
@@ -1551,11 +1800,12 @@ export default function BlogGeneratorPage() {
       )}
 
       {/* ── BLOG OUTPUT ── */}
+      {/* ── BLOG OUTPUT & INTERACTIVE METADATA/TAGS EDITOR ── */}
       {blog && !loading && (
-        <div className="bg-blog-wrap" ref={blogRef}>
+        <div className="bg-blog-wrap" ref={blogRef} style={{ width: '100%', maxWidth: '1440px', margin: '0 auto', padding: '0 24px 60px' }}>
           {/* Action strip above the blog preview */}
-          <div className="bg-blog-action-strip no-print">
-            <span className="bg-blog-action-label">📄 Blog Preview</span>
+          <div className="bg-blog-action-strip no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', background: '#ffffff', padding: '16px 24px', borderRadius: '16px', border: '1px solid #cbd5e1' }}>
+            <span className="bg-blog-action-label" style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>📄 Interactive Blog Publisher</span>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 onClick={handleSaveToDb}
@@ -1588,7 +1838,220 @@ export default function BlogGeneratorPage() {
               <button onClick={handlePrint} className="bg-action-btn" style={{ fontSize: '0.85rem' }}>🖨️ Print</button>
             </div>
           </div>
-          <BlogRenderer blog={blog} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '32px', alignItems: 'start' }}>
+            
+            {/* Left Column: Metadata & Exam Tags Editor Panel */}
+            <div className="no-print" style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #cbd5e1', padding: '24px', position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>✏️ Blog Meta &amp; Exam Tags Editor</span>
+              </h3>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Headline</label>
+                <input
+                  type="text"
+                  value={blog.hero?.headline || ''}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setBlog(prev => ({
+                      ...prev,
+                      hero: { ...prev.hero, headline: val },
+                      seo: { ...prev.seo, title: val }
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Subheadline</label>
+                <textarea
+                  rows={2}
+                  value={blog.hero?.subheadline || ''}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setBlog(prev => ({
+                      ...prev,
+                      hero: { ...prev.hero, subheadline: val }
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>SEO Slug</label>
+                <input
+                  type="text"
+                  value={blog.seo?.slug || ''}
+                  onChange={e => {
+                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+                    setBlog(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, slug: val }
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem', fontFamily: 'monospace' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>SEO Meta Description</label>
+                <textarea
+                  rows={3}
+                  value={blog.seo?.metaDescription || ''}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setBlog(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, metaDescription: val }
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>🏷️ Exam Tags Selector</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {['jnvst', 'imo', 'nso', 'mat', 'math', 'fractions', 'ratios', 'time-distance', 'simplification', 'english'].map(tag => {
+                    const existingTags = blog.seo?.tags || [];
+                    const isSelected = existingTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          const updated = isSelected
+                            ? existingTags.filter(t => t !== tag)
+                            : [...existingTags, tag];
+                          setBlog(prev => ({
+                            ...prev,
+                            seo: { ...prev.seo, tags: updated }
+                          }));
+                        }}
+                        style={{
+                          background: isSelected ? '#ede9fe' : '#f1f5f9',
+                          border: `1px solid ${isSelected ? '#8b5cf6' : '#cbd5e1'}`,
+                          color: isSelected ? '#6d28d9' : '#475569',
+                          borderRadius: '16px',
+                          padding: '4px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.1s'
+                        }}
+                      >
+                        {isSelected ? '✓ ' : ''}{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Custom comma-separated tags..."
+                  value={(blog.seo?.tags || []).join(', ')}
+                  onChange={e => {
+                    const val = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                    setBlog(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, tags: val }
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Focus Keyword</label>
+                <input
+                  type="text"
+                  value={blog.seo?.focusKeyword || ''}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setBlog(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, focusKeyword: val }
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem' }}
+                />
+              </div>
+            </div>
+
+            {/* Right Column: Preview / Toggle Mode Panel */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+              
+              {/* Tab Selector */}
+              <div className="no-print" style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', gap: '4px', border: '1px solid #cbd5e1' }}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('render')}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    background: previewMode === 'render' ? '#ffffff' : 'transparent',
+                    color: previewMode === 'render' ? '#0f172a' : '#64748b',
+                    boxShadow: previewMode === 'render' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.1s'
+                  }}
+                >
+                  👁️ Student Preview Render
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('json')}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    background: previewMode === 'json' ? '#ffffff' : 'transparent',
+                    color: previewMode === 'json' ? '#0f172a' : '#64748b',
+                    boxShadow: previewMode === 'json' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.1s'
+                  }}
+                >
+                  ⚙️ Raw JSON Editor
+                </button>
+              </div>
+
+              {previewMode === 'render' ? (
+                <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #cbd5e1', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                  <BlogRenderer blog={blog} />
+                </div>
+              ) : (
+                <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #cbd5e1', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#475569', marginBottom: '8px' }}>
+                    Raw Structure JSON Editor (Direct edits immediately sync to preview and database saves)
+                  </label>
+                  <textarea
+                    rows={30}
+                    value={JSON.stringify(blog, null, 2)}
+                    onChange={e => {
+                      try {
+                        const parsed = JSON.parse(e.target.value);
+                        setBlog(parsed);
+                      } catch (err) {
+                        // Keep text as-is but don't parse invalid JSON
+                      }
+                    }}
+                    style={{ width: '100%', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: 1.5, background: '#0f172a', color: '#38bdf8' }}
+                  />
+                </div>
+              )}
+
+            </div>
+          </div>
         </div>
       )}
     </div>

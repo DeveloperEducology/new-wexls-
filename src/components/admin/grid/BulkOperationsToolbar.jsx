@@ -117,6 +117,8 @@ export default function BulkOperationsToolbar({
   };
 
   // 4. Bulk AI Generate Explanations
+  const [explanationStyle, setExplanationStyle] = useState('auto');
+
   const handleBulkExplanations = async () => {
     const targetIndices = getTargetRowIndices();
     const targetRows = targetIndices.map(i => rows[i]);
@@ -131,17 +133,13 @@ export default function BulkOperationsToolbar({
         body: JSON.stringify({
           action: 'generate_explanation',
           columns,
-          seedRows: targetRows
+          seedRows: targetRows,
+          explanationStyle
         })
       });
 
       const data = await res.json();
       if (!data.success || !data.rows) throw new Error(data.error || 'Explanation generation failed');
-
-      // Ensure explanation column exists in columns schema
-      if (!columns.includes('explanation') && !columns.includes('solution')) {
-        // Automatically add explanation column if missing
-      }
 
       const updated = [...rows];
       targetIndices.forEach((origIdx, i) => {
@@ -151,7 +149,7 @@ export default function BulkOperationsToolbar({
       });
 
       setRows(updated);
-      setStatusMsg(`💡 Generated solution explanations for ${targetIndices.length} rows!`);
+      setStatusMsg(`💡 Generated (${explanationStyle.toUpperCase()}) solution explanations for ${targetIndices.length} rows!`);
     } catch (err) {
       console.error(err);
       setStatusMsg(`Error: ${err.message}`);
@@ -239,13 +237,51 @@ export default function BulkOperationsToolbar({
             🌐 Translate
           </button>
 
-          <button
-            onClick={handleBulkExplanations}
-            disabled={loading}
-            style={{ background: '#fff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}
-          >
-            💡 Gen Explanations
-          </button>
+          {/* Explanation Style Selector + Action Button Group */}
+          <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <select
+              value={explanationStyle}
+              onChange={(e) => setExplanationStyle(e.target.value)}
+              style={{
+                background: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fde68a',
+                borderRight: 'none',
+                padding: '6px 8px',
+                borderRadius: '8px 0 0 8px',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+              title="Select explanation style/archetype"
+            >
+              <option value="auto">🤖 Auto-Detect Style</option>
+              <option value="evs">🌱 Science & EVS (Mechanism + Fun Fact)</option>
+              <option value="passage">📖 Passage Evidence (Story Quote + Trap)</option>
+              <option value="math">🔢 Math & Logic (Step-by-Step Solve)</option>
+              <option value="social">🏛️ GK & Social (Fact + Memory Hook)</option>
+              <option value="concise">⚡ Short & Crisp (2-Line Summary)</option>
+            </select>
+
+            <button
+              onClick={handleBulkExplanations}
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '6px 14px',
+                borderRadius: '0 8px 8px 0',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              {loading ? '⏳ Generating...' : '💡 Gen Explanations'}
+            </button>
+          </div>
 
           {/* Difficulty Dropdown */}
           <select

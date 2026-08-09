@@ -6,6 +6,7 @@ import { getOrCreateProfile } from '../../../../lib/exam/profile-store.js';
 import { getMongoDb } from '../../../../lib/db/mongo.js';
 import { resolveUserId } from '../../../../lib/auth/getAuthUser.js';
 import { normalizeQuestion } from '../../../../lib/exam/question-schema.js';
+import { sanitizeLatexMathText } from '../../../../lib/practice/generators/latexSanitizer.js';
 
 const INITIAL_THETA = 0.5;
 const DEFAULT_SESSION_LENGTH = 15;
@@ -74,7 +75,10 @@ export async function POST(req) {
     const isPremium = profile?.isPremium === true || profile?.plan === 'premium' || profile?.plan === 'pro';
 
     // ── AUTO-GENERATE / FETCH candidates ─────────────
-    if ((!isPyq || templateId) && candidates.length < MIN_QUESTIONS_NEEDED) {
+    if (templateId) {
+      const generated = await generateFromTemplates({ examId, section: targetSection, topic, templateId });
+      if (generated.length > 0) candidates = generated;
+    } else if (!isPyq && candidates.length < MIN_QUESTIONS_NEEDED) {
       const generated = await generateFromTemplates({ examId, section: targetSection, topic, templateId });
       if (generated.length > 0) {
         if (isPremium) {
@@ -88,8 +92,12 @@ export async function POST(req) {
       }
     }
 
-    // Dynamic session length: PYQs use all available questions, adaptive uses default
-    const sessionLength = isPyq ? (candidates.length || DEFAULT_SESSION_LENGTH) : DEFAULT_SESSION_LENGTH;
+    // Dynamic session length: Template drills use at least 10 questions, PYQs use total candidates length
+    const sessionLength = isPyq
+      ? (candidates.length || DEFAULT_SESSION_LENGTH)
+      : templateId
+      ? Math.max(candidates.length || 0, 10)
+      : DEFAULT_SESSION_LENGTH;
 
     // Create session (sessionLength persisted so answer API can read it)
     const session = await createSession({
@@ -103,7 +111,7 @@ export async function POST(req) {
       sessionLength,
     });
 
-    const firstQuestion = selectNextQuestion(theta, profile?.topicMastery || {}, candidates);
+    const firstQuestion = (templateId && candidates.length > 0) ? candidates[0] : selectNextQuestion(theta, profile?.topicMastery || {}, candidates);
 
     if (!firstQuestion) {
       return NextResponse.json(
@@ -132,22 +140,39 @@ export async function POST(req) {
 
 function sanitizeQuestion(q) {
   const n = normalizeQuestion(q);
+  const rawPrompt = n.questionText || n.questionPrompt || '';
+  const fixedPrompt = sanitizeLatexMathText(rawPrompt);
+
+  const rawOptions = n.options || [];
+  const fixedOptions = Array.isArray(rawOptions)
+    ? rawOptions.map(opt => typeof opt === 'string' ? sanitizeLatexMathText(opt) : (opt?.label ? { ...opt, label: sanitizeLatexMathText(opt.label) } : opt))
+    : (typeof rawOptions === 'object' && rawOptions !== null)
+    ? Object.fromEntries(Object.entries(rawOptions).map(([k, v]) => [k, typeof v === 'string' ? sanitizeLatexMathText(v) : v]))
+    : rawOptions;
+
+  const fixedExplanation = typeof n.explanation === 'string'
+    ? sanitizeLatexMathText(n.explanation)
+    : n.explanation;
+
   return {
-    id: String(n._id),
-    questionText:       n.questionText,
-    questionImageUrl:   n.questionImageUrl,
-    questionImageCrop:  n.questionImageCrop,
-    options:            n.options,
-    optionsImages:      n.optionsImages,
+    id: String(n._id || n.id),
+    questionText: fixedPrompt,
+    questionPrompt: fixedPrompt,
+    questionImageUrl: n.questionImageUrl,
+    questionImageCrop: n.questionImageCrop,
+    options: fixedOptions,
+    optionsImages: n.optionsImages,
     optionsImagesCrops: n.optionsImagesCrops,
-    parts:              n.parts,
-    questionMode:       n.questionMode,
-    topic:              n.topic,
-    difficulty:         n.difficulty,
-    section:            n.section,
-    cognitiveLevel:     n.cognitiveLevel,
-    metadata:           n.metadata,
-    drillTemplateId:    n.drillTemplateId,
+    explanation: fixedExplanation,
+    parts: n.parts,
+    questionMode: n.questionMode,
+    topic: n.topic,
+    difficulty: q?.difficulty || n.difficulty,
+    level: q?.level || n.level,
+    section: n.section,
+    cognitiveLevel: n.cognitiveLevel,
+    metadata: n.metadata,
+    drillTemplateId: n.drillTemplateId,
   };
 }
 

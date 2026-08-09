@@ -23,6 +23,15 @@ function readFilters(request) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // ── One-time seeder: ?seed=jnvst-number-system ──────────────────────────
+    if (searchParams.get('seed') === 'jnvst-number-system') {
+      const { seedJnvstNumberSystem } = await import('@/lib/curriculum/seedJnvstNumberSystem.js');
+      const results = await seedJnvstNumberSystem();
+      const failed = results.filter(r => r.status !== 'ok');
+      return NextResponse.json({ success: failed.length === 0, results });
+    }
+
     const filters = readFilters(request);
 
     if (searchParams.get('tree') === 'true') {
@@ -37,6 +46,7 @@ export async function GET(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
 
 export async function POST(request) {
   try {

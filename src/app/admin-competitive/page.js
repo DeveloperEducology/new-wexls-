@@ -11,16 +11,18 @@ import FramedImage from '../../components/common/FramedImage';
 
 function parseMathAndText(text) {
   if (!text) return '';
-  const trimmed = typeof text === 'string' ? text.trim() : '';
+  let str = typeof text === 'string' ? text : String(text);
+  str = str.replace(/\\n/g, '\n').replace(/\/n/g, '\n');
+  const trimmed = str.trim();
   if (trimmed.startsWith('<svg') || trimmed.startsWith('<div')) {
     return (
       <div
-        dangerouslySetInnerHTML={{ __html: text }}
+        dangerouslySetInnerHTML={{ __html: str }}
         style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center', padding: '4px' }}
       />
     );
   }
-  const parts = text.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
+  const parts = str.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g);
   return parts.map((part, i) => {
     if (part.startsWith('\\(') && part.endsWith('\\)')) {
       const formula = part.slice(2, -2);
@@ -50,6 +52,7 @@ function parseMathAndText(text) {
     let processed = part;
     processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    processed = processed.replace(/\n/g, '<br />');
     return <span key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
   });
 }
@@ -1507,7 +1510,7 @@ export default function AdminCompetitivePage() {
       {/* QUESTION FORM MODAL (CREATE / EDIT / DUPLICATE WITH IMAGE UPLOADER & CROPPER) */}
       {showQuestionModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '800px', maxHeight: '92vh', overflowY: 'auto', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '1300px', maxHeight: '92vh', overflowY: 'auto', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {editingQuestionId ? '✏️ Edit Question' : '➕ Create New Question'}
@@ -1515,303 +1518,443 @@ export default function AdminCompetitivePage() {
               <button onClick={() => setShowQuestionModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
             </div>
 
-            <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              {/* Row 1: Exam ID, Section, Q. Number */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Exam ID</label>
-                  <select
-                    value={questionFormData.examId}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, examId: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
-                  >
-                    <option value="jnvst">JNVST Class 6</option>
-                    <option value="imo">IMO Olympiad</option>
-                    <option value="nso">NSO Olympiad</option>
-                  </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '32px', alignItems: 'start' }}>
+              {/* Left Column: Form Fields */}
+              <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* Row 1: Exam ID, Section, Q. Number */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Exam ID</label>
+                    <select
+                      value={questionFormData.examId}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, examId: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                    >
+                      <option value="jnvst">JNVST Class 6</option>
+                      <option value="imo">IMO Olympiad</option>
+                      <option value="nso">NSO Olympiad</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Section</label>
+                    <select
+                      value={questionFormData.section}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, section: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                    >
+                      <option value="mat">Mental Ability (MAT)</option>
+                      <option value="evs">Environmental Studies (EVS)</option>
+                      <option value="arithmetic">Arithmetic (Math)</option>
+                      <option value="language">Language (Reading)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Q. Number</label>
+                    <input
+                      type="number"
+                      value={questionFormData.qNumber}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, qNumber: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                      required
+                    />
+                  </div>
                 </div>
 
+                {/* Row 2: Question Text */}
                 <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Section</label>
-                  <select
-                    value={questionFormData.section}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, section: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
-                  >
-                    <option value="mat">Mental Ability (MAT)</option>
-                    <option value="arithmetic">Arithmetic (Math)</option>
-                    <option value="language">Language (Reading)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Q. Number</label>
-                  <input
-                    type="number"
-                    value={questionFormData.qNumber}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, qNumber: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 700 }}
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Question Text (KaTeX &amp; SVG Enabled)</label>
+                  <textarea
+                    rows={2}
+                    value={questionFormData.questionText}
+                    onChange={(e) => setQuestionFormData({ ...questionFormData, questionText: e.target.value })}
+                    placeholder="Enter question text or KaTeX formula e.g. What is $\frac{13}{4}$? or <svg>..."
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.95rem' }}
                     required
                   />
                 </div>
-              </div>
 
-              {/* Row 2: Question Text */}
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Question Text (KaTeX &amp; SVG Enabled)</label>
-                <textarea
-                  rows={2}
-                  value={questionFormData.questionText}
-                  onChange={(e) => setQuestionFormData({ ...questionFormData, questionText: e.target.value })}
-                  placeholder="Enter question text or KaTeX formula e.g. What is $\frac{13}{4}$? or <svg>..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.95rem' }}
-                  required
-                />
-              </div>
-
-              {/* Question Image / R2 Storage Path Upload & Crop */}
-              <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '14px', border: '1px dashed #cbd5e1' }}>
-                <label style={{ fontSize: '0.84rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  🖼️ Question Figure Image (Crop &amp; Upload to R2 Storage)
-                </label>
-
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    placeholder="R2 Storage Path URL e.g. https://.../jnvst-questions/q1.png"
-                    value={questionFormData.questionImage}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, questionImage: e.target.value })}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
-                  />
-
-                  {/* Crop & Upload Button */}
-                  <label style={{ background: '#10b981', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    ✂️ Crop &amp; Upload
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) => handleSelectFileForCropper(e.target.files[0], 'questionImage')}
-                    />
+                {/* Question Image / R2 Storage Path Upload & Crop */}
+                <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '14px', border: '1px dashed #cbd5e1' }}>
+                  <label style={{ fontSize: '0.84rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    🖼️ Question Figure Image (Crop &amp; Upload to R2 Storage)
                   </label>
 
-                  {/* Direct Upload Button */}
-                  <label style={{ background: '#4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                    {uploadingTarget === 'questionImage' ? 'Uploading...' : '📁 Direct Upload'}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) => handleFileUpload(e.target.files[0], 'questionImage')}
+                      type="text"
+                      placeholder="R2 Storage Path URL e.g. https://.../jnvst-questions/q1.png"
+                      value={questionFormData.questionImage}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, questionImage: e.target.value })}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
                     />
-                  </label>
 
-                  {/* Frame / Mask Image Button */}
+                    {/* Crop & Upload Button */}
+                    <label style={{ background: '#10b981', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      ✂️ Crop &amp; Upload
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleSelectFileForCropper(e.target.files[0], 'questionImage')}
+                      />
+                    </label>
+
+                    {/* Direct Upload Button */}
+                    <label style={{ background: '#4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                      {uploadingTarget === 'questionImage' ? 'Uploading...' : '📁 Direct Upload'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e.target.files[0], 'questionImage')}
+                      />
+                    </label>
+
+                    {/* Frame / Mask Image Button */}
+                    {questionFormData.questionImage && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenFramingModal(
+                          questionFormData.questionImage,
+                          questionFormData.questionImageCrop,
+                          (newCrop) => setQuestionFormData(prev => ({ ...prev, questionImageCrop: newCrop }))
+                        )}
+                        style={{ background: '#0284c7', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        📐 Frame / Mask Image
+                      </button>
+                    )}
+                  </div>
+
                   {questionFormData.questionImage && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenFramingModal(
-                        questionFormData.questionImage,
-                        questionFormData.questionImageCrop,
-                        (newCrop) => setQuestionFormData(prev => ({ ...prev, questionImageCrop: newCrop }))
+                    <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <img src={questionFormData.questionImage} alt="Question figure preview" style={{ maxHeight: '80px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                      {questionFormData.questionImageCrop && (
+                        <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 700, background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>
+                          Framed ({questionFormData.questionImageCrop.width.toFixed(1)}% × {questionFormData.questionImageCrop.height.toFixed(1)}%)
+                        </span>
                       )}
-                      style={{ background: '#0284c7', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      📐 Frame / Mask Image
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuestionFormData({ ...questionFormData, questionImage: '', questionImageCrop: null })}
+                        style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {questionFormData.questionImage && (
-                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img src={questionFormData.questionImage} alt="Question figure preview" style={{ maxHeight: '80px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                    {questionFormData.questionImageCrop && (
-                      <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 700, background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>
-                        Framed ({questionFormData.questionImageCrop.width.toFixed(1)}% × {questionFormData.questionImageCrop.height.toFixed(1)}%)
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setQuestionFormData({ ...questionFormData, questionImage: '', questionImageCrop: null })}
-                      style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-              </div>
+                {/* Options A, B, C, D with text, crop & image inputs */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  {['A', 'B', 'C', 'D'].map(letter => {
+                    const textKey = `option${letter}`;
+                    const imgKey = `option${letter}Image`;
+                    const cropKey = `option${letter}ImageCrop`;
+                    const hasImage = Boolean(questionFormData[imgKey]);
 
-              {/* Options A, B, C, D with text, crop & image inputs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                {['A', 'B', 'C', 'D'].map(letter => {
-                  const textKey = `option${letter}`;
-                  const imgKey = `option${letter}Image`;
-                  const cropKey = `option${letter}ImageCrop`;
-                  const hasImage = Boolean(questionFormData[imgKey]);
+                    return (
+                      <div key={letter} style={{ background: hasImage ? '#f0f9ff' : '#f8fafc', padding: '12px', borderRadius: '12px', border: `1px solid ${hasImage ? '#bae6fd' : '#e2e8f0'}` }}>
+                        <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          Option {letter}
+                          {hasImage && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px' }}>Image only — text optional</span>}
+                        </label>
 
-                  return (
-                    <div key={letter} style={{ background: hasImage ? '#f0f9ff' : '#f8fafc', padding: '12px', borderRadius: '12px', border: `1px solid ${hasImage ? '#bae6fd' : '#e2e8f0'}` }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                        Option {letter}
-                        {hasImage && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px' }}>Image only — text optional</span>}
-                      </label>
-
-                      <input
-                        type="text"
-                        placeholder={hasImage ? `(optional — image will be used)` : `Option ${letter} Text or <svg>...`}
-                        value={questionFormData[textKey]}
-                        onChange={(e) => setQuestionFormData({ ...questionFormData, [textKey]: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '6px', fontSize: '0.88rem', opacity: hasImage ? 0.6 : 1 }}
-                        required={!hasImage}
-                      />
-
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <input
                           type="text"
-                          placeholder="Image R2 URL (optional)"
-                          value={questionFormData[imgKey]}
-                          onChange={(e) => setQuestionFormData({ ...questionFormData, [imgKey]: e.target.value })}
-                          style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}
+                          placeholder={hasImage ? `(optional — image will be used)` : `Option ${letter} Text or <svg>...`}
+                          value={questionFormData[textKey]}
+                          onChange={(e) => setQuestionFormData({ ...questionFormData, [textKey]: e.target.value })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '6px', fontSize: '0.88rem', opacity: hasImage ? 0.6 : 1 }}
+                          required={!hasImage}
                         />
 
-                        {/* Crop Button for Option Image */}
-                        <label style={{ background: '#10b981', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                          ✂️ Crop
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            onChange={(e) => handleSelectFileForCropper(e.target.files[0], imgKey)}
+                            type="text"
+                            placeholder="Image R2 URL (optional)"
+                            value={questionFormData[imgKey]}
+                            onChange={(e) => setQuestionFormData({ ...questionFormData, [imgKey]: e.target.value })}
+                            style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}
                           />
-                        </label>
 
-                        {/* Direct Upload Button */}
-                        <label style={{ background: '#64748b', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                          📁 File
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            onChange={(e) => handleFileUpload(e.target.files[0], imgKey)}
-                          />
-                        </label>
+                          {/* Crop Button for Option Image */}
+                          <label style={{ background: '#10b981', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            ✂️ Crop
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleSelectFileForCropper(e.target.files[0], imgKey)}
+                            />
+                          </label>
 
-                        {/* Frame / Mask Button for Option Image */}
-                        {questionFormData[imgKey] && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFramingModal(
-                              questionFormData[imgKey],
-                              questionFormData[cropKey],
-                              (newCrop) => setQuestionFormData(prev => ({ ...prev, [cropKey]: newCrop }))
-                            )}
-                            style={{ background: '#0284c7', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                            title="Frame / Mask option image"
-                          >
-                            📐 Frame
-                          </button>
-                        )}
-                      </div>
+                          {/* Direct Upload Button */}
+                          <label style={{ background: '#64748b', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            📁 File
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleFileUpload(e.target.files[0], imgKey)}
+                            />
+                          </label>
 
-                      {questionFormData[imgKey] && (
-                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <img src={questionFormData[imgKey]} alt={`Option ${letter}`} style={{ maxHeight: '50px', borderRadius: '4px' }} />
-                          {questionFormData[cropKey] && (
-                            <span style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 700, background: '#e0f2fe', padding: '2px 6px', borderRadius: '4px' }}>
-                              Framed ({questionFormData[cropKey].width.toFixed(1)}% × {questionFormData[cropKey].height.toFixed(1)}%)
-                            </span>
+                          {/* Frame / Mask Button for Option Image */}
+                          {questionFormData[imgKey] && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenFramingModal(
+                                questionFormData[imgKey],
+                                questionFormData[cropKey],
+                                (newCrop) => setQuestionFormData(prev => ({ ...prev, [cropKey]: newCrop }))
+                              )}
+                              style={{ background: '#0284c7', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              title="Frame / Mask option image"
+                            >
+                              📐 Frame
+                            </button>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
 
-              {/* PYQ Metadata & Tags Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px', background: '#f1f5f9', padding: '12px', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="checkbox"
-                    id="isPYQ"
-                    checked={questionFormData.isPYQ}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, isPYQ: e.target.checked })}
-                    style={{ width: '18px', height: '18px' }}
-                  />
-                  <label htmlFor="isPYQ" style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155' }}>
-                    🏆 Official PYQ
-                  </label>
+                        {questionFormData[imgKey] && (
+                          <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <img src={questionFormData[imgKey]} alt={`Option ${letter}`} style={{ maxHeight: '50px', borderRadius: '4px' }} />
+                            {questionFormData[cropKey] && (
+                              <span style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 700, background: '#e0f2fe', padding: '2px 6px', borderRadius: '4px' }}>
+                                Framed ({questionFormData[cropKey].width.toFixed(1)}% × {questionFormData[cropKey].height.toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '2px' }}>PYQ Year</label>
-                  <input
-                    type="number"
-                    value={questionFormData.pyqYear}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, pyqYear: e.target.value })}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 700 }}
-                  />
+                {/* PYQ Metadata & Tags Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px', background: '#f1f5f9', padding: '12px', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      id="isPYQ"
+                      checked={questionFormData.isPYQ}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, isPYQ: e.target.checked })}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <label htmlFor="isPYQ" style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155' }}>
+                      🏆 Official PYQ
+                    </label>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '2px' }}>PYQ Year</label>
+                    <input
+                      type="number"
+                      value={questionFormData.pyqYear}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, pyqYear: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '2px' }}>Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={questionFormData.tags}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, tags: e.target.value })}
+                      placeholder="jnvst, mat, odd-one-out"
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '2px' }}>Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    value={questionFormData.tags}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, tags: e.target.value })}
-                    placeholder="jnvst, mat, odd-one-out"
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                  />
-                </div>
-              </div>
+                {/* Correct Key & Explanation */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Correct Answer Key</label>
+                    <select
+                      value={questionFormData.correctOption}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, correctOption: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 800, color: '#059669' }}
+                    >
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
+                  </div>
 
-              {/* Correct Key & Explanation */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Correct Answer Key</label>
-                  <select
-                    value={questionFormData.correctOption}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, correctOption: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: 800, color: '#059669' }}
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Solution Explanation</label>
+                    <input
+                      type="text"
+                      value={questionFormData.explanationText}
+                      onChange={(e) => setQuestionFormData({ ...questionFormData, explanationText: e.target.value })}
+                      placeholder="Step-by-step answer explanation..."
+                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuestionModal(false)}
+                    style={{ padding: '10px 18px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </select>
-                </div>
+                    Cancel
+                  </button>
 
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>Solution Explanation</label>
-                  <input
-                    type="text"
-                    value={questionFormData.explanationText}
-                    onChange={(e) => setQuestionFormData({ ...questionFormData, explanationText: e.target.value })}
-                    placeholder="Step-by-step answer explanation..."
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
-                  />
+                  <button
+                    type="submit"
+                    disabled={savingQuestion || uploadingTarget !== null}
+                    style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    {savingQuestion ? 'Saving...' : 'Save Question'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Right Column: Live Student Preview Card */}
+              <div style={{ background: '#f8fafc', borderRadius: '18px', padding: '24px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', maxHeight: '78vh', overflowY: 'auto' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+                  <span>👁️ Live Student Preview</span>
+                  <span style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '8px' }}>
+                    Q{questionFormData.qNumber || 1} ({questionFormData.section || 'mat'})
+                  </span>
+                </h4>
+
+                {/* Question Box */}
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #cbd5e1', padding: '20px', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+                  
+                  {/* Question Text */}
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '16px', lineHeight: 1.5 }}>
+                    {questionFormData.questionText ? parseMathAndText(questionFormData.questionText) : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Question prompt goes here...</span>}
+                  </div>
+
+                  {/* Figure Image */}
+                  {questionFormData.questionImage && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{
+                        position: 'relative',
+                        width: '100%',
+                        maxWidth: '280px',
+                        height: '180px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {questionFormData.questionImageCrop ? (
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundImage: `url(${questionFormData.questionImage})`,
+                            backgroundPosition: `${questionFormData.questionImageCrop.x}% ${questionFormData.questionImageCrop.y}%`,
+                            backgroundSize: `${10000 / questionFormData.questionImageCrop.width}% ${10000 / questionFormData.questionImageCrop.height}%`,
+                            backgroundRepeat: 'no-repeat'
+                          }} />
+                        ) : (
+                          <img src={questionFormData.questionImage} alt="Figure image" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Options A, B, C, D */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                    {['A', 'B', 'C', 'D'].map(letter => {
+                      const textVal = questionFormData[`option${letter}`];
+                      const imgVal = questionFormData[`option${letter}Image`];
+                      const cropVal = questionFormData[`option${letter}ImageCrop`];
+                      const isCorrect = questionFormData.correctOption === letter;
+
+                      return (
+                        <div
+                          key={letter}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            borderRadius: '10px',
+                            border: isCorrect ? '2px solid #22c55e' : '1px solid #cbd5e1',
+                            background: isCorrect ? '#f0fdf4' : '#ffffff',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            border: isCorrect ? '2px solid #22c55e' : '2px solid #94a3b8',
+                            background: isCorrect ? '#22c55e' : 'transparent',
+                            color: isCorrect ? '#ffffff' : '#475569',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: '0.8rem',
+                            flexShrink: 0
+                          }}>
+                            {letter}
+                          </div>
+
+                          <div style={{ flex: 1, color: '#334155', fontWeight: 600, fontSize: '0.9rem' }}>
+                            {imgVal ? (
+                              <div style={{
+                                width: '100%',
+                                maxWidth: '160px',
+                                height: '80px',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}>
+                                {cropVal ? (
+                                  <div style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    backgroundImage: `url(${imgVal})`,
+                                    backgroundPosition: `${cropVal.x}% ${cropVal.y}%`,
+                                    backgroundSize: `${10000 / cropVal.width}% ${10000 / cropVal.height}%`,
+                                    backgroundRepeat: 'no-repeat'
+                                  }} />
+                                ) : (
+                                  <img src={imgVal} alt={`Option ${letter}`} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                )}
+                              </div>
+                            ) : textVal ? (
+                              parseMathAndText(textVal)
+                            ) : (
+                              <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>Empty Option</span>
+                            )}
+                          </div>
+
+                          {isCorrect && (
+                            <span style={{ color: '#22c55e', fontSize: '1.1rem', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Solution Explanation Box */}
+                  <div style={{ marginTop: '20px', background: '#f8fafc', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #6366f1' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      💡 Official Solution Explanation
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5 }}>
+                      {questionFormData.explanationText ? parseMathAndText(questionFormData.explanationText) : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No explanation entered.</span>}
+                    </div>
+                  </div>
+
                 </div>
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowQuestionModal(false)}
-                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={savingQuestion || uploadingTarget !== null}
-                  style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  {savingQuestion ? 'Saving...' : 'Save Question'}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

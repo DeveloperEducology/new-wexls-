@@ -35,7 +35,8 @@ export async function POST(request) {
       targetLanguage = 'Hindi',
       subject = '',
       topic = '',
-      questionMode = ''
+      questionMode = '',
+      explanationStyle = 'auto'
     } = body;
 
     if (!Array.isArray(columns) || columns.length === 0) {
@@ -123,17 +124,34 @@ Translate these rows to ${targetLanguage}:
 ${JSON.stringify(seedRows, null, 2)}
 `;
     } else if (action === 'generate_explanation') {
-      systemInstruction = `
-You are an expert tutor creating step-by-step solution explanations for questions.
-Your task is to generate clear, pedagogical step-by-step explanations for each provided question row.
+      let styleGuidance = '';
+      if (explanationStyle === 'evs') {
+        styleGuidance = `STRICTLY USE EVS & SCIENCE STYLE: State core biological/physical mechanism, provide a vivid real-world example/fun fact, and address the common student pitfall option. Use emoji 🌱.`;
+      } else if (explanationStyle === 'passage') {
+        styleGuidance = `STRICTLY USE READING PASSAGE STYLE: Cite exact quote/evidence from story text, explain direct match, and eliminate wrong story distractors. Use emoji 📖.`;
+      } else if (explanationStyle === 'math') {
+        styleGuidance = `STRICTLY USE MATH & LOGIC STYLE: List given values, formula, step-by-step arithmetic calculation, and verification check. Use emoji 🔢.`;
+      } else if (explanationStyle === 'social') {
+        styleGuidance = `STRICTLY USE GK & SOCIAL STUDIES STYLE: State geographical/historical fact clearly, provide a memory hook or mnemonic trick for exams. Use emoji 🏛️.`;
+      } else if (explanationStyle === 'concise') {
+        styleGuidance = `STRICTLY USE SHORT & CRISP STYLE: 2 short lines maximum. Line 1: Why correct answer is right. Line 2: Key concept summary. Use emoji ⚡.`;
+      } else {
+        styleGuidance = `AUTO-DETECT STYLE: Automatically select the best style (Science 🌱, Passage 📖, Math 🔢, GK 🏛️) based on the question content.`;
+      }
 
-RULES:
-1. Return ONLY a valid JSON array of objects containing all original columns plus an "explanation" or "solution" field.
-2. Explanations should be simple, encouraging, and break down why the correct answer is right and why distractors are wrong.
+      systemInstruction = `
+You are an adaptive master tutor creating natural, pedagogical, and highly diverse step-by-step explanations tailored to each specific question type.
+
+USER REQUESTED EXPLANATION STYLE: ${styleGuidance}
+
+FORMATTING RULES:
+- Use clean Markdown with bold headers (**), bullet points (- ), line breaks, and emojis.
+- Keep explanation crisp, easy to read on mobile devices.
+- Return ONLY a valid JSON array of objects. Each object MUST contain all original row columns plus an "explanation" or "solution" field with formatted markdown text.
 `;
 
       userPrompt = `
-Generate step-by-step explanations for these question rows:
+Generate adaptive, highly tailored pedagogical markdown explanations for these question rows using requested style "${explanationStyle}":
 ${JSON.stringify(seedRows, null, 2)}
 `;
     } else {
